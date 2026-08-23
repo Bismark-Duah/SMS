@@ -39,11 +39,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 DEFAULT_ROLES = ["super_admin", "admin", "teacher", "student", "parent", "headmaster", "headmistress", "form_master", "form_mistress", "house_master", "house_mistress", "senior_housemaster", "senior_housemistress", "hod", "assistant_house_master", "assistant_house_mistress", "assistant_headmaster_academic", "assistant_headmaster_domestic", "assistant_headmaster_admin", "bursar", "storekeeper", "security_officer"]
 
-# Default user roles for seeding (passwords are randomly generated on first install)
+# Default master user for seeding
 DEFAULT_USER_TEMPLATES = [
     {"username": "superadmin", "email": "superadmin@system.local", "roles": ["super_admin"]},
-    {"username": "admin", "email": "admin@school.local", "roles": ["admin"]},
-    {"username": "teacher", "email": "teacher@school.local", "roles": ["teacher"]},
 ]
 
 def _hash_password(password: str) -> str:
@@ -88,25 +86,17 @@ def _seed_db(db: Session) -> None:
                 db.flush()
             roles_map[role_name] = role
 
-        # ── Phase 2: Known default passwords (Clean Production Path) ───────
-        # These are reset on EVERY startup so credentials are always known.
-        # ACTION REQUIRED: After your first login, create a named admin account,
-        # then set LOCK_DEFAULT_PASSWORDS=true in env to disable this reset.
-        LOCK = os.environ.get("LOCK_DEFAULT_PASSWORDS", "false").lower() == "true"
-
+        # ── Phase 2: Seed Master Super-Admin ───────────────────────────────
         DEFAULT_PASSWORDS = {
             "superadmin": "superadmin123!",
-            "admin":      "admin123!",
-            "teacher":    "Welcome123!",
         }
 
         for user_data in DEFAULT_USER_TEMPLATES:
             existing = db.query(User).filter(User.username == user_data["username"]).first()
-            default_password = DEFAULT_PASSWORDS.get(user_data["username"], "Welcome123!")
+            default_password = DEFAULT_PASSWORDS.get(user_data["username"], "Superadmin123!")
             target_roles = [roles_map[r] for r in user_data["roles"] if r in roles_map]
 
             if not existing:
-                # Create the account if it doesn't exist yet
                 new_user = User(
                     username=user_data["username"],
                     email=user_data["email"],
@@ -116,11 +106,18 @@ def _seed_db(db: Session) -> None:
                 new_user.roles = target_roles
                 db.add(new_user)
             else:
-                # Ensure roles are attached properly without overwriting user's changed password
                 for role_obj in target_roles:
                     if role_obj not in existing.roles:
                         existing.roles.append(role_obj)
                 existing.is_active = True
+
+        # Clean up legacy unassigned placeholder demo users (admin, teacher with no school)
+        orphan_demo_users = db.query(User).filter(
+            User.username.in_(["admin", "teacher"]),
+            User.school_id.is_(None)
+        ).all()
+        for u in orphan_demo_users:
+            db.delete(u)
 
         db.commit()
 

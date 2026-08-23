@@ -332,13 +332,156 @@ app.mount("/assets", StaticFiles(directory=frontend_dir, html=True), name="asset
 app.mount("/frontend", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 
+def _serve(filename: str):
+    """Helper: serve a frontend HTML file by name."""
+    return FileResponse(os.path.join(frontend_dir, filename))
 
+
+# ── Public pages ──────────────────────────────────────────────────────────────
 @app.get("/")
 @app.get("/index.html")
 def root_index():
-    return FileResponse(os.path.join(frontend_dir, "index.html"))
+    return _serve("index.html")
+
+@app.get("/auth.html")
+def serve_auth():
+    return _serve("auth.html")
+
+@app.get("/login.html")
+def serve_login():
+    return _serve("login.html")
+
+@app.get("/enrollment.html")
+def serve_enrollment():
+    return _serve("enrollment.html")
+
+# ── App pages (authenticated) ─────────────────────────────────────────────────
+@app.get("/dashboard.html")
+def serve_dashboard():
+    return _serve("dashboard.html")
+
+@app.get("/students.html")
+def serve_students():
+    return _serve("students.html")
+
+@app.get("/attendance.html")
+def serve_attendance():
+    return _serve("attendance.html")
+
+@app.get("/fees.html")
+def serve_fees():
+    return _serve("fees.html")
+
+@app.get("/reports.html")
+def serve_reports():
+    return _serve("reports.html")
+
+@app.get("/report-card.html")
+def serve_report_card():
+    return _serve("report-card.html")
+
+@app.get("/results.html")
+def serve_results():
+    return _serve("results.html")
+
+@app.get("/assignments.html")
+def serve_assignments():
+    return _serve("assignments.html")
+
+@app.get("/timetable.html")
+def serve_timetable():
+    return _serve("timetable.html")
+
+@app.get("/discipline.html")
+def serve_discipline():
+    return _serve("discipline.html")
+
+@app.get("/exeat.html")
+def serve_exeat():
+    return _serve("exeat.html")
+
+@app.get("/messaging.html")
+def serve_messaging():
+    return _serve("messaging.html")
+
+@app.get("/houses.html")
+def serve_houses():
+    return _serve("houses.html")
+
+@app.get("/classes.html")
+def serve_classes():
+    return _serve("classes.html")
+
+@app.get("/subjects.html")
+def serve_subjects():
+    return _serve("subjects.html")
+
+@app.get("/departments.html")
+def serve_departments():
+    return _serve("departments.html")
+
+@app.get("/programs.html")
+def serve_programs():
+    return _serve("programs.html")
+
+@app.get("/academic.html")
+def serve_academic():
+    return _serve("academic.html")
+
+@app.get("/settings.html")
+def serve_settings():
+    return _serve("settings.html")
+
+@app.get("/users.html")
+def serve_users():
+    return _serve("users.html")
+
+@app.get("/promotions.html")
+def serve_promotions():
+    return _serve("promotions.html")
+
+@app.get("/rollover.html")
+def serve_rollover():
+    return _serve("rollover.html")
+
+@app.get("/clearance.html")
+def serve_clearance():
+    return _serve("clearance.html")
+
+@app.get("/assets.html")
+def serve_assets_page():
+    return _serve("assets.html")
+
+@app.get("/broadsheet.html")
+def serve_broadsheet():
+    return _serve("broadsheet.html")
+
+@app.get("/cumulative-record.html")
+def serve_cumulative():
+    return _serve("cumulative-record.html")
+
+@app.get("/announcements.html")
+def serve_announcements():
+    return _serve("announcements.html")
+
+@app.get("/data-tools.html")
+def serve_data_tools():
+    return _serve("data-tools.html")
+
+@app.get("/parent-view.html")
+def serve_parent_view():
+    return _serve("parent-view.html")
+
+@app.get("/super-admin.html")
+def serve_super_admin():
+    return _serve("super-admin.html")
+
+@app.get("/bulk-entry.html")
+def serve_bulk_entry():
+    return _serve("bulk-entry.html")
 
 
+# ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "School management API is running"}

@@ -5,12 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EduManage360 – Unified Multi-School Administration Portal</title>
     <meta name="description" content="Revolutionize your school administration. Centralized, efficient, unified school management system compliant with WAEC and NCCA standards." />
-    <link rel="stylesheet" href="css/styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="js/theme.js"></script>
     <style>
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
       :root {
         --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         --color-bg: #f8fafc;
@@ -20,26 +24,25 @@
         --color-text-muted: #64748b;
         --color-primary: #0284c7;
         --color-primary-hover: #0369a1;
-        --color-primary-light: #e0f2fe;
         --color-emerald: #059669;
-        --color-emerald-light: #d1fae5;
         --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
         --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-        --shadow-lg: 0 20px 35px -10px rgba(2, 132, 199, 0.15);
+        --shadow-lg: 0 20px 35px -10px rgba(2, 132, 199, 0.18);
       }
 
-      body {
-        font-family: var(--font-main);
-        background-color: var(--color-bg);
-        color: var(--color-text-main);
-        margin: 0;
-        padding: 0;
+      html, body {
+        width: 100%;
+        min-height: 100vh;
+        background-color: var(--color-bg) !important;
+        color: var(--color-text-main) !important;
+        font-family: var(--font-main) !important;
         line-height: 1.6;
         overflow-x: hidden;
       }
 
       /* Navbar */
       .navbar {
+        width: 100%;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -61,6 +64,7 @@
 
       .brand-logo img {
         height: 48px;
+        max-width: 220px;
         object-fit: contain;
       }
 
@@ -69,8 +73,6 @@
         align-items: center;
         gap: 32px;
         list-style: none;
-        margin: 0;
-        padding: 0;
       }
 
       .nav-menu-item a {
@@ -93,13 +95,13 @@
 
       .btn-login {
         background: var(--color-primary);
-        color: #ffffff;
+        color: #ffffff !important;
         font-weight: 600;
         font-size: 0.95rem;
         padding: 10px 24px;
         border-radius: 8px;
         text-decoration: none;
-        transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+        transition: background 0.2s, transform 0.2s;
         box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
         display: inline-flex;
         align-items: center;
@@ -109,12 +111,11 @@
       .btn-login:hover {
         background: var(--color-primary-hover);
         transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
       }
 
       .btn-superadmin {
         background: #f1f5f9;
-        color: #334155;
+        color: #334155 !important;
         font-weight: 600;
         font-size: 0.95rem;
         padding: 10px 20px;
@@ -130,7 +131,8 @@
 
       /* Hero Section */
       .hero {
-        padding: 70px 48px 60px;
+        width: 100%;
+        padding: 70px 24px 60px;
         text-align: center;
         max-width: 1200px;
         margin: 0 auto;
@@ -142,11 +144,12 @@
         letter-spacing: -0.03em;
         line-height: 1.15;
         color: var(--color-text-main);
-        margin: 0 0 20px 0;
+        margin-bottom: 20px;
       }
 
       .hero-title span {
         color: var(--color-primary);
+        display: block;
       }
 
       .hero-subtitle {
@@ -163,11 +166,12 @@
         justify-content: center;
         gap: 16px;
         margin-bottom: 50px;
+        flex-wrap: wrap;
       }
 
       .btn-demo {
         background: var(--color-primary);
-        color: #ffffff;
+        color: #ffffff !important;
         font-weight: 700;
         font-size: 1.1rem;
         padding: 16px 36px;
@@ -223,7 +227,7 @@
       .mockup-body {
         padding: 24px;
         display: grid;
-        grid-template-columns: 240px 1fr 1fr;
+        grid-template-columns: 220px 1fr 1fr;
         gap: 20px;
         background: #fafafa;
       }
@@ -290,14 +294,15 @@
 
       /* 4 Pillar Cards Section */
       .section-pillars {
+        width: 100%;
         max-width: 1200px;
         margin: 0 auto 80px;
-        padding: 0 48px;
+        padding: 0 24px;
       }
 
       .pillars-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 24px;
       }
 
@@ -307,14 +312,13 @@
         border-radius: 16px;
         padding: 32px 24px;
         box-shadow: var(--shadow-sm);
-        transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+        transition: transform 0.25s, box-shadow 0.25s;
         text-align: left;
       }
 
       .pillar-card:hover {
         transform: translateY(-4px);
         box-shadow: var(--shadow-md);
-        border-color: #cbd5e1;
       }
 
       .pillar-icon {
@@ -336,23 +340,23 @@
       .pillar-title {
         font-size: 1.2rem;
         font-weight: 700;
-        margin: 0 0 10px 0;
+        margin-bottom: 10px;
         color: var(--color-text-main);
       }
 
       .pillar-desc {
         font-size: 0.92rem;
         color: var(--color-text-muted);
-        margin: 0;
         line-height: 1.55;
       }
 
       /* Why Choose Section */
       .why-section {
+        width: 100%;
         background: #ffffff;
         border-top: 1px solid var(--color-card-border);
         border-bottom: 1px solid var(--color-card-border);
-        padding: 80px 48px;
+        padding: 80px 24px;
         text-align: center;
       }
 
@@ -364,15 +368,15 @@
       .why-header h2 {
         font-size: 2.4rem;
         font-weight: 800;
-        margin: 0 0 12px 0;
+        margin-bottom: 12px;
       }
 
       .why-grid {
         max-width: 1100px;
         margin: 0 auto;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 36px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 32px;
         text-align: left;
       }
 
@@ -386,19 +390,19 @@
       .why-card h3 {
         font-size: 1.15rem;
         font-weight: 700;
-        margin: 0 0 8px 0;
+        margin-bottom: 8px;
         color: var(--color-text-main);
       }
 
       .why-card p {
         font-size: 0.92rem;
         color: var(--color-text-muted);
-        margin: 0;
       }
 
       /* Footer */
       .footer {
-        padding: 48px;
+        width: 100%;
+        padding: 48px 24px;
         text-align: center;
         background: #0f172a;
         color: #94a3b8;
@@ -416,6 +420,7 @@
         justify-content: center;
         gap: 28px;
         margin-bottom: 20px;
+        flex-wrap: wrap;
       }
 
       .footer-links a {
@@ -431,21 +436,19 @@
       /* Responsive */
       @media (max-width: 768px) {
         .navbar { padding: 14px 20px; }
-        .hero { padding: 40px 20px; }
         .hero-title { font-size: 2.2rem; }
+        .hero { padding: 40px 16px; }
         .mockup-body { grid-template-columns: 1fr; }
         .mockup-sidebar { display: none; }
-        .section-pillars { padding: 0 20px; }
-        .why-section { padding: 50px 20px; }
         .nav-menu { display: none; }
       }
     </style>
   </head>
-  <body id="public-landing-page" class="public-landing-page">
+  <body>
     <!-- Header Navigation -->
     <header class="navbar">
       <a class="brand-logo" href="index.html">
-        <img src="assets/logo_primary.png" alt="EduManage360 Logo" />
+        <img src="assets/logo_primary.png" alt="EduManage360 Logo" onerror="this.onerror=null; this.src='logo_primary.png';" />
       </a>
       <ul class="nav-menu">
         <li class="nav-menu-item"><a href="#features">Features</a></li>
@@ -462,7 +465,7 @@
     <!-- Hero Section -->
     <section class="hero">
       <h1 class="hero-title">
-        Revolutionize Your School Administration.<br />
+        Revolutionize Your School Administration.
         <span>Centralized. Efficient. Unified.</span>
       </h1>
       <p class="hero-subtitle">
@@ -613,7 +616,7 @@
     <!-- Footer -->
     <footer class="footer">
       <a href="index.html">
-        <img src="assets/logo_primary.png" alt="EduManage360 Logo" class="footer-logo" />
+        <img src="assets/logo_primary.png" alt="EduManage360 Logo" class="footer-logo" onerror="this.onerror=null; this.src='logo_primary.png';" />
       </a>
       <div class="footer-links">
         <a href="auth.html">School Portal</a>
@@ -629,7 +632,5 @@
         &copy; 2026 EduManage360 Enterprise. Unified Multi-School Administration Portal.
       </div>
     </footer>
-
-    <script src="js/app.js"></script>
   </body>
 </html>

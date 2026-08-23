@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 import os
 
 from sqlalchemy import text
@@ -334,8 +334,9 @@ app.mount("/frontend", StaticFiles(directory=frontend_dir, html=True), name="fro
 
 
 @app.get("/")
-def root_redirect():
-    return RedirectResponse(url="/assets/index.html")
+@app.get("/index.html")
+def root_index():
+    return FileResponse(os.path.join(frontend_dir, "index.html"))
 
 
 @app.get("/health")

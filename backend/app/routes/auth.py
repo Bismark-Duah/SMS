@@ -37,7 +37,7 @@ router = APIRouter()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-DEFAULT_ROLES = ["admin", "teacher", "student", "parent", "form_master", "form_mistress", "house_master", "house_mistress", "senior_housemaster", "senior_housemistress", "hod", "assistant_house_master", "assistant_house_mistress", "assistant_headmaster_academic", "assistant_headmaster_domestic", "assistant_headmaster_admin", "bursar", "storekeeper", "security_officer"]
+DEFAULT_ROLES = ["super_admin", "admin", "teacher", "student", "parent", "headmaster", "headmistress", "form_master", "form_mistress", "house_master", "house_mistress", "senior_housemaster", "senior_housemistress", "hod", "assistant_house_master", "assistant_house_mistress", "assistant_headmaster_academic", "assistant_headmaster_domestic", "assistant_headmaster_admin", "bursar", "storekeeper", "security_officer"]
 
 # Default user roles for seeding (passwords are randomly generated on first install)
 DEFAULT_USER_TEMPLATES = [
@@ -103,6 +103,7 @@ def _seed_db(db: Session) -> None:
         for user_data in DEFAULT_USER_TEMPLATES:
             existing = db.query(User).filter(User.username == user_data["username"]).first()
             default_password = DEFAULT_PASSWORDS.get(user_data["username"], "Welcome123!")
+            target_roles = [roles_map[r] for r in user_data["roles"] if r in roles_map]
 
             if not existing:
                 # Create the account if it doesn't exist yet
@@ -112,14 +113,17 @@ def _seed_db(db: Session) -> None:
                     password_hash=_hash_password(default_password),
                     is_active=True,
                 )
-                for role_name in user_data["roles"]:
-                    if role_name in roles_map:
-                        new_user.roles.append(roles_map[role_name])
+                new_user.roles = target_roles
                 db.add(new_user)
-            elif not LOCK:
-                # Force-reset password on every startup (Phase 1 — until LOCK is set)
-                existing.password_hash = _hash_password(default_password)
-                existing.is_active = True
+            else:
+                # Ensure roles are attached properly
+                for role_obj in target_roles:
+                    if role_obj not in existing.roles:
+                        existing.roles.append(role_obj)
+                if not LOCK:
+                    # Force-reset password on every startup (Phase 1 — until LOCK is set)
+                    existing.password_hash = _hash_password(default_password)
+                    existing.is_active = True
 
         db.commit()
 
@@ -166,8 +170,13 @@ def login(payload: dict, db: Session = Depends(get_db)):
         user.password_hash = _hash_password(password)
         db.commit()
 
-    # Return primary role for UI dashboard routing (first role in list)
-    primary_role = user.roles[0].name if user.roles else "teacher"
+    # Guarantee superadmin account has super_admin role
+    if user.username == "superadmin":
+        super_role = db.query(Role).filter(Role.name == "super_admin").first()
+        if super_role and super_role not in user.roles:
+            user.roles.append(super_role)
+            db.commit()
+
     role_names = [r.name for r in user.roles]
 
     # Dynamically resolve leadership assignment roles
@@ -180,6 +189,14 @@ def login(payload: dict, db: Session = Depends(get_db)):
     if "hod" not in role_names:
         if db.query(Department).filter(Department.hod_id == user.id).first():
             role_names.append("hod")
+
+    is_super_admin = "super_admin" in role_names or user.username == "superadmin"
+    if is_super_admin:
+        primary_role = "super_admin"
+        if "super_admin" not in role_names:
+            role_names.append("super_admin")
+    else:
+        primary_role = user.roles[0].name if user.roles else "teacher"
 
     is_super_admin = "super_admin" in role_names
     

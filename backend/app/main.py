@@ -328,7 +328,20 @@ app.include_router(super_admin.router, prefix="/api")
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 frontend_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "frontend"))
-app.mount("/assets", StaticFiles(directory=frontend_dir, html=True), name="assets")
+assets_dir = os.path.join(frontend_dir, "assets")
+js_dir = os.path.join(frontend_dir, "js")
+css_dir = os.path.join(frontend_dir, "css")
+uploads_dir = os.path.join(frontend_dir, "uploads")
+
+os.makedirs(assets_dir, exist_ok=True)
+os.makedirs(js_dir, exist_ok=True)
+os.makedirs(css_dir, exist_ok=True)
+os.makedirs(uploads_dir, exist_ok=True)
+
+app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+app.mount("/js", StaticFiles(directory=js_dir), name="js")
+app.mount("/css", StaticFiles(directory=css_dir), name="css")
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 app.mount("/frontend", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 

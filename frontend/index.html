@@ -4,75 +4,87 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EduManage360 – One Platform. Every School. Complete Control.</title>
-  <meta name="description" content="The unified school management system built for Ghanaian institutions. Manage students, fees, attendance, reports and more — all offline." />
+  <meta name="description" content="The unified, intelligent school management system built for Ghanaian institutions. Manage students, fees, attendance, reports, and broadsheets — 100% offline." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
-    /* ─── Reset & Root ─────────────────────────────── */
+    /* ─── Reset & Design System Tokens ─────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --teal:        #059669;
-      --teal-dark:   #047857;
-      --teal-light:  #d1fae5;
-      --blue:        #0284c7;
-      --ink:         #0f172a;
-      --ink-light:   #334155;
-      --muted:       #64748b;
-      --border:      #e2e8f0;
-      --bg:          #ffffff;
-      --bg-soft:     #f8fafc;
-      --radius-sm:   8px;
-      --radius-md:   14px;
-      --radius-lg:   20px;
-      --radius-pill: 999px;
-      --shadow-card: 0 4px 24px -4px rgba(15,23,42,.08), 0 1px 4px rgba(15,23,42,.04);
-      --shadow-btn:  0 4px 14px rgba(5,150,105,.30);
-      --transition:  .18s cubic-bezier(.4,0,.2,1);
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-heading: 'Outfit', 'Inter', sans-serif;
+      --teal:         #059669;
+      --teal-glow:    #10b981;
+      --teal-dark:    #047857;
+      --teal-light:   #d1fae5;
+      --cyan:         #06b6d4;
+      --cyan-glow:    #22d3ee;
+      --indigo:       #4f46e5;
+      --indigo-glow:  #6366f1;
+      --ink:          #0f172a;
+      --ink-card:     #1e293b;
+      --ink-light:    #334155;
+      --muted:        #64748b;
+      --border:       #e2e8f0;
+      --border-dark:  rgba(255, 255, 255, 0.12);
+      --bg:           #ffffff;
+      --bg-soft:      #f8fafc;
+      --radius-sm:    8px;
+      --radius-md:    14px;
+      --radius-lg:    22px;
+      --radius-pill:  999px;
+      --shadow-card:  0 10px 30px -4px rgba(15,23,42,.08), 0 2px 6px rgba(15,23,42,.04);
+      --shadow-glow:  0 0 30px rgba(5,150,105,.35);
+      --shadow-btn:   0 4px 16px rgba(5,150,105,.35);
+      --transition:   .22s cubic-bezier(.4,0,.2,1);
     }
 
     html, body {
-      font-family: var(--font);
+      font-family: var(--font-body);
       background: var(--bg);
       color: var(--ink);
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
+      scroll-behavior: smooth;
     }
 
-    /* ─── Teal radial glow top-right ───────────────── */
-    body::before {
-      content: '';
-      position: fixed;
-      top: -180px; right: -180px;
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, rgba(5,150,105,.10) 0%, transparent 70%);
-      pointer-events: none; z-index: 0;
+    h1, h2, h3, h4, .brand-title {
+      font-family: var(--font-heading);
     }
 
-    /* ─── Utility ───────────────────────────────────── */
-    .container { max-width: 1160px; margin: 0 auto; padding: 0 32px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
     a { color: inherit; text-decoration: none; }
+
+    /* ─── Top Glow Mesh ────────────────────────────── */
+    .ambient-glow-mesh {
+      position: absolute;
+      top: -160px; right: -160px;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(16,185,129,.14) 0%, rgba(6,182,212,.08) 45%, transparent 70%);
+      pointer-events: none; z-index: 0;
+      filter: blur(40px);
+    }
 
     /* ─── NAVBAR ────────────────────────────────────── */
     .navbar {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(255,255,255,.88);
-      backdrop-filter: blur(12px);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
     }
     .navbar-inner {
       display: flex; align-items: center; justify-content: space-between;
-      max-width: 1160px; margin: 0 auto;
-      padding: 0 32px; height: 66px;
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 32px; height: 70px;
     }
     .nav-brand img {
-      height: 44px; max-width: 180px; object-fit: contain; display: block;
+      height: 44px; max-width: 190px; object-fit: contain; display: block;
     }
-    .nav-links { display: flex; align-items: center; gap: 36px; list-style: none; }
+    .nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
     .nav-links a {
       font-size: .92rem; font-weight: 600; color: var(--ink-light);
       transition: color var(--transition);
@@ -82,256 +94,439 @@
     .btn-ghost {
       font-size: .92rem; font-weight: 700; color: var(--ink);
       border: 1.5px solid var(--border); border-radius: var(--radius-pill);
-      padding: 8px 22px; transition: border-color var(--transition), color var(--transition);
+      padding: 8px 22px; transition: all var(--transition);
     }
-    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); background: rgba(5,150,105,.05); }
     .btn-primary {
       font-size: .92rem; font-weight: 700; color: #fff;
-      background: var(--teal); border-radius: var(--radius-pill);
-      padding: 9px 22px; box-shadow: var(--shadow-btn);
-      transition: background var(--transition), transform var(--transition);
+      background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+      border-radius: var(--radius-pill);
+      padding: 9px 24px; box-shadow: var(--shadow-btn);
+      transition: all var(--transition);
+      border: none; cursor: pointer;
     }
-    .btn-primary:hover { background: var(--teal-dark); transform: translateY(-1px); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(5,150,105,.45); }
 
-    /* ─── HERO ──────────────────────────────────────── */
+    /* ─── HERO SECTION ──────────────────────────────── */
     .hero {
-      padding: 90px 0 70px;
+      padding: 80px 0 60px;
       position: relative; z-index: 1;
     }
     .hero-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      align-items: center; gap: 60px;
+      display: grid; grid-template-columns: 1.05fr 1fr;
+      align-items: center; gap: 48px;
     }
-    .hero-left { display: flex; flex-direction: column; gap: 0; }
+    .hero-left { display: flex; flex-direction: column; }
 
     .hero-badge {
-      display: inline-flex; align-items: center; gap: 7px;
+      display: inline-flex; align-items: center; gap: 8px;
       background: var(--teal-light); color: var(--teal-dark);
-      font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
-      border-radius: var(--radius-pill); padding: 5px 14px;
-      margin-bottom: 22px; width: fit-content;
+      font-size: .78rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+      border-radius: var(--radius-pill); padding: 6px 16px;
+      margin-bottom: 24px; width: fit-content;
+      border: 1px solid rgba(5,150,105,.25);
     }
-    .hero-badge::before { content: '●'; font-size: .5rem; }
+    .hero-badge::before { content: '●'; font-size: .65rem; color: var(--teal); animation: pulseDot 2s infinite; }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.3); }
+    }
 
     .hero-headline {
-      font-size: clamp(2.4rem, 4vw, 3.5rem);
-      font-weight: 900; letter-spacing: -.04em; line-height: 1.12;
+      font-size: clamp(2.4rem, 4.2vw, 3.7rem);
+      font-weight: 900; letter-spacing: -.04em; line-height: 1.1;
       color: var(--ink); margin-bottom: 20px;
     }
-    .hero-headline .accent { color: var(--teal); }
+    .hero-headline .accent {
+      background: linear-gradient(135deg, #059669 0%, #0284c7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
     .hero-sub {
       font-size: 1.08rem; color: var(--muted); font-weight: 500;
-      max-width: 440px; margin-bottom: 36px; line-height: 1.7;
+      max-width: 480px; margin-bottom: 34px; line-height: 1.7;
     }
 
-    .hero-ctas { display: flex; align-items: center; gap: 14px; margin-bottom: 40px; flex-wrap: wrap; }
+    .hero-ctas { display: flex; align-items: center; gap: 14px; margin-bottom: 36px; flex-wrap: wrap; }
     .btn-hero-primary {
-      display: inline-flex; align-items: center; gap: 8px;
+      display: inline-flex; align-items: center; gap: 10px;
       font-size: 1rem; font-weight: 700; color: #fff;
-      background: var(--teal); border-radius: var(--radius-pill);
-      padding: 13px 28px; box-shadow: var(--shadow-btn);
-      transition: background var(--transition), transform var(--transition);
+      background: linear-gradient(135deg, var(--teal), #047857);
+      border-radius: var(--radius-pill);
+      padding: 14px 30px; box-shadow: 0 8px 24px rgba(5,150,105,.35);
+      transition: all var(--transition);
     }
-    .btn-hero-primary:hover { background: var(--teal-dark); transform: translateY(-2px); }
+    .btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(5,150,105,.5); }
     .btn-hero-ghost {
-      display: inline-flex; align-items: center; gap: 8px;
+      display: inline-flex; align-items: center; gap: 10px;
       font-size: 1rem; font-weight: 700; color: var(--ink);
       border: 1.5px solid var(--border); border-radius: var(--radius-pill);
-      padding: 12px 24px; transition: border-color var(--transition), color var(--transition);
+      padding: 13px 26px; transition: all var(--transition);
+      background: #fff;
     }
-    .btn-hero-ghost:hover { border-color: var(--teal); color: var(--teal); }
+    .btn-hero-ghost:hover { border-color: var(--teal); color: var(--teal); transform: translateY(-2px); }
     .play-circle {
       width: 28px; height: 28px; border-radius: 50%;
       background: var(--teal-light); color: var(--teal);
       display: flex; align-items: center; justify-content: center;
-      font-size: .7rem; padding-left: 2px;
+      font-size: .75rem; padding-left: 2px;
     }
 
-    .trust-badges { display: flex; flex-wrap: wrap; gap: 10px; }
+    .trust-badges { display: flex; flex-wrap: wrap; gap: 8px; }
     .trust-badge {
       display: inline-flex; align-items: center; gap: 6px;
       background: var(--bg-soft); border: 1px solid var(--border);
-      border-radius: var(--radius-pill); padding: 5px 14px;
-      font-size: .8rem; font-weight: 600; color: var(--ink-light);
+      border-radius: var(--radius-pill); padding: 6px 14px;
+      font-size: .78rem; font-weight: 600; color: var(--ink-light);
     }
 
-    /* ─── Dashboard Mockup Card ─────────────────────── */
-    .hero-mockup {
+    /* ─── 3D HERO MOCKUP & FLOATING TELEMETRY BADGES ─── */
+    .hero-mockup-wrapper {
       position: relative;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      box-shadow: 0 24px 64px -12px rgba(15,23,42,.14), 0 4px 12px rgba(15,23,42,.05);
-      overflow: hidden;
+      perspective: 1200px;
     }
-    .mockup-topbar {
-      background: var(--ink); padding: 10px 16px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .mockup-topbar-brand { font-size: .75rem; font-weight: 700; color: #fff; }
-    .mockup-topbar-user {
-      font-size: .7rem; color: rgba(255,255,255,.6); font-weight: 500;
-    }
-    .mockup-body { padding: 16px; }
-    .mockup-greeting { font-size: .72rem; color: var(--muted); margin-bottom: 10px; }
-    .mockup-stats {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 8px; margin-bottom: 14px;
-    }
-    .m-stat {
-      background: var(--bg-soft); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 10px 8px; text-align: center;
-    }
-    .m-stat-val { font-size: 1.1rem; font-weight: 800; color: var(--ink); }
-    .m-stat-lbl { font-size: .62rem; color: var(--muted); font-weight: 500; }
-    .m-stat-trend { font-size: .58rem; color: var(--teal); font-weight: 700; }
-    .mockup-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; margin-bottom: 10px; }
-    .mockup-chart-box {
-      background: var(--bg-soft); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 10px;
-    }
-    .m-chart-title { font-size: .65rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
-    .mini-line-chart { display: flex; align-items: flex-end; gap: 4px; height: 40px; }
-    .mlc-bar {
-      flex: 1; border-radius: 2px 2px 0 0;
-      background: linear-gradient(to top, var(--teal), #34d399);
-      opacity: .8;
-    }
-    .donut-wrap { display: flex; justify-content: center; align-items: center; height: 56px; }
-    .donut-svg circle { transition: stroke-dasharray .4s; }
-    .mockup-recent { background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; }
-    .m-recent-title { font-size: .65rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
-    .m-recent-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border); }
-    .m-recent-item:last-child { border: none; }
-    .m-recent-name { font-size: .63rem; font-weight: 600; color: var(--ink-light); }
-    .m-recent-time { font-size: .58rem; color: var(--muted); }
-    .m-badge { font-size: .55rem; font-weight: 700; border-radius: 4px; padding: 2px 6px; }
-    .m-badge-green { background: #dcfce7; color: #15803d; }
-    .m-badge-amber { background: #fef9c3; color: #a16207; }
-    .m-badge-blue  { background: #dbeafe; color: #1d4ed8; }
 
-    /* ─── FEATURES SECTION ──────────────────────────── */
-    .features-section { padding: 90px 0; background: var(--bg-soft); position: relative; z-index: 1; }
-    .section-label {
-      text-align: center; font-size: .78rem; font-weight: 700;
+    .hero-glow-orb {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, rgba(16,185,129,.22) 0%, rgba(6,182,212,.14) 50%, transparent 70%);
+      border-radius: 50%;
+      filter: blur(50px);
+      z-index: 0;
+      pointer-events: none;
+      animation: orbBreathe 6s ease-in-out infinite alternate;
+    }
+
+    @keyframes orbBreathe {
+      0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
+      100% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+    }
+
+    .hero-mockup-card {
+      position: relative; z-index: 1;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 28px 70px -12px rgba(15,23,42,.35), 0 0 0 1px rgba(255,255,255,0.06);
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+      color: #fff;
+    }
+
+    .mockup-header-bar {
+      background: rgba(30, 41, 59, 0.9);
+      padding: 12px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .mockup-brand {
+      display: flex; align-items: center; gap: 8px;
+      font-size: .82rem; font-weight: 800; color: #fff;
+    }
+    .mockup-live-pill {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase;
+      background: rgba(16,185,129,.2); color: #34d399;
+      border: 1px solid rgba(16,185,129,.4);
+      padding: 2px 8px; border-radius: 12px;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .mockup-live-pill::before { content: '●'; font-size: .5rem; }
+
+    .mockup-content { padding: 18px; }
+    .mockup-kpi-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-bottom: 14px;
+    }
+    .mockup-kpi {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm); padding: 10px 12px;
+    }
+    .mkpi-label { font-size: .65rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: .04em; }
+    .mkpi-val { font-size: 1.25rem; font-weight: 900; color: #fff; font-family: var(--font-heading); margin-top: 2px; }
+    .mkpi-sub { font-size: .62rem; color: #34d399; font-weight: 700; margin-top: 2px; }
+
+    .mockup-chart-row {
+      display: grid; grid-template-columns: 1.4fr 1fr;
+      gap: 10px; margin-bottom: 12px;
+    }
+    .mockup-chart-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm); padding: 12px;
+    }
+    .mchart-title { font-size: .7rem; font-weight: 700; color: #cbd5e1; margin-bottom: 10px; display: flex; justify-content: space-between; }
+    .bar-chart-preview { display: flex; align-items: flex-end; gap: 6px; height: 50px; }
+    .b-bar {
+      flex: 1; border-radius: 3px 3px 0 0;
+      background: linear-gradient(to top, #059669, #34d399);
+      transition: height .4s ease;
+    }
+
+    .mockup-recent-feed {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm); padding: 10px 12px;
+    }
+    .mfeed-title { font-size: .68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; }
+    .mfeed-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: .68rem;
+    }
+    .mfeed-item:last-child { border: none; }
+
+    /* Floating Micro-Badges */
+    .floating-badge {
+      position: absolute; z-index: 3;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 12px; padding: 10px 16px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+      display: flex; align-items: center; gap: 10px;
+      font-size: .78rem; font-weight: 700; color: #fff;
+      pointer-events: none;
+    }
+    .floating-badge.top-right {
+      top: -20px; right: -24px;
+      animation: floatSlow 5s ease-in-out infinite alternate;
+    }
+    .floating-badge.bottom-left {
+      bottom: -22px; left: -24px;
+      animation: floatSlow 5.5s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes floatSlow {
+      0% { transform: translateY(0px); }
+      100% { transform: translateY(-12px); }
+    }
+
+    .badge-icon-box {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .95rem; flex-shrink: 0;
+    }
+    .badge-icon-box.green { background: rgba(16,185,129,.2); color: #34d399; }
+    .badge-icon-box.cyan  { background: rgba(6,182,212,.2);  color: #22d3ee; }
+
+    /* ─── REGIONAL TRUST MARQUEE ────────────────────── */
+    .marquee-section {
+      padding: 30px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-soft);
+      overflow: hidden;
+      position: relative;
+    }
+    .marquee-track {
+      display: flex; width: max-content;
+      animation: marqueeScroll 28s linear infinite;
+      gap: 36px; align-items: center;
+    }
+    .marquee-track:hover { animation-play-state: paused; }
+    .marquee-item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: .88rem; font-weight: 700; color: var(--ink-light);
+      white-space: nowrap; opacity: 0.85;
+    }
+
+    @keyframes marqueeScroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* ─── INTERACTIVE LIVE PRODUCT TOUR ─────────────── */
+    .tour-section {
+      padding: 100px 0;
+      background: #ffffff;
+      position: relative;
+    }
+    .section-eyebrow {
+      text-align: center; font-size: .8rem; font-weight: 800;
       letter-spacing: .08em; text-transform: uppercase; color: var(--teal);
       margin-bottom: 12px;
     }
-    .section-title {
-      text-align: center; font-size: clamp(1.8rem, 3vw, 2.4rem);
-      font-weight: 900; letter-spacing: -.03em; color: var(--ink);
+    .section-headline {
+      text-align: center; font-size: clamp(2rem, 3.5vw, 2.7rem);
+      font-weight: 900; letter-spacing: -.04em; color: var(--ink);
       margin-bottom: 14px;
     }
-    .section-sub {
-      text-align: center; font-size: 1rem; color: var(--muted);
-      font-weight: 500; max-width: 500px; margin: 0 auto 52px;
+    .section-subtext {
+      text-align: center; font-size: 1.05rem; color: var(--muted);
+      max-width: 580px; margin: 0 auto 44px;
     }
 
+    .tour-nav-tabs {
+      display: flex; justify-content: center; gap: 10px;
+      flex-wrap: wrap; margin-bottom: 36px;
+    }
+    .tour-tab-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px; border-radius: var(--radius-pill);
+      font-size: .9rem; font-weight: 700;
+      background: var(--bg-soft); border: 1.5px solid var(--border);
+      color: var(--ink-light); cursor: pointer;
+      transition: all var(--transition);
+    }
+    .tour-tab-btn:hover { border-color: var(--teal); color: var(--teal); }
+    .tour-tab-btn.active {
+      background: var(--ink); border-color: var(--ink);
+      color: #fff; box-shadow: 0 6px 18px rgba(15,23,42,.25);
+    }
+
+    .tour-showcase-box {
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+      padding: 32px; color: #fff;
+      min-height: 400px;
+      transition: all .3s ease;
+    }
+
+    .tour-view-panel { display: none; animation: fadeIn .3s ease; }
+    .tour-view-panel.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── INSTITUTIONAL ROI CALCULATOR ──────────────── */
+    .calc-section {
+      padding: 90px 0;
+      background: var(--bg-soft);
+      position: relative;
+    }
+    .calc-grid {
+      display: grid; grid-template-columns: 1fr 1.1fr;
+      gap: 40px; align-items: center;
+      background: #ffffff; border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 48px;
+      box-shadow: var(--shadow-card);
+    }
+    .calc-controls { display: flex; flex-direction: column; gap: 24px; }
+    .calc-slider-group { display: flex; flex-direction: column; gap: 8px; }
+    .calc-slider-header {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: .9rem; font-weight: 700; color: var(--ink);
+    }
+    .calc-slider-val {
+      font-family: var(--font-heading);
+      font-size: 1.15rem; font-weight: 800; color: var(--teal);
+    }
+    input[type="range"] {
+      width: 100%; height: 8px; border-radius: 4px;
+      background: #e2e8f0; outline: none; -webkit-appearance: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 22px; height: 22px;
+      border-radius: 50%; background: var(--teal);
+      cursor: pointer; box-shadow: 0 2px 8px rgba(5,150,105,.4);
+      transition: transform .1s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+
+    .calc-results-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .calc-stat-box {
+      background: var(--bg-soft); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 22px;
+      display: flex; flex-direction: column;
+    }
+    .csb-val {
+      font-family: var(--font-heading);
+      font-size: 1.8rem; font-weight: 900; color: var(--teal); line-height: 1.1;
+      margin-bottom: 6px;
+    }
+    .csb-lbl { font-size: .82rem; font-weight: 600; color: var(--muted); }
+
+    /* ─── CORE MODULES (FEATURES) ───────────────────── */
+    .features-section { padding: 90px 0; background: #ffffff; }
     .features-grid {
       display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
+      gap: 24px;
     }
     .feature-card {
-      background: #fff; border: 1px solid var(--border);
+      background: var(--bg-soft); border: 1px solid var(--border);
       border-radius: var(--radius-md); padding: 28px 24px;
-      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-      position: relative; overflow: hidden;
+      transition: all var(--transition); position: relative; overflow: hidden;
     }
-    .feature-card::before {
-      content: ''; position: absolute; top: 0; left: 0;
-      width: 3px; height: 0; background: var(--teal);
-      transition: height .25s ease; border-radius: 0 0 2px 0;
+    .feature-card:hover {
+      transform: translateY(-4px); background: #ffffff;
+      box-shadow: var(--shadow-card); border-color: rgba(5,150,105,.3);
     }
-    .feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-card); border-color: rgba(5,150,105,.2); }
-    .feature-card:hover::before { height: 100%; }
-
     .feature-icon {
-      width: 44px; height: 44px; border-radius: var(--radius-sm);
+      width: 48px; height: 48px; border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.3rem; margin-bottom: 16px;
+      font-size: 1.4rem; margin-bottom: 18px;
     }
-    .icon-teal   { background: #d1fae5; }
-    .icon-blue   { background: #dbeafe; }
-    .icon-violet { background: #ede9fe; }
-    .icon-amber  { background: #fef3c7; }
-    .icon-rose   { background: #ffe4e6; }
-    .icon-slate  { background: #f1f5f9; }
+    .icon-teal   { background: #d1fae5; color: #047857; }
+    .icon-amber  { background: #fef3c7; color: #b45309; }
+    .icon-blue   { background: #dbeafe; color: #1d4ed8; }
+    .icon-violet { background: #ede9fe; color: #6d28d9; }
+    .icon-rose   { background: #ffe4e6; color: #be123c; }
+    .icon-slate  { background: #f1f5f9; color: #334155; }
 
-    .feature-title {
-      font-size: 1rem; font-weight: 800; color: var(--ink); margin-bottom: 6px;
-    }
-    .feature-desc { font-size: .875rem; color: var(--muted); line-height: 1.65; }
+    .feature-title { font-size: 1.05rem; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
+    .feature-desc { font-size: .88rem; color: var(--muted); line-height: 1.6; }
 
     /* ─── CTA BANNER ────────────────────────────────── */
-    .cta-section { padding: 90px 0; position: relative; z-index: 1; }
+    .cta-section { padding: 90px 0; }
     .cta-card {
-      background: var(--ink); border-radius: 24px;
+      background: var(--ink); border-radius: 28px;
       padding: 64px 48px; text-align: center;
-      position: relative; overflow: hidden;
+      position: relative; overflow: hidden; color: #fff;
     }
     .cta-card::before {
-      content: ''; position: absolute; top: -120px; right: -120px;
-      width: 400px; height: 400px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(5,150,105,.25), transparent 70%);
+      content: ''; position: absolute; top: -140px; right: -140px;
+      width: 450px; height: 450px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(16,185,129,.28), transparent 70%);
       pointer-events: none;
-    }
-    .cta-card::after {
-      content: ''; position: absolute; bottom: -80px; left: -80px;
-      width: 300px; height: 300px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(2,132,199,.15), transparent 70%);
-      pointer-events: none;
-    }
-    .cta-eyebrow {
-      font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-      color: rgba(255,255,255,.5); margin-bottom: 16px;
     }
     .cta-headline {
-      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
-      font-weight: 900; letter-spacing: -.04em; line-height: 1.18;
-      color: #fff; margin-bottom: 14px; position: relative; z-index: 1;
+      font-size: clamp(2rem, 3.8vw, 2.8rem);
+      font-weight: 900; letter-spacing: -.04em; margin-bottom: 14px;
     }
-    .cta-headline .accent { color: #34d399; }
     .cta-sub {
-      font-size: 1rem; color: rgba(255,255,255,.6); font-weight: 500;
-      max-width: 440px; margin: 0 auto 36px; line-height: 1.7; position: relative; z-index: 1;
+      font-size: 1.05rem; color: rgba(255,255,255,.7);
+      max-width: 500px; margin: 0 auto 36px;
     }
-    .cta-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; position: relative; z-index: 1; }
+    .cta-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
     .btn-cta-primary {
-      display: inline-flex; align-items: center; gap: 8px;
       font-size: .95rem; font-weight: 700; color: var(--ink);
       background: #fff; border-radius: var(--radius-pill);
-      padding: 13px 28px; transition: background var(--transition), transform var(--transition);
+      padding: 14px 30px; transition: all var(--transition);
     }
-    .btn-cta-primary:hover { background: #f0fdf4; transform: translateY(-2px); }
-    .btn-cta-ghost {
-      display: inline-flex; align-items: center; gap: 8px;
-      font-size: .95rem; font-weight: 700; color: #fff;
-      border: 1.5px solid rgba(255,255,255,.25); border-radius: var(--radius-pill);
-      padding: 12px 26px; transition: border-color var(--transition), background var(--transition);
-    }
-    .btn-cta-ghost:hover { border-color: rgba(255,255,255,.6); background: rgba(255,255,255,.05); }
+    .btn-cta-primary:hover { background: #f0fdf4; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,255,255,.3); }
 
     /* ─── FOOTER ────────────────────────────────────── */
-    .footer { border-top: 1px solid var(--border); padding: 48px 0 32px; position: relative; z-index: 1; }
+    .footer { border-top: 1px solid var(--border); padding: 56px 0 32px; background: var(--bg-soft); }
     .footer-inner {
       display: grid; grid-template-columns: 1.8fr 1fr 1fr 1fr;
       gap: 40px; margin-bottom: 40px;
     }
-    .footer-brand img { height: 38px; object-fit: contain; margin-bottom: 12px; }
-    .footer-brand p { font-size: .85rem; color: var(--muted); max-width: 220px; line-height: 1.6; }
-    .footer-col-title { font-size: .8rem; font-weight: 800; color: var(--ink); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 14px; }
-    .footer-links { list-style: none; display: flex; flex-direction: column; gap: 9px; }
-    .footer-links a { font-size: .875rem; color: var(--muted); font-weight: 500; transition: color var(--transition); }
+    .footer-brand img { height: 40px; object-fit: contain; margin-bottom: 14px; }
+    .footer-brand p { font-size: .88rem; color: var(--muted); max-width: 240px; line-height: 1.6; }
+    .footer-col-title { font-size: .82rem; font-weight: 800; color: var(--ink); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 16px; }
+    .footer-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-links a { font-size: .88rem; color: var(--muted); font-weight: 500; transition: color var(--transition); }
     .footer-links a:hover { color: var(--teal); }
-    .footer-contact-item { font-size: .875rem; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+    .footer-contact-item { font-size: .88rem; color: var(--muted); margin-bottom: 8px; }
     .footer-bottom {
       display: flex; align-items: center; justify-content: space-between;
       padding-top: 24px; border-top: 1px solid var(--border);
-      font-size: .8rem; color: var(--muted); flex-wrap: wrap; gap: 8px;
+      font-size: .82rem; color: var(--muted); flex-wrap: wrap; gap: 8px;
     }
 
-    /* ─── EDUBOT WIDGET ─────────────────────────────── */
+    /* ─── EDUBOT OFFLINE ASSISTANT ─────────────────── */
     #edubot-toggle {
       position: fixed; bottom: 28px; right: 28px; z-index: 1000;
       width: 58px; height: 58px; border-radius: 50%;
@@ -346,9 +541,9 @@
 
     #edubot-window {
       position: fixed; bottom: 100px; right: 28px; z-index: 999;
-      width: 360px; background: #fff;
+      width: 370px; background: #fff;
       border: 1px solid var(--border); border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(15,23,42,.16);
+      box-shadow: 0 24px 64px rgba(15,23,42,.2);
       display: none; flex-direction: column;
       overflow: hidden; animation: slideUp .22s ease;
     }
@@ -361,15 +556,15 @@
 
     .bot-header {
       background: var(--ink); padding: 16px 20px;
-      display: flex; align-items: center; gap: 12px;
+      display: flex; align-items: center; gap: 12px; color: #fff;
     }
     .bot-avatar {
       width: 36px; height: 36px; border-radius: 50%;
       background: var(--teal); display: flex; align-items: center;
       justify-content: center; font-size: 1.1rem; flex-shrink: 0;
     }
-    .bot-header-info h4 { font-size: .9rem; font-weight: 700; color: #fff; }
-    .bot-header-info p  { font-size: .72rem; color: rgba(255,255,255,.55); }
+    .bot-header-info h4 { font-size: .92rem; font-weight: 700; color: #fff; }
+    .bot-header-info p  { font-size: .72rem; color: rgba(255,255,255,.6); }
     .bot-status-dot {
       width: 8px; height: 8px; border-radius: 50%; background: #34d399;
       display: inline-block; margin-right: 5px;
@@ -378,30 +573,24 @@
     .bot-messages {
       flex: 1; overflow-y: auto; padding: 16px;
       display: flex; flex-direction: column; gap: 12px; max-height: 320px;
-      scrollbar-width: thin;
     }
     .bot-msg {
       max-width: 88%; padding: 10px 14px; border-radius: 14px;
       font-size: .85rem; line-height: 1.55; font-weight: 500;
-      animation: msgIn .18s ease;
     }
-    @keyframes msgIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
     .bot-msg.bot { background: var(--bg-soft); color: var(--ink); border-radius: 4px 14px 14px 14px; align-self: flex-start; }
     .bot-msg.user { background: var(--teal); color: #fff; border-radius: 14px 4px 14px 14px; align-self: flex-end; }
-    .bot-typing { display: flex; align-items: center; gap: 4px; padding: 10px 14px; background: var(--bg-soft); border-radius: 4px 14px 14px 14px; align-self: flex-start; width: fit-content; }
+    .bot-typing { display: flex; align-items: center; gap: 4px; padding: 10px 14px; background: var(--bg-soft); border-radius: 4px 14px 14px 14px; align-self: flex-start; }
     .bot-typing span { width: 7px; height: 7px; background: var(--muted); border-radius: 50%; animation: bounce .9s infinite; }
     .bot-typing span:nth-child(2) { animation-delay: .15s; }
     .bot-typing span:nth-child(3) { animation-delay: .30s; }
     @keyframes bounce { 0%,80%,100% { transform: scale(1); } 40% { transform: scale(1.4); } }
 
-    .bot-quick-replies {
-      padding: 0 16px 10px; display: flex; flex-wrap: wrap; gap: 7px;
-    }
+    .bot-quick-replies { padding: 0 16px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
     .qr-btn {
-      font-size: .75rem; font-weight: 600; color: var(--teal);
+      font-size: .75rem; font-weight: 600; color: var(--teal-dark);
       background: var(--teal-light); border: none; border-radius: var(--radius-pill);
-      padding: 5px 12px; cursor: pointer;
-      transition: background var(--transition), color var(--transition);
+      padding: 5px 12px; cursor: pointer; transition: all var(--transition);
     }
     .qr-btn:hover { background: var(--teal); color: #fff; }
 
@@ -411,40 +600,42 @@
     }
     #bot-input {
       flex: 1; border: 1.5px solid var(--border); border-radius: var(--radius-pill);
-      padding: 8px 14px; font-size: .85rem; font-family: var(--font);
-      outline: none; transition: border-color var(--transition); color: var(--ink);
+      padding: 8px 14px; font-size: .85rem; font-family: var(--font-body);
+      outline: none; transition: border-color var(--transition);
     }
     #bot-input:focus { border-color: var(--teal); }
     #bot-send {
       width: 36px; height: 36px; border-radius: 50%; border: none;
       background: var(--teal); color: #fff; cursor: pointer; font-size: .9rem;
       display: flex; align-items: center; justify-content: center;
-      transition: background var(--transition);
     }
-    #bot-send:hover { background: var(--teal-dark); }
 
-    /* ─── Responsive ─────────────────────────────────── */
-    @media (max-width: 960px) {
+    /* ─── Responsive Queries ─────────────────────────── */
+    @media (max-width: 990px) {
       .hero-grid { grid-template-columns: 1fr; }
-      .hero-sub { max-width: 100%; }
-      .hero-right { display: none; }
+      .hero-mockup-wrapper { max-width: 600px; margin: 0 auto; }
+      .calc-grid { grid-template-columns: 1fr; }
       .features-grid { grid-template-columns: repeat(2, 1fr); }
       .footer-inner { grid-template-columns: 1fr 1fr; }
       .nav-links { display: none; }
     }
-    @media (max-width: 600px) {
+    @media (max-width: 640px) {
       .container { padding: 0 20px; }
       .navbar-inner { padding: 0 20px; }
-      .hero { padding: 60px 0 50px; }
-      .hero-headline { font-size: 2.2rem; }
+      .hero { padding: 50px 0 40px; }
+      .hero-headline { font-size: 2.3rem; }
       .features-grid { grid-template-columns: 1fr; }
+      .calc-results-grid { grid-template-columns: 1fr; }
+      .calc-grid { padding: 28px 20px; }
       .footer-inner { grid-template-columns: 1fr; }
-      .cta-card { padding: 48px 24px; }
+      .floating-badge { display: none; }
       #edubot-window { width: calc(100vw - 40px); right: 20px; }
     }
   </style>
 </head>
 <body>
+
+  <div class="ambient-glow-mesh"></div>
 
   <!-- ══════════════ NAVBAR ══════════════ -->
   <nav class="navbar">
@@ -454,25 +645,26 @@
              onerror="this.onerror=null;this.src='frontend/assets/logo_primary.png';" />
       </a>
       <ul class="nav-links">
-        <li><a href="#features">Features</a></li>
-        <li><a href="#contact">Contact</a></li>
+        <li><a href="#product-tour">Live Demo</a></li>
+        <li><a href="#roi-calculator">Savings Calculator</a></li>
+        <li><a href="#features">Modules</a></li>
         <li><a href="super-admin.html">Super Admin</a></li>
       </ul>
       <div class="nav-actions">
         <a class="btn-ghost" href="auth.html">Log In</a>
-        <a class="btn-primary" href="auth.html">Get Started Free</a>
+        <a class="btn-primary" href="auth.html">Launch Platform →</a>
       </div>
     </div>
   </nav>
 
-  <!-- ══════════════ HERO ══════════════ -->
+  <!-- ══════════════ HERO SECTION ══════════════ -->
   <section class="hero">
     <div class="container">
       <div class="hero-grid">
 
-        <!-- Left -->
+        <!-- Left Column -->
         <div class="hero-left">
-          <div class="hero-badge">Now live in Ghana</div>
+          <div class="hero-badge">Unified Multi-School Platform • Ghana</div>
 
           <h1 class="hero-headline">
             One Platform.<br/>
@@ -481,104 +673,117 @@
           </h1>
 
           <p class="hero-sub">
-            EduManage360 helps schools manage students, academics, staff,
-            finances and operations — from one secure, unified platform
-            that works 100% offline.
+            EduManage360 empowers Ghanaian institutions to automate BECE/CSSPS enrollment, WAEC broadsheets, fee collection, attendance, and student operations — with 100% offline resilience.
           </p>
 
           <div class="hero-ctas">
             <a class="btn-hero-primary" href="auth.html">
               Get Started Free →
             </a>
-            <a class="btn-hero-ghost" href="auth.html">
+            <a class="btn-hero-ghost" href="#product-tour">
               <div class="play-circle">▶</div>
-              Watch Demo
+              Explore Live Modules
             </a>
           </div>
 
           <div class="trust-badges">
-            <span class="trust-badge">🔒 Secure & Reliable</span>
-            <span class="trust-badge">📴 Works Offline</span>
-            <span class="trust-badge">🏫 Multi-School</span>
-            <span class="trust-badge">🇬🇭 Ghana-Built</span>
+            <span class="trust-badge">📴 100% Offline Ready</span>
+            <span class="trust-badge">🇬🇭 Ghana Standards (GES)</span>
+            <span class="trust-badge">📜 WAEC &amp; Terminal Broadsheets</span>
+            <span class="trust-badge">🔒 Bank-Grade Security</span>
           </div>
         </div>
 
-        <!-- Right — Dashboard Mockup -->
-        <div class="hero-right">
-          <div class="hero-mockup">
-            <div class="mockup-topbar">
-              <span class="mockup-topbar-brand">⬡ EduManage360</span>
-              <span class="mockup-topbar-user">Welcome back, Administrator 👋</span>
+        <!-- Right Column (3D Hero Mockup + Floating Badges) -->
+        <div class="hero-mockup-wrapper">
+          <div class="hero-glow-orb"></div>
+
+          <!-- Floating Telemetry Badges -->
+          <div class="floating-badge top-right">
+            <div class="badge-icon-box green">✨</div>
+            <div>
+              <div>Terminal Reports</div>
+              <div style="font-size:0.65rem; color:#34d399; font-weight:600;">100% Generated • 0 Errors</div>
             </div>
-            <div class="mockup-body">
-              <p class="mockup-greeting">Dashboard · Academic Year 2024/2025</p>
-              <div class="mockup-stats">
-                <div class="m-stat">
-                  <div class="m-stat-val">1,284</div>
-                  <div class="m-stat-lbl">Students</div>
-                  <div class="m-stat-trend">▲ 12% this month</div>
+          </div>
+
+          <div class="floating-badge bottom-left">
+            <div class="badge-icon-box cyan">💳</div>
+            <div>
+              <div>Fee Receipt Logged</div>
+              <div style="font-size:0.65rem; color:#22d3ee; font-weight:600;">GHS 1,450 • SMS Dispatched</div>
+            </div>
+          </div>
+
+          <!-- Main Interactive Mockup Card -->
+          <div class="hero-mockup-card">
+            <div class="mockup-header-bar">
+              <div class="mockup-brand">
+                <span>⬡ EduManage360 Enterprise</span>
+              </div>
+              <div class="mockup-live-pill">Live Telemetry</div>
+            </div>
+
+            <div class="mockup-content">
+              <!-- KPI Row -->
+              <div class="mockup-kpi-row">
+                <div class="mockup-kpi">
+                  <div class="mkpi-label">Active Students</div>
+                  <div class="mkpi-val">1,284</div>
+                  <div class="mkpi-sub">▲ 100% Enrolled</div>
                 </div>
-                <div class="m-stat">
-                  <div class="m-stat-val">86</div>
-                  <div class="m-stat-lbl">Teachers</div>
-                  <div class="m-stat-trend">▲ 6% this term</div>
+                <div class="mockup-kpi">
+                  <div class="mkpi-label">Attendance</div>
+                  <div class="mkpi-val">98.4%</div>
+                  <div class="mkpi-sub">Today Marked</div>
                 </div>
-                <div class="m-stat">
-                  <div class="m-stat-val">42</div>
-                  <div class="m-stat-lbl">Classes</div>
-                  <div class="m-stat-trend">▲ 5% this term</div>
-                </div>
-                <div class="m-stat">
-                  <div class="m-stat-val">12</div>
-                  <div class="m-stat-lbl">Institutions</div>
-                  <div class="m-stat-trend">All active</div>
+                <div class="mockup-kpi">
+                  <div class="mkpi-label">Fee Recovery</div>
+                  <div class="mkpi-val">94.2%</div>
+                  <div class="mkpi-sub">Term Cleared</div>
                 </div>
               </div>
 
-              <div class="mockup-row">
-                <div class="mockup-chart-box">
-                  <div class="m-chart-title">Student Overview</div>
-                  <div class="mini-line-chart">
-                    <div class="mlc-bar" style="height:55%"></div>
-                    <div class="mlc-bar" style="height:72%"></div>
-                    <div class="mlc-bar" style="height:60%"></div>
-                    <div class="mlc-bar" style="height:88%"></div>
-                    <div class="mlc-bar" style="height:75%"></div>
-                    <div class="mlc-bar" style="height:95%"></div>
-                    <div class="mlc-bar" style="height:82%"></div>
+              <!-- Mini Charts Row -->
+              <div class="mockup-chart-row">
+                <div class="mockup-chart-card">
+                  <div class="mchart-title">
+                    <span>Enrollment Growth</span>
+                    <span style="color:#34d399;">+18% Year</span>
+                  </div>
+                  <div class="bar-chart-preview">
+                    <div class="b-bar" style="height:40%;"></div>
+                    <div class="b-bar" style="height:60%;"></div>
+                    <div class="b-bar" style="height:55%;"></div>
+                    <div class="b-bar" style="height:75%;"></div>
+                    <div class="b-bar" style="height:88%;"></div>
+                    <div class="b-bar" style="height:70%;"></div>
+                    <div class="b-bar" style="height:95%;"></div>
+                    <div class="b-bar" style="height:100%;"></div>
                   </div>
                 </div>
-                <div class="mockup-chart-box">
-                  <div class="m-chart-title">Pass Rate</div>
-                  <div class="donut-wrap">
-                    <svg width="56" height="56" viewBox="0 0 56 56">
-                      <circle cx="28" cy="28" r="22" fill="none" stroke="#e2e8f0" stroke-width="8"/>
-                      <circle cx="28" cy="28" r="22" fill="none" stroke="#059669" stroke-width="8"
-                              stroke-dasharray="117 21" stroke-linecap="round"
-                              transform="rotate(-90 28 28)"/>
-                      <text x="28" y="33" text-anchor="middle" font-size="11" font-weight="800" fill="#0f172a">85%</text>
-                    </svg>
-                  </div>
+
+                <div class="mockup-chart-card" style="text-align:center;">
+                  <div class="mchart-title" style="justify-content:center;">WAEC Pass Rate</div>
+                  <div style="font-size:1.5rem; font-weight:900; font-family:var(--font-heading); color:#34d399; margin-top:4px;">96.8%</div>
+                  <div style="font-size:0.65rem; color:#94a3b8;">Distinction Average</div>
                 </div>
               </div>
 
-              <div class="mockup-recent">
-                <div class="m-recent-title">Recent Activity</div>
-                <div class="m-recent-item">
-                  <span class="m-recent-name">New student admission</span>
-                  <span class="m-badge m-badge-green">Approved</span>
-                  <span class="m-recent-time">15 min ago</span>
+              <!-- Live Operations Feed -->
+              <div class="mockup-recent-feed">
+                <div class="mfeed-title">Recent Operational Activity</div>
+                <div class="mfeed-item">
+                  <span>🎓 CSSPS Placement List Imported (Form 1 STEM)</span>
+                  <span style="color:#34d399; font-weight:700;">Completed</span>
                 </div>
-                <div class="m-recent-item">
-                  <span class="m-recent-name">Fee payment recorded</span>
-                  <span class="m-badge m-badge-blue">Paid</span>
-                  <span class="m-recent-time">1 hr ago</span>
+                <div class="mfeed-item">
+                  <span>💰 MoMo Fee Settlement (Kofi Mensah)</span>
+                  <span style="color:#22d3ee; font-weight:700;">GHS 850</span>
                 </div>
-                <div class="m-recent-item">
-                  <span class="m-recent-name">Term results published</span>
-                  <span class="m-badge m-badge-amber">Pending</span>
-                  <span class="m-recent-time">3 hrs ago</span>
+                <div class="mfeed-item">
+                  <span>📜 3-Year Cumulative Broadsheet Generated</span>
+                  <span style="color:#fbbf24; font-weight:700;">Approved</span>
                 </div>
               </div>
             </div>
@@ -589,49 +794,324 @@
     </div>
   </section>
 
-  <!-- ══════════════ FEATURES ══════════════ -->
+  <!-- ══════════════ REGIONAL TRUST MARQUEE ══════════════ -->
+  <section class="marquee-section">
+    <div class="marquee-track">
+      <div class="marquee-item">🇬🇭 Greater Accra STEM Hub</div>
+      <div class="marquee-item">🏛️ Ashanti Regional Academic Trust</div>
+      <div class="marquee-item">🏫 Kumasi Day &amp; Boarding High</div>
+      <div class="marquee-item">📚 Central Region Model Schools</div>
+      <div class="marquee-item">🎓 Northern Regional Technical Colleges</div>
+      <div class="marquee-item">🇬🇭 Western Regional Educational Directorate</div>
+      <!-- Loop duplicate -->
+      <div class="marquee-item">🇬🇭 Greater Accra STEM Hub</div>
+      <div class="marquee-item">🏛️ Ashanti Regional Academic Trust</div>
+      <div class="marquee-item">🏫 Kumasi Day &amp; Boarding High</div>
+      <div class="marquee-item">📚 Central Region Model Schools</div>
+      <div class="marquee-item">🎓 Northern Regional Technical Colleges</div>
+      <div class="marquee-item">🇬🇭 Western Regional Educational Directorate</div>
+    </div>
+  </section>
+
+  <!-- ══════════════ INTERACTIVE LIVE PRODUCT TOUR ══════════════ -->
+  <section class="tour-section" id="product-tour">
+    <div class="container">
+      <div class="section-eyebrow">Interactive Product Tour</div>
+      <h2 class="section-headline">Experience the System Live</h2>
+      <p class="section-subtext">Click through each operational module to preview how EduManage360 streamlines your school's daily workflows.</p>
+
+      <!-- Nav Tabs -->
+      <div class="tour-nav-tabs">
+        <button class="tour-tab-btn active" onclick="switchTourTab('dashboard')">📊 Executive Dashboard</button>
+        <button class="tour-tab-btn" onclick="switchTourTab('broadsheet')">📜 Terminal Broadsheet</button>
+        <button class="tour-tab-btn" onclick="switchTourTab('fees')">💰 Fee Ledger</button>
+        <button class="tour-tab-btn" onclick="switchTourTab('attendance')">📋 1-Tap Attendance</button>
+      </div>
+
+      <!-- Showcase Box -->
+      <div class="tour-showcase-box">
+        
+        <!-- Panel 1: Dashboard -->
+        <div class="tour-view-panel active" id="tour-dashboard">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+            <div>
+              <h3 style="font-size:1.15rem; color:#fff; margin-bottom:4px;">📊 Institutional Executive Overview</h3>
+              <p style="font-size:0.82rem; color:#94a3b8;">High-level visibility over student enrollment, staff attendance, and revenue.</p>
+            </div>
+            <span style="font-size:0.75rem; background:rgba(16,185,129,0.2); color:#34d399; padding:4px 12px; border-radius:12px; font-weight:700;">Live Feed Active</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+            <div style="background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:16px;">
+              <div style="font-size:0.72rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">Total Enrolled</div>
+              <div style="font-size:1.6rem; font-weight:900; color:#818cf8; font-family:var(--font-heading); margin-top:4px;">1,284</div>
+              <div style="font-size:0.72rem; color:#34d399; margin-top:2px;">▲ 720 Boys • 564 Girls</div>
+            </div>
+            <div style="background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:16px;">
+              <div style="font-size:0.72rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">Term Attendance</div>
+              <div style="font-size:1.6rem; font-weight:900; color:#34d399; font-family:var(--font-heading); margin-top:4px;">98.4%</div>
+              <div style="font-size:0.72rem; color:#94a3b8; margin-top:2px;">1,263 Present Today</div>
+            </div>
+            <div style="background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:16px;">
+              <div style="font-size:0.72rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">Term Fee Collection</div>
+              <div style="font-size:1.6rem; font-weight:900; color:#fbbf24; font-family:var(--font-heading); margin-top:4px;">GHS 428,500</div>
+              <div style="font-size:0.72rem; color:#34d399; margin-top:2px;">94.2% Collected</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 2: Broadsheet -->
+        <div class="tour-view-panel" id="tour-broadsheet">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+            <div>
+              <h3 style="font-size:1.15rem; color:#fff; margin-bottom:4px;">📜 Form 3 Science A — Terminal Broadsheet</h3>
+              <p style="font-size:0.82rem; color:#94a3b8;">Automatic score weighting, cumulative rank calculation, and remark suggestions.</p>
+            </div>
+            <span style="font-size:0.75rem; background:rgba(99,102,241,0.2); color:#a5b4fc; padding:4px 12px; border-radius:12px; font-weight:700;">GES / WAEC Mode</span>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:center;">
+              <thead>
+                <tr style="background:rgba(30,41,59,0.8); color:#cbd5e1; border-bottom:1px solid rgba(255,255,255,0.1);">
+                  <th style="text-align:left; padding:10px;">Student Name</th>
+                  <th style="padding:10px;">Math (100)</th>
+                  <th style="padding:10px;">English (100)</th>
+                  <th style="padding:10px;">Science (100)</th>
+                  <th style="padding:10px;">Total</th>
+                  <th style="padding:10px;">Rank</th>
+                  <th style="padding:10px;">Form Master Remark</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="text-align:left; padding:10px; font-weight:600;">Kofi Mensah</td>
+                  <td><span style="color:#34d399; font-weight:700;">88 (A1)</span></td>
+                  <td><span style="color:#22d3ee; font-weight:700;">76 (B2)</span></td>
+                  <td><span style="color:#34d399; font-weight:700;">92 (A1)</span></td>
+                  <td style="font-weight:800; color:#818cf8;">256.0</td>
+                  <td><span style="background:rgba(245,158,11,0.2); color:#fbbf24; padding:2px 8px; border-radius:8px; font-weight:800;">1st</span></td>
+                  <td style="color:#94a3b8; font-size:0.8rem;">Brilliant performance, keep it up.</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="text-align:left; padding:10px; font-weight:600;">Ama Serwaa</td>
+                  <td><span style="color:#22d3ee; font-weight:700;">74 (B2)</span></td>
+                  <td><span style="color:#34d399; font-weight:700;">82 (A1)</span></td>
+                  <td><span style="color:#34d399; font-weight:700;">85 (A1)</span></td>
+                  <td style="font-weight:800; color:#818cf8;">241.0</td>
+                  <td><span style="background:rgba(99,102,241,0.2); color:#a5b4fc; padding:2px 8px; border-radius:8px; font-weight:800;">2nd</span></td>
+                  <td style="color:#94a3b8; font-size:0.8rem;">Outstanding command of language.</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left; padding:10px; font-weight:600;">Kwame Boateng</td>
+                  <td><span style="color:#fbbf24; font-weight:700;">64 (C4)</span></td>
+                  <td><span style="color:#22d3ee; font-weight:700;">70 (B3)</span></td>
+                  <td><span style="color:#22d3ee; font-weight:700;">72 (B3)</span></td>
+                  <td style="font-weight:800; color:#818cf8;">206.0</td>
+                  <td><span style="background:rgba(255,255,255,0.1); color:#fff; padding:2px 8px; border-radius:8px; font-weight:800;">3rd</span></td>
+                  <td style="color:#94a3b8; font-size:0.8rem;">Good effort, can do better in Math.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Panel 3: Fees -->
+        <div class="tour-view-panel" id="tour-fees">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+            <div>
+              <h3 style="font-size:1.15rem; color:#fff; margin-bottom:4px;">💰 Live Fee &amp; Payment Ledger</h3>
+              <p style="font-size:0.82rem; color:#94a3b8;">Real-time payment reconciliations with instant automated receipt generation.</p>
+            </div>
+            <span style="font-size:0.75rem; background:rgba(16,185,129,0.2); color:#34d399; padding:4px 12px; border-radius:12px; font-weight:700;">Audit Trail Active</span>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left;">
+              <thead>
+                <tr style="background:rgba(30,41,59,0.8); color:#cbd5e1; border-bottom:1px solid rgba(255,255,255,0.1);">
+                  <th style="padding:10px;">Receipt #</th>
+                  <th style="padding:10px;">Student Name</th>
+                  <th style="padding:10px;">Class</th>
+                  <th style="padding:10px;">Amount Paid</th>
+                  <th style="padding:10px;">Method</th>
+                  <th style="padding:10px;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:10px; font-family:monospace; color:#38bdf8;">RCP-2026-081</td>
+                  <td style="font-weight:600;">Abena Osei</td>
+                  <td>Form 2 General Arts</td>
+                  <td style="color:#34d399; font-weight:700;">GHS 1,450.00</td>
+                  <td>MTN MoMo</td>
+                  <td><span style="background:rgba(16,185,129,0.2); color:#34d399; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">✅ Paid in Full</span></td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:10px; font-family:monospace; color:#38bdf8;">RCP-2026-080</td>
+                  <td style="font-weight:600;">Emmanuel Appiah</td>
+                  <td>Form 1 Business</td>
+                  <td style="color:#fbbf24; font-weight:700;">GHS 600.00</td>
+                  <td>Bank Deposit</td>
+                  <td><span style="background:rgba(245,158,11,0.2); color:#fbbf24; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">⏳ Partial Balance</span></td>
+                </tr>
+                <tr>
+                  <td style="padding:10px; font-family:monospace; color:#38bdf8;">RCP-2026-079</td>
+                  <td style="font-weight:600;">Yaa Pokuaa</td>
+                  <td>Form 3 Science</td>
+                  <td style="color:#34d399; font-weight:700;">GHS 1,200.00</td>
+                  <td>Cash at Bursary</td>
+                  <td><span style="background:rgba(16,185,129,0.2); color:#34d399; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">✅ Paid in Full</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Panel 4: Attendance -->
+        <div class="tour-view-panel" id="tour-attendance">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+            <div>
+              <h3 style="font-size:1.15rem; color:#fff; margin-bottom:4px;">📋 1-Tap Daily Class Attendance Register</h3>
+              <p style="font-size:0.82rem; color:#94a3b8;">High-velocity tap marking with instant live count tallies and SMS alerts.</p>
+            </div>
+            <span style="font-size:0.75rem; background:rgba(6,182,212,0.2); color:#22d3ee; padding:4px 12px; border-radius:12px; font-weight:700;">Form 2 Visual Arts</span>
+          </div>
+
+          <!-- Tally Pill -->
+          <div style="display:flex; gap:16px; background:rgba(30,41,59,0.6); padding:10px 16px; border-radius:8px; margin-bottom:16px; font-size:0.85rem; font-weight:700;">
+            <span style="color:#34d399;">✅ 42 Present</span>
+            <span>•</span>
+            <span style="color:#f87171;">❌ 2 Absent</span>
+            <span>•</span>
+            <span style="color:#fbbf24;">⏰ 1 Late</span>
+            <span style="margin-left:auto; color:#fff;">95.5% Attendance Rate</span>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(30,41,59,0.4); padding:8px 14px; border-radius:8px;">
+              <span style="font-weight:600;">Kojo Antwi (STU-084)</span>
+              <div style="display:flex; gap:4px;">
+                <span style="background:#10b981; color:#fff; padding:3px 10px; border-radius:6px; font-size:0.75rem; font-weight:800;">P</span>
+                <span style="background:rgba(255,255,255,0.1); color:#94a3b8; padding:3px 10px; border-radius:6px; font-size:0.75rem;">A</span>
+                <span style="background:rgba(255,255,255,0.1); color:#94a3b8; padding:3px 10px; border-radius:6px; font-size:0.75rem;">L</span>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(30,41,59,0.4); padding:8px 14px; border-radius:8px;">
+              <span style="font-weight:600;">Esi Nyarko (STU-085)</span>
+              <div style="display:flex; gap:4px;">
+                <span style="background:rgba(255,255,255,0.1); color:#94a3b8; padding:3px 10px; border-radius:6px; font-size:0.75rem;">P</span>
+                <span style="background:#ef4444; color:#fff; padding:3px 10px; border-radius:6px; font-size:0.75rem; font-weight:800;">A</span>
+                <span style="background:rgba(255,255,255,0.1); color:#94a3b8; padding:3px 10px; border-radius:6px; font-size:0.75rem;">L</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ INSTITUTIONAL ROI CALCULATOR ══════════════ -->
+  <section class="calc-section" id="roi-calculator">
+    <div class="container">
+      <div class="section-eyebrow">Institutional Efficiency</div>
+      <h2 class="section-headline">Calculate Your School's Savings</h2>
+      <p class="section-subtext">See how many hundreds of staff hours and financial resources EduManage360 preserves each academic term.</p>
+
+      <div class="calc-grid">
+        
+        <!-- Controls Column -->
+        <div class="calc-controls">
+          <h3 style="font-size:1.3rem; margin-bottom:4px;">Institutional Parameters</h3>
+          <p style="font-size:0.85rem; color:var(--muted); margin-bottom:16px;">Adjust the sliders to reflect your school's current size:</p>
+
+          <!-- Slider 1: Student Enrollment -->
+          <div class="calc-slider-group">
+            <div class="calc-slider-header">
+              <span>Student Enrollment:</span>
+              <span class="calc-slider-val" id="calcStudentDisplay">650 Students</span>
+            </div>
+            <input type="range" id="calcStudentRange" min="100" max="3000" step="50" value="650" oninput="updateCalculator()" />
+          </div>
+
+          <!-- Slider 2: Staff Count -->
+          <div class="calc-slider-group">
+            <div class="calc-slider-header">
+              <span>Teaching &amp; Admin Staff:</span>
+              <span class="calc-slider-val" id="calcStaffDisplay">45 Staff</span>
+            </div>
+            <input type="range" id="calcStaffRange" min="10" max="150" step="5" value="45" oninput="updateCalculator()" />
+          </div>
+        </div>
+
+        <!-- Real-Time Results Column -->
+        <div class="calc-results-grid">
+          <div class="calc-stat-box">
+            <div class="csb-val" id="calcHoursSaved">163 hrs</div>
+            <div class="csb-lbl">Staff Hours Saved / Term on Report Cards &amp; Averaging</div>
+          </div>
+          <div class="calc-stat-box">
+            <div class="csb-val" id="calcCostSaved">GHS 4,225</div>
+            <div class="csb-lbl">Annual Savings on Paper, Printing &amp; Manual Ledger Waste</div>
+          </div>
+          <div class="calc-stat-box">
+            <div class="csb-val" style="color:#0284c7;">100%</div>
+            <div class="csb-lbl">Elimination of Grade Calculation &amp; Ranking Errors</div>
+          </div>
+          <div class="calc-stat-box">
+            <div class="csb-val" style="color:#6366f1;">+98.5%</div>
+            <div class="csb-lbl">Fee Collection Velocity via Automated Receipts</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ CORE MODULES (FEATURES) ══════════════ -->
   <section class="features-section" id="features">
     <div class="container">
-      <div class="section-label">Core Modules</div>
-      <h2 class="section-title">Everything your school needs.<br/>Nothing it doesn't.</h2>
-
+      <div class="section-eyebrow">Enterprise Core Modules</div>
+      <h2 class="section-headline">Everything your school needs.<br/>Nothing it doesn't.</h2>
+      <p class="section-subtext">Engineered for Ghanaian institutions with zero bloated dependencies.</p>
 
       <div class="features-grid">
 
         <div class="feature-card">
           <div class="feature-icon icon-teal">🎓</div>
           <h3 class="feature-title">Student Management</h3>
-          <p class="feature-desc">Admissions, BECE/CSSPS enrollment, student profiles, house allocation and academic history — all in one place.</p>
+          <p class="feature-desc">BECE/CSSPS enrollment import, profile dossiers, house &amp; dormitory allocation, and academic history tracking.</p>
         </div>
 
         <div class="feature-card">
           <div class="feature-icon icon-amber">💰</div>
-          <h3 class="feature-title">Fee & Finance Tools</h3>
-          <p class="feature-desc">Record payments, track outstanding balances, generate receipts and monitor school revenue in real time.</p>
+          <h3 class="feature-title">Fee &amp; Finance Ledger</h3>
+          <p class="feature-desc">Automate student billing, log MoMo/Cash payments, track debtors, and generate instant printable receipts.</p>
         </div>
 
         <div class="feature-card">
           <div class="feature-icon icon-blue">📊</div>
-          <h3 class="feature-title">Reports & Broadsheets</h3>
-          <p class="feature-desc">One-click terminal report cards (PDF), class broadsheets, cumulative records and attendance summaries.</p>
+          <h3 class="feature-title">Reports &amp; Broadsheets</h3>
+          <p class="feature-desc">One-click terminal report cards (PDF), WAEC-standard broadsheets, and 3-year cumulative academic transcripts.</p>
         </div>
 
         <div class="feature-card">
           <div class="feature-icon icon-violet">✅</div>
-          <h3 class="feature-title">Attendance Tracking</h3>
-          <p class="feature-desc">Daily class attendance with instant reports, absence alerts and term-end attendance analytics per student.</p>
+          <h3 class="feature-title">1-Tap Attendance</h3>
+          <p class="feature-desc">Daily class register with instant pill toggles, real-time absence tallies, and period-by-period absence alerts.</p>
         </div>
 
         <div class="feature-card">
           <div class="feature-icon icon-rose">💬</div>
-          <h3 class="feature-title">Communication Hub</h3>
-          <p class="feature-desc">Internal staff messaging, parent portal access, exeat management, discipline records and announcements.</p>
+          <h3 class="feature-title">Communication &amp; Exeat</h3>
+          <p class="feature-desc">Parent portal access, boarding exeat management, discipline tracking, and bulk SMS broadcasting.</p>
         </div>
 
         <div class="feature-card">
           <div class="feature-icon icon-slate">🏫</div>
-          <h3 class="feature-title">Multi-School Admin</h3>
-          <p class="feature-desc">Manage all your schools from one super-admin control panel with role-based access for every institution.</p>
+          <h3 class="feature-title">Multi-School Super Admin</h3>
+          <p class="feature-desc">Manage an entire educational network or school group from a single unified super-admin dashboard.</p>
         </div>
 
       </div>
@@ -642,12 +1122,11 @@
   <section class="cta-section" id="contact">
     <div class="container">
       <div class="cta-card">
-        <p class="cta-eyebrow">Get in touch</p>
-        <h2 class="cta-headline">Ready to bring EduManage360<br/>to <span class="accent">your school?</span></h2>
-        <p class="cta-sub">Every school is unique. Get a plan tailored to your institution's size and needs — no commitment required.</p>
+        <h2 class="cta-headline">Ready to bring EduManage360<br/>to <span style="color:#34d399;">your school?</span></h2>
+        <p class="cta-sub">Join leading Ghanaian educational institutions. Elevate your school administration today with 100% offline control.</p>
         <div class="cta-actions">
-          <a class="btn-cta-primary" href="auth.html">Request a Demo →</a>
-          <a class="btn-cta-ghost" href="auth.html">Talk to Our Team</a>
+          <a class="btn-cta-primary" href="auth.html">Launch School Portal →</a>
+          <a class="btn-hero-ghost" style="color:#fff; background:transparent; border-color:rgba(255,255,255,0.3);" href="super-admin.html">Super Admin Console</a>
         </div>
       </div>
     </div>
@@ -663,26 +1142,28 @@
           <p>The unified school management system built for Ghanaian institutions.</p>
         </div>
         <div>
-          <h4 class="footer-col-title">Product</h4>
+          <h4 class="footer-col-title">Platform</h4>
           <ul class="footer-links">
-            <li><a href="#features">Features</a></li>
+            <li><a href="#product-tour">Live Demo</a></li>
+            <li><a href="#roi-calculator">Savings Calculator</a></li>
             <li><a href="auth.html">School Portal</a></li>
             <li><a href="super-admin.html">Super Admin</a></li>
           </ul>
         </div>
         <div>
-          <h4 class="footer-col-title">Company</h4>
+          <h4 class="footer-col-title">Modules</h4>
           <ul class="footer-links">
-            <li><a href="#contact">About Us</a></li>
-            <li><a href="#contact">Contact</a></li>
-            <li><a href="#contact">Request Demo</a></li>
+            <li><a href="#features">Academics &amp; Broadsheets</a></li>
+            <li><a href="#features">Fee Management</a></li>
+            <li><a href="#features">Attendance Registers</a></li>
+            <li><a href="#features">Parent Portal</a></li>
           </ul>
         </div>
         <div>
-          <h4 class="footer-col-title">Contact</h4>
-          <p class="footer-contact-item">🇬🇭 Kumasi, Ghana</p>
-          <p class="footer-contact-item">📧 info@edumanage360.com</p>
-          <p class="footer-contact-item">📞 +233 20 123 4567</p>
+          <h4 class="footer-col-title">Contact &amp; Support</h4>
+          <p class="footer-contact-item">🇬🇭 Kumasi &amp; Accra, Ghana</p>
+          <p class="footer-contact-item">📧 support@edumanage360.com</p>
+          <p class="footer-contact-item">📞 +233 24 000 0000</p>
         </div>
       </div>
       <div class="footer-bottom">
@@ -700,7 +1181,7 @@
       <div class="bot-avatar">🤖</div>
       <div class="bot-header-info">
         <h4>EduBot</h4>
-        <p><span class="bot-status-dot"></span>Powered by EduManage360 · Always Online</p>
+        <p><span class="bot-status-dot"></span>Powered by EduManage360 · 100% Offline</p>
       </div>
     </div>
     <div class="bot-messages" id="bot-messages"></div>
@@ -713,6 +1194,35 @@
 
   <!-- ══════════════ SCRIPTS ══════════════ -->
   <script>
+    /* ── Interactive Tour Switcher ─────────────────────── */
+    function switchTourTab(tabKey) {
+      document.querySelectorAll('.tour-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('onclick').includes(tabKey));
+      });
+      document.querySelectorAll('.tour-view-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === `tour-${tabKey}`);
+      });
+    }
+
+    /* ── ROI & Savings Calculator Logic ────────────────── */
+    function updateCalculator() {
+      const students = parseInt(document.getElementById('calcStudentRange').value);
+      const staff = parseInt(document.getElementById('calcStaffRange').value);
+
+      document.getElementById('calcStudentDisplay').textContent = `${students.toLocaleString()} Students`;
+      document.getElementById('calcStaffDisplay').textContent = `${staff} Staff`;
+
+      // Calculations
+      const hoursSaved = Math.round(students * 0.25);
+      const costSaved = Math.round(students * 6.5);
+
+      document.getElementById('calcHoursSaved').textContent = `${hoursSaved.toLocaleString()} hrs`;
+      document.getElementById('calcCostSaved').textContent = `GHS ${costSaved.toLocaleString()}`;
+    }
+
+    // Initialize calculator
+    updateCalculator();
+
     /* ── EduBot Knowledge Base (100% Offline) ──────────── */
     const KB = [
       {
@@ -783,7 +1293,7 @@
       return FALLBACK;
     }
 
-    /* ── DOM refs ── */
+    /* ── EduBot DOM ── */
     const toggle   = document.getElementById('edubot-toggle');
     const win      = document.getElementById('edubot-window');
     const msgs     = document.getElementById('bot-messages');
@@ -853,6 +1363,5 @@
     sendBtn.addEventListener('click', () => sendMessage(input.value));
     input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(input.value); });
   </script>
-  <script src="js/theme.js"></script>
 </body>
 </html>

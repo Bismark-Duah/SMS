@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🏡 Exeat Management – School Management System</title>
+    <meta name="description" content="Manage student permission passes, departure checks, gate security sign-outs, and return tracking." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <style>
+      .exeat-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+      .stat-card {
+        background: var(--card-bg, #1e293b);
+        border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+        border-radius: 12px;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+      }
+      .stat-number {
+        font-size: 1.6rem;
+        font-weight: 800;
+        line-height: 1.2;
+      }
+      .stat-label {
+        font-size: 0.82rem;
+        opacity: 0.75;
+      }
+
+      /* Tabs styling */
+      .tabs-header {
+        display: flex;
+        gap: 10px;
+        border-bottom: 2px solid var(--border-color, rgba(255,255,255,0.1));
+        margin-bottom: 20px;
+      }
+      .tab-btn {
+        padding: 10px 18px;
+        border: none;
+        background: transparent;
+        color: var(--text-color, #f8fafc);
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s;
+        opacity: 0.7;
+      }
+      .tab-btn.active {
+        opacity: 1;
+        border-bottom-color: var(--primary, #6366f1);
+        color: var(--primary, #6366f1);
+      }
+
+      /* Status Badge Styles */
+      .badge-status {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .status-pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
+      .status-approved { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
+      .status-rejected { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+      .status-departed { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.4); }
+      .status-returned { background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); }
+      .status-overdue { background: rgba(225, 29, 72, 0.3); color: #f43f5e; border: 1px solid #f43f5e; animation: pulse 2s infinite; }
+
+      @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.6; }
+        100% { opacity: 1; }
+      }
+
+      /* Gate Card styling */
+      .gate-search-card {
+        background: rgba(99, 102, 241, 0.08);
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        padding: 24px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+      }
+
+      /* Modal Printable Slip Styling */
+      .slip-container {
+        background: #ffffff;
+        color: #1e293b;
+        padding: 30px;
+        border-radius: 8px;
+        max-width: 650px;
+        margin: 0 auto;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      }
+      .slip-header {
+        text-align: center;
+        border-bottom: 2px dashed #cbd5e1;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+      }
+      .slip-title {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .slip-subtitle {
+        font-size: 0.9rem;
+        color: #475569;
+        margin-top: 4px;
+      }
+      .slip-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 24px;
+        font-size: 0.9rem;
+      }
+      .slip-row {
+        margin-bottom: 8px;
+      }
+      .slip-label {
+        font-weight: 700;
+        color: #64748b;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+      }
+      .slip-value {
+        font-weight: 600;
+        color: #0f172a;
+        font-size: 0.95rem;
+      }
+      .slip-footer {
+        margin-top: 25px;
+        padding-top: 15px;
+        border-top: 2px dashed #cbd5e1;
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+      }
+
+      /* Modal Backdrop */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.75);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        overflow-y: auto;
+      }
+      .modal.show {
+        display: flex;
+      }
+      .modal-content {
+        background: var(--card-bg, #1e293b);
+        border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+        border-radius: 14px;
+        width: 100%;
+        max-width: 650px;
+        padding: 24px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.3rem;">🏡 Exeat Management</h1>
+          <p style="margin:4px 0 0 0;opacity:.75;font-size:.85rem;">Issue, approve, and track student exeat passes & gate sign-in/out logs.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <button class="btn" style="background:#059669; border-color:#047857; color:white; font-weight:700;" onclick="openGatekeeperView()">🚪 Gatekeeper Verification</button>
+          <a class="btn" href="houses.html">🏠 Boarding Houses</a>
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- Jurisdiction & Scope Banner -->
+      <section class="card" style="border-left: 4px solid var(--primary, #6366f1); margin-bottom: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h4 style="margin:0; font-size:1rem; color:var(--primary, #818cf8);" id="jurisdictionRoleLabel">🛡️ Loading Jurisdiction...</h4>
+            <p style="margin:4px 0 0 0; font-size:0.85rem; opacity:0.8;" id="jurisdictionDescription">
+              Verifying house master and domestic administration permissions.
+            </p>
+          </div>
+          <button class="btn btn-primary" onclick="openNewExeatModal()">+ Issue New Exeat Pass</button>
+        </div>
+      </section>
+
+      <!-- Stat Summary Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6;">🚶‍♂️</div>
+          <div>
+            <div class="stat-number" id="statCurrentlyAway">0</div>
+            <div class="stat-label">Currently Away</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">⏳</div>
+          <div>
+            <div class="stat-number" id="statPending">0</div>
+            <div class="stat-label">Pending Approvals</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">🚨</div>
+          <div>
+            <div class="stat-number" id="statOverdue">0</div>
+            <div class="stat-label">Overdue Returns</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">📋</div>
+          <div>
+            <div class="stat-number" id="statTotalTerm">0</div>
+            <div class="stat-label">Total Issued This Term</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Tabs Section -->
+      <section class="card" style="margin-top: 20px;">
+        <div class="tabs-header">
+          <button class="tab-btn active" id="tabBtnLog" onclick="switchTab('log')">📜 Exeat Log & Approvals</button>
+          <button class="tab-btn" id="tabBtnGate" onclick="switchTab('gate')">🚪 Gate Security Control</button>
+        </div>
+
+        <!-- TAB 1: EXEAT LOG TABLE -->
+        <div id="tabContentLog">
+          <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+            <input type="text" id="searchInput" placeholder="Search student name, code, destination..." style="flex:1; min-width:220px;" onkeyup="loadExeatRecords()" />
+            
+            <select id="filterStatus" style="width:160px;" onchange="loadExeatRecords()">
+              <option value="">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Departed">Departed (Away)</option>
+              <option value="Returned">Returned</option>
+              <option value="Overdue">Overdue</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+
+            <select id="filterType" style="width:150px;" onchange="loadExeatRecords()">
+              <option value="">All Types</option>
+              <option value="Day">Day Exeat</option>
+              <option value="Weekend">Weekend Exeat</option>
+              <option value="Medical">Medical Exeat</option>
+              <option value="Special">Special Exeat</option>
+            </select>
+
+            <select id="filterHouse" style="width:170px;" onchange="loadExeatRecords()">
+              <option value="">All Houses</option>
+            </select>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border-color); text-align:left; opacity:0.8;">
+                  <th style="padding:10px;">Student</th>
+                  <th style="padding:10px;">House / Dorm</th>
+                  <th style="padding:10px;">Type & Destination</th>
+                  <th style="padding:10px;">Departure</th>
+                  <th style="padding:10px;">Return</th>
+                  <th style="padding:10px;">Status</th>
+                  <th style="padding:10px; text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="exeatTableBody">
+                <tr>
+                  <td colspan="7" style="text-align:center; padding:30px; opacity:0.6;">Loading exeat records...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 2: SECURITY GATE CONTROL -->
+        <div id="tabContentGate" style="display:none;">
+          <div class="gate-search-card">
+            <h3 style="margin:0 0 10px 0;">🚪 Security Gate Quick Check</h3>
+            <p style="margin:0 0 16px 0; font-size:0.88rem; opacity:0.8;">
+              Scan or type Student Code or Student Name at the gate to perform instant sign-out or sign-in.
+            </p>
+            <div style="display:flex; gap:12px; width:100%;">
+              <input type="text" id="gateSearchInput" placeholder="Enter Student Code or Name..." style="font-size:1.1rem; padding:12px;" onkeypress="if(event.key==='Enter') searchGateStudent()" />
+              <button class="btn btn-primary" style="padding:12px 24px; font-size:1rem;" onclick="searchGateStudent()">🔍 Find Student Pass</button>
+            </div>
+          </div>
+
+          <div id="gateResultContainer">
+            <p style="text-align:center; padding:40px; opacity:0.6;">Enter student code or name above to verify exeat pass.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- MODAL 1: NEW EXEAT REQUEST -->
+    <div class="modal" id="newExeatModal">
+      <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="margin:0;">📝 Issue New Exeat Pass</h3>
+          <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="closeModal('newExeatModal')">&times;</button>
+        </div>
+
+        <form id="newExeatForm" onsubmit="submitNewExeat(event)">
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Select Student *</label>
+            <select id="formStudentId" required style="width:100%;" onchange="autoFillParentContact()">
+              <option value="">Select student...</option>
+            </select>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Exeat Type *</label>
+              <select id="formExeatType" required style="width:100%;">
+                <option value="Day">Day Exeat (Returns Today)</option>
+                <option value="Weekend">Weekend / Home Exeat</option>
+                <option value="Medical">Medical / Hospital Exeat</option>
+                <option value="Special">Special / Official Event</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Guardian Contact Phone</label>
+              <input type="text" id="formParentContact" placeholder="e.g. 0244123456" style="width:100%;" />
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Destination / Address *</label>
+            <input type="text" id="formDestination" required placeholder="e.g. Accra, Kumasi, Local Hospital, Home..." style="width:100%;" />
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Reason for Exeat *</label>
+            <textarea id="formReason" required rows="2" placeholder="State reason for granting exeat..." style="width:100%; font-family:inherit;"></textarea>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Expected Departure *</label>
+              <input type="datetime-local" id="formExpectedDeparture" required style="width:100%;" />
+            </div>
+            <div>
+              <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Expected Return *</label>
+              <input type="datetime-local" id="formExpectedReturn" required style="width:100%;" />
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Approval / Housemaster Notes</label>
+            <input type="text" id="formApprovalNotes" placeholder="Optional notes for security gate staff..." style="width:100%;" />
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn" onclick="closeModal('newExeatModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Grant & Issue Exeat</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL 2: PRINTABLE EXEAT SLIP -->
+    <div class="modal" id="slipModal">
+      <div class="modal-content" style="max-width:700px; background: transparent; border:none; box-shadow:none;">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+          <button class="btn" style="background:#ffffff; color:#0f172a; font-weight:700; margin-right:8px;" onclick="printExeatSlipDoc()">🖨️ Print Slip</button>
+          <button class="btn" style="background:#ef4444; color:white; font-weight:700;" onclick="closeModal('slipModal')">Close</button>
+        </div>
+
+        <div class="slip-container" id="printableSlipArea">
+          <div class="slip-header">
+            <div style="font-size:0.8rem; font-weight:700; color:#64748b; letter-spacing:1px; margin-bottom:2px;">OFFICIAL PERMISSION PASS</div>
+            <h2 class="slip-title">SCHOOL EXEAT PASS</h2>
+            <div class="slip-subtitle">Student Boarding & Gate Clearance Slip</div>
+          </div>
+
+          <div class="slip-grid">
+            <div class="slip-row">
+              <div class="slip-label">Student Name</div>
+              <div class="slip-value" id="slipStudentName">--</div>
+            </div>
+            <div class="slip-row">
+              <div class="slip-label">Student ID / Code</div>
+              <div class="slip-value" id="slipStudentCode">--</div>
+            </div>
+            <div class="slip-row">
+              <div class="slip-label">Class</div>
+              <div class="slip-value" id="slipClass">--</div>
+            </div>
+            <div class="slip-row">
+              <div class="slip-label">House & Dormitory</div>
+              <div class="slip-value" id="slipHouseDorm">--</div>
+            </div>
+            <div class="slip-row">
+              <div class="slip-label">Exeat Type</div>
+              <div class="slip-value" id="slipType">--</div>
+            </div>
+            <div class="slip-row">
+              <div class="slip-label">Destination</div>
+              <div class="slip-value" id="slipDestination">--</div>
+            </div>
+            <div class="slip-row">
+              <div class="slip-label">Departure Date & Time</div>
+              <div class="slip-value" id="slipDeparture">--</div>
+            </div>
+            <div class="slip-row">
+              <div class="slip-label">Expected Return Time</div>
+              <div class="slip-value" id="slipReturn">--</div>
+            </div>
+          </div>
+
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:12px; border-radius:6px; margin-top:15px; font-size:0.85rem;">
+            <div class="slip-label" style="margin-bottom:2px;">Reason for Exeat</div>
+            <div id="slipReason" style="color:#334155; font-style:italic;">--</div>
+          </div>
+
+          <div style="background:#f1f5f9; border-left:4px solid #3b82f6; padding:12px; border-radius:4px; margin-top:15px; font-size:0.85rem;">
+            <div style="font-weight:700; color:#1e293b;">AUTHORIZATION & SIGNATURES</div>
+            <div style="margin-top:6px; color:#475569;">
+              <span style="font-weight:600;">Authorized By:</span> <span id="slipApprovedBy">--</span>
+            </div>
+            <div style="margin-top:2px; color:#475569;">
+              <span style="font-weight:600;">Role / Office:</span> <span id="slipApprovedRole">--</span>
+            </div>
+            <div style="margin-top:2px; color:#475569;">
+              <span style="font-weight:600;">Guardian Contact:</span> <span id="slipParentContact">--</span>
+            </div>
+          </div>
+
+          <div class="slip-footer">
+            <div>
+              <div style="border-bottom:1px solid #94a3b8; width:150px; height:30px;"></div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">Housemaster Signature</div>
+            </div>
+            <div>
+              <div style="border-bottom:1px solid #94a3b8; width:150px; height:30px;"></div>
+              <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">Gate Officer Sign-Out</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/exeat.js"></script>
+  </body>
+</html>

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Results – School Management System</title>
+    <meta name="description" content="Enter and review student academic scores by class, subject, and semester." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <style>
+      .score-input {
+        width: 70px;
+        padding: 4px 6px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+        color: var(--text-primary);
+        text-align: center;
+        font-size: .9rem;
+      }
+      .score-input:focus { border-color: var(--primary); outline: none; }
+      .grade-chip { font-size: .75rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; display: inline-block; }
+      .grade-A1 { background: #d1fae5; color: #065f46; }
+      .grade-B2, .grade-B3 { background: #dbeafe; color: #1e40af; }
+      .grade-C4, .grade-C5, .grade-C6 { background: #fef3c7; color: #92400e; }
+      .grade-D7, .grade-E8 { background: #fed7aa; color: #9a3412; }
+      .grade-F9 { background: #fee2e2; color: #991b1b; }
+      .total-cell { font-weight: 700; font-size: 1rem; }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Results & Scores</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Enter and review academic scores by class and subject</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- Tabs -->
+      <div class="tab-nav" style="display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--border-color); padding-bottom:8px; flex-wrap:wrap;">
+        <button class="btn tab-btn active" id="tabEntryBtn" onclick="switchTab('entry')">📝 Bulk Score Entry</button>
+        <button class="btn tab-btn" id="tabBrowserBtn" onclick="switchTab('browser')">📊 Results Browser</button>
+      </div>
+
+      <!-- PANEL 1: Bulk Score Entry -->
+      <div id="panelEntry" class="tab-panel">
+        <section class="card">
+          <h3>Class Score Entry</h3>
+          <form id="entryFilterForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; align-items:end;" onsubmit="loadStudentsForEntry(); return false;">
+            <label>Class Section
+              <select id="entry_class_id" required>
+                <option value="">Select Class...</option>
+              </select>
+            </label>
+            <label>Semester / Term
+              <select id="entry_semester_id" required>
+                <option value="">Select Semester...</option>
+              </select>
+            </label>
+            <label>Subject
+              <select id="entry_subject_id" required>
+                <option value="">Select Subject...</option>
+              </select>
+            </label>
+            <button type="submit" class="btn primary" style="height:40px;">📋 Load Students</button>
+          </form>
+          <div id="entryMsg" style="margin-top:10px;"></div>
+        </section>
+
+        <section class="card" id="entryCard" style="display:none; margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div>
+              <h3 style="margin:0;" id="entryTitle">Score Entry</h3>
+              <p style="margin:4px 0 0; font-size:.85rem; opacity:.7;" id="entrySubtitle">Class Score max 30 · Exam Score max 70</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:.85rem; font-weight:600; cursor:pointer; background:rgba(255,255,255,0.05); padding:6px 12px; border-radius:6px; border:1px solid var(--border-color);">
+                <input type="checkbox" id="breakdownToggle" onchange="toggleBreakdownMode(this.checked)" />
+                <span>🔬 Detailed Continuous Assessment Sheet Mode</span>
+              </label>
+              <button class="btn primary" onclick="saveAllScores()">💾 Save All Scores</button>
+            </div>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table style="width:100%;">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Code</th>
+                  <th>Student Name</th>
+                  <th>Class Score<br><small style="opacity:.6">(max 30)</small></th>
+                  <th>Exam Score<br><small style="opacity:.6">(max 70)</small></th>
+                  <th>Total</th>
+                  <th>Grade</th>
+                </tr>
+              </thead>
+              <tbody id="entryBody">
+                <tr><td colspan="7" style="text-align:center;padding:20px;opacity:.6">Load a class to begin.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="saveMsg" style="margin-top:14px;"></div>
+        </section>
+      </div>
+
+      <!-- PANEL 2: Results Browser -->
+      <div id="panelBrowser" class="tab-panel" style="display:none;">
+        <section class="card">
+          <h3>Browse & Edit Results</h3>
+          <form id="browserFilterForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; align-items:end;" onsubmit="loadResultsBrowser(); return false;">
+            <label>Class Section
+              <select id="br_class_id" required>
+                <option value="">Select Class...</option>
+              </select>
+            </label>
+            <label>Semester / Term
+              <select id="br_semester_id" required>
+                <option value="">Select Semester...</option>
+              </select>
+            </label>
+            <label>Subject (optional)
+              <select id="br_subject_id">
+                <option value="">All Subjects</option>
+              </select>
+            </label>
+            <button type="submit" class="btn primary" style="height:40px;">🔍 Load Results</button>
+          </form>
+
+          <div id="browserStats" style="margin-top:14px; display:none; padding:10px 14px; background:rgba(var(--primary-rgb,79 70 229),.08); border-radius:8px; font-size:.88rem; display:flex; gap:16px; flex-wrap:wrap;"></div>
+
+          <div style="overflow-x:auto; margin-top:16px;">
+            <table style="width:100%;">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Subject</th>
+                  <th>Class Score</th>
+                  <th>Exam Score</th>
+                  <th>Total</th>
+                  <th>Grade</th>
+                  <th>Remark</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="browserBody">
+                <tr><td colspan="8" style="text-align:center;padding:20px;opacity:.6">Select class, semester and load results.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/results.js"></script>
+  </body>
+</html>

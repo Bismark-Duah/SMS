@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Academic Rollover Wizard – School Management System</title>
+    <meta name="description" content="Guide to rolling over the academic term/semester safely." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <style>
+      .wizard-step {
+        display: none;
+      }
+      .wizard-step.active {
+        display: block;
+      }
+      .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        position: relative;
+      }
+      .step-indicator::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--border-color);
+        z-index: 1;
+        transform: translateY(-50%);
+      }
+      .step-node {
+        position: relative;
+        z-index: 2;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--card-bg);
+        border: 2px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: var(--text-secondary);
+        transition: all 0.3s ease;
+      }
+      .step-node.active {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: #fff;
+        box-shadow: 0 0 10px var(--primary-color);
+      }
+      .step-node.completed {
+        border-color: var(--success-color);
+        background: var(--success-color);
+        color: #fff;
+      }
+      .status-box {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 14px;
+        margin-bottom: 20px;
+      }
+      .status-box p {
+        margin: 6px 0;
+      }
+      .actions-row {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 24px;
+        border-top: 1px solid var(--border-color);
+        padding-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Academic Rollover Wizard</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Safely transition the school to the next term</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="settings.html">← Settings</a>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="step-indicator">
+          <div class="step-node active" id="node-1">1</div>
+          <div class="step-node" id="node-2">2</div>
+          <div class="step-node" id="node-3">3</div>
+          <div class="step-node" id="node-4">4</div>
+        </div>
+
+        <div id="rolloverForm">
+          <!-- STEP 1: Current Term Audit -->
+          <div class="wizard-step active" id="step-1">
+            <h3>Step 1: Current Academic Term Audit</h3>
+            <p>Review the active state of the current term before proceeding. Ensure all classes have completed grading and promotions if it is the end of the year.</p>
+            
+            <div class="status-box">
+              <p>📅 <strong>Current Academic Year:</strong> <span id="currentYearText" style="color:var(--primary-color);">Loading...</span></p>
+              <p>🏫 <strong>Current Academic Term:</strong> <span id="currentSemText" style="color:var(--primary-color);">Loading...</span></p>
+              <p>👤 <strong>Total Enrolled Students:</strong> <span id="enrolledCount" style="color:var(--text-primary);">0</span></p>
+              <p>💸 <strong>Unpaid Fees for Current Term:</strong> <span id="unpaidCount" style="color:var(--warning-color);">0</span> (Outstanding balance: <span id="unpaidAmountText" style="color:var(--warning-color);">GHc 0.00</span>)</p>
+            </div>
+
+            <div class="alert alert-info">
+              💡 <strong>Recommendation:</strong> If you are ending the final term of the academic year, make sure you run student promotions/graduations under the Promotions tab first.
+            </div>
+
+            <div class="actions-row">
+              <div></div>
+              <button class="btn primary" onclick="nextStep(2)">Next: Archive & Lock →</button>
+            </div>
+          </div>
+
+          <!-- STEP 2: Archive & Lock -->
+          <div class="wizard-step" id="step-2">
+            <h3>Step 2: Score Archiving & Lock Options</h3>
+            <p>Archiving locks student scores for the completed term so they cannot be edited or deleted by teachers in the future.</p>
+            
+            <div style="margin: 20px 0;">
+              <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                <input type="checkbox" id="archiveReportsCheckbox" checked style="width:20px; height:20px;" />
+                <div>
+                  <strong>Archive Completed Report Cards & Lock Scores</strong>
+                  <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">Recommended. Prevents editing scores for this completing term.</div>
+                </div>
+              </label>
+            </div>
+
+            <div class="actions-row">
+              <button class="btn" onclick="prevStep(1)">← Back</button>
+              <button class="btn primary" onclick="nextStep(3)">Next: Arrears & Fees →</button>
+            </div>
+          </div>
+
+          <!-- STEP 3: Financial Rollover -->
+          <div class="wizard-step" id="step-3">
+            <h3>Step 3: Carry Over Outstanding Balances</h3>
+            <p>Determine how unpaid fees from the current term should be handled for the next term.</p>
+
+            <div style="margin: 20px 0;">
+              <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                <input type="checkbox" id="carryOverCheckbox" checked style="width:20px; height:20px;" />
+                <div>
+                  <strong>Carry Over Outstanding Balances as "Arrears"</strong>
+                  <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">Creates a new Pending fee entry categorized as "Arrears" for the target term. Marks old bills as "Carried Over".</div>
+                </div>
+              </label>
+            </div>
+
+            <div class="actions-row">
+              <button class="btn" onclick="prevStep(2)">← Back</button>
+              <button class="btn primary" onclick="nextStep(4)">Next: Target Term Selection →</button>
+            </div>
+          </div>
+
+          <!-- STEP 4: Target Term Selection & Confirmation -->
+          <div class="wizard-step" id="step-4">
+            <h3>Step 4: Target Term & Execution</h3>
+            <p>Select the new year and term to activate. Executing rollover is a permanent action.</p>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin: 20px 0;">
+              <label>Target Academic Year
+                <select id="targetYearSelect" required>
+                  <option value="">Select Target Year...</option>
+                </select>
+              </label>
+              <label>Target Term / Semester
+                <select id="targetSemSelect" required>
+                  <option value="">Select Target Term...</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="alert alert-warning" style="margin-top:20px;">
+              ⚠️ <strong>Warning:</strong> Executing this rollover will clear active markers on the completed semester. Ensure you have selected the correct target year and term.
+            </div>
+
+            <div id="rolloverMsg" style="margin-top:14px;"></div>
+
+            <div class="actions-row">
+              <button class="btn" onclick="prevStep(3)">← Back</button>
+              <button class="btn primary success" onclick="executeRollover()" style="background:var(--success-color); border-color:var(--success-color);">🚀 Execute Rollover Now</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/rollover.js"></script>
+  </body>
+</html>

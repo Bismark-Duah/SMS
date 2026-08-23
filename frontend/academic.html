@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Academic Years & Semesters – School Management System</title>
+    <meta name="description" content="Manage academic years and semesters, set current term, and promote students." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <style>
+      .modal {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+      }
+      .modal.open {
+        display: flex;
+      }
+      .modal-content {
+        background: var(--bg-card, #1e293b);
+        border: 1px solid var(--border-color, #475569);
+        padding: 24px;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 480px;
+        position: relative;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      }
+      .modal-close {
+        position: absolute;
+        top: 12px; right: 12px;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.2rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Academic Calendar</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Manage academic years, terms, and student promotion</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- Existing Years & Semesters List -->
+      <section class="card" style="margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+          <h3 style="margin:0;">Academic Years</h3>
+          <span id="academicMsg" style="font-size:.88rem;"></span>
+        </div>
+        <div id="yearsList">
+          <p style="opacity:.6; text-align:center; padding:20px;">Loading...</p>
+        </div>
+      </section>
+
+      <!-- Add Academic Year -->
+      <section class="card" style="margin-bottom:20px;">
+        <h3>Add Academic Year</h3>
+        <form id="yearForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; align-items:flex-end;">
+          <label>Year Label
+            <input id="yearLabel" placeholder="e.g. 2025/2026" required />
+          </label>
+          <label>Year Start Date
+            <input type="date" id="yearStartDate" />
+          </label>
+          <label>Year End Date
+            <input type="date" id="yearEndDate" />
+          </label>
+          <button type="submit" class="btn primary" style="height:40px;">+ Add Year</button>
+        </form>
+        <div id="yearMsg" style="margin-top:8px;"></div>
+      </section>
+
+      <!-- Add Semester / Term -->
+      <section class="card" style="margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <h3 style="margin:0;">Add Semester / Term</h3>
+          <button type="button" id="autoGenerateBtn" onclick="autoGenerateTerms()" class="btn secondary" style="font-size:0.85rem;">⚡ Auto-Generate Terms</button>
+        </div>
+        <form id="semesterForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; align-items:flex-end;">
+          <label>Semester / Term Name
+            <select id="semesterName" required>
+              <option value="">Loading terms...</option>
+            </select>
+          </label>
+          <label>Start Date
+            <input type="date" id="semesterStartDate" />
+          </label>
+          <label>End Date
+            <input type="date" id="semesterEndDate" />
+          </label>
+          <label>Academic Year
+            <select id="academic_year_id" required>
+              <option value="">Select Year...</option>
+            </select>
+          </label>
+          <button type="submit" class="btn primary" style="height:40px;">+ Add Semester/Term</button>
+        </form>
+        <div id="semesterMsg" style="margin-top:8px;"></div>
+      </section>
+
+      <!-- Quick Utilities -->
+      <section class="card">
+        <h3>⚠ Quick Utilities</h3>
+        <p style="opacity:.7; font-size:.85rem; margin-bottom:14px;">
+          Promote all active students globally to the next class/form. This cannot be undone.
+        </p>
+        <button id="promoteBtn" class="btn" style="color:var(--error-color); border-color:var(--error-color); font-weight:600;">
+          🚀 Promote Active Students Globally
+        </button>
+        <div id="promoteMsg" style="margin-top:10px;"></div>
+      </section>
+    </main>
+
+    <!-- Edit Academic Year Modal -->
+    <div id="editYearModal" class="modal">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closeEditYearModal()">✕</button>
+        <h3 style="margin-top: 0;">Edit Academic Year</h3>
+        <form id="editYearForm" style="display:flex; flex-direction:column; gap:16px;" onsubmit="saveEditYear(event)">
+          <input type="hidden" id="editYearId" />
+          <label>Year Label
+            <input id="editYearLabel" placeholder="e.g. 2024/2025" required />
+          </label>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="editYearIsCurrent" />
+            <label for="editYearIsCurrent" style="cursor:pointer; text-transform:none; font-size:0.9rem; margin:0;">Current Academic Year</label>
+          </div>
+          <button type="submit" class="btn primary" style="width:100%;">Save Changes</button>
+        </form>
+        <div id="editYearMsg" style="margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <!-- Edit Semester Modal -->
+    <div id="editSemesterModal" class="modal">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closeEditSemesterModal()">✕</button>
+        <h3 style="margin-top: 0;">Edit Semester / Term</h3>
+        <form id="editSemesterForm" style="display:flex; flex-direction:column; gap:16px;" onsubmit="saveEditSemester(event)">
+          <input type="hidden" id="editSemesterId" />
+          <label>Semester / Term Name
+            <select id="editSemesterName" required>
+              <option value="">Select Term / Semester...</option>
+            </select>
+          </label>
+          <label>Start Date
+            <input type="date" id="editSemesterStartDate" />
+          </label>
+          <label>End Date
+            <input type="date" id="editSemesterEndDate" />
+          </label>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="editSemesterIsCurrent" />
+            <label for="editSemesterIsCurrent" style="cursor:pointer; text-transform:none; font-size:0.9rem; margin:0;">Current Semester</label>
+          </div>
+          <button type="submit" class="btn primary" style="width:100%;">Save Changes</button>
+        </form>
+        <div id="editSemesterMsg" style="margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <script src="js/guard.js"></script>
+    <script src="js/academic.js"></script>
+  </body>
+</html>

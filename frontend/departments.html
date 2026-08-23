@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Departments – School Management System</title>
+    <meta name="description" content="Manage school academic departments and assign HODs." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Academic Departments</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Manage departments, assign Head of Departments (HOD), and subjects.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn btn-primary" href="broadsheet.html">📜 Class Broadsheets</a>
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start;">
+        <!-- Departments List -->
+        <section class="card" style="max-width:100%;">
+          <h3>Departments</h3>
+          <div id="deptList">
+            <p style="opacity:.6; text-align:center; padding:20px;">Loading...</p>
+          </div>
+        </section>
+
+        <!-- Add / Edit Department Card -->
+        <section class="card" style="max-width:100%;">
+          <h3>Add / Edit Department</h3>
+          <form id="deptForm">
+            <input type="hidden" id="deptId" />
+            
+            <label>Department Name
+              <input id="deptName" placeholder="e.g. Science Department" required />
+            </label>
+            
+            <label>Acronym / Code
+              <input id="deptCode" placeholder="e.g. SCI" required />
+            </label>
+            
+            <label>Head of Department (HOD)
+              <select id="deptHod">
+                <option value="">Select HOD...</option>
+              </select>
+            </label>
+
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; margin-top:12px;">
+                <label style="margin:0; font-weight:600;">Department Subjects</label>
+                <button type="button" id="loadPresetSubjectsBtn" class="btn btn-sm" style="background:#0284c7; color:#fff; border:none; padding:4px 10px; font-size:0.8rem; border-radius:4px; cursor:pointer;" title="Auto-select standard subjects based on department name">
+                  ⚡ Load Standard Presets
+                </button>
+              </div>
+              <div id="subjectsCheckboxList" style="max-height:240px; overflow-y:auto; border:1px solid var(--border-color); padding:12px; border-radius:var(--radius-md); background:rgba(0,0,0,0.15);">
+                Loading subjects...
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button type="submit" class="btn primary" style="flex:1;">Save Department</button>
+              <button type="button" id="cancelDeptBtn" class="btn" style="flex:1;">Cancel</button>
+            </div>
+          </form>
+          <div id="deptMsg" style="margin-top:8px;"></div>
+        </section>
+      </div>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/departments.js"></script>
+  </body>
+</html>

@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>eduManage360 — Unified Multi-School Administration Portal</title>
+    <meta name="description" content="Sign in to eduManage360 — Unified Multi-School Administration Portal." />
+    <script src="js/theme.js"></script>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --primary:      #4f46e5;
+        --primary-h:    #4338ca;
+        --secondary:    #06b6d4;
+        --bg-deep:      #0f172a;
+        --card-bg:      rgba(15, 23, 42, 0.75);
+        --border:       rgba(255,255,255,0.09);
+        --text:         #f8fafc;
+        --muted:        #94a3b8;
+        --success:      #10b981;
+        --error:        #f87171;
+        --radius:       16px;
+        --transition:   all .3s cubic-bezier(.4,0,.2,1);
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        min-height: 100vh;
+        background: var(--bg-deep);
+        color: var(--text);
+        display: flex;
+        overflow: hidden;
+      }
+
+      /* ── Animated mesh-gradient background ── */
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99,102,241,.35) 0%, transparent 60%),
+          radial-gradient(ellipse 60% 50% at 80% 80%, rgba(6,182,212,.20) 0%, transparent 55%),
+          radial-gradient(ellipse 50% 40% at 60% 30%, rgba(139,92,246,.15) 0%, transparent 50%);
+        animation: meshShift 12s ease-in-out infinite alternate;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      @keyframes meshShift {
+        0%   { opacity: 1; transform: scale(1)   rotate(0deg); }
+        50%  { opacity: .8; transform: scale(1.05) rotate(1deg); }
+        100% { opacity: 1; transform: scale(1)   rotate(-1deg); }
+      }
+
+      /* ── Floating particles ── */
+      .particle {
+        position: fixed;
+        border-radius: 50%;
+        background: rgba(99,102,241,.12);
+        animation: floatUp linear infinite;
+        pointer-events: none;
+        z-index: 0;
+      }
+      @keyframes floatUp {
+        0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+        10%  { opacity: 1; }
+        90%  { opacity: .6; }
+        100% { transform: translateY(-20vh) scale(1.2); opacity: 0; }
+      }
+
+      /* ── Layout ── */
+      .split {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        width: 100%;
+        min-height: 100vh;
+      }
+
+      /* ── Left panel ── */
+      .left-panel {
+        display: none;
+        flex: 1;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 24px 36px;
+        background: linear-gradient(135deg, rgba(79,70,229,.18) 0%, rgba(6,182,212,.10) 100%);
+        border-right: 1px solid var(--border);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      @media (min-width: 900px) { .left-panel { display: flex; } }
+
+      .left-panel::after {
+        content: '';
+        position: absolute;
+        bottom: -80px; right: -80px;
+        width: 280px; height: 280px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(79,70,229,.22), transparent 70%);
+        pointer-events: none;
+      }
+
+      .hero-logo-container {
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .hero-logo-img {
+        max-width: 200px;
+        width: 100%;
+        height: auto;
+        border-radius: 16px;
+        box-shadow: 0 12px 36px rgba(0,0,0,0.35);
+        background: #ffffff;
+        padding: 8px 14px;
+        box-sizing: border-box;
+      }
+
+      .left-panel h1 {
+        font-family: 'Outfit', sans-serif;
+        font-size: clamp(1.4rem, 2.5vw, 2rem);
+        font-weight: 800;
+        letter-spacing: -.5px;
+        line-height: 1.2;
+        margin-bottom: 12px;
+        color: var(--text);
+      }
+
+      .left-panel .tagline {
+        font-size: .95rem;
+        color: var(--muted);
+        font-style: italic;
+        margin-bottom: 40px;
+      }
+
+      .features {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        max-width: 300px;
+        text-align: left;
+      }
+
+      .feature {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 14px;
+        background: rgba(255,255,255,.05);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        font-size: .85rem;
+        color: var(--muted);
+        backdrop-filter: blur(8px);
+        transition: var(--transition);
+      }
+
+      .feature:hover { background: rgba(255,255,255,.08); color: var(--text); }
+      .feature-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+      /* ── Right panel — login form ── */
+      .right-panel {
+        flex: 0 0 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 24px;
+      }
+
+      @media (min-width: 900px) { .right-panel { flex: 0 0 440px; } }
+
+      .login-card {
+        width: 100%;
+        max-width: 400px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 40px 36px;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 24px 64px rgba(0,0,0,.5);
+        animation: cardSlideIn .5s cubic-bezier(.22,1,.36,1) both;
+      }
+
+      @keyframes cardSlideIn {
+        from { opacity: 0; transform: translateY(24px) scale(.97); }
+        to   { opacity: 1; transform: translateY(0)   scale(1); }
+      }
+
+      .login-card .card-logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+
+      .login-card .card-logo .icon {
+        width: 44px; height: 44px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem;
+        flex-shrink: 0;
+        overflow: hidden;
+      }
+
+      .login-card .card-logo .icon img {
+        width: 100%; height: 100%; object-fit: cover; border-radius: 12px;
+      }
+
+      .login-card .card-logo .brand-name {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 1rem;
+        line-height: 1.3;
+        color: var(--text);
+      }
+
+      .login-card h2 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.55rem;
+        font-weight: 800;
+        margin-bottom: 6px;
+        letter-spacing: -.3px;
+      }
+
+      .login-card .subtitle {
+        font-size: .85rem;
+        color: var(--muted);
+        margin-bottom: 28px;
+      }
+
+      label {
+        display: block;
+        font-size: .82rem;
+        font-weight: 500;
+        color: var(--muted);
+        margin-bottom: 6px;
+        letter-spacing: .3px;
+        text-transform: uppercase;
+      }
+
+      .input-wrap {
+        position: relative;
+        margin-bottom: 18px;
+      }
+
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        padding: 12px 44px 12px 14px;
+        background: rgba(255,255,255,.06);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text);
+        font-size: .95rem;
+        font-family: 'Inter', sans-serif;
+        transition: var(--transition);
+        outline: none;
+        appearance: none;
+      }
+
+      input[type="text"]:focus,
+      input[type="password"]:focus {
+        border-color: var(--primary);
+        background: rgba(79,70,229,.08);
+        box-shadow: 0 0 0 3px rgba(79,70,229,.15);
+      }
+
+      input::placeholder { color: rgba(148,163,184,.5); }
+
+      .toggle-pw {
+        position: absolute;
+        right: 12px; top: 50%;
+        transform: translateY(-50%);
+        background: none; border: none;
+        color: var(--muted); cursor: pointer;
+        font-size: 1rem; padding: 4px;
+        transition: color .2s;
+        line-height: 1;
+      }
+      .toggle-pw:hover { color: var(--text); }
+
+      .submit-btn {
+        width: 100%;
+        padding: 13px;
+        background: linear-gradient(135deg, var(--primary) 0%, #6366f1 100%);
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: .3px;
+        cursor: pointer;
+        transition: var(--transition);
+        margin-top: 6px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .submit-btn::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,.08) 100%);
+        opacity: 0;
+        transition: opacity .3s;
+      }
+
+      .submit-btn:hover:not(:disabled)::before { opacity: 1; }
+      .submit-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(79,70,229,.4); }
+      .submit-btn:active:not(:disabled) { transform: translateY(0); }
+      .submit-btn:disabled { opacity: .65; cursor: not-allowed; transform: none; }
+
+      .auth-message {
+        margin-top: 14px;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: .88rem;
+        font-weight: 500;
+        display: none;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .auth-message.error   { display: flex; background: rgba(248,113,113,.12); border: 1px solid rgba(248,113,113,.25); color: var(--error); }
+      .auth-message.success { display: flex; background: rgba(16,185,129,.12);  border: 1px solid rgba(16,185,129,.25);  color: var(--success); }
+      .auth-message.info    { display: flex; background: rgba(245,158,11,.10);  border: 1px solid rgba(245,158,11,.25);  color: #fbbf24; }
+
+      .divider {
+        height: 1px;
+        background: var(--border);
+        margin: 24px 0;
+      }
+
+      .version-tag {
+        text-align: center;
+        font-size: .75rem;
+        color: rgba(148,163,184,.4);
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Floating particles -->
+    <div class="particle" style="width:6px;height:6px;left:15%;animation-duration:18s;animation-delay:0s;"></div>
+    <div class="particle" style="width:4px;height:4px;left:35%;animation-duration:22s;animation-delay:4s;"></div>
+    <div class="particle" style="width:8px;height:8px;left:55%;animation-duration:16s;animation-delay:2s;"></div>
+    <div class="particle" style="width:5px;height:5px;left:75%;animation-duration:20s;animation-delay:7s;"></div>
+    <div class="particle" style="width:3px;height:3px;left:88%;animation-duration:14s;animation-delay:1s;"></div>
+
+    <div class="split">
+      <!-- Left Branding Panel -->
+      <div class="left-panel" id="leftPanel">
+        <div class="hero-logo-container" id="leftLogoWrap">
+          <img src="assets/logo_primary.png" alt="eduManage360 Logo" class="hero-logo-img" />
+        </div>
+        <h1 id="leftSchoolName" style="display:none;">eduManage360</h1>
+        <p class="tagline" id="leftMotto" style="display:none;">Unified multi-school administration portal.</p>
+
+        <div class="features">
+          <div class="feature"><span class="feature-icon">👨‍🎓</span> Student Records & Profiles</div>
+          <div class="feature"><span class="feature-icon">📊</span> Results & Grade Reports</div>
+          <div class="feature"><span class="feature-icon">📅</span> Attendance Tracking</div>
+          <div class="feature"><span class="feature-icon">💰</span> Fee Management</div>
+          <div class="feature"><span class="feature-icon">📣</span> Announcements & Notices</div>
+        </div>
+      </div>
+
+      <!-- Right Login Panel -->
+      <div class="right-panel">
+        <div class="login-card">
+          <!-- Mini branding in card header (shown on mobile when left panel is hidden) -->
+          <div class="card-logo">
+            <div class="icon" id="cardLogoIcon"><img src="assets/logo_compact.png" alt="eduManage360" style="width:36px; height:36px; border-radius:6px; vertical-align:middle;" /></div>
+            <div class="brand-name" id="cardSchoolName">eduManage360</div>
+          </div>
+
+          <h2>Welcome back</h2>
+          <p class="subtitle">Sign in to your account to continue</p>
+
+          <form id="authForm" autocomplete="on" novalidate>
+            <label for="username">Username</label>
+            <div class="input-wrap">
+              <input id="username" name="username" type="text" placeholder="Enter your username" required autocomplete="username" />
+            </div>
+
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <input id="password" name="password" type="password" placeholder="Enter your password" required autocomplete="current-password" />
+              <button type="button" class="toggle-pw" id="togglePw" title="Show / hide password" aria-label="Toggle password visibility">👁</button>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">Sign In</button>
+          </form>
+
+          <div class="auth-message" id="authMessage" role="alert"></div>
+
+          <div class="divider"></div>
+          <p class="version-tag">eduManage360 · All rights reserved</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api';
+      const params = new URLSearchParams(window.location.search);
+
+      // ── Multi-School Portal Login Branding ──
+      (async () => {
+        try {
+          document.getElementById('leftSchoolName').textContent = 'eduManage360';
+          document.getElementById('cardSchoolName').textContent = 'eduManage360';
+          document.title = 'Sign In – eduManage360';
+        } catch (_) {}
+      })();
+
+      // ── Show ?msg= param (e.g., session expired) ──
+      const msgEl = document.getElementById('authMessage');
+      const msgParam = params.get('msg');
+      if (msgParam) {
+        msgEl.className = 'auth-message info';
+        msgEl.innerHTML = `⚠ ${decodeURIComponent(msgParam)}`;
+      }
+
+      // ── Password toggle ──
+      const pwInput    = document.getElementById('password');
+      const toggleBtn  = document.getElementById('togglePw');
+      let pwVisible = false;
+      toggleBtn.addEventListener('click', () => {
+        pwVisible = !pwVisible;
+        pwInput.type = pwVisible ? 'text' : 'password';
+        toggleBtn.textContent = pwVisible ? '🙈' : '👁';
+      });
+
+      // ── Login form ──
+      const form      = document.getElementById('authForm');
+      const submitBtn = document.getElementById('submitBtn');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Clear previous message
+        msgEl.className = 'auth-message';
+        msgEl.innerHTML = '';
+
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+
+        if (!username || !password) {
+          msgEl.className = 'auth-message error';
+          msgEl.innerHTML = '⚠ Please enter both username and password.';
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Signing in…';
+
+        try {
+          const res = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || 'Login failed. Check your credentials.');
+
+          // Resolve highest priority leadership persona
+          const rolesList = data.roles || [data.role];
+          const rolePriority = {
+            super_admin: 100, admin: 90, headmaster: 85, headmistress: 85,
+            assistant_headmaster_academic: 80, assistant_head_academic: 80,
+            assistant_headmaster_domestic: 80, assistant_head_domestic: 80,
+            assistant_headmaster_admin: 80, assistant_head_admin: 80,
+            hod: 70, senior_housemaster: 60, senior_housemistress: 60,
+            senior_house_master: 60, senior_house_mistress: 60,
+            house_master: 55, house_mistress: 55, assistant_house_master: 55, assistant_house_mistress: 55,
+            form_master: 50, form_mistress: 50, bursar: 40, storekeeper: 40, security_officer: 40,
+            teacher: 30, parent: 20, student: 10
+          };
+          let topRole = rolesList[0];
+          let maxScore = -1;
+          rolesList.forEach(r => {
+            const score = rolePriority[(r || '').toLowerCase()] || 0;
+            if (score > maxScore) { maxScore = score; topRole = (r || '').toLowerCase(); }
+          });
+
+          // Store session in both sessionStorage (tab-isolated) and localStorage
+          const setStore = (k, v) => {
+            if (v === null || v === undefined) {
+              sessionStorage.removeItem(k);
+              localStorage.removeItem(k);
+            } else {
+              sessionStorage.setItem(k, String(v));
+              localStorage.setItem(k, String(v));
+            }
+          };
+
+          setStore('userRole',      topRole || data.role);
+          setStore('activeRole',    topRole || data.role);
+          setStore('username',      data.username);
+          setStore('userId',        data.user_id);
+          setStore('accessToken',   data.access_token);
+          setStore('userRoles',     JSON.stringify(rolesList));
+          
+          sessionStorage.removeItem('is_impersonating');
+          localStorage.removeItem('is_impersonating');
+          sessionStorage.removeItem('_admin_backup_session');
+          localStorage.removeItem('_admin_backup_session');
+
+          if (data.is_super_admin) {
+            setStore('is_super_admin', 'true');
+            setStore('is_super_admin_viewing', null);
+            setStore('school_name', 'Master System Portal');
+            setStore('school_abbreviation', 'SUPER ADMIN');
+            setStore('school_id', null);
+          } else {
+            setStore('is_super_admin', null);
+            setStore('is_super_admin_viewing', null);
+            if (data.school_id) setStore('school_id', String(data.school_id));
+            if (data.school_name) setStore('school_name', data.school_name);
+            if (data.school_code || data.school_abbreviation) {
+              setStore('school_abbreviation', data.school_code || data.school_abbreviation);
+            }
+            if (data.school_mode) setStore('school_mode', data.school_mode);
+          }
+          setStore('_lastActivity', Date.now().toString());
+
+          msgEl.className = 'auth-message success';
+          msgEl.innerHTML = `✔ Signed in as <strong>${data.username}</strong>. Redirecting…`;
+
+          let dest = 'dashboard.html';
+          if (data.is_super_admin) {
+            dest = 'super-admin.html';
+          } else {
+            const next = params.get('next');
+            if (next) dest = decodeURIComponent(next);
+          }
+          setTimeout(() => { window.location.href = dest; }, 500);
+
+        } catch (err) {
+          msgEl.className = 'auth-message error';
+          msgEl.innerHTML = `✖ ${err.message}`;
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Sign In';
+        }
+      });
+    </script>
+  </body>
+</html>

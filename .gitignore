@@ -1,0 +1,57 @@
+# ── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# ── Virtual Environments ─────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Environment & Secrets ────────────────────────────────────────────
+backend/.env
+.env
+*.env
+first_run_credentials.txt
+
+# ── Database Files (contain all student/staff/financial data) ────────
+school.db
+school.db-shm
+school.db-wal
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Backups (database dumps — never commit) ──────────────────────────
+backups/
+
+# ── Logs ─────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Uploaded Files (signatures, logos) ───────────────────────────────
+frontend/uploads/
+frontend/assets/uploads/
+
+# ── OS & Editor Junk ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Scratch & Executables ──────────────────────────────────────────────
+scratch/
+*.exe
+scratch_*.py

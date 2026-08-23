@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📣 Announcements – School Management System</title>
+    <meta name="description" content="Post and manage school-wide announcements and notifications." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">📣 Announcements</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Post and manage school-wide announcements and notifications.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+      <section class="card" id="composeSection">
+        <h3>Send Announcement</h3>
+        <form id="announceForm">
+          <label>Message
+            <textarea id="announceMsg" rows="4" placeholder="Type your announcement..."></textarea>
+          </label>
+          <label>Type
+            <select id="announceType">
+              <option value="General">General</option>
+              <option value="Fee">Fee</option>
+              <option value="Attendance">Attendance</option>
+              <option value="Result">Result</option>
+            </select>
+          </label>
+          <label>Send To
+            <select id="announceTarget">
+              <option value="">All Active Students</option>
+            </select>
+          </label>
+          <button type="submit" class="btn primary">Send Announcement</button>
+        </form>
+        <div id="announceStatus" style="margin-top:12px;"></div>
+      </section>
+      <section class="card">
+        <h3>Recent Announcements</h3>
+        <div id="notifList">Loading...</div>
+      </section>
+    </main>
+    <script src="js/guard.js"></script>
+    <script src="js/announcements.js"></script>
+  </body>
+</html>

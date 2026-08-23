@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📅 Timetable – School Management System</title>
+    <meta name="description" content="Weekly schedule management and conflict checking." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <style>
+      .timetable-grid-layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      @media (max-width: 900px) {
+        .timetable-grid-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+      .view-toggles {
+        display: inline-flex;
+        background: rgba(15, 23, 42, 0.4);
+        padding: 4px;
+        border-radius: var(--radius-md);
+        border: var(--glass-border);
+        margin-bottom: 16px;
+      }
+      .view-toggles .btn {
+        background: transparent;
+        border: none;
+        padding: 8px 16px;
+      }
+      .view-toggles .btn.active {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+      }
+      /* Custom visual styles for visual timetable grid */
+      .tt-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+      .tt-table th, .tt-table td {
+        border: 1px solid var(--border-color);
+        padding: 8px;
+        vertical-align: top;
+        font-size: 0.8rem;
+        width: 16%;
+      }
+      .tt-table th {
+        background: rgba(255, 255, 255, 0.04);
+        text-align: center;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+      .tt-table td:first-child {
+        width: 80px;
+        text-align: center;
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .slot-cell {
+        min-height: 70px;
+        padding: 6px;
+        border-radius: 6px;
+        position: relative;
+        transition: var(--transition);
+      }
+      .slot-cell.empty {
+        border: 1px dashed rgba(255, 255, 255, 0.15);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 50px;
+      }
+      .slot-cell.empty:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: var(--primary);
+      }
+      .slot-cell.filled {
+        background: rgba(79, 70, 229, 0.08);
+        border-left: 4px solid var(--primary);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+      .slot-cell .del-btn {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        background: none;
+        border: none;
+        color: var(--danger);
+        cursor: pointer;
+        font-size: 0.75rem;
+        opacity: 0;
+        transition: var(--transition);
+      }
+      .slot-cell:hover .del-btn {
+        opacity: 1;
+      }
+      .slot-subject {
+        font-weight: 700;
+        margin-bottom: 2px;
+      }
+      .slot-teacher, .slot-room, .slot-time {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+      }
+      .slot-add {
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+      }
+      #subjectLegend {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+      }
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      #conflictAlert {
+        display: none;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid #ef4444;
+        color: #ef4444;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-size: 0.9rem;
+      }
+      #conflictAlert.visible {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">📅 Timetable & Schedules</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Weekly class schedules and double-booking conflict check</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- View Selection Toggles -->
+      <div>
+        <div class="view-toggles">
+          <button id="vBtnClass" class="btn active" onclick="switchView('class')">Class View</button>
+          <button id="vBtnTeacher" class="btn" onclick="switchView('teacher')">Teacher View</button>
+        </div>
+      </div>
+
+      <!-- Controls Row -->
+      <div class="card" style="padding:16px; margin-bottom:16px;">
+        <!-- Class Controls Panel -->
+        <div id="classControls" style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+          <div style="flex:1; min-width:200px;">
+            <label>View Class</label>
+            <select id="viewClassSelect" onchange="loadClassView()">
+              <option value="">Select class...</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:200px;">
+            <label>Semester / Term</label>
+            <select id="viewSemesterSelect" onchange="loadClassView()">
+              <option value="">All Semesters</option>
+            </select>
+          </div>
+          <button class="btn danger" onclick="clearClassTimetable()" style="margin-top:20px;">🗑️ Clear Timetable</button>
+        </div>
+
+        <!-- Teacher Controls Panel -->
+        <div id="teacherControls" style="display:none; gap:16px; align-items:center; flex-wrap:wrap;">
+          <div style="flex:1; min-width:200px;">
+            <label>View Teacher</label>
+            <select id="viewTeacherSelect" onchange="loadTeacherView()">
+              <option value="">Select teacher...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Layout -->
+      <div class="timetable-grid-layout">
+        <!-- Add Entry Form (Left Panel) -->
+        <div class="card" id="leftPanel">
+          <h3>Add Schedule Slot</h3>
+          <form id="timetableForm" onsubmit="addSlot(); return false;">
+            <label>Class Section
+              <select id="fClass" required><option value="">Select class...</option></select>
+            </label>
+            <label>Subject
+              <select id="fSubject" required><option value="">Select subject...</option></select>
+            </label>
+            <label>Teacher
+              <select id="fTeacher"><option value="">No teacher assigned</option></select>
+            </label>
+            <label>Semester / Term
+              <select id="fSemester"><option value="">Any / All semesters</option></select>
+            </label>
+            <label>Day of Week
+              <select id="fDay">
+                <option value="0">Monday</option>
+                <option value="1">Tuesday</option>
+                <option value="2">Wednesday</option>
+                <option value="3">Thursday</option>
+                <option value="4">Friday</option>
+              </select>
+            </label>
+            <label>Period (1-8)
+              <input type="number" id="fPeriod" min="1" max="8" value="1" required />
+            </label>
+            <label>Start Time
+              <input type="time" id="fStart" value="08:00" />
+            </label>
+            <label>End Time
+              <input type="time" id="fEnd" value="09:00" />
+            </label>
+            <label>Class Room / Venue
+              <input id="fRoom" placeholder="e.g. Science Lab" />
+            </label>
+            <button type="submit" id="addBtn" class="btn primary" style="width:100%; margin-top:8px;">Add to Timetable</button>
+          </form>
+          <div id="addStatus" style="margin-top:12px; font-weight:600; text-align:center;"></div>
+        </div>
+
+        <!-- Timetable View Panel (Right Panel) -->
+        <div class="card" style="padding:20px; overflow:hidden;">
+          <div id="conflictAlert"></div>
+          
+          <div style="width:100%; overflow-x:auto;">
+            <div id="gridContainer">
+              <div class="empty-state" style="text-align:center; padding:40px; color:var(--text-secondary);">Select a class or teacher above.</div>
+            </div>
+          </div>
+
+          <div id="subjectLegend"></div>
+        </div>
+      </div>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/timetable.js"></script>
+  </body>
+</html>

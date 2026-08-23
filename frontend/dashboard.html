@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard – School Management System</title>
+    <meta name="description" content="School Management System main dashboard with live stats and quick navigation." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <style>
+      /* ── Stat Cards ─────────────────────────────────── */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 16px;
+      }
+
+      .stat-card {
+        background: var(--card-bg, rgba(30,41,59,.7));
+        border: 1px solid var(--border-color, rgba(255,255,255,.08));
+        border-radius: 14px;
+        padding: 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(12px);
+        transition: transform .25s ease, box-shadow .25s ease;
+        border-left: 3px solid transparent;
+      }
+
+      .stat-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,.3); }
+
+      .stat-card.indigo { border-left-color: #6366f1; }
+      .stat-card.green  { border-left-color: #10b981; }
+      .stat-card.cyan   { border-left-color: #06b6d4; }
+      .stat-card.amber  { border-left-color: #f59e0b; }
+      .stat-card.red    { border-left-color: #ef4444; }
+      .stat-card.orange { border-left-color: #f97316; }
+
+      .stat-card::before {
+        content: '';
+        position: absolute;
+        top: -30px; right: -20px;
+        width: 90px; height: 90px;
+        border-radius: 50%;
+        opacity: .06;
+        background: currentColor;
+        pointer-events: none;
+      }
+
+      .stat-card.indigo::before { background: #6366f1; }
+      .stat-card.green::before  { background: #10b981; }
+      .stat-card.cyan::before   { background: #06b6d4; }
+      .stat-card.amber::before  { background: #f59e0b; }
+      .stat-card.red::before    { background: #ef4444; }
+      .stat-card.orange::before { background: #f97316; }
+
+      .stat-icon {
+        font-size: 1.5rem;
+        line-height: 1;
+        margin-bottom: 2px;
+      }
+
+      .stat-label {
+        font-size: .75rem;
+        font-weight: 600;
+        letter-spacing: .5px;
+        text-transform: uppercase;
+        color: var(--text-secondary, #94a3b8);
+      }
+
+      .stat-value {
+        font-size: 1.85rem;
+        font-weight: 800;
+        font-family: 'Outfit', sans-serif;
+        color: var(--text-primary, #f8fafc);
+        line-height: 1;
+      }
+
+      .stat-sub {
+        font-size: .75rem;
+        color: var(--text-secondary, #94a3b8);
+        margin-top: 2px;
+      }
+
+      /* ── Current term banner ────────────────────────── */
+      .term-banner {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background: rgba(79,70,229,.15);
+        border: 1px solid rgba(79,70,229,.3);
+        border-radius: 20px;
+        font-size: .78rem;
+        font-weight: 600;
+        color: #a5b4fc;
+        margin-top: 4px;
+        white-space: nowrap;
+      }
+
+      .term-banner .dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: #a5b4fc;
+        animation: blink 2s ease infinite;
+      }
+
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: .3; }
+      }
+
+      /* ── Quick Nav Cards ────────────────────────────── */
+      #dashboardCards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 12px;
+      }
+
+      .nav-card {
+        background: var(--card-bg, rgba(30,41,59,.7));
+        border: 1px solid var(--border-color, rgba(255,255,255,.08));
+        border-radius: 14px;
+        padding: 18px 14px;
+        text-decoration: none;
+        color: var(--text-primary, #f8fafc);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+        font-size: .85rem;
+        font-weight: 500;
+        backdrop-filter: blur(12px);
+        transition: all .22s ease;
+      }
+
+      .nav-card:hover {
+        background: rgba(79,70,229,.15);
+        border-color: rgba(79,70,229,.4);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(79,70,229,.2);
+        color: #c7d2fe;
+      }
+
+      .nav-card .nav-icon {
+        font-size: 1.6rem;
+        line-height: 1;
+      }
+
+      /* ── Section headings ───────────────────────────── */
+      .section-heading {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: -.2px;
+        margin-bottom: 14px;
+        color: var(--text-primary, #f8fafc);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .section-heading::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border-color, rgba(255,255,255,.08));
+      }
+
+      /* ── Topbar user info ───────────────────────────── */
+      .topbar-user {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 2px;
+      }
+
+      .topbar-user .user-name {
+        font-size: .85rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .topbar-user .user-role {
+        font-size: .72rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: .5px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <h1 style="margin:0; font-size:1.2rem; font-family:'Outfit',sans-serif; font-weight:800;" id="schoolNameHeader">School Management System</h1>
+        </div>
+      </header>
+
+      <!-- Stats Row (admin only) -->
+      <div id="statsRow" style="display:none;">
+        <div class="section-heading">📊 Live Overview</div>
+        <div class="stats-grid">
+          <div class="stat-card indigo">
+            <span class="stat-icon">👨‍🎓</span>
+            <span class="stat-label">Active Students</span>
+            <span class="stat-value" id="statStudents">—</span>
+            <span class="stat-sub" id="statStudentsSub"></span>
+          </div>
+          <div class="stat-card green">
+            <span class="stat-icon">✅</span>
+            <span class="stat-label">Attendance Today</span>
+            <span class="stat-value" id="statAttendance">—</span>
+            <span class="stat-sub" id="statAttendanceSub"></span>
+          </div>
+          <div class="stat-card cyan">
+            <span class="stat-icon">🏫</span>
+            <span class="stat-label">Classes</span>
+            <span class="stat-value" id="statClasses">—</span>
+            <span class="stat-sub" id="statClassesSub"></span>
+          </div>
+          <div class="stat-card amber">
+            <span class="stat-icon">📅</span>
+            <span class="stat-label">Current Term</span>
+            <span class="stat-value" id="statTerm" style="font-size:1.1rem;">—</span>
+            <span class="stat-sub" id="statTermSub"></span>
+          </div>
+          <div class="stat-card red">
+            <span class="stat-icon">🔔</span>
+            <span class="stat-label">Unread Alerts</span>
+            <span class="stat-value" id="statAlerts">—</span>
+            <span class="stat-sub"></span>
+          </div>
+          <div class="stat-card orange">
+            <span class="stat-icon">💰</span>
+            <span class="stat-label">Outstanding Fees</span>
+            <span class="stat-value" id="statFees" style="font-size:1.1rem;">—</span>
+            <span class="stat-sub" id="statFeesSub"></span>
+          </div>
+          <div class="stat-card indigo" id="statHousesCard">
+            <span class="stat-icon">🏠</span>
+            <span class="stat-label">Boarding Houses</span>
+            <span class="stat-value" id="statHouses">—</span>
+            <span class="stat-sub" id="statHousesSub"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Executive Analytics Widgets Section -->
+      <section id="executiveAnalyticsSection" style="display:none; margin-bottom:24px;">
+        <div class="section-heading" id="execAnalyticsTitle">👑 Executive Operations Summary</div>
+        <div id="execAnalyticsContainer" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px;"></div>
+      </section>
+
+      <!-- Daily Action Shortcuts (Sidebar ERP Mode) -->
+      <section id="dailyShortcutsSection" style="margin-bottom:20px;">
+        <div class="section-heading">⚡ Daily Operations Shortcuts</div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <a class="btn" href="attendance.html" style="background:var(--card-bg); border:1px solid var(--border-color); color:var(--text-primary); font-weight:600; padding:10px 16px; display:inline-flex; align-items:center; gap:8px;">⚡ Mark Attendance Today</a>
+          <a class="btn" href="bulk-entry.html" style="background:var(--card-bg); border:1px solid var(--border-color); color:var(--text-primary); font-weight:600; padding:10px 16px; display:inline-flex; align-items:center; gap:8px;">✍️ Record Class Marks</a>
+          <a class="btn" href="fees.html" style="background:var(--card-bg); border:1px solid var(--border-color); color:var(--text-primary); font-weight:600; padding:10px 16px; display:inline-flex; align-items:center; gap:8px;">💳 Log Student Payment</a>
+          <a class="btn" href="messaging.html" style="background:var(--card-bg); border:1px solid var(--border-color); color:var(--text-primary); font-weight:600; padding:10px 16px; display:inline-flex; align-items:center; gap:8px;">💬 Broadcast Parent SMS</a>
+        </div>
+      </section>
+
+      <!-- Quick Navigation (Topbar Mode) -->
+      <section id="quickNavSection">
+        <div class="section-heading">⚡ Quick Navigation</div>
+        <div id="dashboardCards"></div>
+      </section>
+
+      <!-- Analytics (admin only) -->
+      <section id="analyticsSection" style="display:none;">
+        <div class="section-heading">📈 Analytics</div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px,1fr)); gap:20px;">
+          <div class="card">
+            <h3 style="margin:0 0 12px; font-size:.95rem; font-weight:600;">Attendance Overview</h3>
+            <div id="attendanceChartBox" style="min-height:180px; display:flex; align-items:center; justify-content:center; color:var(--text-secondary);">Loading…</div>
+          </div>
+          <div class="card">
+            <h3 style="margin:0 0 8px; font-size:.95rem; font-weight:600;">Class Performance</h3>
+            <select id="classAnalyticsSelect" style="margin-bottom:12px; width:100%;"></select>
+            <div id="performanceChartBox" style="min-height:180px; display:flex; align-items:center; justify-content:center; color:var(--text-secondary);">Select a class…</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/branding.js"></script>
+    <script src="js/dashboard.js"></script>
+  </body>
+</html>

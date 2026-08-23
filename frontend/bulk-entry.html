@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bulk Results Entry – School Management System</title>
+    <meta name="description" content="Enter results for an entire class in one go." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Bulk Results Entry</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Input marks for an entire class at once</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <section class="card">
+        <h3>Select Class &amp; Subject</h3>
+        <form id="bulkFilterForm" onsubmit="loadStudentList(); document.getElementById('bulkEntrySection').style.display='block'; return false;">
+          <label>Class Section
+            <select id="class_section_id" required><option value="">Loading classes...</option></select>
+          </label>
+          <label>Subject
+            <select id="subject_id" required><option value="">Loading subjects...</option></select>
+          </label>
+          <label>Semester / Term
+            <select id="semester_id" required><option value="">Loading semesters...</option></select>
+          </label>
+          <button type="submit" class="btn primary" style="margin-top:8px;">Load Student List</button>
+        </form>
+      </section>
+
+      <section class="card" id="bulkEntrySection" style="display:none; width:100%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <h3 style="margin:0;">Enter Student Scores</h3>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <label style="font-size:0.88rem; font-weight:600; cursor:pointer;">
+              <input type="radio" name="entryMode" value="simple" checked onchange="toggleEntryMode('simple')" /> Simple CA & Exam
+            </label>
+            <label style="font-size:0.88rem; font-weight:600; cursor:pointer; color:#818cf8;">
+              <input type="radio" name="entryMode" value="detailed" onchange="toggleEntryMode('detailed')" /> Detailed Breakdown (Exercises, Homework, Group Work, Mid-Term)
+            </label>
+          </div>
+        </div>
+        
+        <div style="width:100%; overflow-x:auto; margin-top:16px; margin-bottom:16px;">
+          <table>
+            <thead>
+              <tr id="tableHeaderRow">
+                <th>Student Name</th>
+                <th class="simple-col" id="caHeader">CA Score (0 - 30)</th>
+                <th class="detailed-col" style="display:none;">Ex 1</th>
+                <th class="detailed-col" style="display:none;">Ex 2</th>
+                <th class="detailed-col" style="display:none;">Hwk / Assg</th>
+                <th class="detailed-col" style="display:none;">Group Work</th>
+                <th class="detailed-col" style="display:none;">Mid-Term</th>
+                <th id="examHeader">Exam Score (0 - 70)</th>
+                <th>Total Preview</th>
+                <th>Grade</th>
+              </tr>
+            </thead>
+            <tbody id="studentListBody">
+              <tr>
+                <td colspan="10" style="text-align:center; padding:20px; color:var(--text-secondary);">Click load student list above.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <button class="btn primary" id="saveBulkBtn" onclick="saveAllScores()" style="width:100%;">💾 Save All Results</button>
+        <div id="bulkMsg" style="margin-top:10px;"></div>
+      </section>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/bulk-entry.js"></script>
+  </body>
+</html>

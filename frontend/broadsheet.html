@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📜 Class Broadsheet & Terminal Remarks – School Management System</title>
+    <meta name="description" content="View class broadsheet matrix, auto-calculate student ranks, edit form master remarks, and publish terminal reports." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <style>
+      .broadsheet-matrix {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+      }
+      .broadsheet-matrix th, .broadsheet-matrix td {
+        padding: 10px 12px;
+        border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+        text-align: center;
+      }
+      .broadsheet-matrix th {
+        background: var(--card-bg, #1e293b);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        font-weight: 700;
+      }
+      .broadsheet-matrix tr:nth-child(even) {
+        background: rgba(255,255,255,0.02);
+      }
+      .rank-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 0.82rem;
+      }
+      .rank-top { background: rgba(245, 158, 11, 0.25); color: #f59e0b; border: 1px solid #f59e0b; }
+      .rank-normal { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; }
+
+      .remark-input {
+        width: 100%;
+        min-width: 130px;
+        padding: 6px 8px;
+        font-size: 0.82rem;
+        background: rgba(0,0,0,0.2);
+        border: 1px solid var(--border-color, rgba(255,255,255,0.15));
+        border-radius: 4px;
+        color: var(--text-color, #f8fafc);
+      }
+
+      .publishing-banner {
+        padding: 14px 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.3rem;">📜 Class Broadsheet & Remarks</h1>
+          <p style="margin:4px 0 0 0;opacity:.75;font-size:.85rem;">Review class broadsheet matrix, total scores, class ranks, and manage terminal remarks.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="results.html">📝 Results & Scores</a>
+          <a class="btn" href="departments.html">🏢 Departments</a>
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- Selector Controls Card -->
+      <section class="card" style="margin-bottom: 20px;">
+        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+          <div style="flex:1; min-width:220px;">
+            <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Select Class Section *</label>
+            <select id="selectClassSection" style="width:100%;" onchange="loadBroadsheetData()">
+              <option value="">Select class section...</option>
+            </select>
+          </div>
+
+          <div style="width:200px;">
+            <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Academic Semester / Term</label>
+            <select id="selectSemester" style="width:100%;" onchange="loadBroadsheetData()">
+              <option value="">Current Term</option>
+            </select>
+          </div>
+
+          <div style="margin-top:20px;">
+            <button class="btn btn-primary" onclick="loadBroadsheetData()">🔄 Refresh Broadsheet</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Publishing Policy & Status Banner -->
+      <div id="publishingBanner" class="publishing-banner" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3);">
+        <div>
+          <h4 style="margin:0; color:#818cf8; font-size:0.98rem;" id="bannerTitle">⚙️ Loading Policy Settings...</h4>
+          <p style="margin:4px 0 0 0; font-size:0.85rem; opacity:0.85;" id="bannerDesc">Select a class section above to view the broadsheet matrix.</p>
+        </div>
+        <div id="bannerActionContainer">
+          <!-- Dynamically populated publish / save buttons -->
+        </div>
+      </div>
+
+      <!-- Broadsheet Matrix Container -->
+      <section class="card" style="max-width:100%; overflow-x:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <h3 style="margin:0;" id="broadsheetTitle">Class Section Broadsheet</h3>
+          <button class="btn" style="background:#10b981; color:white; font-weight:600;" onclick="saveBroadsheetRemarks()">💾 Save Remarks</button>
+        </div>
+
+        <form id="remarksForm" onsubmit="event.preventDefault(); saveBroadsheetRemarks();">
+          <div style="overflow-x:auto;">
+            <table class="broadsheet-matrix" id="broadsheetTable">
+              <thead>
+                <tr id="broadsheetHeaderRow">
+                  <th style="text-align:left;">Student Code & Name</th>
+                  <th>Total</th>
+                  <th>Avg</th>
+                  <th>Rank</th>
+                  <th>Attitude</th>
+                  <th>Conduct</th>
+                  <th>Interest</th>
+                  <th style="min-width:200px;">Form Teacher Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="broadsheetBody">
+                <tr>
+                  <td colspan="8" style="text-align:center; padding:40px; opacity:0.6;">Please select a class section above to view the broadsheet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </form>
+      </section>
+
+      <!-- Subject Mastery & Grade Distribution Summary Card -->
+      <section class="card" id="subjectMasterySection" style="display:none; margin-top:20px; border-top:3px solid var(--primary);">
+        <h3 style="margin-top:0; font-size:1.1rem; color:#818cf8;">📊 Class Academic Subject Mastery Analytics</h3>
+        <div id="subjectMasteryContent" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-top:12px;"></div>
+      </section>
+    </main>
+
+    <script src="js/broadsheet.js"></script>
+  </body>
+</html>

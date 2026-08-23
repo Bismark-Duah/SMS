@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>💰 Fee Management – School Management System</title>
+    <meta name="description" content="Track student billing, record payments, and manage balances." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <style>
+      .fees-grid-layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      @media (max-width: 900px) {
+        .fees-grid-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+      .tab-header {
+        display: flex;
+        background: rgba(15, 23, 42, 0.4);
+        padding: 4px;
+        border-radius: var(--radius-md);
+        border: var(--glass-border);
+        margin-bottom: 16px;
+      }
+      .tab-header .btn-tab {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        padding: 8px 12px;
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: var(--transition);
+        text-align: center;
+      }
+      .tab-header .btn-tab.active {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+      }
+      /* Modal styles */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        backdrop-filter: blur(8px);
+        padding: 16px;
+      }
+      .modal.open {
+        display: flex;
+      }
+      .modal-content {
+        background: #1e293b;
+        border: var(--glass-border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--box-shadow);
+        padding: 24px;
+        width: 100%;
+        max-width: 500px;
+        position: relative;
+        animation: fadeIn 0.3s ease-out;
+      }
+      .modal-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 1.2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">💰 Fee & Finance Management</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Track invoices, record student payments, and view outstanding balances</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <button class="btn" style="background:#0284c7; border-color:#0369a1; color:#fff;" onclick="broadcastFeeReminders()">📲 Broadcast Fee Reminders</button>
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- Stat Cards -->
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+        <div class="card stat" style="min-height: 100px; padding: 16px;">
+          <div class="stat-label" style="font-size: 0.8rem; color: var(--text-secondary);">Total Billed</div>
+          <div class="stat-value" id="sTotalBilled" style="font-size: 1.4rem;">GHS 0</div>
+        </div>
+        <div class="card stat" style="min-height: 100px; padding: 16px;">
+          <div class="stat-label" style="font-size: 0.8rem; color: var(--text-secondary);">Total Paid</div>
+          <div class="stat-value" id="sTotalPaid" style="font-size: 1.4rem; color: var(--success);">GHS 0</div>
+        </div>
+        <div class="card stat" style="min-height: 100px; padding: 16px;">
+          <div class="stat-label" style="font-size: 0.8rem; color: var(--text-secondary);">Outstanding Balance</div>
+          <div class="stat-value" id="sTotalBalance" style="font-size: 1.4rem; color: var(--warning);">GHS 0</div>
+        </div>
+        <div class="card stat" style="min-height: 100px; padding: 16px; display: flex; flex-direction: row; gap: 12px; justify-content: space-around;">
+          <div style="text-align: center;">
+            <div style="font-size: 0.75rem; color: var(--danger); font-weight: 700;">OVERDUE</div>
+            <div id="sOverdue" style="font-size: 1.2rem; font-weight: 800;">0</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 0.75rem; color: var(--success); font-weight: 700;">PAID</div>
+            <div id="sPaid" style="font-size: 1.2rem; font-weight: 800;">0</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 0.75rem; color: var(--warning); font-weight: 700;">PENDING</div>
+            <div id="sPending" style="font-size: 1.2rem; font-weight: 800;">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Layout -->
+      <div class="fees-grid-layout">
+        <!-- Billing Creation Panel (Left) -->
+        <div class="card">
+          <div class="tab-header">
+            <button id="tabSingle" class="btn-tab active" onclick="switchCompose('single')">Single Student</button>
+            <button id="tabBulk" class="btn-tab" onclick="switchCompose('bulk')">Bulk Class</button>
+          </div>
+
+          <!-- Single Student Billing Form -->
+          <div id="formSingle">
+            <h3>Assign Fee to Student</h3>
+            <form onsubmit="createSingleFee(); return false;">
+              <label>Student
+                <select id="sStudentId" required><option value="">Loading students...</option></select>
+              </label>
+              <label>Fee Type
+                <select id="sFeeType" required>
+                  <option value="Tuition">Tuition Fee</option>
+                  <option value="Uniform">Uniform</option>
+                  <option value="Books">Books</option>
+                  <option value="Facility">Facility Usage</option>
+                  <option value="Exam">Examination</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>Amount (GHS)
+                <input type="number" id="sAmount" min="0" step="0.01" placeholder="e.g. 5000" required />
+              </label>
+              <label>Academic Year
+                <input id="sAcYear" placeholder="e.g. 2024/2025" required />
+              </label>
+              <label>Semester / Term
+                <input id="sTerm" placeholder="e.g. First Term" required />
+              </label>
+              <label>Due Date
+                <input type="date" id="sDueDate" required />
+              </label>
+              <label>Description / Notes
+                <textarea id="sDesc" rows="3" placeholder="Additional billing details..."></textarea>
+              </label>
+              <button type="submit" class="btn primary" style="width:100%; margin-top:8px;">Assign Invoice</button>
+            </form>
+          </div>
+
+          <!-- Bulk Class Billing Form -->
+          <div id="formBulk" style="display:none;">
+            <h3>Assign Fee to Class</h3>
+            <form onsubmit="createBulkFee(); return false;">
+              <label>Class Section
+                <select id="bClassId" required><option value="">Loading classes...</option></select>
+              </label>
+              <label>Fee Type
+                <select id="bFeeType" required>
+                  <option value="Tuition">Tuition Fee</option>
+                  <option value="Uniform">Uniform</option>
+                  <option value="Books">Books</option>
+                  <option value="Facility">Facility Usage</option>
+                  <option value="Exam">Examination</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>Amount (GHS)
+                <input type="number" id="bAmount" min="0" step="0.01" placeholder="e.g. 5000" required />
+              </label>
+              <label>Academic Year
+                <input id="bAcYear" placeholder="e.g. 2024/2025" required />
+              </label>
+              <label>Semester / Term
+                <input id="bTerm" placeholder="e.g. First Term" required />
+              </label>
+              <label>Due Date
+                <input type="date" id="bDueDate" required />
+              </label>
+              <label>Description / Notes
+                <textarea id="bDesc" rows="3" placeholder="Additional billing details..."></textarea>
+              </label>
+              <button type="submit" class="btn primary" style="width:100%; margin-top:8px;">Invoice Class</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Invoices List & Filter Area (Right) -->
+        <div class="card" style="padding: 20px;">
+          <h3>Billing Invoices (<span id="tableCount">0</span>)</h3>
+          
+          <!-- Filters row -->
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+            <select id="filterStatus" onchange="applyFilter()" style="flex:1; min-width:110px;">
+              <option value="">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Paid">Paid</option>
+              <option value="Overdue">Overdue</option>
+            </select>
+            <select id="filterType" onchange="applyFilter()" style="flex:1; min-width:110px;">
+              <option value="">All Types</option>
+              <option value="Tuition">Tuition</option>
+              <option value="Uniform">Uniform</option>
+              <option value="Books">Books</option>
+              <option value="Facility">Facility</option>
+              <option value="Exam">Exam</option>
+              <option value="Other">Other</option>
+            </select>
+            <select id="filterClass" onchange="applyFilter()" style="flex:1; min-width:110px;">
+              <option value="">All Classes</option>
+            </select>
+            <input id="filterSearch" placeholder="Search student name..." oninput="applyFilter()" style="flex:2; min-width:160px;" />
+            <button class="btn" onclick="exportFeesCSV()" style="background:#10b981; border-color:#059669; color:white; font-size:0.85rem; font-weight:600; white-space:nowrap;">📊 Export CSV</button>
+          </div>
+
+          <!-- Invoices Table -->
+          <div style="width:100%; overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Class</th>
+                  <th>Fee Type</th>
+                  <th>Amount</th>
+                  <th>Paid</th>
+                  <th>Balance</th>
+                  <th>Due Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="feesBody">
+                <tr>
+                  <td colspan="9" class="empty-state" style="text-align:center; padding:32px; color:var(--text-secondary);">Loading fees...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Payment Modal -->
+    <div id="payModal" class="modal">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closePayModal()">✕</button>
+        <h3 style="margin-bottom:16px;">Record Payment</h3>
+        <div id="payFeeInfo" style="margin-bottom:16px; font-size:0.9rem; padding:10px; background:rgba(255,255,255,0.03); border-radius:6px; border-left:4px solid var(--primary);"></div>
+        
+        <form onsubmit="submitPayment(); return false;">
+          <label>Payment Amount (GHS)
+            <input type="number" id="payAmount" min="0.01" step="0.01" required />
+          </label>
+          <label>Payment Method
+            <select id="payMethod" required>
+              <option value="MTN MoMo">🟡 MTN Mobile Money (MoMo)</option>
+              <option value="Telecel Cash">🔴 Telecel Cash (Vodafone Cash)</option>
+              <option value="AT Money">🔵 AT Money (AirtelTigo Cash)</option>
+              <option value="Cash">💵 Cash</option>
+              <option value="Bank Transfer">🏦 Bank Transfer / Direct Deposit</option>
+              <option value="Cheque">📄 Cheque / Bank Draft</option>
+            </select>
+          </label>
+          <label>Payment Reference / Receipt ID
+            <input id="payRef" placeholder="e.g. Bank Transfer Ref, Cash Receipt" required />
+          </label>
+          <label>Payment Date
+            <input type="date" id="payDate" required />
+          </label>
+          <label>Notes / Comments
+            <input id="payNotes" placeholder="e.g. Paid in full, Part payment" />
+          </label>
+          <div style="display:flex; gap:10px; margin-top:12px;">
+            <button type="submit" class="btn primary" style="flex:1;">Submit Offline Payment</button>
+            <button type="button" class="btn" style="background:#10b981; border-color:#059669; color:#fff; font-weight:700; flex:1;" onclick="payOnlineWithPaystack()">💳 Pay Online (Paystack MoMo)</button>
+          </div>
+        </form>
+        
+        <div id="payStatus" style="margin-top:10px; font-weight:600; text-align:center;"></div>
+
+        <!-- Payment History list inside modal -->
+        <div id="payHistorySection" style="margin-top:20px; display:none;">
+          <h4 style="border-bottom:1px solid var(--border-color); padding-bottom:4px; margin-bottom:8px;">Payment Log</h4>
+          <div id="payHistoryList" style="max-height:120px; overflow-y:auto; font-size:0.85rem; display:flex; flex-direction:column; gap:6px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/guard.js"></script>
+    <script src="js/fees.js"></script>
+  </body>
+</html>

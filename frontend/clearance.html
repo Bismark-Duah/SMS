@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🎓 SHS Final Year Student Clearance Hub – SMS</title>
+    <meta name="description" content="Manage graduating SHS 3 student clearance across Storekeeper, Bursar, Housemaster, and Headmaster sign-offs for certificate and transcript release." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <script src="js/guard.js"></script>
+    <style>
+      .badge-clearance {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .badge-ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); }
+      .badge-hold { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+      .badge-pending { background: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.4); }
+
+      @media print {
+        body * { visibility: hidden; }
+        #printableCertificateArea, #printableCertificateArea * { visibility: visible; }
+        #printableCertificateArea { position: absolute; left: 0; top: 0; width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0; font-size:1.2rem;">🎓 SHS 3 Graduating Student Clearance</h1>
+          <p style="margin:0; opacity:.7; font-size:.85rem;">Official Completion Clearance Hub for store, fee, house, and academic sign-offs before certificate/transcript release.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- Departmental Scope Banner -->
+      <section class="card" style="border-left: 4px solid #818cf8; margin-bottom: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h4 style="margin:0; font-size:1rem; color:#818cf8;">📋 Departmental Sign-off Process for WASSCE / Transcript Release</h4>
+            <p style="margin:4px 0 0 0; font-size:0.85rem; opacity:0.8;">
+              Final year students must obtain sign-offs from <b>Storekeeper (Books)</b>, <b>Bursar (Fees)</b>, <b>Housemaster (Dorm)</b>, and <b>Headmaster (Academics)</b>.
+            </p>
+          </div>
+          <button class="btn primary" onclick="loadClearanceList()">🔄 Refresh Clearance Matrix</button>
+        </div>
+      </section>
+
+      <!-- Search & Filters -->
+      <section class="card" style="margin-bottom: 20px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <input type="text" id="clearanceSearchInput" placeholder="Search student name, code, class..." style="flex:1; min-width:220px;" onkeyup="filterTable()" />
+          <select id="clearanceFilterStatus" onchange="filterTable()" style="width:180px;">
+            <option value="">All Statuses</option>
+            <option value="Fully Cleared">Fully Cleared</option>
+            <option value="Pending">Pending Sign-off</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Clearance Matrix Table -->
+      <section class="card" style="width:100%;">
+        <h3 style="margin-top:0;">SHS 3 Completion Clearance Matrix</h3>
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; color:var(--text-primary);">
+            <thead>
+              <tr style="border-bottom:2px solid var(--border-color); text-align:left;">
+                <th style="padding:10px;">Student Name</th>
+                <th style="padding:10px;">Class</th>
+                <th style="padding:10px;">House</th>
+                <th style="padding:10px; text-align:center;">1. Storekeeper</th>
+                <th style="padding:10px; text-align:center;">2. Bursar</th>
+                <th style="padding:10px; text-align:center;">3. House Master</th>
+                <th style="padding:10px; text-align:center;">4. Headmaster</th>
+                <th style="padding:10px; text-align:center;">Overall Status</th>
+                <th style="padding:10px; text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="clearanceTableBody">
+              <tr>
+                <td colspan="9" style="text-align:center; padding:30px; opacity:0.6;">Loading final year clearance matrix...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- MODAL: DEPARTMENT SIGN-OFF & LIVE BREAKDOWN -->
+    <div class="modal" id="clearanceModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:1000;">
+      <div class="card" style="max-width:650px; width:90%; max-height:90vh; overflow-y:auto; position:relative;">
+        <button onclick="closeClearanceModal()" style="position:absolute; right:16px; top:16px; background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+        <h3 style="margin-top:0; border-bottom:1px solid var(--border-color); padding-bottom:8px;" id="modalStudentTitle">Student Clearance Details</h3>
+        
+        <div id="modalContentContainer">
+          <p style="opacity:0.6;">Loading student metrics...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- HIDDEN PRINT AREA: OFFICIAL CLEARANCE CERTIFICATE -->
+    <div id="printableCertificateArea" style="display:none;"></div>
+
+    <script src="js/clearance.js"></script>
+  </body>
+</html>

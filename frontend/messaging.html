@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📲 Messaging & Report Dispatcher – School Management System</title>
+    <meta name="description" content="Send Terminal Report Cards, SMS alerts, and WhatsApp PDF summaries to guardians." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <script src="js/vendor/html2pdf.bundle.min.js"></script>
+    <style>
+      .messaging-layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      @media (max-width: 960px) {
+        .messaging-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+      .channel-tab-group {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .channel-btn {
+        flex: 1;
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-color);
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+      }
+      .channel-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .channel-btn.active.whatsapp {
+        background: #10b981;
+        border-color: #059669;
+        color: white;
+      }
+      .channel-btn.active.sms {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+      }
+      .recipient-row.warning-no-phone {
+        background: rgba(245, 158, 11, 0.08) !important;
+      }
+      .preview-box {
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 16px;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.88rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #e2e8f0;
+        max-height: 320px;
+        overflow-y: auto;
+      }
+      .tag-pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        background: rgba(255, 255, 255, 0.1);
+        cursor: pointer;
+        margin-right: 4px;
+        margin-bottom: 4px;
+      }
+      .tag-pill:hover {
+        background: var(--primary);
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">📲 Messaging & Report Dispatcher</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Send bulk SMS, emergency alerts, and auto-dispatch terminal report links.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+    <div class="container" style="margin-top: 24px;">
+      <!-- Navigation Tabs -->
+      <div style="display: flex; gap: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 24px;">
+        <button class="btn primary" id="tabDispatchBtn" onclick="switchMainTab('dispatch')">📤 Send Messages & Reports</button>
+        <button class="btn secondary" id="tabOutboxBtn" onclick="switchMainTab('outbox')">📋 Delivery Log & Outbox</button>
+      </div>
+
+      <!-- DISPATCH PANEL -->
+      <div id="panelDispatch" class="messaging-layout">
+        <!-- Sidebar Controls -->
+        <div class="card" style="padding: 20px;">
+          <h3 style="margin-top: 0; font-size: 1.05rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">⚙️ Scope & Target Filters</h3>
+          
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label>Message Type</label>
+            <select id="msgTypeSelect" onchange="onMsgTypeChange()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);">
+              <option value="TERMINAL_REPORT">📄 Terminal Report Card</option>
+              <option value="ABSENCE_ALERT">🔔 Absentee / Attendance Alert</option>
+              <option value="DISCIPLINE_NOTICE">⚠️ Disciplinary Incident Alert</option>
+              <option value="EXEAT_NOTICE">🏡 Exeat / Leave Pass Alert</option>
+              <option value="ANNOUNCEMENT">📢 General Announcement</option>
+              <option value="FEE_NOTICE">💰 Fee Notice / Balance Alert</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label>Class Section (Form Master)</label>
+            <select id="filterClassSelect" onchange="loadRecipients()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);">
+              <option value="">All Assigned Classes...</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label>House (House Master)</label>
+            <select id="filterHouseSelect" onchange="loadRecipients()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);">
+              <option value="">All Assigned Houses...</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label>Program (SHS Only)</label>
+            <select id="filterProgramSelect" onchange="loadRecipients()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);">
+              <option value="">All Programs...</option>
+            </select>
+          </div>
+
+          <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px; font-size: 0.85rem;">
+              <input type="checkbox" id="chkGroupParent" onchange="loadRecipients()" />
+              Group Siblings (1 msg per parent)
+            </label>
+            <button class="btn secondary" style="width: 100%; margin-top: 8px; font-size: 0.82rem;" onclick="triggerAutoLinkGuardians()">
+              ⚡ Auto-Link Missing Guardians
+            </button>
+          </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div>
+          <!-- Channel Selection -->
+          <div class="card" style="padding: 16px; margin-bottom: 20px;">
+            <label style="font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; display: block;">Select Primary Dispatch Channel:</label>
+            <div class="channel-tab-group">
+              <button class="channel-btn active whatsapp" id="btnChannelWA" onclick="setChannel('WHATSAPP')">
+                🟢 WhatsApp (Rich Text + PDF Report)
+              </button>
+              <button class="channel-btn sms" id="btnChannelSMS" onclick="setChannel('SMS')">
+                📱 SMS (Full Subject Score Breakdown)
+              </button>
+            </div>
+          </div>
+
+          <!-- Announcement Template Form (Visible when ANNOUNCEMENT selected) -->
+          <div id="announcementTemplateBox" class="card" style="padding: 16px; margin-bottom: 20px; display: none;">
+            <h4 style="margin-top: 0;">Compose Announcement Message</h4>
+            <div style="margin-bottom: 8px;">
+              <span class="tag-pill" onclick="insertTag('{student_name}')">+ {student_name}</span>
+              <span class="tag-pill" onclick="insertTag('{guardian_name}')">+ {guardian_name}</span>
+              <span class="tag-pill" onclick="insertTag('{class_name}')">+ {class_name}</span>
+              <span class="tag-pill" onclick="insertTag('{school_name}')">+ {school_name}</span>
+            </div>
+            <textarea id="customTemplateText" rows="4" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);" placeholder="Dear {guardian_name}, this is an official notice regarding {student_name}..."></textarea>
+          </div>
+
+          <!-- Recipient List Table -->
+          <div class="card" style="padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="margin: 0; font-size: 1.05rem;">👥 Target Recipients (<span id="recipientCount">0</span>)</h3>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn secondary" style="font-size: 0.8rem; padding: 4px 10px;" onclick="toggleSelectAll(true)">Select All</button>
+                <button class="btn secondary" style="font-size: 0.8rem; padding: 4px 10px;" onclick="toggleSelectAll(false)">Deselect All</button>
+              </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
+                  <th style="padding: 10px; width: 40px;"><input type="checkbox" id="chkSelectAllHeader" onchange="onHeaderCheckChange(this)" /></th>
+                  <th style="padding: 10px;">Student / Parent</th>
+                  <th style="padding: 10px;">Class / House</th>
+                  <th style="padding: 10px;">Guardian Contact</th>
+                  <th style="padding: 10px; text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="recipientTableBody">
+                <tr><td colspan="5" style="text-align: center; padding: 24px; opacity: 0.6;">Loading recipients...</td></tr>
+              </tbody>
+            </table>
+
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 12px;">
+              <button class="btn secondary" style="padding: 10px 16px;" onclick="exportBulkCSV()">📥 Export Bulk SMS CSV</button>
+              <button class="btn primary" style="padding: 10px 20px;" onclick="openBulkPreviewModal()">🚀 Preview & Send Selected (<span id="selectedCount">0</span>)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OUTBOX PANEL -->
+      <div id="panelOutbox" class="card" style="padding: 20px; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0;">📋 Outbox & Delivery History</h3>
+          <button class="btn secondary" onclick="loadOutboxLogs()">🔄 Refresh Log</button>
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
+              <th style="padding: 10px;">Date & Time</th>
+              <th style="padding: 10px;">Sender</th>
+              <th style="padding: 10px;">Student / Parent</th>
+              <th style="padding: 10px;">Contact Phone</th>
+              <th style="padding: 10px;">Channel</th>
+              <th style="padding: 10px;">Type</th>
+              <th style="padding: 10px;">Overall Grade</th>
+              <th style="padding: 10px;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="outboxTableBody">
+            <tr><td colspan="8" style="text-align: center; padding: 24px; opacity: 0.6;">Loading outbox history...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PREVIEW & CONFIRM MODAL (RICH TABLE + WHATSAPP TEXT) -->
+    <div id="previewModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); align-items: center; justify-content: center; z-index: 9999;">
+      <div class="card" style="width: 92%; max-width: 780px; padding: 24px; max-height: 90vh; overflow-y: auto; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="margin: 0; font-size: 1.2rem;" id="previewModalTitle">Report & Message Preview</h3>
+          <button class="btn secondary" style="padding: 4px 10px; font-weight: 700;" onclick="closePreviewModal()">✕</button>
+        </div>
+
+        <div id="previewMetaInfo" style="margin-bottom: 14px; font-size: 0.88rem; opacity: 0.9; background: var(--input-bg, rgba(15,23,42,0.4)); padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-color);"></div>
+
+        <!-- Dual View Mode Tabs -->
+        <div style="display: flex; gap: 8px; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+          <button class="btn tab-btn active" id="btnViewRichTable" onclick="switchPreviewMode('table')" style="font-weight: 700;">📊 Visual Table View</button>
+          <button class="btn tab-btn" id="btnViewRawText" onclick="switchPreviewMode('text')" style="font-weight: 700;">💬 WhatsApp Text View</button>
+          <button class="btn secondary" style="margin-left: auto; padding: 4px 12px; font-size: 0.8rem;" onclick="copyWhatsAppTextToClipboard()">📋 Copy Text</button>
+        </div>
+
+        <!-- Container 1: Rich HTML Table View (Columns & Rows) -->
+        <div id="richTableViewContainer" style="display: block;">
+          <div id="richTableRenderArea"></div>
+        </div>
+
+        <!-- Container 2: WhatsApp Raw Text View -->
+        <div id="rawTextViewContainer" style="display: none;">
+          <div class="preview-box" id="previewTextContent" style="white-space: pre-wrap; font-family: monospace; font-size: 0.88rem; background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color); max-height: 400px; overflow-y: auto;"></div>
+          <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.78rem; opacity: 0.7;">
+            <span id="charCountLabel">0 chars · 1 SMS segment</span>
+            <span id="gradeHighlightLabel">Grade: -</span>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+          <button class="btn secondary" onclick="closePreviewModal()">Cancel</button>
+          <button class="btn primary" id="btnExecuteSend" onclick="executeSendCurrent()" style="font-size: 0.95rem; font-weight: 700;">🚀 Dispatch Message & Log</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/messaging.js"></script>
+  </body>
+</html>

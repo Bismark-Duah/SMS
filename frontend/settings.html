@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings – School Management System</title>
+    <meta name="description" content="Configure school profile, grading standards, and system preferences." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">System Settings</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">School profile and grading configuration</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- SECTION 1: School Profile -->
+      <section class="card" style="margin-bottom:20px;">
+        <h3>School Profile</h3>
+        <form id="settingsForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px;">
+          <label>School Name <span style="font-size:0.72rem; color:#818cf8; font-weight:normal;">(🔒 Managed by Super-Admin)</span>
+            <input type="text" id="school_name" placeholder="E.g. J.A. Kuffour STEM Technical" />
+          </label>
+          <label>School Abbreviation / Shortcut <span style="font-size:0.72rem; color:#818cf8; font-weight:normal;">(🔒 Managed by Super-Admin)</span>
+            <input type="text" id="school_abbreviation" placeholder="E.g. JAK STEM" />
+          </label>
+          <label>School Motto
+            <input type="text" id="report_motto" placeholder="E.g. Knowledge is Power" />
+          </label>
+          <label>Report Title
+            <input type="text" id="report_title" placeholder="E.g. TERMINAL REPORT" />
+          </label>
+          <label>Principal / Headteacher
+            <input type="text" id="report_headmaster" placeholder="E.g. Dr. John Doe" />
+          </label>
+          <label>School Address
+            <input type="text" id="school_address" placeholder="E.g. 123 School Lane" />
+          </label>
+          <label>School Phone
+            <input type="tel" id="school_phone" placeholder="E.g. +233 20 000 0000" />
+          </label>
+          <label>School Email
+            <input type="email" id="school_email" placeholder="admin@school.edu.gh" />
+          </label>
+          <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 14px; margin-top: 6px;">
+            <label style="flex: 1; margin: 0;">School Logo
+              <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
+                <input type="file" id="school_logo_file" accept="image/*" style="display: none;" />
+                <button type="button" class="btn" style="white-space: nowrap; margin: 0;" onclick="document.getElementById('school_logo_file').click()">📁 Select Logo</button>
+                <input type="text" id="school_logo" placeholder="Optional: Logo path or URL" style="flex: 1; margin: 0;" readonly />
+              </div>
+            </label>
+            <div id="logo_preview_container" style="display: none; align-items: center; justify-content: center; width: 60px; height: 60px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; background: #fff; margin-top: 14px;">
+              <img id="logo_preview" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+            </div>
+          </div>
+          <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 14px; margin-top: 6px;">
+            <label style="flex: 1; margin: 0;">Headmaster Signature
+              <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
+                <input type="file" id="headmaster_signature_file" accept="image/*" style="display: none;" />
+                <button type="button" class="btn" style="white-space: nowrap; margin: 0;" onclick="document.getElementById('headmaster_signature_file').click()">📁 Select Signature</button>
+                <input type="text" id="headmaster_signature" placeholder="Optional: Signature path or URL" style="flex: 1; margin: 0;" readonly />
+              </div>
+            </label>
+            <div id="sig_preview_container" style="display: none; align-items: center; justify-content: center; width: 120px; height: 60px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; background: #fff; margin-top: 14px;">
+              <img id="sig_preview" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+            </div>
+          </div>
+          <label>School Mode <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;" id="schoolModeLockNotice">(🔒 Managed by Overall Super-Admin)</span>
+            <select id="school_mode" onchange="if(window.updateGradingStandardDropdown) window.updateGradingStandardDropdown(this.value)">
+              <option value="COMBINED">Combined School (Basic + SHS)</option>
+              <option value="BASIC_ONLY">Basic School Only (Creche to JHS)</option>
+              <option value="SHS_ONLY">Senior High School (SHS) Only</option>
+            </select>
+          </label>
+          <label>Boarding Status
+            <select id="boarding_status" onchange="if(window.toggleBoardingHierarchyBox) window.toggleBoardingHierarchyBox(this.value)">
+              <option value="BOARDING_AND_DAY">Boarding & Day (Mixed)</option>
+              <option value="DAY_ONLY">Day Only (No Boarding Facilities)</option>
+            </select>
+          </label>
+          <label id="hierarchyModeLabel">Boarding Approval Hierarchy
+            <select id="boarding_hierarchy_mode">
+              <option value="SHS_THREE_TIER">SHS Standard (Housemaster → Senior Housemaster → Asst Head Domestic)</option>
+              <option value="BASIC_TWO_TIER">Basic School / Simple (Housemaster/Matron → Headteacher/Asst Head directly)</option>
+            </select>
+          </label>
+          <label>SBA Class Score Weight (%)
+            <input type="number" id="class_score_weight" min="0" max="100" placeholder="E.g. 30" required />
+          </label>
+          <label>End-of-Term Exam Weight (%)
+            <input type="number" id="exam_score_weight" min="0" max="100" placeholder="E.g. 70" required />
+          </label>
+          <label>Active Academic Year
+            <select id="active_academic_year_id">
+              <option value="">Loading years...</option>
+            </select>
+          </label>
+          <label>Active Academic Term / Semester
+            <select id="active_semester_id">
+              <option value="">Loading terms...</option>
+            </select>
+            <div style="margin-top:6px;">
+              <a href="academic.html" class="btn secondary" style="display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; padding:4px 10px;">📅 Manage Academic Calendar & Dates →</a>
+            </div>
+          </label>
+          <label>System Theme
+            <select id="system_theme" onchange="if(window.applyTheme) window.applyTheme(this.value)">
+              <option value="midnight">🌙 Midnight Dark (Default)</option>
+              <option value="light">☀️ Light Executive</option>
+              <option value="emerald">🌲 Emerald Oasis</option>
+              <option value="ocean">🌊 Ocean Sapphire</option>
+              <option value="auto">🎨 Auto Logo Theme (Extracted from Logo)</option>
+            </select>
+          </label>
+          <label>Grading Standard
+            <select id="grading_standard" onchange="toggleGradingSection(this.value)">
+              <option value="BECE">BECE System (1-9)</option>
+              <option value="WAEC">WASSCE / WAEC (A1-F9)</option>
+              <option value="CUSTOM">Custom Grading System</option>
+            </select>
+          </label>
+            <div style="grid-column: 1 / -1; padding-top:4px;">
+              <button type="submit" class="btn primary" style="min-width:180px;">💾 Save Settings</button>
+              <span id="settingsMsg" style="margin-left:14px;font-size:.9rem;"></span>
+            </div>
+          </form>
+        </section>
+
+        <!-- SECTION 2: Academic & Report Card Publishing Policy -->
+        <section class="card" style="margin-bottom:20px; border-left: 4px solid var(--primary);">
+          <h3>📜 Academic & Report Card Publishing Policy</h3>
+          <p style="opacity:.8; font-size:.85rem; margin-bottom:16px;">
+            Choose how terminal report cards are approved and published to guardians across your school.
+          </p>
+
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <label style="display:flex; align-items:start; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+              <input type="radio" name="publishing_mode_radio" value="FORM_MASTER_DIRECT" style="margin-top:3px;" />
+              <div>
+                <strong style="color:#818cf8;">Option 1: Direct Form Master Publishing</strong>
+                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Form Masters / Class Teachers can directly publish and send terminal report cards to guardians for their class as soon as their broadsheet is complete.</div>
+              </div>
+            </label>
+
+            <label style="display:flex; align-items:start; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+              <input type="radio" name="publishing_mode_radio" value="ACADEMIC_HEAD_ONLY" style="margin-top:3px;" />
+              <div>
+                <strong style="color:#f59e0b;">Option 2: Centralized Executive Approval</strong>
+                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Form Masters submit class broadsheets for review. Only the Assistant Headmaster Academic / Headmaster can approve and publish terminal reports to guardians.</div>
+              </div>
+            </label>
+
+            <label style="display:flex; align-items:start; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+              <input type="radio" name="publishing_mode_radio" value="HYBRID_BOTH" style="margin-top:3px;" checked />
+              <div>
+                <strong style="color:#10b981;">Option 3: Hybrid Dual Mode (Default)</strong>
+                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Both Form Masters AND the Assistant Headmaster Academic have publishing & overriding capability. Form Masters can publish their own class, and Academic Heads have master publish controls over all classes.</div>
+              </div>
+            </label>
+          </div>
+        </section>
+
+        <!-- SECTION 3: School Code of Conduct & Student Honor Pledge Hub -->
+        <section class="card" style="margin-bottom:20px; border-left: 4px solid #0284c7;">
+          <h3 style="color:#0284c7; margin-top:0;">📜 School Code of Conduct & Student Honor Pledge Hub</h3>
+          <p style="opacity:.8; font-size:.85rem; margin-bottom:16px;">
+            Customize your school's official Code of Conduct, Behavioral Rules, and Student Honor Pledge. These rules and undertaking signature blocks are automatically attached to all new student Prospectus & Admission packages during enrollment.
+          </p>
+
+          <form id="conductSettingsForm" onsubmit="saveConductSettings(event)">
+            <label style="margin-bottom:14px; display:block;">School Code of Conduct & Behavioral Rules
+              <textarea id="code_of_conduct_text" rows="6" style="width:100%; box-sizing:border-box; padding:10px; font-family:inherit; border-radius:6px; margin-top:6px;" placeholder="Enter behavioral rules, grooming standards, attendance, and cell phone policies..."></textarea>
+            </label>
+
+            <label style="margin-bottom:14px; display:block;">Student & Parent Honor Pledge / Declaration Text
+              <textarea id="student_pledge_text" rows="4" style="width:100%; box-sizing:border-box; padding:10px; font-family:inherit; border-radius:6px; margin-top:6px;" placeholder="Enter solemn declaration text for student and parent signatures..."></textarea>
+            </label>
+
+            <div style="margin-bottom:16px; background:rgba(2,132,199,0.06); padding:12px; border-radius:8px; border:1px solid rgba(2,132,199,0.2);">
+              <label style="font-weight:700; color:#0369a1;">📁 Upload Scanned Code of Conduct PDF / Document (Optional)
+                <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
+                  <input type="file" id="conduct_pdf_file" accept=".pdf,image/*" style="display:none;" onchange="uploadConductPDF(event)" />
+                  <button type="button" class="btn" style="background:#0284c7; color:#fff; font-weight:700;" onclick="document.getElementById('conduct_pdf_file').click()">📁 Select PDF / Document File</button>
+                  <input type="text" id="code_of_conduct_pdf_url" placeholder="Optional: Uploaded document URL" style="flex:1;" readonly />
+                </div>
+              </label>
+            </div>
+
+            <button type="submit" class="btn primary" style="background:#0284c7; border-color:#0369a1; font-weight:700;">💾 Save Code of Conduct & Pledge</button>
+            <span id="conductMsg" style="margin-left:14px; font-size:.9rem;"></span>
+          </form>
+        </section>
+
+        <!-- SECTION 4: Paystack Ghana MoMo Payment Gateway Settings -->
+        <section class="card" style="margin-bottom:20px; border-left: 4px solid #10b981;">
+          <h3 style="color:#10b981; margin-top:0;">💳 Paystack Ghana MoMo Payment Gateway Settings</h3>
+          <p style="opacity:.8; font-size:.85rem; margin-bottom:16px;">
+            Configure your school's Paystack API credentials for online Mobile Money fee collection (MTN MoMo, Telecel Cash, AT Money). If disabled or offline, the system seamlessly operates in 100% Offline Bursar Entry Mode.
+          </p>
+
+          <form id="paystackSettingsForm" onsubmit="savePaystackSettings(event)">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px; margin-bottom:14px;">
+              <label>Enable Online Paystack Gateway
+                <select id="paystack_enabled">
+                  <option value="false">❌ Disabled / 100% Offline Mode Only</option>
+                  <option value="true">✅ Enabled (Online Paystack MoMo Active)</option>
+                </select>
+              </label>
+
+              <label>Paystack Public Key (PK)
+                <input id="paystack_public_key" type="text" placeholder="pk_live_... or pk_test_..." />
+              </label>
+
+              <label>Paystack Secret Key (SK)
+                <input id="paystack_secret_key" type="password" placeholder="sk_live_... or sk_test_..." />
+              </label>
+            </div>
+
+            <div style="font-size:0.8rem; background:rgba(16,185,129,0.08); padding:10px; border-radius:6px; border:1px solid rgba(16,185,129,0.2); margin-bottom:14px;">
+              <strong>Webhook Callback URL:</strong> <code style="color:#10b981; font-weight:800;">http://YOUR-SERVER-DOMAIN/api/fees/paystack/webhook</code>
+            </div>
+
+            <button type="submit" class="btn primary" style="background:#10b981; border-color:#059669; font-weight:700;">💾 Save Paystack Gateway Settings</button>
+            <span id="paystackMsg" style="margin-left:14px; font-size:.9rem;"></span>
+          </form>
+        </section>
+
+      <!-- SECTION 2: Custom Grading Tiers (shown only when CUSTOM selected) -->
+      <section class="card" id="customGradingSection" style="display:none;">
+        <h3>Custom Grading Tiers</h3>
+        <p style="opacity:.7;font-size:.85rem;margin-bottom:16px;">Define your own grade thresholds. Select grades, min score, remarks, and points from dropdowns.</p>
+
+        <form id="addTierForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; align-items:end; margin-bottom:20px;">
+          <label>Grade Label
+            <select id="new_grade">
+              <!-- Populated by JS -->
+            </select>
+          </label>
+          <label>Min Score (%)
+            <input type="number" id="new_min_score" placeholder="E.g. 80" min="0" max="100" />
+          </label>
+          <label>Remark / Description
+            <select id="new_remark">
+              <!-- Populated by JS -->
+            </select>
+          </label>
+          <label>Grade Point (1–9)
+            <select id="new_points">
+              <!-- Populated by JS -->
+            </select>
+          </label>
+          <button type="button" class="btn primary" id="addTierBtn" style="height:40px;">+ Add Tier</button>
+        </form>
+
+        <div style="overflow-x:auto;">
+          <table style="width:100%;">
+            <thead>
+              <tr>
+                <th>Grade</th>
+                <th>Min Score (%)</th>
+                <th>Remark</th>
+                <th>Grade Point</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="gradingTiersBody">
+              <tr><td colspan="5" style="text-align:center;padding:16px;opacity:.6">No custom tiers defined yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION 4: End-of-Term Rollover Wizard -->
+      <section class="card" style="margin-top:20px;">
+        <h3>End-of-Term Rollover Wizard</h3>
+        <p style="color:var(--text-muted);font-size:.9rem;">Safely rollover the current term/semester: archive completed report cards, carry over outstanding arrears, and transition the active academic period.</p>
+        <a class="btn primary" href="rollover.html">🚀 Open Rollover Wizard</a>
+      </section>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/settings.js"></script>
+  </body>
+</html>

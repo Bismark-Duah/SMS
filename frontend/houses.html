@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Boarding Houses & Dormitories – School Management System</title>
+    <meta name="description" content="Manage school houses, dormitories, housemasters and senior supervisors." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Boarding System</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Manage houses, dormitories, and assign residential supervisors.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <button class="btn" style="background:#7c3aed; border-color:#6d28d9; color:white; font-weight:700;" onclick="triggerAutoAllocation()">⚡ Auto-Allocate Boarders</button>
+          <a class="btn btn-primary" href="exeat.html">🏡 Exeat Management</a>
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- Reporting Structure Section -->
+      <section class="card" style="max-width:100%; border-left: 4px solid var(--primary);">
+        <h3 style="border-bottom:none; margin-bottom:10px;">📋 Boarding Hierarchy & Reporting Structure</h3>
+        <p style="font-size:0.88rem; opacity:0.8; margin-bottom:15px;">
+          Note: Male supervisors (Housemasters) report to the Senior Housemaster. Female supervisors (Housemistresses) report to the Senior Housemistress.
+        </p>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+          <div style="background:rgba(0,0,0,0.2); padding:14px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.05);">
+            <h4 style="margin:0 0 8px 0; color:#818cf8; font-size:0.95rem;">🚹 Boys' Residential Wing</h4>
+            <div style="font-size:0.85rem; opacity:0.85; line-height:1.6;">
+              <span style="font-weight:600;">Senior Housemaster:</span> <span id="reportSeniorHousemaster">None Assigned</span>
+              <ul id="reportHousemastersList" style="margin:6px 0 0 15px; padding:0; list-style-type:circle;">
+                <li style="opacity:0.6;">No male housemasters registered.</li>
+              </ul>
+            </div>
+          </div>
+          <div style="background:rgba(0,0,0,0.2); padding:14px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.05);">
+            <h4 style="margin:0 0 8px 0; color:#f472b6; font-size:0.95rem;">🚺 Girls' Residential Wing</h4>
+            <div style="font-size:0.85rem; opacity:0.85; line-height:1.6;">
+              <span style="font-weight:600;">Senior Housemistress:</span> <span id="reportSeniorHousemistress">None Assigned</span>
+              <ul id="reportHousemistressesList" style="margin:6px 0 0 15px; padding:0; list-style-type:circle;">
+                <li style="opacity:0.6;">No female housemistresses registered.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start;">
+        <!-- Houses list -->
+        <section class="card" style="max-width:100%;">
+          <h3>Boarding Houses</h3>
+          <div id="housesList">
+            <p style="opacity:.6; text-align:center; padding:20px;">Loading houses...</p>
+          </div>
+        </section>
+
+        <!-- Add / Edit House form -->
+        <section class="card" style="max-width:100%;">
+          <h3>Add / Edit House</h3>
+          <form id="houseForm">
+            <input type="hidden" id="houseId" />
+            
+            <label>House Name
+              <input id="houseName" placeholder="e.g. Guggisberg House" required />
+            </label>
+
+            <label>Gender Category
+              <select id="houseGender" required>
+                <option value="Boys">Boys</option>
+                <option value="Girls">Girls</option>
+                <option value="Both">Both</option>
+              </select>
+            </label>
+
+            <!-- Boys' Wing Supervisors Container -->
+            <div id="boysSupervisorsContainer" style="display: block;">
+              <h4 style="margin: 15px 0 8px 0; color: #818cf8; border-bottom: 1px solid rgba(99,102,241,0.2); padding-bottom: 4px;">🚹 Boys' Wing Supervisors</h4>
+              <label>Senior Housemaster
+                <select id="houseSenior">
+                  <option value="">Select Senior in charge...</option>
+                </select>
+              </label>
+
+              <label>House Master
+                <select id="houseMaster">
+                  <option value="">Select House Master...</option>
+                </select>
+              </label>
+
+              <label>Assistant House Master
+                <select id="houseAssistant">
+                  <option value="">Select Assistant...</option>
+                </select>
+              </label>
+            </div>
+
+            <!-- Girls' Wing Supervisors Container -->
+            <div id="girlsSupervisorsContainer" style="display: none;">
+              <h4 style="margin: 15px 0 8px 0; color: #f472b6; border-bottom: 1px solid rgba(244,114,182,0.2); padding-bottom: 4px;">🚺 Girls' Wing Supervisors</h4>
+              <label>Senior Housemistress
+                <select id="houseSeniorGirls">
+                  <option value="">Select Senior in charge...</option>
+                </select>
+              </label>
+
+              <label>House Mistress
+                <select id="houseMasterGirls">
+                  <option value="">Select House Mistress...</option>
+                </select>
+              </label>
+
+              <label>Assistant House Mistress
+                <select id="houseAssistantGirls">
+                  <option value="">Select Assistant...</option>
+                </select>
+              </label>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button type="submit" class="btn primary" style="flex:1;">Save House</button>
+              <button type="button" id="cancelHouseBtn" class="btn" style="flex:1;">Cancel</button>
+            </div>
+          </form>
+          <div id="houseMsg" style="margin-top:8px;"></div>
+        </section>
+      </div>
+
+      <!-- Manage Dormitories Modal -->
+      <div id="dormsModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+        <div class="card" style="width:90%; max-width:550px; margin:auto; padding:24px; position:relative; box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+          <h3 style="margin-top:0;">Manage Dormitories</h3>
+          <p id="modalHouseName" style="font-weight:bold; margin-bottom:16px; font-size:1.1rem; color:var(--secondary);"></p>
+
+          <!-- List of Existing Dormitories in Modal -->
+          <div id="modalDormsList" style="max-height:200px; overflow-y:auto; margin-bottom:20px; border-bottom:1px solid var(--border-color); padding-bottom:10px; display:flex; flex-direction:column; gap:8px;">
+            Loading dormitories...
+          </div>
+
+          <!-- Add / Edit Dormitory Form inside Modal -->
+          <h4 style="margin: 0 0 10px 0;">Add / Edit Dormitory</h4>
+          <form id="dormForm" style="display:flex; flex-direction:column; gap:12px;">
+            <input type="hidden" id="dormId" />
+            <input type="hidden" id="dormHouseId" />
+            
+            <label>Dormitory Name
+              <input id="dormName" placeholder="e.g. Dorm A / Room 101" required />
+            </label>
+
+            <label>Bed Capacity (Max Students)
+              <input type="number" id="dormCapacity" min="1" max="500" value="30" placeholder="e.g. 30" required />
+            </label>
+
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <button type="submit" class="btn primary" style="flex:1;">Save Dormitory</button>
+              <button type="button" id="cancelDormBtn" class="btn" style="flex:1;">Cancel / Reset</button>
+              <button type="button" id="closeDormsModalBtn" class="btn" style="flex:1;">Close</button>
+            </div>
+          </form>
+          <div id="dormMsg" style="margin-top:8px;"></div>
+        </div>
+      </div>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/houses.js"></script>
+  </body>
+</html>

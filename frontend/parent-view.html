@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parent Portal – School Management System</title>
+    <meta name="description" content="Parent portal: view your child's attendance, fee balance, results and discipline records." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <style>
+      .portal-hero {
+        background: linear-gradient(135deg, var(--primary) 0%, #1a4a8a 100%);
+        border-radius: 16px;
+        padding: 32px;
+        margin-bottom: 24px;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+      .portal-hero .avatar {
+        width: 72px; height: 72px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 2rem;
+        flex-shrink: 0;
+      }
+      .portal-hero h2 { margin: 0 0 4px; font-size: 1.5rem; }
+      .portal-hero p  { margin: 0; opacity: 0.85; font-size: 0.95rem; }
+
+      .child-bar {
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 24px;
+      }
+      .child-bar label { font-weight: 600; color: var(--text-muted); font-size: 0.85rem; letter-spacing: .05em; text-transform: uppercase; }
+      .child-bar select { flex: 1; min-width: 200px; }
+      .child-bar .btn  { flex-shrink: 0; }
+
+      .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .stat-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex; flex-direction: column; gap: 8px;
+        transition: transform .15s, box-shadow .15s;
+      }
+      .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+      .stat-card .stat-icon { font-size: 1.6rem; }
+      .stat-card .stat-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); }
+      .stat-card .stat-value { font-size: 1.85rem; font-weight: 800; color: var(--primary); line-height: 1; }
+      .stat-card .stat-sub   { font-size: 0.8rem; color: var(--text-muted); }
+      .stat-card.danger  .stat-value { color: #e74c3c; }
+      .stat-card.success .stat-value { color: #27ae60; }
+      .stat-card.warning .stat-value { color: #e67e22; }
+
+      .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+      .section-header h3 { margin: 0; font-size: 1.05rem; }
+      .section-header .badge {
+        background: var(--primary); color: #fff;
+        font-size: 0.72rem; font-weight: 700;
+        padding: 2px 8px; border-radius: 20px;
+      }
+
+      .heatmap-wrap { overflow-x: auto; padding-bottom: 8px; }
+      .heatmap {
+        display: grid;
+        grid-template-columns: repeat(7, 36px);
+        gap: 4px;
+        min-width: 276px;
+      }
+      .heatmap-day-header { font-size: 0.68rem; font-weight: 700; text-align: center; color: var(--text-muted); text-transform: uppercase; }
+      .heatmap-cell {
+        width: 36px; height: 36px; border-radius: 6px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.7rem; font-weight: 600; cursor: default; position: relative;
+        transition: transform .1s;
+      }
+      .heatmap-cell:hover { transform: scale(1.15); z-index: 2; }
+      .heatmap-cell.present  { background: #27ae60; color: #fff; }
+      .heatmap-cell.absent   { background: #e74c3c; color: #fff; }
+      .heatmap-cell.late     { background: #e67e22; color: #fff; }
+      .heatmap-cell.excused  { background: #3498db; color: #fff; }
+      .heatmap-cell.empty    { background: transparent; }
+      .heatmap-cell.filler   { background: var(--bg); border: 1px dashed var(--border); color: var(--text-muted); }
+      .heatmap-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; font-size: 0.78rem; }
+      .heatmap-legend span { display: flex; align-items: center; gap: 6px; }
+      .dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+      .dot.present { background: #27ae60; } .dot.absent { background: #e74c3c; }
+      .dot.late    { background: #e67e22; } .dot.excused { background: #3498db; }
+
+      .fee-summary-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+      .fee-pill { padding: 10px 18px; border-radius: 50px; font-size: 0.82rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+      .fee-pill span { font-size: 1.1rem; }
+      .fee-pill.billed  { background: rgba(52,152,219,.15); color: #2980b9; }
+      .fee-pill.paid    { background: rgba(39,174,96,.15);  color: #27ae60; }
+      .fee-pill.balance { background: rgba(231,76,60,.15);  color: #c0392b; }
+
+      .fee-row-status { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+      .fee-row-status.Paid    { background: #d5f5e3; color: #27ae60; }
+      .fee-row-status.Pending { background: #fef9c3; color: #b45309; }
+      .fee-row-status.Overdue { background: #fee2e2; color: #c0392b; }
+      .fee-row-status.Partial { background: #dbeafe; color: #1e40af; }
+      .fee-row-status.Waived  { background: #ede9fe; color: #6d28d9; }
+
+      .discipline-feed { display: flex; flex-direction: column; gap: 10px; }
+      .disc-item { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; border-radius: 10px; background: var(--bg); border-left: 4px solid #ccc; }
+      .disc-item.Warning     { border-color: #e67e22; }
+      .disc-item.Detention   { border-color: #e74c3c; }
+      .disc-item.Suspension  { border-color: #8e44ad; }
+      .disc-item.Expulsion   { border-color: #2c3e50; }
+      .disc-item.Commendation{ border-color: #27ae60; }
+      .disc-badge { padding: 3px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; white-space: nowrap; flex-shrink: 0; }
+      .disc-badge.Warning     { background: #fde68a; color: #92400e; }
+      .disc-badge.Detention   { background: #fee2e2; color: #7f1d1d; }
+      .disc-badge.Suspension  { background: #ede9fe; color: #4c1d95; }
+      .disc-badge.Expulsion   { background: #1e293b; color: #f8fafc; }
+      .disc-badge.Commendation{ background: #d1fae5; color: #065f46; }
+      .disc-desc { font-size: 0.88rem; color: var(--text); line-height: 1.4; }
+      .disc-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; }
+
+      .notif-item { padding: 12px 16px; border-radius: 10px; background: var(--bg); border-left: 4px solid var(--primary); display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
+      .notif-item.read { border-color: var(--border); opacity: 0.65; }
+
+      .tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 2px solid var(--border); margin-bottom: 20px; padding-bottom: 0; }
+      .tab-btn { padding: 10px 18px; border: none; background: none; font-size: 0.88rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color .15s, border-color .15s; white-space: nowrap; }
+      .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+      .tab-btn:hover  { color: var(--primary); }
+      .tab-panel { display: none; }
+      .tab-panel.active { display: block; }
+      .chart-box { background: var(--bg); border-radius: 10px; padding: 16px; position: relative; min-height: 220px; }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">👨‍👩‍👧 Parent Portal</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Track your child's progress at a glance</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <div class="portal-hero" id="heroSection">
+        <div class="avatar">👤</div>
+        <div>
+          <h2 id="heroName">Welcome, Parent</h2>
+          <p id="heroSub">Select a child below to see their full profile.</p>
+        </div>
+      </div>
+
+      <div class="child-bar">
+        <label>👶 SELECT CHILD</label>
+        <select id="child_id" onchange="onChildChange()">
+          <option value="">Loading children…</option>
+        </select>
+        <button class="btn primary" id="viewBtn" onclick="loadChildDashboard()" disabled>View Dashboard</button>
+      </div>
+
+      <div id="childDashboard" style="display:none;">
+        <div class="stat-grid">
+          <div class="stat-card success">
+            <span class="stat-icon">📅</span>
+            <span class="stat-label">Attendance Rate</span>
+            <span class="stat-value" id="kpiAttendance">—</span>
+            <span class="stat-sub" id="kpiAttendanceSub">present days</span>
+          </div>
+          <div class="stat-card" id="kpiBalanceCard">
+            <span class="stat-icon">💰</span>
+            <span class="stat-label">Fee Balance</span>
+            <span class="stat-value" id="kpiBalance">—</span>
+            <span class="stat-sub" id="kpiBalanceSub">outstanding</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">📊</span>
+            <span class="stat-label">Avg. Score</span>
+            <span class="stat-value" id="kpiAvgScore">—</span>
+            <span class="stat-sub">across subjects</span>
+          </div>
+          <div class="stat-card" id="kpiDisciplineCard">
+            <span class="stat-icon">⚖️</span>
+            <span class="stat-label">Discipline Flags</span>
+            <span class="stat-value" id="kpiDiscipline">—</span>
+            <span class="stat-sub" id="kpiDisciplineSub">incidents</span>
+          </div>
+        </div>
+
+        <div class="card" style="padding:24px;">
+          <div class="tabs" id="portalTabs">
+            <button class="tab-btn active" onclick="switchTab('attendance')">📅 Attendance</button>
+            <button class="tab-btn" onclick="switchTab('fees')">💰 Fees</button>
+            <button class="tab-btn" onclick="switchTab('results')">📊 Results</button>
+            <button class="tab-btn" onclick="switchTab('exeat')">🏡 Exeat Passes</button>
+            <button class="tab-btn" onclick="switchTab('discipline')">⚖️ Discipline</button>
+            <button class="tab-btn" onclick="switchTab('notifications')">🔔 Notifications</button>
+          </div>
+
+          <!-- Attendance tab -->
+          <div class="tab-panel active" id="tab-attendance">
+            <div class="section-header">
+              <h3>Attendance Heatmap</h3>
+              <span class="badge" id="attendanceBadge">Loading…</span>
+            </div>
+            <p style="font-size:.85rem;color:var(--text-muted);margin-top:-8px;margin-bottom:16px;">Each cell represents a school day. Hover over any cell to see the date.</p>
+            <div class="heatmap-wrap">
+              <div class="heatmap" id="heatmapGrid">
+                <div class="heatmap-day-header">Sun</div>
+                <div class="heatmap-day-header">Mon</div>
+                <div class="heatmap-day-header">Tue</div>
+                <div class="heatmap-day-header">Wed</div>
+                <div class="heatmap-day-header">Thu</div>
+                <div class="heatmap-day-header">Fri</div>
+                <div class="heatmap-day-header">Sat</div>
+              </div>
+            </div>
+            <div class="heatmap-legend">
+              <span><span class="dot present"></span>Present</span>
+              <span><span class="dot absent"></span>Absent</span>
+              <span><span class="dot late"></span>Late</span>
+              <span><span class="dot excused"></span>Excused</span>
+            </div>
+            <div id="attendanceEmptyMsg" style="display:none; text-align:center; padding:32px; color:var(--text-muted);">No attendance records found for this student.</div>
+          </div>
+
+          <!-- Fees tab -->
+          <div class="tab-panel" id="tab-fees">
+            <div class="section-header">
+              <h3>Fee Balance</h3>
+              <span class="badge" id="feesBadge">Loading…</span>
+            </div>
+            <div class="fee-summary-bar" id="feeSummaryBar"></div>
+            <table class="table">
+              <thead>
+                <tr><th>Type</th><th>Description</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th><th>Due</th></tr>
+              </thead>
+              <tbody id="feesTableBody">
+                <tr><td colspan="7" style="text-align:center;padding:24px;">Loading fees…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Results tab -->
+          <div class="tab-panel" id="tab-results">
+            <div class="section-header">
+              <h3>Academic Performance</h3>
+              <span class="badge" id="resultsBadge">Loading…</span>
+            </div>
+            <div class="chart-box" style="margin-bottom:16px;">
+              <canvas id="resultsChart" style="max-height:220px;"></canvas>
+              <div id="resultsChartEmpty" style="display:none;text-align:center;padding:40px 0;color:var(--text-muted);">No results recorded yet.</div>
+            </div>
+            <table class="table">
+              <thead><tr><th>Subject</th><th>Score</th><th>Grade</th><th>Term</th></tr></thead>
+              <tbody id="resultsTableBody">
+                <tr><td colspan="4" style="text-align:center;padding:24px;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Exeat Passes tab -->
+          <div class="tab-panel" id="tab-exeat">
+            <div class="section-header">
+              <h3>Exeat &amp; Leave Passes</h3>
+              <span class="badge" id="exeatBadge">Loading…</span>
+            </div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Reason</th>
+                  <th>Destination</th>
+                  <th>Expected Departure</th>
+                  <th>Expected Return</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="exeatTableBody">
+                <tr><td colspan="6" style="text-align:center;padding:24px;">Loading exeat records…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Discipline tab -->
+          <div class="tab-panel" id="tab-discipline">
+            <div class="section-header">
+              <h3>Discipline Records</h3>
+              <span class="badge" id="disciplineBadge">Loading…</span>
+            </div>
+            <div class="discipline-feed" id="disciplineFeed">
+              <p style="text-align:center;padding:24px;color:var(--text-muted);">Loading…</p>
+            </div>
+          </div>
+
+          <!-- Notifications tab -->
+          <div class="tab-panel" id="tab-notifications">
+            <div class="section-header">
+              <h3>Notifications &amp; Alerts</h3>
+              <span class="badge" id="notifBadge">Loading…</span>
+            </div>
+            <div id="notifFeed">
+              <p style="text-align:center;padding:24px;color:var(--text-muted);">Loading…</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;padding:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;">
+          <div>
+            <h3 style="margin:0 0 4px;">📜 Official Student Terminal Report Card</h3>
+            <p style="margin:0;font-size:.85rem;color:var(--text-muted);">View or print the official terminal report card for this student.</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <select id="reportSemesterSelect" style="padding:8px 12px; border-radius:6px; background:var(--bg); color:var(--text); border:1px solid var(--border);">
+              <!-- Populated by JS -->
+            </select>
+            <button class="btn primary" style="font-weight:700;" onclick="viewInteractiveReportCard()">👁 View Report Card</button>
+            <button class="btn" onclick="downloadReport()">📥 Download PDF</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/parent-view.js"></script>
+  </body>
+</html>

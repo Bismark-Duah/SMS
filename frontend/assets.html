@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Storekeeper Inventory & Asset Management – SMS</title>
+    <meta name="description" content="Manage school assets, textbook barcode allocations, and uniform disbursement log." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <script src="js/guard.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0; font-size:1.2rem;">📦 Inventory & Asset Management</h1>
+          <p style="margin:0; opacity:.7; font-size:.85rem;">Track institutional assets, textbook student barcode allocations, and uniform stock disbursements.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- Navigation Tabs -->
+      <div style="display:flex; gap:8px; border-bottom:1px solid var(--border-color); padding-bottom:8px; margin-bottom:16px; flex-wrap:wrap;">
+        <button id="tabBtnAssets" class="btn primary sm" onclick="switchStoreTab('assets')">📦 Institutional Assets</button>
+        <button id="tabBtnTextbooks" class="btn sm" onclick="switchStoreTab('textbooks')">📚 Textbook Allocations</button>
+        <button id="tabBtnUniforms" class="btn sm" onclick="switchStoreTab('uniforms')">👕 Uniform Disbursement</button>
+      </div>
+
+      <!-- Pane 1: Institutional Assets -->
+      <section id="paneAssets" class="card" style="width:100%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+          <h3 style="margin:0;">Register New Institutional Asset</h3>
+          <div style="display:flex; gap:8px;">
+            <select id="assetCategoryFilter" onchange="loadAssets()" style="padding:4px 8px; font-size:0.85rem;">
+              <option value="">All Categories...</option>
+              <option value="Furniture">Furniture</option>
+              <option value="Lab Equipment">Lab Equipment</option>
+              <option value="IT & Computers">IT & Computers</option>
+              <option value="Books">Books</option>
+              <option value="Supplies">Supplies</option>
+            </select>
+          </div>
+        </div>
+
+        <form id="assetForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; background:rgba(255,255,255,0.02); padding:14px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.06); margin-bottom:20px;">
+          <label>Asset Name *
+            <input type="text" id="assetName" placeholder="E.g. Science Lab Microscope" required />
+          </label>
+          <label>Category
+            <select id="assetCategory">
+              <option value="Furniture">Furniture</option>
+              <option value="Lab Equipment">Lab Equipment</option>
+              <option value="IT & Computers">IT & Computers</option>
+              <option value="Books">Books</option>
+              <option value="Supplies">Supplies</option>
+            </select>
+          </label>
+          <label>Serial / Tag Number
+            <input type="text" id="assetSerial" placeholder="E.g. LAB-MIC-042" />
+          </label>
+          <label>Quantity
+            <input type="number" id="assetQuantity" min="1" value="1" required />
+          </label>
+          <label>Unit Cost (GHS)
+            <input type="number" id="assetCost" step="0.01" value="0.00" />
+          </label>
+          <label>Location / Room
+            <input type="text" id="assetLocation" placeholder="E.g. Lab 2 / Block B" />
+          </label>
+          <div style="grid-column:1/-1; display:flex; justify-content:flex-end;">
+            <button type="submit" class="btn primary">➕ Register Asset</button>
+          </div>
+        </form>
+
+        <h4>Registered Institutional Assets</h4>
+        <div id="assetsTableContainer" style="overflow-x:auto;">
+          <p style="opacity:.6; font-style:italic;">Loading assets...</p>
+        </div>
+      </section>
+
+      <!-- Pane 2: Textbook Allocations -->
+      <section id="paneTextbooks" class="card" style="width:100%; display:none;">
+        <h3 style="margin:0 0 16px 0;">Issue Textbook to Student</h3>
+        
+        <form id="textbookForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; background:rgba(255,255,255,0.02); padding:14px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.06); margin-bottom:20px;">
+          <label>Student *
+            <select id="textbookStudentSelect" required><option value="">Select Student...</option></select>
+          </label>
+          <label>Book Title *
+            <input type="text" id="textbookTitle" placeholder="E.g. Elective Mathematics SHS 1" required />
+          </label>
+          <label>Unique Barcode / Book ID *
+            <input type="text" id="textbookBarcode" placeholder="E.g. EMATH-2026-0089" required />
+          </label>
+          <label>Expected Return Date
+            <input type="date" id="textbookReturnDate" />
+          </label>
+          <div style="grid-column:1/-1; display:flex; justify-content:flex-end;">
+            <button type="submit" class="btn primary">📚 Issue Textbook</button>
+          </div>
+        </form>
+
+        <h4>Active Textbook Allocations</h4>
+        <div id="textbooksTableContainer" style="overflow-x:auto;">
+          <p style="opacity:.6; font-style:italic;">Loading textbook allocations...</p>
+        </div>
+      </section>
+
+      <!-- Pane 3: Uniform Disbursement -->
+      <section id="paneUniforms" class="card" style="width:100%; display:none;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px; margin-bottom:20px;">
+          <!-- Stock Items Form -->
+          <div style="background:rgba(255,255,255,0.02); padding:14px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.06);">
+            <h4 style="margin-top:0;">➕ Add Uniform Item to Stock</h4>
+            <form id="uniformStockForm" style="display:flex; flex-direction:column; gap:10px;">
+              <label>Item Name *
+                <input type="text" id="uniformItemName" placeholder="E.g. House Jersey (Boys)" required />
+              </label>
+              <label>Size
+                <select id="uniformSize">
+                  <option value="Standard">Standard</option>
+                  <option value="S">Small (S)</option>
+                  <option value="M">Medium (M)</option>
+                  <option value="L">Large (L)</option>
+                  <option value="XL">Extra Large (XL)</option>
+                </select>
+              </label>
+              <label>Quantity In Stock
+                <input type="number" id="uniformQty" min="0" value="50" required />
+              </label>
+              <button type="submit" class="btn primary sm" style="margin-top:6px;">Add Uniform Stock</button>
+            </form>
+          </div>
+
+          <!-- Disbursement Form -->
+          <div style="background:rgba(255,255,255,0.02); padding:14px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.06);">
+            <h4 style="margin-top:0;">👕 Disburse Uniform to Student</h4>
+            <form id="uniformDisburseForm" style="display:flex; flex-direction:column; gap:10px;">
+              <label>Student *
+                <select id="disburseStudentSelect" required><option value="">Select Student...</option></select>
+              </label>
+              <label>Uniform Item *
+                <select id="disburseItemSelect" required><option value="">Select Stock Item...</option></select>
+              </label>
+              <label>Quantity
+                <input type="number" id="disburseQty" min="1" value="1" required />
+              </label>
+              <button type="submit" class="btn primary sm" style="margin-top:6px;">⚡ Record Disbursement</button>
+            </form>
+          </div>
+        </div>
+
+        <h4>Disbursement Log</h4>
+        <div id="uniformsTableContainer" style="overflow-x:auto;">
+          <p style="opacity:.6; font-style:italic;">Loading uniform disbursement log...</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- HIDDEN PRINT AREA FOR STORE RECEIPTS -->
+    <div id="storePrintableArea" style="display:none;"></div>
+
+    <style>
+      @media print {
+        body * { visibility: hidden; }
+        #storePrintableArea, #storePrintableArea * { visibility: visible; }
+        #storePrintableArea { position: absolute; left: 0; top: 0; width: 100%; }
+      }
+    </style>
+
+    <script src="js/assets.js"></script>
+  </body>
+</html>

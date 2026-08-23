@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Attendance – School Management System</title>
+    <meta name="description" content="Mark daily class registers and log subject period absences." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Attendance</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Daily register & subject period absence log</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- Tabs -->
+      <div class="tab-nav" id="tabNav" style="display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--border-color); padding-bottom:8px; flex-wrap:wrap;">
+        <!-- Tab buttons injected by JS based on role -->
+      </div>
+
+      <!-- PANEL 1: Daily Class Register (Form Master / Admin only) -->
+      <div id="panelMark" class="tab-panel" style="display:none;">
+        <div id="registerBanner" style="display:none; margin-bottom:16px; padding:12px 16px; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.3); border-radius:8px; font-size:.9rem; color:var(--text-secondary);">
+          ℹ️ Daily class register marking is restricted to Form Masters and Administrators. You are not assigned as a Form Master for any class section.
+        </div>
+        <section class="card">
+          <h3>Mark Daily Class Register</h3>
+          <form id="rollFilterForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; align-items:end;" onsubmit="loadClassRoll(); return false;">
+            <label>Class Section
+              <select id="mark_class_id" required>
+                <option value="">Select Class...</option>
+              </select>
+            </label>
+            <label>Date
+              <input type="date" id="mark_date" required />
+            </label>
+            <button type="submit" class="btn primary" style="height:40px;">📋 Load Class Roll</button>
+          </form>
+          <div id="rollMsg" style="margin-top:10px;"></div>
+        </section>
+
+        <section class="card" id="rollCard" style="display:none; margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div>
+              <h3 style="margin:0;" id="rollTitle">Class Roll</h3>
+              <p style="margin:4px 0 0; font-size:.85rem; opacity:.7;" id="rollSubtitle"></p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn" onclick="markAll('Present')" style="background:var(--success-color,#22c55e);color:white;">✅ All Present</button>
+              <button class="btn" onclick="markAll('Absent')" style="background:var(--error-color,#ef4444);color:white;">❌ All Absent</button>
+              <button class="btn primary" onclick="submitBulkAttendance()">💾 Submit Register</button>
+            </div>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table style="width:100%;">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Student Code</th>
+                  <th>Name</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="rollBody">
+                <tr><td colspan="4" style="text-align:center; padding:20px; opacity:.6;">Load a class to see students.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="submitMsg" style="margin-top:12px;"></div>
+        </section>
+      </div>
+
+      <!-- PANEL 2: Period Absence Log (Subject Teachers) -->
+      <div id="panelPeriod" class="tab-panel" style="display:none;">
+        <section class="card">
+          <h3>🚨 Log Subject Period Absences</h3>
+          <p style="font-size:.88rem; opacity:.75; margin-bottom:14px;">
+            Select the class and subject you are currently teaching. Then check off any students who are NOT present in your lesson.
+            All other students are assumed present. The Form Master will be automatically notified.
+          </p>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; align-items:end; margin-bottom:16px;">
+            <label>Class Section
+              <select id="period_class_id" onchange="loadPeriodSubjects()">
+                <option value="">Select Class...</option>
+              </select>
+            </label>
+            <label>Subject
+              <select id="period_subject_id">
+                <option value="">Select Subject...</option>
+              </select>
+            </label>
+            <label>Date
+              <input type="date" id="period_date" />
+            </label>
+            <label>Period / Time <span style="opacity:.6;font-size:.8rem;">(optional)</span>
+              <input type="text" id="period_label" placeholder="e.g. Period 3 – 11:30 AM" />
+            </label>
+            <button class="btn primary" style="height:40px;" onclick="loadPeriodRoll()">👥 Load Students</button>
+          </div>
+          <div id="periodMsg"></div>
+        </section>
+
+        <section class="card" id="periodRollCard" style="display:none; margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+            <div>
+              <h3 style="margin:0;" id="periodRollTitle">Period Roll</h3>
+              <p style="margin:4px 0 0; font-size:.85rem; opacity:.7;" id="periodRollSubtitle">Check any students who are ABSENT from this lesson</p>
+            </div>
+            <button class="btn primary" onclick="submitPeriodAbsences()">🚨 Submit Period Absences</button>
+          </div>
+          <div id="periodRollBody" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:8px;"></div>
+          <div id="periodSubmitMsg" style="margin-top:12px;"></div>
+        </section>
+      </div>
+
+      <!-- PANEL 3: Attendance Records Browser (read-only, all staff) -->
+      <div id="panelRecords" class="tab-panel" style="display:none;">
+        <section class="card">
+          <h3>Attendance Records</h3>
+          <form id="recordsFilterForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; align-items:end;" onsubmit="loadAttendanceRecords(); return false;">
+            <label>Class Section
+              <select id="rec_class_id" required>
+                <option value="">Select Class...</option>
+              </select>
+            </label>
+            <label>Type
+              <select id="rec_type">
+                <option value="daily">Daily Register</option>
+                <option value="period">Period Absences</option>
+                <option value="">All Records</option>
+              </select>
+            </label>
+            <label>From Date
+              <input type="date" id="rec_date_from" />
+            </label>
+            <label>To Date
+              <input type="date" id="rec_date_to" />
+            </label>
+            <label>Status
+              <select id="rec_status">
+                <option value="">All Statuses</option>
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+                <option value="Late">Late</option>
+                <option value="Excused">Excused</option>
+              </select>
+            </label>
+            <button type="submit" class="btn primary" style="height:40px;">🔍 Search</button>
+          </form>
+
+          <div id="recordsStats" style="margin-top:14px; display:none; padding:10px 14px; background:rgba(var(--primary-rgb,79 70 229),.08); border-radius:8px; font-size:.88rem; display:flex; gap:16px; flex-wrap:wrap;"></div>
+
+          <div style="overflow-x:auto; margin-top:16px;">
+            <table style="width:100%;">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Student</th>
+                  <th>Code</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="recordsBody">
+                <tr><td colspan="6" style="text-align:center; padding:20px; opacity:.6;">Select a class and search to view records.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- PANEL 4: House & Dormitory Roll Call (Housemasters & Domestic Head) -->
+      <div id="panelHouseRoll" class="tab-panel" style="display:none;">
+        <section class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div>
+              <h3 style="margin:0; color:#f472b6;">🏠 Boarding House & Dormitory Nightly Roll Call</h3>
+              <p style="margin:4px 0 0; font-size:.85rem; opacity:.75;">Evening Prep & Lights-Out presence audit with automatic Exeat status verification.</p>
+            </div>
+            <span style="font-size:0.75rem; background:rgba(244,114,182,0.2); color:#f472b6; padding:4px 10px; border-radius:12px; font-weight:700; border:1px solid rgba(244,114,182,0.4);">DOMESTIC WELFARE DESK</span>
+          </div>
+          <form id="houseRollFilterForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; align-items:end;" onsubmit="loadHouseRoll(); return false;">
+            <label>Boarding House
+              <select id="hr_house_id" required onchange="onHouseChange()">
+                <option value="">Select House...</option>
+              </select>
+            </label>
+            <label>Dormitory <span style="opacity:.6;font-size:.8rem;">(optional)</span>
+              <select id="hr_dorm_id">
+                <option value="">All Dormitories</option>
+              </select>
+            </label>
+            <label>Roll Call Date
+              <input type="date" id="hr_date" required />
+            </label>
+            <button type="submit" class="btn primary" style="height:40px; background:#db2777; border-color:#db2777;">🏠 Load House Roll</button>
+          </form>
+          <div id="houseRollMsg" style="margin-top:10px;"></div>
+        </section>
+
+        <section class="card" id="houseRollCard" style="display:none; margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div>
+              <h3 style="margin:0;" id="houseRollTitle">House Roll Call</h3>
+              <p style="margin:4px 0 0; font-size:.85rem; opacity:.7;" id="houseRollSubtitle"></p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn" onclick="markAllHouse('Present in Dorm')" style="background:#22c55e;color:white;">✅ All Present in Dorm</button>
+              <button class="btn primary" onclick="submitHouseRollCall()" style="background:#db2777; border-color:#db2777;">💾 Submit House Roll Call</button>
+            </div>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table style="width:100%; font-size:0.88rem;">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Student Code</th>
+                  <th>Name</th>
+                  <th>Dormitory</th>
+                  <th>Exeat Status</th>
+                  <th>Presence Status</th>
+                  <th>Remarks</th>
+                </tr>
+              <tbody id="houseRollBody">
+                <tr><td colspan="7" style="text-align:center; padding:20px; opacity:.6;">Select a house to load boarders.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="houseSubmitMsg" style="margin-top:12px;"></div>
+        </section>
+      </div>
+
+      <!-- PANEL 5: Attendance Reconciliation Audit Desk (Executive & Domestic Staff) -->
+      <div id="panelAudit" class="tab-panel" style="display:none;">
+        <section class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+            <div>
+              <h3 style="margin:0; color:#6366f1;">🔍 Attendance Cross-Reconciliation & Truancy Audit Desk</h3>
+              <p style="margin:4px 0 0; font-size:.85rem; opacity:.75;">Real-time cross-audit comparing Morning Class Registers vs Nightly House Roll Calls vs Exeat Records.</p>
+            </div>
+            <button class="btn primary" style="background:#4f46e5;" onclick="loadReconciliationAudit()">🔄 Run Reconciliation Audit</button>
+          </div>
+
+          <form style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; align-items:end; margin-bottom:16px;" onsubmit="loadReconciliationAudit(); return false;">
+            <label>Audit Date
+              <input type="date" id="audit_date" required />
+            </label>
+            <label>Boarding House Scope
+              <select id="audit_house_id">
+                <option value="">All Boarding Houses</option>
+              </select>
+            </label>
+            <button type="submit" class="btn primary" style="height:40px;">🔍 Run Audit</button>
+          </form>
+
+          <!-- Audit KPI Summary Cards -->
+          <div id="auditKpiSection" style="display:none; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;">
+            <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.8rem;">Boarders Audited:</span><br/>
+              <strong style="font-size:1.2rem; color:#38bdf8;" id="kpiAudited">0</strong>
+            </div>
+            <div style="background:rgba(239,68,68,0.1); padding:12px; border-radius:8px; border:1px solid rgba(239,68,68,0.3);">
+              <span style="color:#f87171; font-size:0.8rem;">🚨 Day Truancy Alerts:</span><br/>
+              <strong style="font-size:1.2rem; color:#f87171;" id="kpiDayTruancy">0</strong>
+            </div>
+            <div style="background:rgba(245,158,11,0.1); padding:12px; border-radius:8px; border:1px solid rgba(245,158,11,0.3);">
+              <span style="color:#fbbf24; font-size:0.8rem;">🚨 Night Absence Alerts:</span><br/>
+              <strong style="font-size:1.2rem; color:#fbbf24;" id="kpiNightAbsence">0</strong>
+            </div>
+            <div style="background:rgba(168,85,247,0.1); padding:12px; border-radius:8px; border:1px solid rgba(168,85,247,0.3);">
+              <span style="color:#c084fc; font-size:0.8rem;">✈️ Unapproved Exeat Alerts:</span><br/>
+              <strong style="font-size:1.2rem; color:#c084fc;" id="kpiUnapprovedExeat">0</strong>
+            </div>
+            <div style="background:rgba(34,197,94,0.1); padding:12px; border-radius:8px; border:1px solid rgba(34,197,94,0.3);">
+              <span style="color:#4ade80; font-size:0.8rem;">✓ Reconciled Clean:</span><br/>
+              <strong style="font-size:1.2rem; color:#4ade80;" id="kpiClean">0</strong>
+            </div>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table style="width:100%; font-size:0.88rem;">
+              <thead>
+                <tr>
+                  <th>Student Code</th>
+                  <th>Student Name</th>
+                  <th>House & Class</th>
+                  <th>Morning Class Status</th>
+                  <th>Night House Status</th>
+                  <th>Exeat File</th>
+                  <th>Discrepancy Category</th>
+                  <th style="text-align:right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="auditBody">
+                <tr><td colspan="8" style="text-align:center; padding:20px; opacity:.6;">Click "Run Reconciliation Audit" to inspect discrepancies.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/attendance.js"></script>
+  </body>
+</html>

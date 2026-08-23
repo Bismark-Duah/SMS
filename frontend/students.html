@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Students – School Management System</title>
+    <meta name="description" content="Manage student records, enrolments, and profiles." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <style>
+      .student-avatar {
+        width: 36px; height: 36px; border-radius: 50%;
+        background: var(--primary, #4f46e5);
+        color: white; font-weight: 700; font-size: .9rem;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+      }
+      .student-row-info { display: flex; align-items: center; gap: 10px; }
+      .inactive-row { opacity: .5; }
+      .cssps-section-header {
+        font-weight: 700;
+        font-size: 0.9rem;
+        padding-bottom: 6px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid rgba(99,102,241,0.2);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Students</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;" id="studentCountBadge">Loading...</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <button class="btn" style="background:#059669; border-color:#047857; color:white; font-weight:700;" onclick="openPrintableIDCardsModal()">🪪 Print Student ID Cards</button>
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- KPI Summary Cards -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
+        <div style="background:var(--card-bg); border:var(--glass-border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; opacity:0.75;">Active Students</div>
+            <div style="font-size:1.4rem; font-weight:700; color:#818cf8; margin-top:2px;" id="kpiTotalStudents">—</div>
+          </div>
+          <div style="font-size:1.6rem; opacity:0.8;">🎓</div>
+        </div>
+        <div style="background:var(--card-bg); border:var(--glass-border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; opacity:0.75;">Boarding Students</div>
+            <div style="font-size:1.4rem; font-weight:700; color:#34d399; margin-top:2px;" id="kpiBoardingStudents">—</div>
+          </div>
+          <div style="font-size:1.6rem; opacity:0.8;">🏠</div>
+        </div>
+        <div style="background:var(--card-bg); border:var(--glass-border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; opacity:0.75;">Day Students</div>
+            <div style="font-size:1.4rem; font-weight:700; color:#38bdf8; margin-top:2px;" id="kpiDayStudents">—</div>
+          </div>
+          <div style="font-size:1.6rem; opacity:0.8;">☀️</div>
+        </div>
+        <div id="kpiCSSPSCard" style="background:var(--card-bg); border:var(--glass-border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; opacity:0.75;">CSSPS Placement Enrolled</div>
+            <div style="font-size:1.4rem; font-weight:700; color:#fbbf24; margin-top:2px;" id="kpiCSSPSCount">—</div>
+          </div>
+          <div style="font-size:1.6rem; opacity:0.8;">📋</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-nav" id="studentTabNav" style="display:flex; gap:8px; margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px; flex-wrap:wrap;">
+        <button class="btn tab-btn active" id="tabListBtn" onclick="switchTab('list')">👥 Student Directory</button>
+        <button class="btn tab-btn" id="tabFormBtn" onclick="switchTab('form')">➕ Add Student</button>
+      </div>
+
+      <!-- PANEL 1: Student Directory -->
+      <div id="panelList" class="tab-panel">
+        <section class="card">
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
+            <input type="text" id="studentSearch" name="student_search_query_no_autofill" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" value="" placeholder="🔍 Search name, code or guardian..." style="flex:1; min-width:200px;" oninput="filterStudents()" />
+            <select id="schoolFilter" onchange="filterStudents()" style="min-width:160px; display:none;">
+              <option value="">All Schools</option>
+            </select>
+            <select id="classFilter" onchange="filterStudents()" style="min-width:160px;">
+              <option value="">All Classes</option>
+            </select>
+            <label style="display:flex; align-items:center; gap:6px; font-size:.85rem; cursor:pointer;">
+              <input type="checkbox" id="showInactive" onchange="loadStudents()" /> Show Inactive
+            </label>
+            <button class="btn" id="autoLinkBtn" onclick="autoLinkGuardians()" style="background:var(--primary, #4f46e5); color:white; padding:6px 12px; font-size:.85rem;">⚡ Auto-Link Guardians</button>
+            <button class="btn" id="exportCsvBtn" onclick="exportStudentsCSV()" style="background:#10b981; border-color:#059669; color:white; padding:6px 12px; font-size:.85rem; font-weight:600;">📊 Export CSV</button>
+            <button class="btn" id="csspsTemplateBtn" onclick="downloadCSSPSCSVTemplate()" style="background:#6366f1; border-color:#4f46e5; color:white; padding:6px 12px; font-size:.85rem; font-weight:600;">📥 CSSPS Template</button>
+            <button class="btn" id="csspsImportBtn" onclick="triggerCSSPSCSVUpload()" style="background:#0284c7; border-color:#0369a1; color:white; padding:6px 12px; font-size:.85rem; font-weight:600;">📤 Import CSSPS CSV</button>
+            <input type="file" id="csspsCsvFileInput" accept=".csv" style="display:none;" onchange="handleCSSPSCSVFileSelected(event)" />
+          </div>
+
+          <div style="max-height: calc(100vh - 290px); min-height: 400px; overflow-y: auto; overflow-x: auto; border-radius: 10px; border: 1px solid var(--border-color, rgba(255,255,255,0.1)); background: var(--card-bg, #1e293b);">
+            <table style="width:100%; border-collapse: separate; border-spacing: 0;">
+              <thead>
+                <tr id="studentTableHeaderRow" style="position: sticky; top: 0; z-index: 20; background: var(--surface-card, #1e293b); box-shadow: 0 3px 10px rgba(0,0,0,0.3);">
+                  <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Student</th>
+                  <th id="thSchoolCol" style="display:none; position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">School</th>
+                  <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Code</th>
+                  <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Class</th>
+                  <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Program</th>
+                  <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Guardian</th>
+                  <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Boarding</th>
+                  <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Status</th>
+                  <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="studentBody">
+                <tr><td colspan="8" style="text-align:center;padding:24px;opacity:.6">Loading students...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- PANEL 2: Add / Edit Student -->
+      <div id="panelForm" class="tab-panel" style="display:none;">
+        <section class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h3 style="margin:0;" id="formTitle">Add New Student</h3>
+              <p id="formSubtitle" style="margin:4px 0 0; font-size:0.85rem; opacity:0.75;"></p>
+            </div>
+            <button class="btn" id="cancelEditBtn" style="display:none;" onclick="cancelEdit()">✕ Cancel Edit</button>
+          </div>
+
+          <!-- Mode Toggle Bar for Combined/Dual Mode -->
+          <div id="formModeToggle" style="display:flex; margin-bottom:16px; gap:8px; align-items:center; background:var(--surface-muted, rgba(99,102,241,0.05)); padding:8px 12px; border-radius:8px; flex-wrap:wrap;">
+            <span style="font-size:0.85rem; opacity:0.75; font-weight:600;">Enrollment Schema:</span>
+            <button type="button" class="btn" id="modeBtnSHS" onclick="setFormMode('SHS')" style="padding:4px 10px; font-size:0.82rem;">📋 CSSPS SHS Placement Form</button>
+            <button type="button" class="btn" id="modeBtnBasic" onclick="setFormMode('BASIC')" style="padding:4px 10px; font-size:0.82rem;">🏫 Basic School Form</button>
+          </div>
+
+          <form id="studentForm" style="display:grid; grid-template-columns: 1fr; gap:16px;">
+            <input type="hidden" id="edit_student_id" value="" />
+
+            <!-- BASIC SCHOOL FORM CONTAINER -->
+            <div id="basic_fields_container" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
+              <label>Full Name *
+                <input type="text" id="full_name" placeholder="E.g. Kwame Mensah" />
+              </label>
+              <label>Student Code *
+                <input type="text" id="student_code" placeholder="E.g. STU-001" />
+              </label>
+              <label>Gender
+                <select id="gender">
+                  <option value="">Not specified</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>Date of Birth
+                <input type="date" id="dob" />
+              </label>
+              <label>Class *
+                <select id="class_section_id">
+                  <option value="">Select Class...</option>
+                </select>
+              </label>
+              <label>Program
+                <select id="program_id">
+                  <option value="">None / Not Applicable</option>
+                </select>
+              </label>
+              <label>Form / Year
+                <select id="form_year">
+                  <option value="">—</option>
+                  <option value="1">Form 1 / Year 1</option>
+                  <option value="2">Form 2 / Year 2</option>
+                  <option value="3">Form 3 / Year 3</option>
+                </select>
+              </label>
+              <label>Guardian Name
+                <input type="text" id="guardian_name" placeholder="E.g. Abena Mensah" />
+              </label>
+              <label>Guardian Phone
+                <input type="tel" id="phone" placeholder="E.g. +233 20 000 0000" />
+              </label>
+              <label>Boarding House
+                <select id="studentHouseId">
+                  <option value="">None (Day Student)</option>
+                </select>
+              </label>
+              <label>Dormitory
+                <select id="studentDormitoryId">
+                  <option value="">None</option>
+                </select>
+              </label>
+              <label style="grid-column: 1 / -1;">Address
+                <input type="text" id="address" placeholder="Home or postal address" />
+              </label>
+              <label>Blood Group
+                <select id="blood_group">
+                  <option value="">-- Select Blood Group --</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </label>
+              <label>Known Allergies
+                <input type="text" id="allergies" placeholder="E.g. Peanuts, Penicillin, Dust" />
+              </label>
+              <label>Chronic / Special Conditions
+                <input type="text" id="chronic_conditions" placeholder="E.g. Asthma, Diabetes" />
+              </label>
+            </div>
+
+            <!-- CSSPS SHS PLACEMENT FORM CONTAINER -->
+            <div id="cssps_fields_container" style="display:none; flex-direction:column; gap:20px; background: rgba(99,102,241,0.04); border: 1px dashed rgba(99,102,241,0.35); border-radius: 12px; padding: 22px;">
+              
+              <!-- Section 1: Placement Details -->
+              <div>
+                <div class="cssps-section-header" style="color: #6366f1;">
+                  <span>📋 1. Official CSSPS Placement Identifiers</span>
+                  <span style="font-size:0.75rem; background:rgba(99,102,241,0.15); color:#818cf8; padding:2px 8px; border-radius:4px; margin-left:auto;">SHS Candidate</span>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+                  <label>BECE Index Number (12 digits) *
+                    <input type="text" id="bece_index_number" maxlength="12" placeholder="E.g. 100000000026" oninput="autoFormatStudentCode(this.value)" />
+                  </label>
+                  <label>Quick Enrolment Code
+                    <input type="text" id="enrolment_code" placeholder="E.g. CSSPS-2026-X89" />
+                  </label>
+                  <label>BECE Raw Score (out of 600)
+                    <input type="number" id="bece_raw_score" placeholder="E.g. 430" />
+                  </label>
+                  <label>BECE Aggregate (6 - 54)
+                    <input type="number" id="bece_aggregate" min="6" max="54" placeholder="E.g. 8" />
+                  </label>
+                  <label style="grid-column: span 2;">Former JHS Attended
+                    <input type="text" id="jhs_attended" placeholder="E.g. Achimota Basic School" />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Section 2: Candidate Identification -->
+              <div>
+                <div class="cssps-section-header" style="color: #10b981;">
+                  <span>👤 2. Candidate Personal Identification</span>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+                  <label>First Name *
+                    <input type="text" id="shs_first_name" placeholder="E.g. Kwame" />
+                  </label>
+                  <label>Middle Name(s)
+                    <input type="text" id="shs_middle_name" placeholder="E.g. Kofi" />
+                  </label>
+                  <label>Surname / Last Name *
+                    <input type="text" id="shs_last_name" placeholder="E.g. Mensah" />
+                  </label>
+                  <label>Gender *
+                    <select id="shs_gender">
+                      <option value="Male">Male (M)</option>
+                      <option value="Female">Female (F)</option>
+                    </select>
+                  </label>
+                  <label>Date of Birth
+                    <input type="date" id="shs_dob" />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Section 3: Program & Residential Status -->
+              <div>
+                <div class="cssps-section-header" style="color: #06b6d4;">
+                  <span>🎓 3. Program & Residential Placement</span>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+                  <label>Assigned Program / Course *
+                    <select id="shs_program_id">
+                      <option value="">Select Program...</option>
+                    </select>
+                  </label>
+                  <label>Residential Status *
+                    <select id="residential_status">
+                      <option value="B">Boarding (B)</option>
+                      <option value="D">Day Student (D)</option>
+                    </select>
+                  </label>
+                  <label>House Assignment
+                    <select id="shs_house_id">
+                      <option value="">-- Select House --</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Section 4: Guardian & Emergency Contacts -->
+              <div>
+                <div class="cssps-section-header" style="color: #f59e0b;">
+                  <span>📞 4. Guardian Contacts & Residential Address</span>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+                  <label>Primary Guardian Name *
+                    <input type="text" id="shs_guardian_name" placeholder="E.g. Mr. Ebenezer Mensah" />
+                  </label>
+                  <label>Primary Phone (SMS Alerts) *
+                    <input type="tel" id="shs_phone" placeholder="E.g. 0244123456" />
+                  </label>
+                  <label>Alternative Phone
+                    <input type="tel" id="shs_alternative_phone" placeholder="E.g. 0200000000" />
+                  </label>
+                  <label style="grid-column: 1 / -1;">Residential Address
+                    <input type="text" id="shs_address" placeholder="E.g. House No 12, West Legon, Accra" />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Section 5: Medical & Health Record -->
+              <div>
+                <div class="cssps-section-header" style="color: #ef4444;">
+                  <span>🏥 5. Official Medical & Health Profile</span>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+                  <label>Blood Group
+                    <select id="shs_blood_group">
+                      <option value="">-- Select Blood Group --</option>
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                    </select>
+                  </label>
+                  <label>Genotype
+                    <select id="shs_genotype">
+                      <option value="">-- Select Genotype --</option>
+                      <option value="AA">AA</option>
+                      <option value="AS">AS</option>
+                      <option value="SS">SS</option>
+                      <option value="AC">AC</option>
+                      <option value="SC">SC</option>
+                    </select>
+                  </label>
+                  <label>Known Allergies
+                    <input type="text" id="shs_allergies" placeholder="E.g. Peanuts, Penicillin, Dust" />
+                  </label>
+                  <label>Chronic / Special Conditions
+                    <input type="text" id="shs_chronic_conditions" placeholder="E.g. Asthma, Diabetes, Epilepsy" />
+                  </label>
+                  <label>PE / Physical Limitations
+                    <input type="text" id="shs_pe_limitations" placeholder="E.g. No heavy lifting, Strenuous run exemption" />
+                  </label>
+                  <label>Doctor / Medical Clearance
+                    <select id="shs_doctor_clearance">
+                      <option value="true">✅ Cleared by Medical Officer</option>
+                      <option value="false">⏳ Pending Medical Examination</option>
+                    </select>
+                  </label>
+                  <label style="grid-column: 1 / -1;">Emergency Medical Contact (Name & Phone)
+                    <input type="text" id="shs_emergency_contact" placeholder="E.g. Dr. K. Appiah (+233 24 111 2233)" />
+                  </label>
+                </div>
+              </div>
+
+            </div>
+
+            <div style="grid-column: 1 / -1; display:flex; gap:12px; align-items:center; padding-top:4px;">
+              <button type="submit" class="btn primary" id="submitBtn">➕ Add Student</button>
+              <span id="studentMsg" style="font-size:.9rem;"></span>
+            </div>
+          </form>
+        </section>
+      </div>
+    </main>
+
+    <!-- Printable Student ID Card Modal -->
+    <div class="modal" id="idCardModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
+      <div style="background:var(--card-bg, #1e293b); padding:24px; border-radius:12px; max-width:440px; width:100%; border:1px solid var(--border-color, #334155); box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+          <h3 style="margin:0; font-size:1.1rem;">🪪 Student Identification Card</h3>
+          <button type="button" class="btn" onclick="closeIdCardModal()" style="padding:2px 8px; font-size:0.85rem;">✕</button>
+        </div>
+
+        <!-- Card Container (Print Target) -->
+        <div id="printableIdCard" style="width:340px; height:214px; background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border:2px solid #6366f1; border-radius:12px; padding:12px; color:#fff; position:relative; margin:0 auto; box-shadow:0 4px 12px rgba(0,0,0,0.4); font-family:sans-serif;">
+          <!-- Card Header -->
+          <div style="display:flex; align-items:center; gap:8px; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:6px; margin-bottom:8px;">
+            <div style="font-size:1.2rem;">🎓</div>
+            <div>
+              <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#a5b4fc;" id="idCardSchoolName">REPUBLIC OF GHANA</div>
+              <div style="font-size:0.55rem; opacity:0.8; text-transform:uppercase;">Official Student Identity Pass</div>
+            </div>
+          </div>
+
+          <!-- Card Body -->
+          <div style="display:flex; gap:10px; align-items:flex-start;">
+            <!-- Photo Avatar -->
+            <div style="width:60px; height:70px; background:#334155; border:1px solid #6366f1; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-size:1.5rem;">
+              👤
+            </div>
+
+            <!-- Student Info Details -->
+            <div style="flex:1; font-size:0.7rem; line-height:1.3;">
+              <div style="font-size:0.85rem; font-weight:700; color:#fff; margin-bottom:2px;" id="idCardFullName">Kofi Mensah</div>
+              <div><strong style="opacity:0.7;">Code:</strong> <span id="idCardStudentCode" style="color:#38bdf8;">STU-001</span></div>
+              <div><strong style="opacity:0.7;">Class/Stage:</strong> <span id="idCardClass">Form 1 STEM A</span></div>
+              <div><strong style="opacity:0.7;">Status:</strong> <span id="idCardResStatus">Boarding</span></div>
+              <div style="margin-top:2px;"><strong style="opacity:0.7;">Medical:</strong> <span id="idCardMedical" style="color:#4ade80;">O+ | AA</span></div>
+            </div>
+          </div>
+
+          <!-- Card Footer & QR Code -->
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px; border-top:1px dashed rgba(255,255,255,0.2); padding-top:6px;">
+            <div style="font-size:0.55rem; opacity:0.75;">
+              <div>Emergency: <span id="idCardEmergency">+233 24 000 0000</span></div>
+              <div style="font-size:0.5rem; opacity:0.6; margin-top:2px;">GES Verified Student Pass</div>
+            </div>
+            <!-- Offline QR Code -->
+            <div id="idCardQrContainer" style="background:#fff; padding:3px; border-radius:4px; width:44px; height:44px; display:flex; align-items:center; justify-content:center;">
+              <!-- SVG QR Code injected dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+          <button type="button" class="btn primary" style="flex:1;" onclick="printStudentIdCard()">🖨 Print ID Card</button>
+          <button type="button" class="btn" style="flex:1;" onclick="closeIdCardModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/guard.js"></script>
+    <script src="js/data-tools.js"></script>
+    <script src="js/students.js"></script>
+  </body>
+</html>

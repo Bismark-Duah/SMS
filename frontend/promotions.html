@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Class Promotions & Graduation – School Management System</title>
+    <meta name="description" content="Promote students to the next class or mark them as graduated." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <style>
+      .promotions-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      .tab-header {
+        display: flex;
+        background: rgba(15, 23, 42, 0.4);
+        padding: 4px;
+        border-radius: var(--radius-md);
+        border: var(--glass-border);
+        margin-bottom: 16px;
+        max-width: 400px;
+      }
+      .tab-header .btn-tab {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        padding: 8px 12px;
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: var(--transition);
+        text-align: center;
+      }
+      .tab-header .btn-tab.active {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+      }
+      .student-list-container {
+        border: var(--glass-border);
+        background: rgba(15, 23, 42, 0.4);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        max-height: 280px;
+        overflow-y: auto;
+        margin-top: 12px;
+        margin-bottom: 16px;
+      }
+      .student-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-bottom: 6px;
+        background: rgba(255, 255, 255, 0.02);
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 0.9rem;
+      }
+      .student-checkbox-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .panel-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      @media (max-width: 768px) {
+        .panel-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">🎓 Class Promotions & Graduation</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Manage lifecycle transitions of students: promoting classes or graduating cohorts</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- Tab header selector -->
+      <div class="tab-header">
+        <button id="tabPromote" class="btn-tab active" onclick="switchTab('promote')">Promote Students</button>
+        <button id="tabGraduate" class="btn-tab" onclick="switchTab('graduate')">Graduate Students</button>
+      </div>
+
+      <div class="promotions-layout">
+        <!-- Promote Panel -->
+        <form id="promoteForm" class="panel-grid" onsubmit="return false;">
+          <div class="card">
+            <h3>1. Selection Criteria</h3>
+            <label>Source Class Section (From)
+              <select id="promote_source_class" required><option value="">Select class...</option></select>
+            </label>
+            <div style="margin-top: 16px;">
+              <label>Target Class Section (To)
+                <select id="promote_target_class" required><option value="">Select class...</option></select>
+              </label>
+            </div>
+            <div style="margin-top: 16px; display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" id="increment_form" checked />
+              <label for="increment_form" style="cursor:pointer; text-transform:none; font-size:0.9rem;">Increment Student Form Level (e.g. Form 1 → Form 2)</label>
+            </div>
+            <button type="submit" class="btn primary" style="width:100%; margin-top:20px;">Promote Selected Students</button>
+          </div>
+
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:8px; flex-wrap:wrap; gap:10px;">
+              <h3 style="margin:0;">2. Select Students</h3>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="filterSelection('recommended')">✨ Select Recommended</button>
+                <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="filterSelection('all')">Select All</button>
+                <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="filterSelection('none')">Clear</button>
+              </div>
+            </div>
+            <div id="promoteStudentsList" class="student-list-container">
+              <div class="empty-state" style="text-align:center; padding:32px; color:var(--text-secondary);">Select a source class to view students.</div>
+            </div>
+          </div>
+        </form>
+
+        <!-- Graduate Panel (hidden by default) -->
+        <form id="graduateForm" class="panel-grid" style="display:none;" onsubmit="return false;">
+          <div class="card">
+            <h3>1. Selection Criteria</h3>
+            <label>Graduating Class Section (Source)
+              <select id="graduate_source_class" required><option value="">Select class...</option></select>
+            </label>
+            <p style="margin-top:16px; font-size:0.82rem; color:var(--text-secondary);">
+              Graduating students will have their status updated to "Graduated", their class section association removed, and their active enrolment status set to inactive.
+            </p>
+            <button type="submit" class="btn primary" style="width:100%; margin-top:20px;">Graduate Selected Students</button>
+          </div>
+
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+              <h3 style="margin:0;">2. Select Students</h3>
+              <label style="display:flex; align-items:center; gap:6px; text-transform:none; margin:0; cursor:pointer;">
+                <input type="checkbox" id="selectAllGraduate" checked /> Select All
+              </label>
+            </div>
+            <div id="graduateStudentsList" class="student-list-container">
+              <div class="empty-state" style="text-align:center; padding:32px; color:var(--text-secondary);">Select a source class to view graduating students.</div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/promotions.js"></script>
+  </body>
+</html>

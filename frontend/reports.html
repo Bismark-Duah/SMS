@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reports – School Management System</title>
+    <meta name="description" content="Generate and download student report cards, class academic summaries, and financial reports." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Reports &amp; Analytics</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">System academic summaries, fee balances, and report card config</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+
+      <!-- Tabs Navigation -->
+      <div class="tab-nav" style="display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+        <button class="btn tab-btn active" id="tabTerminalBtn" onclick="switchTab('terminal')">📄 Terminal Reports</button>
+        <button class="btn tab-btn" id="tabAcademicBtn" onclick="switchTab('academic')">📊 Academic Class Summaries</button>
+        <button class="btn tab-btn" id="tabFinancialBtn" onclick="switchTab('financial')">💰 Financial Reports</button>
+      </div>
+
+      <!-- PANEL 1: Terminal Report Card & Config -->
+      <div id="panelTerminal" class="tab-panel">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+          <!-- Card A: Download PDF -->
+          <section class="card">
+            <h3>Download Terminal Report</h3>
+            <form id="reportForm">
+              <label>Student
+                <select id="student_id" required><option value="">Loading students...</option></select>
+              </label>
+              <label>Semester
+                <select id="semester_id" required><option value="">Loading semesters...</option></select>
+              </label>
+              <button type="submit" class="btn primary" style="width:100%; margin-top:8px;">💾 Download Report (PDF)</button>
+            </form>
+            <div id="reportMsg" style="margin-top:10px;"></div>
+          </section>
+
+          <!-- Card B: Report Header Configuration -->
+          <section class="card" id="configCard" style="display:none;">
+            <h3>Report PDF Header Config</h3>
+            <form id="reportConfigForm" onsubmit="saveReportConfig(); return false;">
+              <label>School Name Header
+                <input type="text" id="cfg_school_name" placeholder="SCHOOL MANAGEMENT SYSTEM" required />
+              </label>
+              <label>School Motto
+                <input type="text" id="cfg_report_motto" placeholder="E.g. Knowledge is Power" />
+              </label>
+              <label>Report Title
+                <input type="text" id="cfg_report_title" placeholder="TERMINAL REPORT" required />
+              </label>
+              <label>Principal / Headteacher Name
+                <input type="text" id="cfg_report_headmaster" placeholder="E.g. Dr. John Doe" />
+              </label>
+              <button type="submit" class="btn primary" style="width:100%; margin-top:8px;">💾 Save Header Configuration</button>
+            </form>
+            <div id="configMsg" style="margin-top:10px;"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- PANEL 2: Academic Class Summaries -->
+      <div id="panelAcademic" class="tab-panel" style="display:none;">
+        <section class="card">
+          <h3>Class Academic &amp; Attendance Performance Summary</h3>
+          <form id="academicFilterForm" onsubmit="loadAcademicSummary(); return false;" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; align-items: end;">
+            <label>Class Section
+              <select id="acad_class_id" required><option value="">Select Class...</option></select>
+            </label>
+            <label>Semester / Term
+              <select id="acad_semester_id" required><option value="">Select Semester...</option></select>
+            </label>
+            <label>Grade Average Tier
+              <select id="acad_grade_tier">
+                <option value="">All Tiers</option>
+                <option value="A">Tier A (>= 80%)</option>
+                <option value="B">Tier B (70 - 79%)</option>
+                <option value="C">Tier C (50 - 69%)</option>
+                <option value="Pass">Pass Tier (40 - 49%)</option>
+                <option value="Fail">Fail Tier (< 40%)</option>
+              </select>
+            </label>
+            <label>Attendance Rate
+              <select id="acad_attendance_rate">
+                <option value="">All Rates</option>
+                <option value="Normal">Normal (>= 75%)</option>
+                <option value="Low">Low (< 75%)</option>
+              </select>
+            </label>
+            <button type="submit" class="btn primary" style="height:40px;">🔍 Load Summary</button>
+          </form>
+
+          <div style="margin-top:20px; display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0;">Performance Data</h4>
+            <button class="btn" onclick="exportAcademicCSV()">📥 Export Filtered CSV</button>
+          </div>
+
+          <div style="overflow-x:auto; margin-top:10px;">
+            <table style="width:100%;">
+              <thead>
+                <tr>
+                  <th>Student Code</th>
+                  <th>Name</th>
+                  <th>Average Score (%)</th>
+                  <th>Fails Count</th>
+                  <th>Attendance Rate (%)</th>
+                  <th>Grade Tier</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="academicSummaryBody">
+                <tr>
+                  <td colspan="7" style="text-align:center; color:var(--text-secondary); padding:20px;">Select class/semester and search.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- PANEL 3: Financial Reports -->
+      <div id="panelFinancial" class="tab-panel" style="display:none;">
+        <section class="card">
+          <h3>Class Outstanding Fees &amp; Overdue Invoices</h3>
+          <form id="financialFilterForm" onsubmit="loadFinancialSummary(); return false;" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; align-items: end;">
+            <label>Class Section (Optional)
+              <select id="fin_class_id"><option value="">All Classes</option></select>
+            </label>
+            <label>Minimum Outstanding Balance
+              <input type="number" id="fin_min_balance" value="0" min="0" />
+            </label>
+            <div style="display:flex; align-items:center; height:40px; margin-bottom:6px;">
+              <input type="checkbox" id="fin_overdue_only" style="margin-right:8px; width:auto;" />
+              <label for="fin_overdue_only" style="margin:0; cursor:pointer;">Overdue Invoices Only</label>
+            </div>
+            <button type="submit" class="btn primary" style="height:40px;">🔍 Load Financials</button>
+          </form>
+
+          <div style="margin-top:20px; display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h4 style="margin:0;">Fee Balances</h4>
+            <button class="btn" onclick="exportFinancialCSV()">📥 Export Filtered CSV</button>
+          </div>
+
+          <div style="overflow-x:auto; margin-top:10px;">
+            <table style="width:100%;">
+              <thead>
+                <tr>
+                  <th>Student Code</th>
+                  <th>Name</th>
+                  <th>Class</th>
+                  <th>Total Billed</th>
+                  <th>Total Paid</th>
+                  <th>Outstanding Balance</th>
+                  <th>Overdue Count</th>
+                </tr>
+              </thead>
+              <tbody id="financialSummaryBody">
+                <tr>
+                  <td colspan="7" style="text-align:center; color:var(--text-secondary); padding:20px;">Click search to load data.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="js/guard.js"></script>
+    <script src="js/reports.js"></script>
+  </body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subjects – School Management System</title>
+    <meta name="description" content="Manage school subjects." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Subjects</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Manage subjects and core/elective classifications.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+      <section class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+          <h3 style="margin:0;">Subjects</h3>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input id="subjectSearchInput" name="subject_search_query_no_autofill" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" value="" placeholder="🔍 Search subject name or code..." style="padding:6px 12px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); width:240px;" oninput="loadSubjects()" />
+          </div>
+        </div>
+        <div id="subjectList">Loading...</div>
+      </section>
+      <section class="card">
+        <h3>Add / Edit Subject</h3>
+        <form id="subjectForm">
+          <input type="hidden" id="subjectId" />
+          <label>Subject Name <input id="subjectName" required /></label>
+          <label>Code (Optional) <input id="subjectCode" /></label>
+          <label>School Level
+            <select id="subjectSchoolLevel">
+              <option value="Basic">Basic School</option>
+              <option value="SHS" selected>SHS</option>
+              <option value="STEM">STEM</option>
+            </select>
+          </label>
+          <label>Type
+            <select id="subjectIsCore">
+              <option value="true">Core</option>
+              <option value="false">Elective</option>
+            </select>
+          </label>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button type="submit" class="btn primary" style="flex:1;">Save Subject</button>
+            <button type="button" id="cancelSubjectBtn" class="btn" style="flex:1;">Cancel</button>
+          </div>
+        </form>
+      </section>
+    </main>
+    <script src="js/guard.js"></script>
+    <script src="js/subjects.js"></script>
+  </body>
+</html>

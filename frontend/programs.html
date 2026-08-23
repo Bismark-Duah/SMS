@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Programs – School Management System</title>
+    <meta name="description" content="Manage school academic programs." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Programs</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Manage school academic programs.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+      <section class="card">
+        <h3>Programs</h3>
+        <div id="programList">Loading...</div>
+      </section>
+      <section class="card">
+        <h3>Add / Edit Program</h3>
+        <form id="programForm">
+          <input type="hidden" id="programId" />
+          <label>Program Name <input id="programName" placeholder="e.g. General Science" required /></label>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button type="submit" class="btn primary" style="flex:1;">Save Program</button>
+            <button type="button" id="cancelProgramBtn" class="btn" style="flex:1;">Cancel</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Manage Program Subjects Modal -->
+      <div id="subjectsModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.65); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+        <div style="width:92%; max-width:620px; margin:auto; background:var(--bg-card, #1e293b); padding:24px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); box-shadow:0 10px 30px rgba(0,0,0,0.4); position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+            <h3 style="margin:0; font-size:1.2rem; display:flex; align-items:center; gap:8px;">📚 Manage Program Subjects</h3>
+            <button type="button" onclick="document.getElementById('subjectsModal').style.display='none'" style="background:none; border:none; color:rgba(255,255,255,0.6); font-size:1.4rem; cursor:pointer; padding:0 4px;">&times;</button>
+          </div>
+          
+          <p id="modalProgramName" style="font-weight:600; font-size:0.95rem; color:var(--primary-color, #6366f1); margin-top:0; margin-bottom:16px;"></p>
+          
+          <form id="subjectsForm">
+            <input type="hidden" id="modalProgramId" />
+            <div id="subjectsCheckboxList" style="max-height:340px; overflow-y:auto; margin-bottom:20px; padding-right:6px; display:flex; flex-direction:column; gap:6px;">
+              Loading subjects...
+            </div>
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+              <button type="button" id="closeSubjectsModalBtn" class="btn secondary" style="min-width:100px;">Close</button>
+              <button type="submit" class="btn primary" style="min-width:130px;">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+    <script src="js/guard.js"></script>
+    <script src="js/programs.js"></script>
+  </body>
+</html>

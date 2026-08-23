@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Official SHS Candidate Admission & Prospectus Portal – School Management System</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+    <script src="js/guard.js"></script>
+    <style>
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+      .badge-code {
+        background: rgba(99, 102, 241, 0.15);
+        color: #818cf8;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-family: monospace;
+        font-weight: bold;
+      }
+      .card-header {
+        border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1));
+        padding-bottom: 12px;
+        margin-bottom: 20px;
+      }
+      .step-card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      }
+      .prospectus-section {
+        background: #0f172a;
+        border: 1px dashed #475569;
+        border-radius: 10px;
+        padding: 16px;
+        margin-top: 16px;
+      }
+      .prospectus-section h4 {
+        color: #818cf8;
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 0.95rem;
+      }
+      .prospectus-list {
+        margin: 0;
+        padding-left: 20px;
+        font-size: 0.88rem;
+        color: #cbd5e1;
+      }
+      .prospectus-list li {
+        margin-bottom: 6px;
+      }
+      @media print {
+        .sidebar, .topbar, .btn-no-print { display: none !important; }
+        .main-content { margin: 0 !important; padding: 0 !important; }
+        body { background: #fff !important; color: #000 !important; }
+        .step-card { border: 1px solid #000 !important; box-shadow: none !important; color: #000 !important; background: #fff !important; }
+        .prospectus-section { background: #fff !important; border: 1px solid #000 !important; color: #000 !important; }
+        .prospectus-list { color: #000 !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-layout">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-icon">🏫</span>
+          <span class="brand-name">SchoolManager</span>
+        </div>
+        <nav class="nav-menu">
+          <a href="dashboard.html" class="nav-link"><span class="nav-icon">📊</span> Dashboard</a>
+          <a href="students.html" class="nav-link"><span class="nav-icon">🎓</span> Students</a>
+          <a href="enrollment.html" class="nav-link active"><span class="nav-icon">📝</span> CSSPS & Admission</a>
+          <a href="cumulative-record.html" class="nav-link"><span class="nav-icon">📂</span> Cumulative Records</a>
+          <a href="programs.html" class="nav-link"><span class="nav-icon">📚</span> Programs & NaCCA</a>
+          <a href="subjects.html" class="nav-link"><span class="nav-icon">📖</span> Subjects</a>
+          <a href="reports.html" class="nav-link"><span class="nav-icon">📜</span> Transcripts & Reports</a>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <h1 style="margin:0;font-size:1.2rem;">Ghana SHS Candidate Online/Offline Admission Portal</h1>
+            <p style="margin:0;opacity:.7;font-size:.85rem;">Voucher authentication, elective combination auto-routing, and dynamic GES Prospectus issuance.</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+            <a class="btn" href="dashboard.html">← Dashboard</a>
+          </div>
+        </header>
+
+        <div class="content-container" style="max-width:1100px; margin:24px auto;">
+          
+          <!-- STEP 1: Candidate Voucher Login Gateway -->
+          <div id="step-gateway" class="step-card">
+            <div class="card-header">
+              <h2 style="margin:0; color:#38bdf8;">🔑 Step 1: Candidate Admission Voucher Gateway</h2>
+              <p style="font-size:0.88rem; color:#94a3b8; margin:4px 0 0;">Enter your BECE Index Number, Voucher Serial Code, and Secret PIN to access your official Admission Form.</p>
+            </div>
+
+            <form id="voucher-login-form" onsubmit="handleVoucherLogin(event)">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="gate_bece_index">BECE Index Number (12 digits) *</label>
+                  <input type="text" id="gate_bece_index" required maxlength="12" placeholder="e.g. 101000100124" />
+                </div>
+                <div class="form-group">
+                  <label for="gate_serial">Voucher Serial Code *</label>
+                  <input type="text" id="gate_serial" required placeholder="e.g. JAK-2026-8891" />
+                </div>
+                <div class="form-group">
+                  <label for="gate_pin">Secret 6-Digit PIN *</label>
+                  <input type="password" id="gate_pin" required maxlength="6" placeholder="e.g. 948215" />
+                </div>
+              </div>
+
+              <div style="margin-top:20px; display:flex; gap:12px; align-items:center;">
+                <button type="submit" class="btn btn-primary" style="padding:10px 24px; font-weight:700;">
+                  🔓 Verify & Access Admission Form
+                </button>
+                <span id="voucher-login-status" style="font-size:0.9rem; font-weight:600;"></span>
+              </div>
+            </form>
+
+            <div style="margin-top:24px; padding-top:16px; border-top:1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:0.82rem; color:#94a3b8;">Secretariat Admin Tools: Need batch vouchers?</span>
+              <button onclick="handleGenerateBatchVouchers()" class="btn" style="font-size:0.8rem; background:#334155;">⚡ Batch Generate 50 Vouchers</button>
+            </div>
+          </div>
+
+
+          <!-- STEP 2: Candidate School Admission Form -->
+          <div id="step-form" class="step-card" style="display:none;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <h2 style="margin:0; color:#4ade80;">📝 Step 2: School Official Admission Form</h2>
+                <p style="font-size:0.88rem; color:#94a3b8; margin:4px 0 0;">Candidate: <strong id="cand-name-display" style="color:#fff;">—</strong> | BECE Index: <span id="cand-bece-display" class="badge-code">—</span></p>
+              </div>
+              <span id="cand-status-badge" style="background:#0284c7; color:#fff; padding:6px 14px; border-radius:20px; font-size:0.8rem; font-weight:700;">STATUS: PLACED</span>
+            </div>
+
+            <form id="candidate-admission-form" onsubmit="handleFormSubmission(event)">
+              <h3 style="color:#6366f1; margin:16px 0 12px; font-size:1.05rem;">1. Elective Subject Combination Selection (Auto-Class Routing)</h3>
+              <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:12px;">Selecting your elective combination automatically assigns you to your specific Class Section stream (e.g. Option B → 1 Home Economics 2).</p>
+              
+              <div class="form-group" style="margin-bottom:20px;">
+                <label for="adm_elective_combo">Select Elective Combination *</label>
+                <select id="adm_elective_combo" required style="width:100%; padding:10px; font-size:0.92rem; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:8px; font-weight:600;">
+                  <option value="">-- Choose Elective Subject Combination --</option>
+                  <option value="Option A (Mgmt in Living + Food & Nut + Clothing & Textiles + GKA)">Option A: Mgmt in Living + Food & Nutrition + Clothing & Textiles + GKA → (Form 1 Stream 1)</option>
+                  <option value="Option B (Mgmt in Living + Food & Nut + Biology + Economics)">Option B: Mgmt in Living + Food & Nutrition + Biology + Economics → (Form 1 Stream 2)</option>
+                  <option value="Option C (Mgmt in Living + Clothing & Textiles + Economics + French)">Option C: Mgmt in Living + Clothing & Textiles + Economics + French → (Form 1 Stream 3)</option>
+                  <option value="Option D (Mgmt in Living + Food & Nut + GKA + French)">Option D: Mgmt in Living + Food & Nutrition + GKA + French → (Form 1 Stream 4)</option>
+                </select>
+              </div>
+
+              <h3 style="color:#6366f1; margin:20px 0 12px; font-size:1.05rem;">2. Guardian & Emergency Contact Information</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="adm_guardian_name">Parent / Guardian Full Name *</label>
+                  <input type="text" id="adm_guardian_name" required placeholder="e.g. Mr. Kwame Osei" />
+                </div>
+                <div class="form-group">
+                  <label for="adm_primary_phone">Primary Phone Number (SMS Notifications) *</label>
+                  <input type="tel" id="adm_primary_phone" required placeholder="e.g. 0244123456" />
+                </div>
+                <div class="form-group">
+                  <label for="adm_alt_phone">Alternative Phone Number</label>
+                  <input type="tel" id="adm_alt_phone" placeholder="e.g. 0208987654" />
+                </div>
+                <div class="form-group">
+                  <label for="adm_address">Residential Address</label>
+                  <input type="text" id="adm_address" placeholder="e.g. Plot 14, Block B, Kumasi" />
+                </div>
+              </div>
+
+              <h3 style="color:#6366f1; margin:20px 0 12px; font-size:1.05rem;">3. Student Medical Profile & Health Clearance</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="adm_blood_group">Blood Group</label>
+                  <select id="adm_blood_group">
+                    <option value="">Unknown</option>
+                    <option value="O+">O+</option><option value="O-">O-</option>
+                    <option value="A+">A+</option><option value="A-">A-</option>
+                    <option value="B+">B+</option><option value="B-">B-</option>
+                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="adm_allergies">Known Food / Drug Allergies</label>
+                  <input type="text" id="adm_allergies" placeholder="e.g. Penicillin, Nuts (or None)" />
+                </div>
+                <div class="form-group">
+                  <label for="adm_conditions">Chronic Medical Conditions</label>
+                  <input type="text" id="adm_conditions" placeholder="e.g. Asthma, Sickle Cell (or None)" />
+                </div>
+              </div>
+
+              <div style="margin-top:24px; display:flex; gap:12px; align-items:center;">
+                <button type="submit" class="btn btn-primary" style="padding:12px 28px; font-weight:700; font-size:0.95rem;">
+                  🚀 Submit Form & Generate Admission Letter
+                </button>
+                <span id="form-submit-status" style="font-size:0.9rem; font-weight:600;"></span>
+              </div>
+            </form>
+          </div>
+
+
+          <!-- STEP 3: Official Admission Package & Dynamic GES Prospectus Viewer -->
+          <div id="step-package" class="step-card" style="display:none;">
+            <div class="btn-no-print" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid #334155;">
+              <div>
+                <h2 style="margin:0; color:#f59e0b;">📜 Official Admission Letter & Prospectus Package</h2>
+                <p style="font-size:0.85rem; color:#94a3b8; margin:2px 0 0;">Auto-tailored by Gender, Boarding Status, and Academic Program.</p>
+              </div>
+              <div style="display:flex; gap:10px;">
+                <button onclick="window.print()" class="btn btn-primary" style="font-weight:700;">🖨️ Print Admission & Prospectus Package</button>
+                <button onclick="handleFinalClearance()" class="btn" style="background:#10b981; color:#fff; font-weight:700;">🎓 Grant Final Clearance</button>
+              </div>
+            </div>
+
+            <!-- Printable Official Letterhead -->
+            <div id="printable-letter" style="background:#fff; color:#000; padding:32px; border-radius:8px; font-family:serif;">
+              <div style="text-align:center; border-bottom:2px solid #000; padding-bottom:16px; margin-bottom:24px;">
+                <div style="font-size:1.8rem; font-weight:800; text-transform:uppercase; letter-spacing:1px;" id="letter-school-name">GHANA SENIOR HIGH SCHOOL</div>
+                <div style="font-size:0.9rem; font-weight:600;">MINISTRY OF EDUCATION / GHANA EDUCATION SERVICE</div>
+                <div style="font-size:0.85rem; font-style:italic; margin-top:4px;">OFFICIAL ADMISSION LETTER & STUDENT PLACEMENT DOCKET • ACADEMIC YEAR <span id="letter-year">2025/2026</span></div>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; font-size:0.95rem; margin-bottom:20px; font-family:sans-serif;">
+                <div>
+                  <div><strong>Student Full Name:</strong> <span id="letter-student-name">—</span></div>
+                  <div><strong>BECE Index Number:</strong> <span id="letter-bece-index">—</span></div>
+                  <div><strong>Assigned Student ID:</strong> <span id="letter-student-code">—</span></div>
+                </div>
+                <div style="text-align:right;">
+                  <div><strong>Assigned Program:</strong> <span id="letter-program">—</span></div>
+                  <div><strong>Assigned Class Stream:</strong> <span id="letter-class" style="color:#0284c7; font-weight:800;">—</span></div>
+                  <div><strong>Assigned House & Dorm:</strong> <span id="letter-house" style="color:#059669; font-weight:800;">—</span></div>
+                  <div><strong>Residential Status:</strong> <span id="letter-residential">—</span></div>
+                </div>
+              </div>
+
+              <p style="font-size:0.95rem; line-height:1.6; font-family:sans-serif;">
+                Dear Student,<br/>
+                We are pleased to inform you that following your placement on the Ministry CSSPS list and submission of your School Admission Form, you have been officially offered admission into <strong><span id="letter-school-body">this institution</span></strong> for the <strong><span id="letter-year-body">2025/2026</span></strong> Academic Session.
+              </p>
+
+              <!-- Dynamic Prospectus Requirements List -->
+              <div style="margin-top:24px; border-top:2px solid #000; padding-top:16px;">
+                <h3 style="margin:0 0 12px; font-size:1.1rem; text-transform:uppercase; text-decoration:underline;">OFFICIAL GES FORM 1 PROSPECTUS & ITEM CHECKLIST</h3>
+
+                <div class="prospectus-section">
+                  <h4>📚 1. Core Academic Supplies (All Students)</h4>
+                  <ul class="prospectus-list" id="prospectus-academic"></ul>
+                </div>
+
+                <div class="prospectus-section" id="section-boarding">
+                  <h4>🏡 2. Boarding House & Personal Hygiene Supplies</h4>
+                  <ul class="prospectus-list" id="prospectus-boarding"></ul>
+                </div>
+
+                <div class="prospectus-section">
+                  <h4>👔 3. Official Clothing, Uniforms & Grooming</h4>
+                  <ul class="prospectus-list" id="prospectus-gender"></ul>
+                </div>
+
+                <div class="prospectus-section">
+                  <h4>🎨 4. Program Specialization Practical Tools</h4>
+                  <ul class="prospectus-list" id="prospectus-program"></ul>
+                </div>
+
+                <div class="prospectus-section" style="grid-column: 1 / -1; margin-top:16px;">
+                  <h4 style="color:#0369a1;">📜 5. School Code of Conduct & Honor Declaration</h4>
+                  <div id="prospectus-conduct-rules" style="font-size:0.8rem; line-height:1.5; color:#334155; white-space:pre-line; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0; margin-bottom:12px;"></div>
+                  <div style="font-size:0.8rem; font-weight:700; color:#0f172a; margin-bottom:4px;">CANDIDATE & PARENT HONOR PLEDGE:</div>
+                  <div id="prospectus-honor-pledge" style="font-size:0.78rem; font-style:italic; color:#475569; background:#fff; padding:10px; border-left:3px solid #0284c7; border:1px solid #cbd5e1; margin-bottom:16px;"></div>
+
+                  <!-- Undertaking Signature Block -->
+                  <div style="display:flex; justify-content:space-between; gap:20px; font-size:0.78rem; padding-top:10px; border-top:1px dashed #cbd5e1;">
+                    <div style="flex:1;">
+                      <div style="border-bottom:1px solid #000; height:24px; margin-bottom:4px;"></div>
+                      <div style="font-weight:700;">Student / Candidate Signature & Date</div>
+                    </div>
+                    <div style="flex:1;">
+                      <div style="border-bottom:1px solid #000; height:24px; margin-bottom:4px;"></div>
+                      <div style="font-weight:700;">Parent / Guardian Signature & Date</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:32px; display:flex; justify-content:space-between; align-items:flex-end; font-family:sans-serif;">
+                <div>
+                  <div style="font-weight:700;">Assigned Security QR Verification:</div>
+                  <div style="font-family:monospace; font-size:0.8rem; background:#f1f5f9; padding:4px 8px; border:1px solid #cbd5e1; display:inline-block;" id="letter-qr-code">VERIFIED-SHS-101000100124</div>
+                </div>
+                <div style="text-align:center;">
+                  <div style="font-family:cursive; font-size:1.2rem; margin-bottom:4px;">A. H. Academic</div>
+                  <div style="border-top:1px solid #000; width:200px; padding-top:4px; font-size:0.85rem; font-weight:700;">Assistant Headmaster (Academic)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </main>
+    </div>
+
+    <script src="js/enrollment.js"></script>
+  </body>
+</html>

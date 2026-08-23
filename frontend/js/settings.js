@@ -1,0 +1,576 @@
+const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
+
+const token = localStorage.getItem('accessToken');
+if (!token) {
+  window.location.href = 'auth.html';
+}
+
+function getHeaders(headers = {}) {
+  const h = { ...headers };
+  if (token) h['Authorization'] = `Bearer ${token}`;
+  return h;
+}
+
+let gradingRules = [];
+
+function toggleGradingSection(val) {
+    const section = document.getElementById('customGradingSection');
+    if (section) {
+        section.style.display = val === 'CUSTOM' ? 'block' : 'none';
+    }
+}
+
+window.toggleBoardingHierarchyBox = function(val) {
+    const label = document.getElementById('hierarchyModeLabel');
+    if (label) {
+        label.style.display = val === 'DAY_ONLY' ? 'none' : 'block';
+    }
+};
+
+function renderGradingTiers() {
+    const tbody = document.getElementById('gradingTiersBody');
+    if (!tbody) return;
+
+    // Sort rules descending by minimum score
+    gradingRules.sort((a, b) => b.min_score - a.min_score);
+
+    tbody.innerHTML = gradingRules.map((rule, index) => `
+        <tr>
+            <td><strong>${escapeHtml(rule.grade)}</strong></td>
+            <td>${rule.min_score}%</td>
+            <td>${escapeHtml(rule.remark)}</td>
+            <td>${rule.point}</td>
+            <td>
+                <button type="button" class="btn danger" style="padding: 4px 8px; font-size: 0.8rem; margin: 0;" onclick="deleteTier(${index})">Remove</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function populateCustomTierDropdowns() {
+    const gradeSel = document.getElementById('new_grade');
+    const remarkSel = document.getElementById('new_remark');
+    const pointsSel = document.getElementById('new_points');
+
+    if (gradeSel) {
+        const grades = ['A1', 'B2', 'B3', 'C4', 'C5', 'C6', 'D7', 'E8', 'F9', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
+        gradeSel.innerHTML = '<option value="">Select Grade...</option>' + grades.map(g => `<option value="${g}">${g}</option>`).join('');
+    }
+
+    if (remarkSel) {
+        const remarks = ['EXCELLENT', 'VERY GOOD', 'GOOD', 'CREDIT', 'PASS', 'WEAK PASS', 'FAIL', 'HIGHEST', 'VERY HIGH', 'HIGH', 'AVERAGE', 'FAIR', 'LOW', 'VERY LOW', 'LOWEST'];
+        remarkSel.innerHTML = '<option value="">Select Remark...</option>' + remarks.map(r => `<option value="${r}">${r}</option>`).join('');
+    }
+
+    if (pointsSel) {
+        const points = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        pointsSel.innerHTML = points.map(p => `<option value="${p}">${p}</option>`).join('');
+    }
+}
+
+window.updateGradingStandardDropdown = function(mode) {
+    const stdSel = document.getElementById('grading_standard');
+    if (!stdSel) return;
+
+    const currentVal = stdSel.value;
+    let html = '';
+
+    if (mode === 'BASIC_ONLY') {
+        html = `
+            <option value="BECE">BECE System (1-9)</option>
+            <option value="CUSTOM">Custom Grading System</option>
+        `;
+    } else if (mode === 'SHS_ONLY') {
+        html = `
+            <option value="WAEC">WASSCE / WAEC (A1-F9)</option>
+            <option value="CUSTOM">Custom Grading System</option>
+        `;
+    } else {
+        html = `
+            <option value="BECE">BECE System (1-9)</option>
+            <option value="WAEC">WASSCE / WAEC (A1-F9)</option>
+            <option value="CUSTOM">Custom Grading System</option>
+        `;
+    }
+
+    stdSel.innerHTML = html;
+    if (['BECE', 'WAEC', 'CUSTOM'].includes(currentVal)) {
+        if (mode === 'BASIC_ONLY' && currentVal === 'WAEC') {
+            stdSel.value = 'BECE';
+        } else if (mode === 'SHS_ONLY' && currentVal === 'BECE') {
+            stdSel.value = 'WAEC';
+        } else {
+            stdSel.value = currentVal;
+        }
+    }
+    toggleGradingSection(stdSel.value);
+};
+
+function escapeHtml(str) {
+    return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : '';
+}
+
+window.deleteTier = function(index) {
+    gradingRules.splice(index, 1);
+    renderGradingTiers();
+};
+
+async function loadSettings() {
+    try {
+        const res = await fetch(`${API_BASE}/settings/`, { headers: getHeaders() });
+        const settings = await res.json();
+
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+
+        setVal('school_name',          settings.school_name);
+        setVal('school_abbreviation',  settings.school_abbreviation || 'JAK STEM');
+        setVal('report_motto',         settings.report_motto);
+        setVal('report_title',         settings.report_title);
+        setVal('report_headmaster',    settings.report_headmaster);
+        setVal('school_address',       settings.school_address);
+        setVal('school_phone',         settings.school_phone);
+        setVal('school_email',         settings.school_email);
+        setVal('school_logo',          settings.school_logo);
+        setVal('headmaster_signature', settings.headmaster_signature);
+        setVal('code_of_conduct_text', settings.code_of_conduct_text);
+        setVal('student_pledge_text', settings.student_pledge_text);
+        setVal('code_of_conduct_pdf_url', settings.code_of_conduct_pdf_url);
+        setVal('paystack_public_key', settings.paystack_public_key);
+        setVal('paystack_secret_key', settings.paystack_secret_key);
+        setVal('paystack_enabled', settings.paystack_enabled || 'false');
+
+        if (settings.report_publishing_mode) {
+            const pubRadio = document.querySelector(`input[name="publishing_mode_radio"][value="${settings.report_publishing_mode}"]`);
+            if (pubRadio) pubRadio.checked = true;
+        }
+
+        if (settings.school_logo) {
+            const previewContainer = document.getElementById('logo_preview_container');
+            const previewImg = document.getElementById('logo_preview');
+            if (previewContainer && previewImg) {
+                previewImg.src = settings.school_logo;
+                previewContainer.style.display = 'flex';
+            }
+        }
+
+        if (settings.headmaster_signature) {
+            const previewContainer = document.getElementById('sig_preview_container');
+            const previewImg = document.getElementById('sig_preview');
+            if (previewContainer && previewImg) {
+                previewImg.src = settings.headmaster_signature;
+                previewContainer.style.display = 'flex';
+            }
+        }
+
+        populateCustomTierDropdowns();
+        const mode = settings.school_mode || 'COMBINED';
+        setVal('school_mode', mode);
+        localStorage.setItem('school_mode', mode);
+        window.updateGradingStandardDropdown(mode);
+
+        const isSchoolAdmin = localStorage.getItem('userRole') === 'admin' || localStorage.getItem('userRole') === 'super_admin' || localStorage.getItem('is_super_admin') === 'true';
+        const superOnlyFields = ['school_name', 'school_abbreviation'];
+        superOnlyFields.forEach(fieldId => {
+            const el = document.getElementById(fieldId);
+            if (el) {
+                if (!isSuperAdmin) {
+                    el.disabled = true;
+                    el.title = "This parameter is locked and managed by the Super-Admin.";
+                    el.style.opacity = '0.7';
+                    el.style.cursor = 'not-allowed';
+                } else {
+                    el.disabled = false;
+                    el.style.opacity = '1';
+                    el.style.cursor = 'default';
+                }
+            }
+        });
+
+        ['school_mode', 'boarding_status'].forEach(fieldId => {
+            const el = document.getElementById(fieldId);
+            if (el) {
+                if (!isSchoolAdmin) {
+                    el.disabled = true;
+                    el.style.opacity = '0.7';
+                } else {
+                    el.disabled = false;
+                    el.style.opacity = '1';
+                }
+            }
+        });
+        const lockNotice = document.getElementById('schoolModeLockNotice');
+        if (lockNotice) {
+            lockNotice.textContent = isSuperAdmin ? '(⭐ Super-Admin Editable)' : '(🔒 Managed by Super-Admin)';
+        }
+
+        const bStatus = settings.boarding_status || 'BOARDING_AND_DAY';
+        setVal('boarding_status', bStatus);
+        localStorage.setItem('boarding_status', bStatus);
+        const bHierarchy = settings.boarding_hierarchy_mode || 'SHS_THREE_TIER';
+        setVal('boarding_hierarchy_mode', bHierarchy);
+        localStorage.setItem('boarding_hierarchy_mode', bHierarchy);
+        window.toggleBoardingHierarchyBox(bStatus);
+
+        setVal('class_score_weight', settings.class_score_weight || 30);
+        localStorage.setItem('class_score_weight', settings.class_score_weight || 30);
+        setVal('exam_score_weight', settings.exam_score_weight || 70);
+        localStorage.setItem('exam_score_weight', settings.exam_score_weight || 70);
+
+        if (settings.grading_standard) {
+            setVal('grading_standard', settings.grading_standard);
+            toggleGradingSection(settings.grading_standard);
+        }
+
+        // Load academic years and semesters for settings selects
+        try {
+            const [yrRes, semRes] = await Promise.all([
+                fetch(`${API_BASE}/academic/years`, { headers: getHeaders() }),
+                fetch(`${API_BASE}/academic/semesters`, { headers: getHeaders() })
+            ]);
+            if (yrRes.ok) {
+                const years = await yrRes.json();
+                const yrSel = document.getElementById('active_academic_year_id');
+                if (yrSel) {
+                    yrSel.innerHTML = '<option value="">Select Active Academic Year...</option>' +
+                        years.map(y => `<option value="${y.id}">${y.label}${y.is_current ? ' (Current)' : ''}</option>`).join('');
+                    if (settings.active_academic_year_id) yrSel.value = settings.active_academic_year_id;
+                }
+            }
+            if (semRes.ok) {
+                const semesters = await semRes.json();
+                const semSel = document.getElementById('active_semester_id');
+                const isBasic = (settings.school_mode === 'BASIC_ONLY');
+                if (semSel) {
+                    semSel.innerHTML = '<option value="">Select Active Term / Semester...</option>' +
+                        semesters.map(s => {
+                            const name = isBasic ? s.name.replace(/Semester/i, 'Term') : s.name;
+                            return `<option value="${s.id}">${name}${s.is_current ? ' (Current)' : ''}</option>`;
+                        }).join('');
+                    if (settings.active_semester_id) semSel.value = settings.active_semester_id;
+                }
+            }
+        } catch (_) {}
+
+        const savedTheme = settings.system_theme || localStorage.getItem('system_theme') || 'midnight';
+        setVal('system_theme', savedTheme);
+        localStorage.setItem('system_theme', savedTheme);
+        if (window.applyTheme) window.applyTheme(savedTheme);
+
+        if (settings.grading_standard) {
+            setVal('grading_standard', settings.grading_standard);
+            toggleGradingSection(settings.grading_standard);
+        }
+        if (settings.grading_rules) {
+            try { gradingRules = JSON.parse(settings.grading_rules); } catch (e) { gradingRules = []; }
+        } else {
+            gradingRules = [];
+        }
+        renderGradingTiers();
+        if (window.applySchoolModeVisibility) window.applySchoolModeVisibility();
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+document.getElementById('grading_standard').addEventListener('change', (e) => {
+    toggleGradingSection(e.target.value);
+});
+
+const addTierBtn = document.getElementById('addTierBtn');
+if (addTierBtn) {
+    addTierBtn.addEventListener('click', () => {
+        const gradeInput = document.getElementById('new_grade');
+        const minScoreInput = document.getElementById('new_min_score');
+        const remarkInput = document.getElementById('new_remark');
+        const pointsInput = document.getElementById('new_points');
+
+        const grade = gradeInput.value.trim();
+        const minScore = minScoreInput.value.trim();
+        const remark = remarkInput.value.trim();
+        const points = pointsInput.value.trim();
+
+        if (!grade || minScore === "" || !remark || points === "") {
+            alert("Please fill all grading tier fields.");
+            return;
+        }
+
+        const minScoreNum = parseInt(minScore);
+        const pointsNum = parseInt(points);
+
+        if (isNaN(minScoreNum) || minScoreNum < 0 || minScoreNum > 100) {
+            alert("Min score must be a number between 0 and 100.");
+            return;
+        }
+        if (isNaN(pointsNum) || pointsNum < 1 || pointsNum > 9) {
+            alert("Points must be a number between 1 and 9.");
+            return;
+        }
+
+        // Avoid duplicate grades
+        if (gradingRules.some(r => r.grade.toUpperCase() === grade.toUpperCase())) {
+            alert(`A tier for grade ${grade} already exists.`);
+            return;
+        }
+
+        gradingRules.push({
+            grade: grade,
+            min_score: minScoreNum,
+            remark: remark,
+            point: pointsNum
+        });
+
+        // Reset inputs
+        gradeInput.value = "";
+        minScoreInput.value = "";
+        remarkInput.value = "";
+        pointsInput.value = "1";
+
+        renderGradingTiers();
+    });
+}
+
+const settingsForm = document.getElementById('settingsForm');
+if (settingsForm) {
+    settingsForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const standard = document.getElementById('grading_standard').value;
+        if (standard === 'CUSTOM' && gradingRules.length === 0) {
+            alert("Please define at least one grading tier for Custom standard.");
+            return;
+        }
+
+        const classWeightNum = parseInt(document.getElementById('class_score_weight').value);
+        const examWeightNum = parseInt(document.getElementById('exam_score_weight').value);
+        if (isNaN(classWeightNum) || isNaN(examWeightNum) || (classWeightNum + examWeightNum !== 100)) {
+            alert("SBA Class Weight and Exam Weight must sum to exactly 100%.");
+            return;
+        }
+
+        const schoolMode = document.getElementById('school_mode')?.value || 'COMBINED';
+        const themeVal = document.getElementById('system_theme')?.value || 'midnight';
+        const activeYearId = document.getElementById('active_academic_year_id')?.value || '';
+        const activeSemesterId = document.getElementById('active_semester_id')?.value || '';
+        const boardingStatus = document.getElementById('boarding_status')?.value || 'BOARDING_AND_DAY';
+        const boardingHierarchyMode = document.getElementById('boarding_hierarchy_mode')?.value || 'SHS_THREE_TIER';
+
+        const pubRadio = document.querySelector('input[name="publishing_mode_radio"]:checked');
+        const reportPublishingMode = pubRadio ? pubRadio.value : 'HYBRID_BOTH';
+
+        const payload = {
+            school_name:              document.getElementById('school_name').value,
+            school_abbreviation:      document.getElementById('school_abbreviation') ? document.getElementById('school_abbreviation').value : 'JAK STEM',
+            report_motto:             document.getElementById('report_motto').value,
+            report_title:             document.getElementById('report_title').value,
+            report_headmaster:        document.getElementById('report_headmaster').value,
+            school_address:           document.getElementById('school_address').value,
+            school_phone:             document.getElementById('school_phone').value,
+            school_email:             document.getElementById('school_email').value,
+            school_mode:              schoolMode,
+            boarding_status:          boardingStatus,
+            boarding_hierarchy_mode:   boardingHierarchyMode,
+            class_score_weight:       classWeightNum,
+            exam_score_weight:        examWeightNum,
+            system_theme:             themeVal,
+            active_academic_year_id:  activeYearId,
+            active_semester_id:       activeSemesterId,
+            grading_standard:         standard,
+            report_publishing_mode:   reportPublishingMode,
+            school_logo:              document.getElementById('school_logo').value,
+            headmaster_signature:     document.getElementById('headmaster_signature').value,
+            grading_rules:            JSON.stringify(gradingRules)
+        };
+
+        localStorage.setItem('system_theme', themeVal);
+        localStorage.setItem('school_mode', schoolMode);
+        localStorage.setItem('boarding_status', boardingStatus);
+        if (window.applyTheme) window.applyTheme(themeVal);
+        if (window.applySchoolModeVisibility) window.applySchoolModeVisibility(schoolMode, boardingStatus);
+
+        const res = await fetch(`${API_BASE}/settings/`, {
+            method: 'PUT',
+            headers: getHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(payload)
+        });
+
+        const msgEl = document.getElementById('settingsMsg');
+        if (res.ok) {
+            msgEl.innerHTML = '<span style="color:var(--success-color)">✔ Settings saved successfully!</span>';
+            loadSettings();
+            if (window.applyBranding) window.applyBranding();
+            if (window.applySchoolModeVisibility) window.applySchoolModeVisibility(schoolMode, boardingStatus);
+        } else {
+            msgEl.innerHTML = '<span style="color:var(--error-color)">❌ Failed to save settings.</span>';
+        }
+    });
+}
+
+const schoolLogoFile = document.getElementById('school_logo_file');
+if (schoolLogoFile) {
+    schoolLogoFile.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch(`${API_BASE}/settings/upload-logo`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: formData
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                alert(`Upload failed: ${err.detail || 'Unknown error'}`);
+                return;
+            }
+
+            const data = await res.json();
+            const schoolLogoInput = document.getElementById('school_logo');
+            const previewContainer = document.getElementById('logo_preview_container');
+            const previewImg = document.getElementById('logo_preview');
+
+            if (schoolLogoInput) schoolLogoInput.value = data.logo_url;
+            if (previewImg) previewImg.src = data.logo_url;
+            if (previewContainer) previewContainer.style.display = 'flex';
+
+            if (window.extractLogoColors) {
+                window.extractLogoColors(data.logo_url, function(colors) {
+                    if (window.applyTheme) window.applyTheme('auto', colors);
+                    const themeSel = document.getElementById('system_theme');
+                    if (themeSel) themeSel.value = 'auto';
+                });
+            }
+
+        } catch (error) {
+            console.error('Error uploading logo:', error);
+            alert('An error occurred while uploading the logo.');
+        }
+    });
+}
+
+const headmasterSigFile = document.getElementById('headmaster_signature_file');
+if (headmasterSigFile) {
+    headmasterSigFile.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+ 
+        const formData = new FormData();
+        formData.append('file', file);
+ 
+        try {
+            const res = await fetch(`${API_BASE}/settings/upload-signature`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: formData
+            });
+ 
+            if (!res.ok) {
+                const err = await res.json();
+                alert(`Upload failed: ${err.detail || 'Unknown error'}`);
+                return;
+            }
+ 
+            const data = await res.json();
+            const headmasterSigInput = document.getElementById('headmaster_signature');
+            const previewContainer = document.getElementById('sig_preview_container');
+            const previewImg = document.getElementById('sig_preview');
+ 
+            if (headmasterSigInput) headmasterSigInput.value = data.signature_url;
+            if (previewImg) previewImg.src = data.signature_url;
+            if (previewContainer) previewContainer.style.display = 'flex';
+ 
+        } catch (error) {
+            console.error('Error uploading signature:', error);
+            alert('An error occurred while uploading the signature.');
+        }
+    });
+}
+
+window.saveConductSettings = async function(event) {
+  event.preventDefault();
+  const msgEl = document.getElementById('conductMsg');
+  if (msgEl) { msgEl.style.color = '#38bdf8'; msgEl.textContent = 'Saving Code of Conduct & Pledge...'; }
+
+  const payload = {
+    code_of_conduct_text: document.getElementById('code_of_conduct_text').value,
+    student_pledge_text: document.getElementById('student_pledge_text').value
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/`, {
+      method: 'PUT',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      if (msgEl) { msgEl.style.color = '#34d399'; msgEl.textContent = '✔ Code of Conduct & Pledge saved successfully!'; }
+    } else {
+      const err = await res.json().catch(() => ({ detail: 'Failed to save' }));
+      if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ ${err.detail || 'Save failed'}`; }
+    }
+  } catch (e) {
+    if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ Network error saving conduct settings: ${e.message}`; }
+  }
+};
+
+window.uploadConductPDF = async function(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const msgEl = document.getElementById('conductMsg');
+  if (msgEl) { msgEl.style.color = '#38bdf8'; msgEl.textContent = 'Uploading Code of Conduct PDF...'; }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/upload-code-of-conduct`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: formData
+    });
+    const data = await res.json();
+    if (res.ok) {
+      const inputEl = document.getElementById('code_of_conduct_pdf_url');
+      if (inputEl) inputEl.value = data.document_url;
+      if (msgEl) { msgEl.style.color = '#34d399'; msgEl.textContent = '✔ Code of Conduct document uploaded successfully!'; }
+    } else {
+      if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ ${data.detail || 'Upload failed'}`; }
+    }
+  } catch (e) {
+    if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ Network error uploading file: ${e.message}`; }
+  }
+};
+
+window.savePaystackSettings = async function(event) {
+  event.preventDefault();
+  const msgEl = document.getElementById('paystackMsg');
+  if (msgEl) { msgEl.style.color = '#38bdf8'; msgEl.textContent = 'Saving Paystack Gateway Settings...'; }
+
+  const payload = {
+    paystack_enabled: document.getElementById('paystack_enabled').value,
+    paystack_public_key: document.getElementById('paystack_public_key').value.trim(),
+    paystack_secret_key: document.getElementById('paystack_secret_key').value.trim()
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/`, {
+      method: 'PUT',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      if (msgEl) { msgEl.style.color = '#34d399'; msgEl.textContent = '✔ Paystack Gateway Settings saved successfully!'; }
+    } else {
+      const err = await res.json().catch(() => ({ detail: 'Failed to save' }));
+      if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ ${err.detail || 'Save failed'}`; }
+    }
+  } catch (e) {
+    if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ Network error saving Paystack settings: ${e.message}`; }
+  }
+};
+ 
+loadSettings();

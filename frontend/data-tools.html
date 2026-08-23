@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Tools – School Management System</title>
+    <meta name="description" content="Import and export school data." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/theme.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1 style="margin:0;font-size:1.2rem;">Data Tools</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">CSV data import, CSSPS placement, and database backup/restore.</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <a class="btn" href="dashboard.html">← Dashboard</a>
+        </div>
+      </header>
+      <section class="card">
+        <h3>Import Students (CSV)</h3>
+        <p style="color:var(--text-muted);font-size:.9rem;">Upload a CSV with columns: full_name, student_code, gender, date_of_birth, parent_name, parent_phone, address, class_id</p>
+        <input type="file" id="studentCsvFile" accept=".csv" />
+        <button class="btn primary" onclick="importStudentCSV()">Import Students</button>
+        <div id="importStudentResult" style="margin-top:12px;"></div>
+      </section>
+      <section class="card">
+        <h3>Import Users (CSV)</h3>
+        <p style="color:var(--text-muted);font-size:.9rem;">Upload a CSV with columns: username, email, roles (pipe-separated)</p>
+        <input type="file" id="userCsvFile" accept=".csv" />
+        <button class="btn primary" onclick="importUserCSV()">Import Users</button>
+        <div id="importUserResult" style="margin-top:12px;"></div>
+      </section>
+      <section class="card">
+        <h3>Export & Data Portability</h3>
+        <button class="btn" onclick="exportStudentsCSV()">Export Students CSV</button>
+      </section>
+      
+      <section class="card" style="border: 2px solid #0284c7;">
+        <h3 style="color:#0284c7; margin-top:0;">💾 1-Click Offline USB & LAN Backup Hub</h3>
+        <p style="color:var(--text-muted);font-size:.9rem; margin-bottom:16px;">
+          Create safe, non-locking hot database backups locally on the server host disk, export a complete <code>.zip</code> package for USB drives, or mirror backups directly to a local drive (e.g. <code>D:\</code>) or local network office folder.
+        </p>
+        
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
+          <button class="btn primary" style="background:#0284c7; border-color:#0369a1; font-weight:700;" onclick="runBackup()">💾 Generate SQLite Hot Backup</button>
+          <button class="btn" style="background:#10b981; border-color:#059669; color:#fff; font-weight:700;" onclick="exportFullSystemZip()">📦 Export Full System Package (.zip for USB Drive)</button>
+        </div>
+
+        <!-- Custom Directory Backup Form -->
+        <div style="background:rgba(2,132,199,0.06); border:1px solid rgba(2,132,199,0.2); padding:16px; border-radius:8px; margin-bottom:20px;">
+          <h4 style="margin:0 0 6px; font-size:0.95rem; color:#0369a1;">📁 Save Backup to Secondary Local Drive or Local Network Path</h4>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Enter a local drive folder (e.g. <code>D:\SchoolBackups</code>, <code>E:\USB_Drive</code>) or LAN network folder (e.g. <code>\\HEADMASTER-PC\Backups</code>):</p>
+          <div style="display:flex; gap:10px;">
+            <input id="customBackupPathInput" type="text" placeholder="e.g. D:\SchoolBackups or E:\USB_Backup" style="flex:1; padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem;" />
+            <button class="btn" style="background:#0284c7; color:#fff; font-weight:700;" onclick="saveToCustomPath()">💾 Save to Location</button>
+          </div>
+        </div>
+
+        <div id="backupMsg" style="margin-top:12px;"></div>
+        
+        <h4 style="margin-top:24px;margin-bottom:10px;">Existing Local Server Backups</h4>
+        <div style="max-height: 250px; overflow-y: auto;">
+          <table style="width:100%; font-size:0.9rem;">
+            <thead>
+              <tr>
+                <th>Backup File</th>
+                <th>Size</th>
+                <th>Created At</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="backupListBody">
+              <tr>
+                <td colspan="4" style="text-align:center; opacity:0.6; padding:12px;">Loading backups...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script src="js/guard.js"></script>
+    <script src="js/data-tools.js"></script>
+  </body>
+</html>

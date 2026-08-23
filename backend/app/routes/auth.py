@@ -78,7 +78,7 @@ def _verify_password(plain_password: str, hashed_password: str) -> tuple[bool, b
 
 def _seed_db(db: Session) -> None:
     try:
-        # Seed roles
+        # ── Phase 1: Seed roles ────────────────────────────────────────────
         roles_map = {}
         for role_name in DEFAULT_ROLES:
             role = db.query(Role).filter(Role.name == role_name).first()
@@ -88,17 +88,24 @@ def _seed_db(db: Session) -> None:
                 db.flush()
             roles_map[role_name] = role
 
-        # Default passwords per role (users should change on first login)
+        # ── Phase 2: Known default passwords (Clean Production Path) ───────
+        # These are reset on EVERY startup so credentials are always known.
+        # ACTION REQUIRED: After your first login, create a named admin account,
+        # then set LOCK_DEFAULT_PASSWORDS=true in env to disable this reset.
+        LOCK = os.environ.get("LOCK_DEFAULT_PASSWORDS", "false").lower() == "true"
+
         DEFAULT_PASSWORDS = {
             "superadmin": "superadmin123!",
-            "admin": "admin123!",
-            "teacher": "Welcome123!",
+            "admin":      "admin123!",
+            "teacher":    "Welcome123!",
         }
-        first_run_entries = []
+
         for user_data in DEFAULT_USER_TEMPLATES:
             existing = db.query(User).filter(User.username == user_data["username"]).first()
+            default_password = DEFAULT_PASSWORDS.get(user_data["username"], "Welcome123!")
+
             if not existing:
-                default_password = DEFAULT_PASSWORDS.get(user_data["username"], "Welcome123!")
+                # Create the account if it doesn't exist yet
                 new_user = User(
                     username=user_data["username"],
                     email=user_data["email"],
@@ -109,21 +116,29 @@ def _seed_db(db: Session) -> None:
                     if role_name in roles_map:
                         new_user.roles.append(roles_map[role_name])
                 db.add(new_user)
-                first_run_entries.append(f"  {user_data['username']}: {default_password}")
+            elif not LOCK:
+                # Force-reset password on every startup (Phase 1 — until LOCK is set)
+                existing.password_hash = _hash_password(default_password)
+                existing.is_active = True
+
         db.commit()
 
-        # Write first-run credentials to file so admin can find them
-        if first_run_entries:
+        # ── Phase 3: Write current credentials to file for reference ───────
+        if not LOCK:
             BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             creds_path = os.path.join(BASE_DIR, "first_run_credentials.txt")
             with open(creds_path, "w") as f:
-                f.write("SMS First-Run Credentials\n")
-                f.write("=" * 40 + "\n")
-                f.write("These are your auto-generated login passwords.\n")
-                f.write("IMPORTANT: Change these after your first login!\n")
-                f.write("DELETE this file once you have saved the passwords.\n")
-                f.write("=" * 40 + "\n\n")
-                f.write("\n".join(first_run_entries) + "\n")
+                f.write("EduManage360 — Default System Credentials\n")
+                f.write("=" * 45 + "\n")
+                f.write("These passwords are reset on every startup.\n")
+                f.write("To lock them, set LOCK_DEFAULT_PASSWORDS=true\n")
+                f.write("in your environment variables after creating\n")
+                f.write("your own named admin account.\n")
+                f.write("=" * 45 + "\n\n")
+                for uname, pwd in DEFAULT_PASSWORDS.items():
+                    f.write(f"  {uname}: {pwd}\n")
+                f.write("\nLogin URL: /auth.html\n")
+
     except Exception as e:
         db.rollback()
 

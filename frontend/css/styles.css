@@ -1636,4 +1636,286 @@ thead th {
   .cmd-modal   { max-width: 100%; margin: 0; border-radius: 20px 20px 0 0; }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   BREADCRUMB NAVIGATION BAR
+   ═══════════════════════════════════════════════════════════════ */
 
+.breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.breadcrumb-item {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #94a3b8);
+  text-decoration: none;
+  transition: color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breadcrumb-item:hover {
+  color: var(--text-primary, #f8fafc);
+}
+
+.breadcrumb-item.current {
+  color: var(--primary-light, #a5b4fc);
+  font-weight: 600;
+  pointer-events: none;
+  max-width: 220px;
+}
+
+.breadcrumb-sep {
+  font-size: 0.62rem;
+  color: rgba(148, 163, 184, 0.3);
+  margin: 0 6px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Breadcrumb is inside the main layout, so it needs to account for sidebar */
+[data-layout="sidebar"] .breadcrumb-bar {
+  /* sidebar-aware; already placed in page flow after topbar */
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ENTERPRISE PRINT / EXPORT CSS
+   ═══════════════════════════════════════════════════════════════ */
+
+@media print {
+
+  /* ── Page setup ── */
+  @page {
+    size: A4;
+    margin: 15mm 20mm;
+  }
+
+  @page :first {
+    margin-top: 12mm;
+  }
+
+  /* ── Hide all non-content chrome ── */
+  .app-sidebar,
+  .sidebar-backdrop,
+  .topbar,
+  .breadcrumb-bar,
+  .notif-bell-btn,
+  .topbar-controls,
+  #topbarControls,
+  .mobile-hamburger-btn,
+  .no-print,
+  .btn,
+  button:not(.print-keep),
+  .cmd-overlay,
+  .notif-panel,
+  select,
+  input[type="search"],
+  input[type="text"]:not(.print-keep),
+  .pagination,
+  .filter-bar,
+  [class*="action-"],
+  [class*="toolbar"],
+  .stat-card::before,
+  .stat-card::after {
+    display: none !important;
+  }
+
+  /* ── Reset dark theme for paper ── */
+  html, body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    font-size: 11pt !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Layout: full width, no sidebar margin ── */
+  .page,
+  main.page,
+  [data-layout="sidebar"] .page {
+    margin-left: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    min-height: auto !important;
+  }
+
+  /* ── Cards & containers ── */
+  .card,
+  .stat-card,
+  .data-card,
+  .printable-content {
+    background: #ffffff !important;
+    border: 1px solid #dee2e6 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    break-inside: avoid;
+  }
+
+  /* ── Tables: clean black-on-white ── */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 9pt !important;
+  }
+
+  table th,
+  table td {
+    border: 1px solid #adb5bd !important;
+    padding: 5px 7px !important;
+    color: #111111 !important;
+    background: transparent !important;
+  }
+
+  table th {
+    background: #1e293b !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-weight: 700 !important;
+  }
+
+  table tr {
+    break-inside: avoid;
+  }
+
+  table thead {
+    display: table-header-group;
+  }
+
+  /* ── Broadsheet: force landscape ── */
+  .broadsheet-matrix,
+  [id*="broadsheet"],
+  .printable-landscape {
+    page-break-before: auto;
+  }
+
+  body:has(.broadsheet-matrix) {
+    /* Landscape hint — actual page orientation set by JS before window.print() */
+  }
+
+  /* ── Grade/score coloured badges: preserve colours ── */
+  .grade-a, .grade-b, .grade-c, .grade-d, .grade-f,
+  .rank-badge, .rank-top, .rc-badge,
+  .status-chip {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Stat cards: show as compact summary blocks ── */
+  .stats-grid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .stat-card {
+    flex: 0 0 calc(25% - 8px) !important;
+    padding: 8px !important;
+    border: 1px solid #dee2e6 !important;
+    border-left: 3px solid #1e293b !important;
+    border-radius: 4px !important;
+    break-inside: avoid;
+  }
+
+  .stat-icon { font-size: 1rem !important; }
+  .stat-value { font-size: 1.2rem !important; color: #111 !important; }
+  .stat-label { font-size: 0.65rem !important; color: #555 !important; }
+
+  /* ── Page footer with school name + print date ── */
+  body::after {
+    content: attr(data-school-name) " — Printed: " attr(data-print-date);
+    display: block;
+    position: fixed;
+    bottom: 8mm;
+    left: 20mm;
+    right: 20mm;
+    text-align: center;
+    font-size: 8pt;
+    color: #6c757d;
+    border-top: 1px solid #dee2e6;
+    padding-top: 4px;
+  }
+
+  /* ── Section headings ── */
+  .section-heading {
+    color: #1e293b !important;
+    border-bottom: 2px solid #1e293b !important;
+    font-size: 11pt !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* ── Attendance-specific ── */
+  .attendance-table td,
+  .attendance-table th {
+    font-size: 8pt !important;
+    padding: 4px 5px !important;
+  }
+
+  /* ── Discipline log ── */
+  .discipline-entry {
+    break-inside: avoid;
+    border-bottom: 1px solid #dee2e6 !important;
+    padding: 6px 0 !important;
+  }
+
+  /* ── Signature area for clearance & discipline ── */
+  .signature-area {
+    margin-top: 24px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .signature-line {
+    width: 40%;
+    border-top: 1px solid #333;
+    text-align: center;
+    font-size: 9pt;
+    padding-top: 4px;
+  }
+
+  /* ── Ensure links print as text ── */
+  a[href]::after { content: none !important; }
+
+  /* ── Empty state — hide on print ── */
+  .empty-state { display: none !important; }
+
+  /* ── Skeleton loaders — hide on print ── */
+  .skeleton, .skeleton-text, .skeleton-num { display: none !important; }
+}
+
+/* ── Print button style (matches existing .btn but with print icon) ── */
+.btn-print {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: var(--text-primary, #f8fafc);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.btn-print:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}

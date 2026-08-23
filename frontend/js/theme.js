@@ -1063,7 +1063,95 @@
 
   // Inject notification bell after sidebar + topbar are fully mounted
   setTimeout(() => loadNotificationBell(), 600);
+
+  // ── 7. Breadcrumb Navigation ─────────────────────────────────────────────────
+  const BREADCRUMB_MAP = {
+    'dashboard.html':        { label: 'Dashboard',              icon: '📊', group: null },
+    'students.html':         { label: 'Students',               icon: '👥', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'classes.html':          { label: 'Classes',                icon: '🏫', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'subjects.html':         { label: 'Subjects',               icon: '📚', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'programs.html':         { label: 'Programs',               icon: '🎯', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'departments.html':      { label: 'Departments',            icon: '🏢', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'assignments.html':      { label: 'Teacher Assignments',    icon: '👩‍🏫', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'timetable.html':        { label: 'Timetable',              icon: '📅', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'attendance.html':       { label: 'Attendance',             icon: '📋', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'houses.html':           { label: 'Houses & Dorms',         icon: '🏠', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'exeat.html':            { label: 'Exeat Management',       icon: '🎟️', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'discipline.html':       { label: 'Discipline Records',     icon: '⚖️', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'promotions.html':       { label: 'Promotions',             icon: '🎓', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'clearance.html':        { label: 'Final Year Clearance',   icon: '🎓', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'cumulative-record.html':{ label: 'Cumulative Record',      icon: '📁', group: { label: 'Assessment',    href: 'dashboard.html' } },
+    'bulk-entry.html':       { label: 'Marks Entry',            icon: '✍️', group: { label: 'Assessment',    href: 'dashboard.html' } },
+    'broadsheet.html':       { label: 'Class Broadsheet',       icon: '📈', group: { label: 'Assessment',    href: 'dashboard.html' } },
+    'reports.html':          { label: 'Report Cards',           icon: '📄', group: { label: 'Assessment',    href: 'dashboard.html' } },
+    'report-card.html':      { label: 'Student Report Card',    icon: '📄', group: { label: 'Assessment',    href: 'reports.html'   } },
+    'fees.html':             { label: 'Fee Management',         icon: '💰', group: { label: 'Finance',       href: 'dashboard.html' } },
+    'assets.html':           { label: 'Asset Management',       icon: '🗄️', group: { label: 'Finance',       href: 'dashboard.html' } },
+    'messaging.html':        { label: 'Bulk Messaging',         icon: '💬', group: { label: 'Communications',href: 'dashboard.html' } },
+    'parent-view.html':      { label: 'Parent Portal',          icon: '👨‍👩‍👧', group: { label: 'Communications',href: 'dashboard.html' } },
+    'announcements.html':    { label: 'Announcements',          icon: '📢', group: { label: 'Communications',href: 'dashboard.html' } },
+    'users.html':            { label: 'Users',                  icon: '👤', group: { label: 'Admin',         href: 'dashboard.html' } },
+    'data-tools.html':       { label: 'Data Tools',             icon: '🛠️', group: { label: 'Admin',         href: 'dashboard.html' } },
+    'settings.html':         { label: 'Settings',               icon: '⚙️', group: { label: 'Admin',         href: 'dashboard.html' } },
+    'super-admin.html':      { label: 'Super Admin',            icon: '👑', group: null },
+  };
+
+  function mountBreadcrumb() {
+    const currentPage = (window.location.pathname.split('/').pop() || '').toLowerCase().split('?')[0];
+    const publicPages = ['index.html', 'auth.html', 'login.html', ''];
+    if (publicPages.includes(currentPage)) return;
+
+    const topbar = document.querySelector('.topbar');
+    if (!topbar || document.querySelector('.breadcrumb-bar')) return;
+
+    const meta = BREADCRUMB_MAP[currentPage];
+    if (!meta) return;
+
+    const crumbs = [];
+
+    // Always start with Dashboard (unless we are on dashboard)
+    if (currentPage !== 'dashboard.html' && currentPage !== 'super-admin.html') {
+      crumbs.push({ label: 'Dashboard', href: 'dashboard.html', icon: '📊' });
+    }
+
+    // Add group if present
+    if (meta.group) {
+      crumbs.push({ label: meta.group.label, href: meta.group.href, icon: '' });
+    }
+
+    // Add current page as last (non-clickable)
+    crumbs.push({ label: meta.label, href: null, icon: meta.icon, current: true });
+
+    // Build HTML
+    let html = '';
+    crumbs.forEach((crumb, i) => {
+      if (i > 0) html += '<span class="breadcrumb-sep">›</span>';
+      if (crumb.current) {
+        html += `<span class="breadcrumb-item current">${crumb.icon ? crumb.icon + ' ' : ''}${crumb.label}</span>`;
+      } else {
+        html += `<a href="${crumb.href}" class="breadcrumb-item">${crumb.icon ? crumb.icon + ' ' : ''}${crumb.label}</a>`;
+      }
+    });
+
+    const bar = document.createElement('nav');
+    bar.className = 'breadcrumb-bar no-print';
+    bar.setAttribute('aria-label', 'breadcrumb');
+    bar.innerHTML = html;
+
+    // Insert after topbar
+    topbar.insertAdjacentElement('afterend', bar);
+
+    // Stamp print metadata on body
+    const schoolName = localStorage.getItem('school_name') || 'School Management System';
+    const printDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    document.body.setAttribute('data-school-name', schoolName);
+    document.body.setAttribute('data-print-date', printDate);
+  }
+
+  // Boot breadcrumb after sidebar is mounted
+  setTimeout(() => mountBreadcrumb(), 400);
 })();
+
 
 
 

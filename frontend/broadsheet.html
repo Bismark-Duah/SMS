@@ -69,6 +69,7 @@
           <p style="margin:4px 0 0 0;opacity:.75;font-size:.85rem;">Review class broadsheet matrix, total scores, class ranks, and manage terminal remarks.</p>
         </div>
         <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <button class="btn-print no-print" title="Print landscape broadsheet" onclick="(function(){var s=document.createElement('style');s.id='_landscapeHint';s.textContent='@page{size:A4 landscape;}';document.head.appendChild(s);window.print();setTimeout(function(){var el=document.getElementById('_landscapeHint');if(el)el.parentNode.removeChild(el);},1000);})()">🖨️ Print Broadsheet</button>
           <a class="btn" href="results.html">📝 Results & Scores</a>
           <a class="btn" href="departments.html">🏢 Departments</a>
           <a class="btn" href="dashboard.html">← Dashboard</a>
@@ -110,7 +111,7 @@
       </div>
 
       <!-- Broadsheet Matrix Container -->
-      <section class="card" style="max-width:100%; overflow-x:auto;">
+      <section class="card printable-content" style="max-width:100%; overflow-x:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
           <h3 style="margin:0;" id="broadsheetTitle">Class Section Broadsheet</h3>
           <button class="btn" style="background:#10b981; color:white; font-weight:600;" onclick="saveBroadsheetRemarks()">💾 Save Remarks</button>

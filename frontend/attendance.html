@@ -16,6 +16,7 @@
           <p style="margin:0;opacity:.7;font-size:.85rem;">Daily register & subject period absence log</p>
         </div>
         <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <button class="btn-print no-print" title="Print attendance register (landscape)" onclick="(function(){var s=document.createElement('style');s.id='_landscapeHint';s.textContent='@page{size:A4 landscape;}';document.head.appendChild(s);window.print();setTimeout(function(){var el=document.getElementById('_landscapeHint');if(el)el.parentNode.removeChild(el);},1000);})()">🖨️ Print Register</button>
           <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>

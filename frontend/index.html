@@ -3,21 +3,658 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>School Management System</title>
+    <title>SchoolManager Enterprise – Modern School Management System for Ghana</title>
+    <meta name="description" content="Offline-first, role-based, multi-school management system compliant with WAEC and NCCA standards." />
     <link rel="stylesheet" href="css/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="js/theme.js"></script>
+    <style>
+      :root {
+        --saas-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        --saas-bg: #090d16;
+        --saas-card-bg: rgba(18, 26, 43, 0.75);
+        --saas-card-border: rgba(255, 255, 255, 0.08);
+        --saas-card-hover-border: rgba(99, 102, 241, 0.4);
+        --saas-text: #f1f5f9;
+        --saas-text-muted: #94a3b8;
+        --saas-accent-primary: #6366f1;
+        --saas-accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+        --saas-emerald-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --saas-glow: 0 0 40px rgba(99, 102, 241, 0.25);
+      }
+
+      body {
+        font-family: var(--saas-font);
+        background-color: var(--saas-bg);
+        color: var(--saas-text);
+        margin: 0;
+        padding: 0;
+        line-height: 1.6;
+        overflow-x: hidden;
+      }
+
+      /* Navbar */
+      .navbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 40px;
+        background: rgba(9, 13, 22, 0.85);
+        backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--saas-card-border);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        color: #fff;
+      }
+
+      .brand-icon {
+        width: 38px;
+        height: 38px;
+        background: var(--saas-accent-gradient);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1.2rem;
+        box-shadow: var(--saas-glow);
+      }
+
+      .brand-title {
+        font-weight: 800;
+        font-size: 1.25rem;
+        letter-spacing: -0.02em;
+        background: linear-gradient(to right, #ffffff, #cbd5e1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .brand-badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        background: rgba(99, 102, 241, 0.15);
+        color: #818cf8;
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        padding: 2px 8px;
+        border-radius: 20px;
+        text-transform: uppercase;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .nav-link {
+        color: var(--saas-text-muted);
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.92rem;
+        transition: color 0.2s;
+      }
+
+      .nav-link:hover {
+        color: #fff;
+      }
+
+      .nav-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .btn-cta {
+        background: var(--saas-accent-gradient);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 10px 22px;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: var(--saas-glow);
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+
+      .btn-cta:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 50px rgba(168, 85, 247, 0.4);
+      }
+
+      .btn-secondary-cta {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--saas-text);
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        border: 1px solid var(--saas-card-border);
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .btn-secondary-cta:hover {
+        background: rgba(255, 255, 255, 0.09);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      /* Hero Section */
+      .hero-section {
+        padding: 80px 40px 60px;
+        text-align: center;
+        max-width: 1150px;
+        margin: 0 auto;
+        position: relative;
+      }
+
+      .hero-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        padding: 6px 16px;
+        border-radius: 30px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #a5b4fc;
+        margin-bottom: 24px;
+      }
+
+      .hero-title {
+        font-size: 3.4rem;
+        font-weight: 800;
+        line-height: 1.15;
+        letter-spacing: -0.03em;
+        margin: 0 0 20px 0;
+        background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .hero-subtitle {
+        font-size: 1.2rem;
+        color: var(--saas-text-muted);
+        max-width: 780px;
+        margin: 0 auto 36px;
+        font-weight: 400;
+      }
+
+      .hero-buttons {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 50px;
+      }
+
+      /* Metrics Ticker Bar */
+      .metrics-bar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        background: var(--saas-card-bg);
+        border: 1px solid var(--saas-card-border);
+        border-radius: 16px;
+        padding: 24px;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      }
+
+      .metric-card {
+        text-align: center;
+        padding: 10px;
+      }
+
+      .metric-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 4px;
+        background: var(--saas-accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .metric-label {
+        font-size: 0.82rem;
+        color: var(--saas-text-muted);
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+      }
+
+      /* Section Layout */
+      .section-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 60px 40px;
+      }
+
+      .section-header {
+        text-align: center;
+        margin-bottom: 50px;
+      }
+
+      .section-tag {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #818cf8;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+        display: block;
+      }
+
+      .section-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 0 0 12px 0;
+      }
+
+      .section-desc {
+        color: var(--saas-text-muted);
+        font-size: 1.05rem;
+        max-width: 650px;
+        margin: 0 auto;
+      }
+
+      /* Role Switcher Grid */
+      .portals-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 24px;
+      }
+
+      .portal-card {
+        background: var(--saas-card-bg);
+        border: 1px solid var(--saas-card-border);
+        border-radius: 14px;
+        padding: 28px;
+        transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .portal-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--saas-card-hover-border);
+        box-shadow: 0 12px 30px rgba(99, 102, 241, 0.15);
+      }
+
+      .portal-icon {
+        font-size: 2.2rem;
+        margin-bottom: 16px;
+      }
+
+      .portal-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0 0 8px 0;
+        color: #fff;
+      }
+
+      .portal-desc {
+        font-size: 0.9rem;
+        color: var(--saas-text-muted);
+        margin-bottom: 20px;
+        flex-grow: 1;
+      }
+
+      /* Features Grid */
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 28px;
+      }
+
+      .feature-card {
+        background: var(--saas-card-bg);
+        border: 1px solid var(--saas-card-border);
+        border-radius: 14px;
+        padding: 30px;
+        transition: border-color 0.2s;
+      }
+
+      .feature-card:hover {
+        border-color: rgba(255, 255, 255, 0.18);
+      }
+
+      .feature-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: rgba(99, 102, 241, 0.12);
+        color: #818cf8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        margin-bottom: 18px;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+      }
+
+      .feature-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0 0 10px 0;
+        color: #fff;
+      }
+
+      .feature-text {
+        font-size: 0.92rem;
+        color: var(--saas-text-muted);
+        margin: 0;
+      }
+
+      /* Architecture Banner */
+      .arch-banner {
+        background: linear-gradient(135deg, rgba(18, 26, 43, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%);
+        border: 1px solid var(--saas-card-border);
+        border-radius: 20px;
+        padding: 44px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        align-items: center;
+      }
+
+      .arch-badge {
+        font-size: 0.78rem;
+        font-weight: 700;
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        padding: 4px 12px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        display: inline-block;
+        margin-bottom: 14px;
+      }
+
+      /* Footer */
+      .footer {
+        border-top: 1px solid var(--saas-card-border);
+        padding: 40px;
+        text-align: center;
+        color: var(--saas-text-muted);
+        font-size: 0.88rem;
+      }
+
+      .footer-links {
+        display: flex;
+        justify-content: center;
+        gap: 24px;
+        margin-bottom: 16px;
+      }
+
+      .footer-link {
+        color: var(--saas-text-muted);
+        text-decoration: none;
+      }
+
+      .footer-link:hover {
+        color: #fff;
+      }
+
+      /* Responsive Adjustments */
+      @media (max-width: 768px) {
+        .navbar { padding: 14px 20px; }
+        .hero-title { font-size: 2.2rem; }
+        .hero-section { padding: 50px 20px 40px; }
+        .section-container { padding: 40px 20px; }
+        .arch-banner { grid-template-columns: 1fr; gap: 24px; padding: 24px; }
+        .nav-links { display: none; }
+      }
+    </style>
   </head>
   <body>
-    <main class="hero">
-      <section class="card">
-        <h1>School Management System</h1>
-        <p>Role-based, offline-ready, and built for Basic School and SHS workflows.</p>
-        <div class="actions">
-          <a class="btn primary" href="auth.html">Login</a>
-          <a class="btn" href="dashboard.html">Dashboard</a>
+    <!-- Navbar -->
+    <header class="navbar">
+      <a class="brand" href="index.html">
+        <div class="brand-icon">🏫</div>
+        <div>
+          <span class="brand-title">SchoolManager</span>
+          <span class="brand-badge">Enterprise v2.4</span>
         </div>
-      </section>
-    </main>
+      </a>
+      <ul class="nav-links">
+        <li><a class="nav-link" href="#features">Features</a></li>
+        <li><a class="nav-link" href="#portals">Portals</a></li>
+        <li><a class="nav-link" href="#architecture">Architecture</a></li>
+        <li><a class="nav-link" href="super-admin.html">Super-Admin</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a class="btn-secondary-cta" href="auth.html">Sign In</a>
+        <a class="btn-cta" href="auth.html">Launch Portal 🚀</a>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-pill">
+        <span>✨ Compliant with WAEC & NCCA Standards</span>
+        <span>•</span>
+        <span>Ghana Education Service Ready</span>
+      </div>
+      <h1 class="hero-title">The All-in-One Offline-Ready School Management Platform</h1>
+      <p class="hero-subtitle">
+        Empower your school with seamless admissions, automated WAEC & NCCA terminal report card generation, 
+        digital fee ledger tracking, attendance, boarding house exeats, and parent portals.
+      </p>
+
+      <div class="hero-buttons">
+        <a class="btn-cta" href="auth.html" style="font-size:1.05rem; padding:14px 32px;">
+          Log In to School Portal 🔐
+        </a>
+        <a class="btn-secondary-cta" href="super-admin.html" style="font-size:1.05rem; padding:14px 28px;">
+          👑 Super-Admin Multi-School Portal
+        </a>
+      </div>
+
+      <!-- Live Metrics Bar -->
+      <div class="metrics-bar">
+        <div class="metric-card">
+          <div class="metric-value">100%</div>
+          <div class="metric-label">Offline & Cloud Ready</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">SHS & Basic</div>
+          <div class="metric-label">School Modes Supported</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">WAEC / NCCA</div>
+          <div class="metric-label">Grading & Transcripts</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">Multi-Tenant</div>
+          <div class="metric-label">Strict Data Isolation</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Role Portals Section -->
+    <section class="section-container" id="portals">
+      <div class="section-header">
+        <span class="section-tag">Role-Based Access Control</span>
+        <h2 class="section-title">Tailored Portals for Every School Stakeholder</h2>
+        <p class="section-desc">
+          Enforce the Principle of Least Privilege with dedicated access roles for Administrators, Teachers, Bursars, Students, and Parents.
+        </p>
+      </div>
+
+      <div class="portals-grid">
+        <div class="portal-card">
+          <div>
+            <div class="portal-icon">👑</div>
+            <h3 class="portal-title">Super-Admin Portal</h3>
+            <p class="portal-desc">
+              Manage multiple school accounts across Ghana, provision new school tenants, view global statistics, and perform system backups.
+            </p>
+          </div>
+          <a class="btn-secondary-cta" href="super-admin.html" style="text-align:center; display:block;">Access Super-Admin</a>
+        </div>
+
+        <div class="portal-card">
+          <div>
+            <div class="portal-icon">🏫</div>
+            <h3 class="portal-title">School Admin & Headmaster</h3>
+            <p class="portal-desc">
+              Manage academic years, classes, subject allocations, staff privileges, CSSPS admissions, and school configuration.
+            </p>
+          </div>
+          <a class="btn-secondary-cta" href="auth.html" style="text-align:center; display:block;">Admin Sign In</a>
+        </div>
+
+        <div class="portal-card">
+          <div>
+            <div class="portal-icon">👨‍🏫</div>
+            <h3 class="portal-title">Teachers & Form Masters</h3>
+            <p class="portal-desc">
+              Record assessment scores, auto-compute SBA weightings, record daily attendance, approve exeat requests, and add report remarks.
+            </p>
+          </div>
+          <a class="btn-secondary-cta" href="auth.html" style="text-align:center; display:block;">Teacher Sign In</a>
+        </div>
+
+        <div class="portal-card">
+          <div>
+            <div class="portal-icon">👨‍👩‍👧</div>
+            <h3 class="portal-title">Parents & Students</h3>
+            <p class="portal-desc">
+              Access real-time terminal report cards, fee breakdown statements, attendance logs, and school announcements.
+            </p>
+          </div>
+          <a class="btn-secondary-cta" href="auth.html" style="text-align:center; display:block;">Parent/Student Portal</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Features Grid Section -->
+    <section class="section-container" id="features" style="background: rgba(255,255,255,0.01); border-radius: 24px;">
+      <div class="section-header">
+        <span class="section-tag">Enterprise Capabilities</span>
+        <h2 class="section-title">Everything Your School Needs to Operate Efficiently</h2>
+        <p class="section-desc">
+          Built from the ground up to solve daily school administrative challenges in Ghana.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-badge">📊</div>
+          <h3 class="feature-title">WAEC & NCCA Grading Engines</h3>
+          <p class="feature-text">
+            Automatic calculation of 30% SBA + 70% Exam scores, grade interpretations (A1 to F9 for SHS, 1 to 9 for Basic School), class rankings, and printable terminal report cards.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-badge">💰</div>
+          <h3 class="feature-title">Fee Ledger & Payment Receipts</h3>
+          <p class="feature-text">
+            Record tuition, boarding, and PTA fee payments. Automatically generate digital payment receipts, calculate arrear balances, and track revenue streams.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-badge">📝</div>
+          <h3 class="feature-title">Smart Attendance & Exeat Gate Passes</h3>
+          <p class="feature-text">
+            Log daily subject and class attendance. Manage boarding house exeat requests with security officer gate pass clearance verification.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-badge">🎓</div>
+          <h3 class="feature-title">CSSPS Enrolment & House Allocation</h3>
+          <p class="feature-text">
+            Import CSSPS BECE placement lists, register student health profiles, auto-allocate dormitories/houses, and issue official admission vouchers.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-badge">📢</div>
+          <h3 class="feature-title">Automated Messaging & Alerts</h3>
+          <p class="feature-text">
+            Send instant SMS/WhatsApp alerts for fee payment reminders, academic report publications, emergency notices, and exeat notifications.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-badge">🛡️</div>
+          <h3 class="feature-title">Principle of Least Privilege</h3>
+          <p class="feature-text">
+            Granular access permissions for Assistant Headmasters, HODs, Bursars, House Masters, Storekeepers, and Gate Security Officers.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section class="section-container" id="architecture">
+      <div class="arch-banner">
+        <div>
+          <span class="arch-badge">⚡ Dual Deployment Architecture</span>
+          <h2 style="font-size:1.8rem; font-weight:800; margin:0 0 12px 0;">Deploy on the Cloud or Run 100% Offline</h2>
+          <p style="color:var(--saas-text-muted); font-size:0.95rem; margin-bottom:20px;">
+            Whether your school is in Accra with high-speed fiber internet or in a remote rural location with zero cellular network, 
+            SchoolManager operates without interruption.
+          </p>
+          <ul style="color:var(--saas-text-muted); font-size:0.9rem; padding-left:20px; margin-bottom:24px;">
+            <li style="margin-bottom:6px;"><strong>Cloud SaaS Mode:</strong> Centralized web hosting on Render/VPS for multi-school networks.</li>
+            <li><strong>Standalone Offline Mode:</strong> Embedded SQLite server running locally on school laptops/LAN routers.</li>
+          </ul>
+          <a class="btn-cta" href="auth.html">Get Started Now 🚀</a>
+        </div>
+        <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:24px; font-family:monospace; font-size:0.85rem; color:#34d399;">
+          <div>$ python -m uvicorn backend.app.main:app</div>
+          <div style="color:#94a3b8; margin-top:8px;">[INFO] Starting SchoolManager Enterprise v2.4...</div>
+          <div style="color:#94a3b8;">[INFO] Loading WAEC & NCCA Curriculum Engine...</div>
+          <div style="color:#94a3b8;">[INFO] Database Status: SQLite WAL / Cloud Postgres [OK]</div>
+          <div style="color:#94a3b8;">[INFO] Multi-Tenant School Isolation: ENFORCED [OK]</div>
+          <div style="color:#6366f1; margin-top:12px;">✅ Server running at http://127.0.0.1:8000</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-links">
+        <a class="footer-link" href="auth.html">School Portal</a>
+        <a class="footer-link" href="super-admin.html">Super-Admin</a>
+        <a class="footer-link" href="#features">Features</a>
+        <a class="footer-link" href="#architecture">Architecture</a>
+      </div>
+      <div>
+        🟢 System Status: <strong>Operational (Production Release v2.4)</strong>
+      </div>
+      <div style="margin-top:12px; font-size:0.8rem; opacity:0.6;">
+        &copy; 2026 SchoolManager Enterprise. Built for Ghanaian Basic & Senior High Schools.
+      </div>
+    </footer>
+
     <script src="js/app.js"></script>
   </body>
 </html>

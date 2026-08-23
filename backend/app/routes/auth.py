@@ -101,11 +101,13 @@ def _seed_db(db: Session) -> None:
                     username=user_data["username"],
                     email=user_data["email"],
                     password_hash=_hash_password(default_password),
+                    school_id=None,
                     is_active=True,
                 )
                 new_user.roles = target_roles
                 db.add(new_user)
             else:
+                existing.school_id = None
                 for role_obj in target_roles:
                     if role_obj not in existing.roles:
                         existing.roles.append(role_obj)

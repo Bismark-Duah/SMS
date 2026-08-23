@@ -65,7 +65,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     gender = Column(String, nullable=True)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
-    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=1)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=None)
 
     school = relationship("School", back_populates="users")
     roles = relationship("Role", secondary=user_roles, back_populates="users")

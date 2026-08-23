@@ -61,57 +61,15 @@ function toggleEntryMode(mode) {
   }
 }
 
-function calculateGrade(total) {
-  if (total >= 80) return 'A1';
-  if (total >= 70) return 'B2';
-  if (total >= 65) return 'B3';
-  if (total >= 60) return 'C4';
-  if (total >= 55) return 'C5';
-  if (total >= 50) return 'C6';
-  if (total >= 45) return 'D7';
-  if (total >= 40) return 'E8';
-  return 'F9';
+function formatGradePill(grade) {
+  if (!grade) return '—';
+  let pillClass = 'grade-f';
+  if (grade === 'A1') pillClass = 'grade-a1';
+  else if (grade.startsWith('B')) pillClass = 'grade-b';
+  else if (grade.startsWith('C')) pillClass = 'grade-c';
+  else if (grade.startsWith('D') || grade.startsWith('E')) pillClass = 'grade-d';
+  return `<span class="grade-pill ${pillClass}">${grade}</span>`;
 }
-
-async function loadStudentList() {
-  const classId = document.getElementById('class_section_id').value;
-  const subjectId = document.getElementById('subject_id').value;
-  const semesterId = document.getElementById('semester_id').value;
-
-  if (!classId) return alert('Please select a class section.');
-
-  const body = document.getElementById('studentListBody');
-  body.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;">Loading students & existing scores...</td></tr>';
-
-  try {
-    const [resStudents, resScores] = await Promise.all([
-      fetch(`${API_BASE}/students/`, { headers: getHeaders() }),
-      fetch(`${API_BASE}/results/`, { headers: getHeaders() })
-    ]);
-
-    const allStudents = await resStudents.json();
-    const allScores = resScores.ok ? await resScores.json() : [];
-
-    const filteredStudents = allStudents.filter(s => String(s.class_section_id) === String(classId));
-
-    if (filteredStudents.length === 0) {
-      body.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px; color:var(--text-secondary);">No students found in this class section.</td></tr>';
-      return;
-    }
-
-    const { classWeight, examWeight } = getScoreWeights();
-    const caHeader = document.getElementById('caHeader');
-    const examHeader = document.getElementById('examHeader');
-    if (caHeader) caHeader.textContent = `CA Score (0 - ${classWeight})`;
-    if (examHeader) examHeader.textContent = `Exam Score (0 - ${examWeight})`;
-
-    // Map existing scores by student_id
-    const scoreMap = {};
-    allScores.forEach(sc => {
-      if (String(sc.subject_id) === String(subjectId) && String(sc.semester_id) === String(semesterId)) {
-        scoreMap[sc.student_id] = sc;
-      }
-    });
 
     body.innerHTML = filteredStudents.map(s => {
       const sc = scoreMap[s.id] || {};
@@ -127,38 +85,85 @@ async function loadStudentList() {
 
       return `
         <tr data-student-id="${s.id}">
-          <td style="font-weight:600;">${escapeHtml(s.full_name)}</td>
+          <td style="font-weight:600; padding:10px 8px;">${escapeHtml(s.full_name)}</td>
           <td class="simple-col" style="${currentMode === 'detailed' ? 'display:none;' : ''}">
-            <input type="number" class="class-score" min="0" max="${classWeight}" step="0.1" value="${caVal}">
+            <input type="number" class="spreadsheet-input class-score" min="0" max="${classWeight}" step="0.1" value="${caVal}" data-max="${classWeight}">
           </td>
           <td class="detailed-col" style="${currentMode === 'simple' ? 'display:none;' : ''}">
-            <input type="number" class="ex1-score" min="0" max="10" step="0.5" value="${ex1}" style="width:60px;">
+            <input type="number" class="spreadsheet-input ex1-score" min="0" max="10" step="0.5" value="${ex1}" data-max="10" style="width:62px;">
           </td>
           <td class="detailed-col" style="${currentMode === 'simple' ? 'display:none;' : ''}">
-            <input type="number" class="ex2-score" min="0" max="10" step="0.5" value="${ex2}" style="width:60px;">
+            <input type="number" class="spreadsheet-input ex2-score" min="0" max="10" step="0.5" value="${ex2}" data-max="10" style="width:62px;">
           </td>
           <td class="detailed-col" style="${currentMode === 'simple' ? 'display:none;' : ''}">
-            <input type="number" class="ass1-score" min="0" max="10" step="0.5" value="${ass1}" style="width:60px;">
+            <input type="number" class="spreadsheet-input ass1-score" min="0" max="10" step="0.5" value="${ass1}" data-max="10" style="width:62px;">
           </td>
           <td class="detailed-col" style="${currentMode === 'simple' ? 'display:none;' : ''}">
-            <input type="number" class="grp-score" min="0" max="10" step="0.5" value="${grp}" style="width:60px;">
+            <input type="number" class="spreadsheet-input grp-score" min="0" max="10" step="0.5" value="${grp}" data-max="10" style="width:62px;">
           </td>
           <td class="detailed-col" style="${currentMode === 'simple' ? 'display:none;' : ''}">
-            <input type="number" class="mid-score" min="0" max="20" step="0.5" value="${mid}" style="width:60px;">
+            <input type="number" class="spreadsheet-input mid-score" min="0" max="20" step="0.5" value="${mid}" data-max="20" style="width:62px;">
           </td>
           <td>
-            <input type="number" class="exam-score" min="0" max="${examWeight}" step="0.5" value="${examVal}">
+            <input type="number" class="spreadsheet-input exam-score" min="0" max="${examWeight}" step="0.5" value="${examVal}" data-max="${examWeight}">
           </td>
-          <td class="total-preview" style="font-weight:700; color:#818cf8;">${totalVal}</td>
-          <td class="grade-preview" style="font-weight:700; color:#34d399;">${gradeVal}</td>
+          <td class="total-preview tabular-num" style="font-weight:700; color:#818cf8; text-align:center;">${totalVal}</td>
+          <td class="grade-preview" style="text-align:center;">${formatGradePill(gradeVal)}</td>
         </tr>
       `;
     }).join('');
 
-    // Add event listeners for real-time live total & grade preview
-    body.querySelectorAll('tr[data-student-id]').forEach(row => {
-      row.querySelectorAll('input').forEach(input => {
+    // Spreadsheet Keyboard Navigation & Live Validation
+    const allRows = Array.from(body.querySelectorAll('tr[data-student-id]'));
+    
+    allRows.forEach((row, rowIndex) => {
+      const inputsInRow = Array.from(row.querySelectorAll('.spreadsheet-input'));
+
+      inputsInRow.forEach((input, colIndex) => {
+        // Auto-select entire number on focus for fast replacement
+        input.addEventListener('focus', () => {
+          setTimeout(() => input.select(), 10);
+        });
+
+        // Keyboard Arrow & Enter spreadsheet navigation
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowDown' || e.key === 'Enter') {
+            e.preventDefault();
+            const nextRow = allRows[rowIndex + 1];
+            if (nextRow) {
+              const targetInput = nextRow.querySelectorAll('.spreadsheet-input')[colIndex];
+              if (targetInput) { targetInput.focus(); targetInput.select(); }
+            }
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prevRow = allRows[rowIndex - 1];
+            if (prevRow) {
+              const targetInput = prevRow.querySelectorAll('.spreadsheet-input')[colIndex];
+              if (targetInput) { targetInput.focus(); targetInput.select(); }
+            }
+          } else if (e.key === 'ArrowRight' && input.selectionEnd === input.value.length) {
+            const nextInput = inputsInRow[colIndex + 1];
+            if (nextInput) { nextInput.focus(); nextInput.select(); }
+          } else if (e.key === 'ArrowLeft' && input.selectionStart === 0) {
+            const prevInput = inputsInRow[colIndex - 1];
+            if (prevInput) { prevInput.focus(); prevInput.select(); }
+          }
+        });
+
+        // Live validation & score calculations
         input.addEventListener('input', () => {
+          const val = parseFloat(input.value);
+          const maxVal = parseFloat(input.dataset.max || 100);
+
+          // Validation check
+          if (val > maxVal || val < 0) {
+            input.classList.add('score-invalid');
+            input.title = `Score exceeds maximum allowed (${maxVal})`;
+          } else {
+            input.classList.remove('score-invalid');
+            input.removeAttribute('title');
+          }
+
           let caVal = 0;
           if (currentMode === 'detailed') {
             const ex1 = parseFloat(row.querySelector('.ex1-score')?.value) || 0;
@@ -180,7 +185,7 @@ async function loadStudentList() {
           const totalEl = row.querySelector('.total-preview');
           const gradeEl = row.querySelector('.grade-preview');
           if (totalEl) totalEl.textContent = total.toFixed(2);
-          if (gradeEl) gradeEl.textContent = grade;
+          if (gradeEl) gradeEl.innerHTML = formatGradePill(grade);
         });
       });
     });

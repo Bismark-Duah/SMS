@@ -850,10 +850,30 @@
     const topbar = document.querySelector('.topbar');
     if (!topbar || topbar.querySelector('.notif-bell-btn')) return;
 
-    // Build bell button container
+    // Build bell button container & live sync status badge
     const controlsDiv = document.createElement('div');
     controlsDiv.className = 'topbar-controls';
     controlsDiv.id = 'topbarControls';
+
+    // Live Network & Sync Status Badge
+    const syncBadge = document.createElement('div');
+    syncBadge.className = 'sync-status-badge ' + (navigator.onLine ? 'online' : 'offline');
+    syncBadge.id = 'syncStatusBadge';
+    
+    function updateSyncBadge() {
+      const isOnline = navigator.onLine;
+      syncBadge.className = 'sync-status-badge ' + (isOnline ? 'online' : 'offline');
+      const isCloud = window.location.hostname.includes('render') || window.location.hostname.includes('onrender');
+      const label = isOnline ? (isCloud ? 'Cloud Sync Active' : 'Online') : 'Offline Ready';
+      syncBadge.innerHTML = `<span class="sync-status-dot"></span><span>${label}</span>`;
+      syncBadge.title = isOnline ? 'Connected to PostgreSQL Database' : 'Offline Mode: Local Caching Active';
+    }
+    
+    updateSyncBadge();
+    window.addEventListener('online', () => { updateSyncBadge(); if (window.showToast) window.showToast('🟢 Connection restored. Syncing with database...', 'success'); });
+    window.addEventListener('offline', () => { updateSyncBadge(); if (window.showToast) window.showToast('💾 Working offline. Changes cached locally.', 'info'); });
+    
+    controlsDiv.appendChild(syncBadge);
 
     const bellBtn = document.createElement('button');
     bellBtn.className = 'notif-bell-btn';

@@ -214,8 +214,13 @@ async function loadStudentsStat() {
     const active = Array.isArray(students) ? students.filter(s => s.is_active !== false).length : 0;
     const el = document.getElementById('statStudents');
     const subEl = document.getElementById('statStudentsSub');
+    const progEl = document.getElementById('progStudents');
     animateCountUp(el, active);
     if (subEl) subEl.textContent = `${students.length} total enrolled`;
+    if (progEl && students.length > 0) {
+      const activePct = Math.min(100, Math.round((active / students.length) * 100));
+      setTimeout(() => { progEl.style.width = `${activePct}%`; }, 150);
+    }
   } catch (_) {}
 }
 
@@ -230,13 +235,18 @@ async function loadAttendanceStat() {
     const data = await res.json();
     const el    = document.getElementById('statAttendance');
     const subEl = document.getElementById('statAttendanceSub');
+    const progEl = document.getElementById('progAttendance');
     if (data.total_marked > 0) {
-      const pct = parseFloat(data.attendance_percentage);
+      const pct = parseFloat(data.attendance_percentage) || 0;
       animateCountUp(el, Math.round(pct), '%');
       if (subEl) subEl.textContent = `${data.present_count || '—'} present of ${data.total_marked}`;
+      if (progEl) {
+        setTimeout(() => { progEl.style.width = `${Math.min(100, Math.round(pct))}%`; }, 150);
+      }
     } else {
       if (el) el.textContent = 'N/A';
       if (subEl) subEl.textContent = 'Not yet marked today';
+      if (progEl) progEl.style.width = '0%';
     }
   } catch (_) {}
 }
@@ -295,14 +305,19 @@ async function loadFeesStat() {
       : 0;
     const el    = document.getElementById('statFees');
     const subEl = document.getElementById('statFeesSub');
+    const progEl = document.getElementById('progFees');
     if (el) {
       el.textContent = total === 0
         ? 'GHS 0'
         : `GHS ${total.toLocaleString('en-GH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
     }
     if (subEl) {
-      const debtors = data.filter(r => r.outstanding_balance > 0).length;
+      const debtors = Array.isArray(data) ? data.filter(r => r.outstanding_balance > 0).length : 0;
       subEl.textContent = `${debtors} student${debtors !== 1 ? 's' : ''} with balance`;
+      if (progEl && data.length > 0) {
+        const clearedPct = Math.max(0, Math.min(100, Math.round(((data.length - debtors) / data.length) * 100)));
+        setTimeout(() => { progEl.style.width = `${clearedPct}%`; }, 150);
+      }
     }
   } catch (_) {}
 }
@@ -329,18 +344,25 @@ async function loadHousesStat() {
     const count = Array.isArray(houses) ? houses.length : 0;
     const el = document.getElementById('statHouses');
     const subEl = document.getElementById('statHousesSub');
+    const progEl = document.getElementById('progHouses');
     
     let totalDorms = 0;
     let totalBoarders = 0;
+    let totalCapacity = 0;
     if (Array.isArray(houses)) {
       houses.forEach(h => {
         totalDorms += (h.dormitories || []).length;
         totalBoarders += (h.student_count || 0);
+        totalCapacity += (h.capacity || (h.student_count || 0) + 10);
       });
     }
 
     animateCountUp(el, count);
     if (subEl) subEl.textContent = `${totalDorms} dorms | ${totalBoarders} boarders`;
+    if (progEl && totalCapacity > 0) {
+      const occPct = Math.min(100, Math.round((totalBoarders / totalCapacity) * 100));
+      setTimeout(() => { progEl.style.width = `${occPct}%`; }, 150);
+    }
   } catch (_) {}
 }
 

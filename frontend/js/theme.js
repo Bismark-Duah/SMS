@@ -4,9 +4,10 @@
  */
 
 (function () {
-  // Immediately enforce sidebar layout mode for all application pages
+  // Immediately enforce sidebar layout mode for application pages (excluding public landing & auth pages)
   const _initialPage = (window.location.pathname.split("/").pop() || "").toLowerCase();
-  if (_initialPage !== "auth.html" && _initialPage !== "login.html") {
+  const _publicPages = ["index.html", "auth.html", "login.html", ""];
+  if (!_publicPages.includes(_initialPage)) {
     document.documentElement.setAttribute("data-layout", "sidebar");
   }
 
@@ -247,9 +248,9 @@
   };
 
   window.mountSidebarNav = function () {
-    const rawPath = window.location.pathname.split("/").pop() || "dashboard.html";
-    const currentPath = rawPath.toLowerCase();
-    if (currentPath === "auth.html" || currentPath === "login.html") return;
+    const rawPath = (window.location.pathname.split("/").pop() || "").toLowerCase();
+    const publicPages = ["index.html", "auth.html", "login.html", ""];
+    if (publicPages.includes(rawPath)) return;
     if (document.querySelector(".app-sidebar")) return;
     if (!document.body) {
       if (document.readyState === 'loading') {

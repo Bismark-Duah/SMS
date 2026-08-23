@@ -304,7 +304,8 @@
     const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || sessionStorage.getItem('userRole') || localStorage.getItem('userRole') || '').toLowerCase();
     const rawRolesStr = sessionStorage.getItem('userRoles') || localStorage.getItem('userRoles');
     const userRoles = rawRolesStr ? JSON.parse(rawRolesStr).map(r => r.toLowerCase()) : [activeRole];
-    const isActiveAdmin = ['admin', 'super_admin'].includes(activeRole);
+    const isSuperAdminUser = localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin' || activeRole === 'super_admin' || userRoles.includes('super_admin');
+    const isActiveAdmin = ['admin', 'super_admin'].includes(activeRole) || userRoles.includes('admin') || userRoles.includes('super_admin') || isSuperAdminUser;
 
     const EXEC_ACADEMIC = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_admin', 'assistant_head_admin'];
     const EXEC_DOMESTIC = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'assistant_headmaster_admin', 'assistant_head_admin'];

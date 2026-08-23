@@ -572,10 +572,11 @@ body {
 }
 
 .app-sidebar {
-  width: 250px !important;
-  min-width: 250px !important;
-  background: var(--card-bg, #1e293b) !important;
-  border-right: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
+  width: 250px;
+  min-width: 250px;
+  max-width: 250px;
+  background: var(--card-bg, #1e293b);
+  border-right: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   display: flex !important;
   flex-direction: column !important;
   height: 100vh !important;
@@ -584,37 +585,34 @@ body {
   left: 0 !important;
   z-index: 100 !important;
   overflow-y: auto !important;
-  box-shadow: 2px 0 12px rgba(0,0,0,0.15) !important;
+  overflow-x: hidden !important;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.15);
   flex-shrink: 0 !important;
-}
-
-main.page {
-  flex: 1 !important;
-  min-width: 0 !important;
-  width: 100% !important;
-  padding: 24px 32px !important;
-  margin: 0 !important;
+  transition: width 0.22s ease, min-width 0.22s ease, max-width 0.22s ease;
   box-sizing: border-box !important;
 }
 
-aside.sidebar,
-.app-sidebar ~ .app-layout aside.sidebar {
-  display: none !important;
-}
-
 .app-sidebar.collapsed {
-  width: 68px;
-  min-width: 68px;
+  width: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
 }
 
 .app-sidebar.collapsed .sidebar-text,
-.app-sidebar.collapsed .sidebar-group-title {
+.app-sidebar.collapsed .sidebar-group-title,
+.app-sidebar.collapsed #sidebarFilterInput,
+.app-sidebar.collapsed .accordion-arrow {
   display: none !important;
 }
 
 .app-sidebar.collapsed .sidebar-item {
-  justify-content: center;
-  padding: 10px 0;
+  justify-content: center !important;
+  padding: 10px 0 !important;
+}
+
+.app-sidebar.collapsed .sidebar-header {
+  padding: 14px 8px !important;
+  justify-content: center !important;
 }
 
 .sidebar-header {

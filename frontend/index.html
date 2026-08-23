@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EduManage360 – Unified Multi-School Administration Portal</title>
-    <meta name="description" content="Revolutionize your school administration. Centralized, efficient, unified school management system." />
+    <title>EduManage360 – Transform Your Educational Ecosystem</title>
+    <meta name="description" content="The complete, multi-school administration portal designed for modern institutional success." />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -17,22 +17,23 @@
 
       :root {
         --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        --bg-slate: #0b1329;
-        --text-white: #ffffff;
-        --text-muted: #cbd5e1;
+        --bg-radial: radial-gradient(circle at 90% 10%, rgba(16, 185, 129, 0.12) 0%, rgba(2, 132, 199, 0.06) 40%, #ffffff 75%);
+        --text-dark: #0f172a;
+        --text-muted: #475569;
+        --primary-teal: #059669;
+        --primary-teal-hover: #047857;
         --primary-blue: #0284c7;
-        --primary-blue-hover: #0369a1;
-        --glass-bg: rgba(255, 255, 255, 0.04);
-        --glass-border: 1px solid rgba(255, 255, 255, 0.08);
-        --glass-hover-border: 1px solid rgba(2, 132, 199, 0.4);
-        --shadow-soft: 0 20px 45px -10px rgba(0, 0, 0, 0.5);
+        --card-border: #e2e8f0;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 4px 10px -4px rgba(0, 0, 0, 0.02);
+        --shadow-lg: 0 20px 40px -12px rgba(5, 150, 105, 0.15);
       }
 
       html, body {
         width: 100%;
         min-height: 100vh;
-        background-color: var(--bg-slate) !important;
-        color: var(--text-white) !important;
+        background: var(--bg-radial) !important;
+        color: var(--text-dark) !important;
         font-family: var(--font-main) !important;
         line-height: 1.5;
         overflow-x: hidden;
@@ -41,35 +42,17 @@
       /* Navigation Header */
       .navbar {
         width: 100%;
-        max-width: 1300px;
+        max-width: 1280px;
         margin: 0 auto;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 28px 48px;
+        padding: 24px 40px;
       }
 
-      /* White Pill Badge Container around Logo for High Contrast */
-      .brand-logo-badge {
-        background: #ffffff;
-        padding: 8px 18px;
-        border-radius: 12px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-        text-decoration: none;
-        transition: transform 0.2s, box-shadow 0.2s;
-      }
-
-      .brand-logo-badge:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
-      }
-
-      .brand-logo-badge img {
-        height: 42px;
-        max-width: 220px;
+      .brand-logo img {
+        height: 52px;
+        max-width: 240px;
         object-fit: contain;
       }
 
@@ -82,373 +65,315 @@
       .nav-menu {
         display: flex;
         align-items: center;
-        gap: 32px;
+        gap: 28px;
         list-style: none;
       }
 
       .nav-item a {
-        color: #cbd5e1;
+        color: #334155;
         text-decoration: none;
-        font-weight: 500;
-        font-size: 1rem;
+        font-weight: 600;
+        font-size: 0.95rem;
         transition: color 0.2s;
       }
 
       .nav-item a:hover {
-        color: #ffffff;
+        color: var(--primary-teal);
       }
 
-      .btn-signin {
-        background: var(--primary-blue);
+      .btn-login {
+        background: var(--primary-teal);
         color: #ffffff !important;
-        font-weight: 600;
-        font-size: 1rem;
+        font-weight: 700;
+        font-size: 0.95rem;
         padding: 10px 28px;
-        border-radius: 8px;
+        border-radius: 20px;
         text-decoration: none;
         transition: background 0.2s, transform 0.2s;
-        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+        box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
       }
 
-      .btn-signin:hover {
-        background: var(--primary-blue-hover);
+      .btn-login:hover {
+        background: var(--primary-teal-hover);
         transform: translateY(-1px);
       }
 
-      /* Hero Section (2-Column Side-by-Side Grid) */
-      .hero-container {
-        width: 100%;
-        max-width: 1300px;
+      /* Hero Section (Centered Layout) */
+      .hero-section {
+        max-width: 1100px;
         margin: 0 auto;
-        padding: 40px 48px 60px;
-        display: grid;
-        grid-template-columns: 1fr 1.15fr;
-        gap: 48px;
-        align-items: center;
+        padding: 40px 24px 30px;
+        text-align: center;
       }
 
-      .hero-left {
-        text-align: left;
-      }
-
-      .hero-headline {
-        font-size: clamp(2rem, 3.2vw, 2.8rem);
+      .hero-title {
+        font-size: 3.4rem;
         font-weight: 900;
         letter-spacing: -0.035em;
-        line-height: 1.18;
-        color: #ffffff;
-        margin-bottom: 32px;
-      }
-
-      .btn-demo {
-        background: #ffffff;
-        color: #0f172a !important;
-        font-weight: 700;
-        font-size: 1.05rem;
-        padding: 16px 36px;
-        border-radius: 8px;
-        text-decoration: none;
-        display: inline-block;
-        box-shadow: 0 8px 24px rgba(255, 255, 255, 0.15);
-        transition: background 0.2s, transform 0.2s;
-      }
-
-      .btn-demo:hover {
-        background: #f1f5f9;
-        transform: translateY(-2px);
-      }
-
-      /* Right Column: Floating Dashboard Mockup Card */
-      .hero-right {
-        position: relative;
-      }
-
-      .dashboard-mockup-card {
-        background: #0f172a;
-        border: var(--glass-border);
-        border-radius: 16px;
-        box-shadow: var(--shadow-soft);
-        overflow: hidden;
-        display: grid;
-        grid-template-columns: 56px 1fr;
-        min-height: 380px;
-      }
-
-      /* Left Icon Rail */
-      .mockup-rail {
-        background: #090d16;
-        padding: 16px 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-      }
-
-      .rail-brand {
-        width: 32px;
-        height: 32px;
-        background: var(--primary-blue);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-        font-weight: 800;
-        font-size: 0.9rem;
-      }
-
-      .rail-icon {
-        width: 34px;
-        height: 34px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #64748b;
-        font-size: 1rem;
-      }
-
-      .rail-icon.active {
-        background: rgba(255, 255, 255, 0.1);
-        color: #ffffff;
-      }
-
-      /* Main Mockup Dashboard Body (Dark Theme Matching Reference) */
-      .mockup-main {
-        padding: 18px 22px;
-        background: #1e293b;
-        color: #ffffff;
-      }
-
-      .mockup-topbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 16px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      }
-
-      .mockup-search {
-        background: rgba(255, 255, 255, 0.06);
-        border-radius: 6px;
-        padding: 6px 12px;
-        font-size: 0.75rem;
-        color: #94a3b8;
-        width: 160px;
-      }
-
-      .mockup-title {
-        font-size: 1.15rem;
-        font-weight: 800;
-        color: #ffffff;
-        margin-bottom: 14px;
-      }
-
-      /* Stats Row */
-      .mockup-stats-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 10px;
+        line-height: 1.15;
+        color: #0f172a;
         margin-bottom: 16px;
       }
 
-      .stat-box {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 8px;
-        padding: 10px;
-      }
-
-      .stat-label {
-        font-size: 0.65rem;
-        color: #94a3b8;
-        font-weight: 600;
-        margin-bottom: 2px;
-      }
-
-      .stat-val {
-        font-size: 1rem;
-        font-weight: 800;
-        color: #ffffff;
-      }
-
-      /* Charts Grid */
-      .mockup-charts-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-
-      .chart-box {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 8px;
-        padding: 12px;
-      }
-
-      .chart-title {
-        font-size: 0.72rem;
-        font-weight: 700;
-        color: #cbd5e1;
-        margin-bottom: 8px;
-      }
-
-      .mini-bars {
-        display: flex;
-        align-items: flex-end;
-        gap: 6px;
-        height: 70px;
-      }
-
-      .mini-bar-group {
-        flex: 1;
-        display: flex;
-        gap: 2px;
-        align-items: flex-end;
-        height: 100%;
-      }
-
-      .m-bar-1 { flex: 1; background: #0284c7; border-radius: 2px 2px 0 0; }
-      .m-bar-2 { flex: 1; background: #059669; border-radius: 2px 2px 0 0; }
-
-      .mini-line {
-        height: 70px;
-        width: 100%;
-        background: linear-gradient(180deg, rgba(2, 132, 199, 0.25) 0%, rgba(2, 132, 199, 0) 100%);
-        border-top: 2px solid #38bdf8;
-        border-radius: 4px;
-        margin-top: 6px;
-      }
-
-      /* 4 Seamless Dark Glassmorphic Feature Cards Row (Below Hero) */
-      .features-row-container {
-        width: 100%;
-        max-width: 1300px;
-        margin: 20px auto 80px;
-        padding: 0 48px;
-      }
-
-      .features-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 24px;
-      }
-
-      .feature-card {
-        background: var(--glass-bg);
-        border: var(--glass-border);
-        border-radius: 16px;
-        padding: 32px 24px;
-        text-align: center;
-        transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .feature-card:hover {
-        transform: translateY(-4px);
-        border: var(--glass-hover-border);
-        box-shadow: 0 12px 30px rgba(2, 132, 199, 0.15);
-      }
-
-      /* Glowing Neon Halo Icon Badges Matching Reference */
-      .feature-icon-badge {
-        width: 58px;
-        height: 58px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.7rem;
-        margin-bottom: 18px;
-      }
-
-      .badge-cyan {
-        background: rgba(2, 132, 199, 0.25);
-        color: #38bdf8;
-        border: 1px solid rgba(56, 189, 248, 0.4);
-        box-shadow: 0 0 20px rgba(56, 189, 248, 0.45);
-      }
-      .badge-emerald {
-        background: rgba(5, 150, 105, 0.25);
-        color: #34d399;
-        border: 1px solid rgba(52, 211, 153, 0.4);
-        box-shadow: 0 0 20px rgba(52, 211, 153, 0.45);
-      }
-      .badge-violet {
-        background: rgba(147, 51, 234, 0.25);
-        color: #c084fc;
-        border: 1px solid rgba(192, 132, 252, 0.4);
-        box-shadow: 0 0 20px rgba(192, 132, 252, 0.45);
-      }
-      .badge-amber {
-        background: rgba(217, 119, 6, 0.25);
-        color: #fbbf24;
-        border: 1px solid rgba(251, 191, 36, 0.4);
-        box-shadow: 0 0 20px rgba(251, 191, 36, 0.45);
-      }
-
-      .feature-card-title {
-        font-size: 1.15rem;
-        font-weight: 800;
-        color: #ffffff;
-        margin-bottom: 10px;
-      }
-
-      .feature-card-desc {
-        font-size: 0.9rem;
-        color: #cbd5e1;
-        line-height: 1.6;
-      }
-
-      /* Footer */
-      .footer {
-        width: 100%;
-        padding: 48px 48px;
-        text-align: center;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+      .hero-subtitle {
+        font-size: 1.2rem;
         color: var(--text-muted);
-        font-size: 0.9rem;
-      }
-
-      .footer-links {
-        display: flex;
-        justify-content: center;
-        gap: 28px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-      }
-
-      .footer-links a {
-        color: #cbd5e1;
-        text-decoration: none;
+        max-width: 760px;
+        margin: 0 auto 40px;
         font-weight: 500;
       }
 
-      .footer-links a:hover {
+      /* Central Emblem Graphic Showcase */
+      .emblem-showcase-container {
+        position: relative;
+        max-width: 720px;
+        margin: 0 auto 40px;
+        padding: 40px;
+        background: #ffffff;
+        border: 1px solid var(--card-border);
+        border-radius: 24px;
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .platform-tour-badge {
+        position: absolute;
+        left: 24px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 30px;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: #0f172a;
+        box-shadow: var(--shadow-md);
+        text-decoration: none;
+        transition: transform 0.2s;
+      }
+
+      .platform-tour-badge:hover {
+        transform: translateY(-50%) scale(1.05);
+      }
+
+      .play-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--primary-teal);
         color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+      }
+
+      .central-emblem-icon {
+        width: 180px;
+        height: 180px;
+        background: linear-gradient(135deg, #059669 0%, #0284c7 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-size: 5rem;
+        box-shadow: 0 16px 36px rgba(5, 150, 105, 0.3);
+        margin-bottom: 20px;
+      }
+
+      .emblem-banner {
+        background: linear-gradient(90deg, #059669, #0284c7);
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 0.85rem;
+        padding: 6px 24px;
+        border-radius: 20px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      /* Horizontal Category Pill Bar */
+      .category-pill-bar {
+        max-width: 900px;
+        margin: 0 auto 60px;
+        background: #ffffff;
+        border: 1px solid var(--card-border);
+        border-radius: 30px;
+        padding: 12px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        box-shadow: var(--shadow-sm);
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+
+      .pill-item {
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: #334155;
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+
+      .pill-item:hover {
+        color: var(--primary-teal);
+      }
+
+      /* Section: Unified Control for Every Institution */
+      .unified-section {
+        max-width: 1150px;
+        margin: 0 auto 60px;
+        padding: 0 24px;
+        text-align: center;
+      }
+
+      .section-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 36px;
+      }
+
+      .unified-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        margin-bottom: 50px;
+      }
+
+      .unified-card {
+        background: #ffffff;
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 28px 24px;
+        text-align: left;
+        box-shadow: var(--shadow-md);
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        transition: transform 0.2s;
+      }
+
+      .unified-card:hover {
+        transform: translateY(-3px);
+      }
+
+      .unified-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        background: #d1fae5;
+        color: #059669;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+      }
+
+      .unified-card-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 4px;
+      }
+
+      .unified-card-desc {
+        font-size: 0.88rem;
+        color: var(--text-muted);
+      }
+
+      /* Checkmark Feature Matrix & School Badges */
+      .matrix-container {
+        max-width: 1100px;
+        margin: 0 auto 60px;
+        background: #ffffff;
+        border: 1px solid var(--card-border);
+        border-radius: 20px;
+        padding: 36px 40px;
+        box-shadow: var(--shadow-sm);
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 28px;
+      }
+
+      .matrix-col-title {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 16px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .matrix-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .matrix-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #334155;
+      }
+
+      .check-icon {
+        color: #059669;
+        font-weight: 800;
+        font-size: 1rem;
+      }
+
+      /* Badge list col 4 */
+      .badge-box-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #0f172a;
+      }
+
+      /* Clean Minimal Footer */
+      .footer {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 28px 24px;
+        text-align: center;
+        border-top: 1px solid var(--card-border);
+        color: var(--text-muted);
+        font-size: 0.85rem;
       }
 
       /* Responsive Media Queries */
-      @media (max-width: 1024px) {
-        .hero-container {
-          grid-template-columns: 1fr;
-          gap: 40px;
-          text-align: center;
-        }
-        .hero-left { text-align: center; }
-        .hero-headline { font-size: 2.6rem; }
-        .features-grid { grid-template-columns: repeat(2, 1fr); }
+      @media (max-width: 900px) {
+        .hero-title { font-size: 2.4rem; }
+        .unified-grid { grid-template-columns: 1fr; }
+        .matrix-container { grid-template-columns: repeat(2, 1fr); }
+        .platform-tour-badge { position: relative; left: 0; top: 0; transform: none; margin-bottom: 20px; }
       }
 
-      @media (max-width: 640px) {
+      @media (max-width: 600px) {
         .navbar { padding: 16px 20px; }
-        .hero-container { padding: 24px 20px; }
-        .hero-headline { font-size: 2rem; }
-        .features-row-container { padding: 0 20px; }
-        .features-grid { grid-template-columns: 1fr; }
+        .matrix-container { grid-template-columns: 1fr; }
+        .category-pill-bar { display: none; }
         .nav-menu { display: none; }
       }
     </style>
@@ -456,126 +381,140 @@
   <body>
     <!-- Top Header Navigation -->
     <header class="navbar">
-      <a class="brand-logo-badge" href="index.html">
+      <a class="brand-logo" href="index.html">
         <img src="frontend/assets/logo_primary.png" alt="EduManage360 Logo" onerror="this.onerror=null; this.src='assets/logo_primary.png';" />
       </a>
 
       <div class="nav-links-container">
         <ul class="nav-menu">
-          <li class="nav-item"><a href="#features">Features</a></li>
-          <li class="nav-item"><a href="#pricing">Pricing</a></li>
-          <li class="nav-item"><a href="#resources">Resources</a></li>
+          <li class="nav-item"><a href="#solutions">Platform ▾</a></li>
+          <li class="nav-item"><a href="#unified">Solutions ▾</a></li>
+          <li class="nav-item"><a href="#matrix">Success Stories</a></li>
+          <li class="nav-item"><a href="#matrix">Pricing</a></li>
           <li class="nav-item"><a href="super-admin.html">Super-Admin</a></li>
         </ul>
-        <a class="btn-signin" href="auth.html">Sign In</a>
+        <a class="btn-login" href="auth.html">Log In</a>
       </div>
     </header>
 
-    <!-- Hero Section (2-Column Side-by-Side Grid) -->
-    <main class="hero-container">
-      <!-- Left Column: Big Headline + CTA -->
-      <div class="hero-left">
-        <h1 class="hero-headline">
-          Revolutionize Your<br />
-          <span style="white-space: nowrap;">School Administration.</span><br />
-          Centralized. Efficient.<br />
-          Unified.
-        </h1>
-        <a class="btn-demo" href="auth.html">
-          Get a Free Demo
+    <!-- Hero Section (Centered Layout with Emblem Showcase) -->
+    <main class="hero-section">
+      <h1 class="hero-title">
+        Transform Your Educational<br />
+        Ecosystem with EduManage360
+      </h1>
+      <p class="hero-subtitle">
+        The complete, multi-school administration portal designed for modern institutional success.
+      </p>
+
+      <!-- Central Emblem Showcase Graphic -->
+      <div class="emblem-showcase-container">
+        <a class="platform-tour-badge" href="auth.html">
+          <div class="play-icon">▶</div>
+          <span>Platform Tour</span>
         </a>
-      </div>
 
-      <!-- Right Column: Floating Dashboard Mockup Card -->
-      <div class="hero-right">
-        <div class="dashboard-mockup-card">
-          <!-- Dark Left Icon Rail -->
-          <div class="mockup-rail">
-            <div class="rail-brand">🏫</div>
-            <div class="rail-icon active">📊</div>
-            <div class="rail-icon">👥</div>
-            <div class="rail-icon">📋</div>
-            <div class="rail-icon">⚙️</div>
-          </div>
+        <div class="central-emblem-icon">
+          🎓
+        </div>
 
-          <!-- Main Mockup Workspace -->
-          <div class="mockup-main">
-            <div class="mockup-topbar">
-              <div class="mockup-search">🔍 Search...</div>
-              <div style="font-size:0.75rem; font-weight:700; color:#38bdf8;">Oct 2026 ▾</div>
-            </div>
-
-            <div class="mockup-title">Dashboard</div>
-
-            <!-- Stats Boxes -->
-            <div class="mockup-stats-grid">
-              <div class="stat-box">
-                <div class="stat-label">Total Analytics</div>
-                <div class="stat-val">$1.52K</div>
-              </div>
-              <div class="stat-box">
-                <div class="stat-label">Dynamic Reporting</div>
-                <div class="stat-val">3.77K</div>
-              </div>
-              <div class="stat-box">
-                <div class="stat-label">Financial Tools</div>
-                <div class="stat-val">$350</div>
-              </div>
-              <div class="stat-box">
-                <div class="stat-label">Parent Portal</div>
-                <div class="stat-val">3,300</div>
-              </div>
-            </div>
-
-            <!-- Charts Grid -->
-            <div class="mockup-charts-grid">
-              <div class="chart-box">
-                <div class="chart-title">Student Attendance</div>
-                <div class="mini-bars">
-                  <div class="mini-bar-group"><div class="m-bar-1" style="height:60%;"></div><div class="m-bar-2" style="height:80%;"></div></div>
-                  <div class="mini-bar-group"><div class="m-bar-1" style="height:70%;"></div><div class="m-bar-2" style="height:50%;"></div></div>
-                  <div class="mini-bar-group"><div class="m-bar-1" style="height:90%;"></div><div class="m-bar-2" style="height:85%;"></div></div>
-                  <div class="mini-bar-group"><div class="m-bar-1" style="height:65%;"></div><div class="m-bar-2" style="height:75%;"></div></div>
-                </div>
-              </div>
-
-              <div class="chart-box">
-                <div class="chart-title">Fee Collection Trend</div>
-                <div class="mini-line"></div>
-              </div>
-            </div>
-          </div>
+        <div class="emblem-banner">
+          THE MULTI-SCHOOL ADMIN PORTAL
         </div>
       </div>
     </main>
 
-    <!-- 4 Seamless Dark Glassmorphic Feature Cards Row (Below Hero) -->
-    <section class="features-row-container" id="features">
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon-badge badge-cyan">🎓</div>
-          <h3 class="feature-card-title">Student Management</h3>
-          <p class="feature-card-desc">Examlasts management and administration, and student management.</p>
+    <!-- Horizontal Category Pill Bar -->
+    <nav class="category-pill-bar" id="solutions">
+      <a class="pill-item" href="auth.html">Integrated Admissions</a>
+      <span style="opacity:0.3;">•</span>
+      <a class="pill-item" href="auth.html">WAEC & NCCA Grading</a>
+      <span style="opacity:0.3;">•</span>
+      <a class="pill-item" href="auth.html">Integrated School Finance</a>
+      <span style="opacity:0.3;">•</span>
+      <a class="pill-item" href="auth.html">Success Stories</a>
+      <span style="opacity:0.3;">•</span>
+      <a class="pill-item" href="auth.html">Data Analytics</a>
+    </nav>
+
+    <!-- Section: Unified Control for Every Institution -->
+    <section class="unified-section" id="unified">
+      <h2 class="section-title">Unified Control for Every Institution</h2>
+
+      <div class="unified-grid">
+        <div class="unified-card">
+          <div class="unified-icon">🏫</div>
+          <div>
+            <h3 class="unified-card-title">Multi-School Coordination</h3>
+            <p class="unified-card-desc">Multi-school coordination & campus management across Ghana.</p>
+          </div>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon-badge badge-emerald">📈</div>
-          <h3 class="feature-card-title">Dynamic Reporting</h3>
-          <p class="feature-card-desc">Dynor dynamic reporting and software administrative camulaims.</p>
+        <div class="unified-card">
+          <div class="unified-icon">⚙️</div>
+          <div>
+            <h3 class="unified-card-title">Centralized Admin</h3>
+            <p class="unified-card-desc">Complete centralized admin controls, staff assignments & security.</p>
+          </div>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon-badge badge-violet">💰</div>
-          <h3 class="feature-card-title">Financial Tools</h3>
-          <p class="feature-card-desc">Management comalytics to assess and their financial meancies.</p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon-badge badge-amber">👥</div>
-          <h3 class="feature-card-title">Parent Portal</h3>
-          <p class="feature-card-desc">Parent portal to steet your parent portal, and proud of their parents.</p>
+        <div class="unified-card">
+          <div class="unified-icon">📊</div>
+          <div>
+            <h3 class="unified-card-title">Data Analytics</h3>
+            <p class="unified-card-desc">Analysis, performance broadsheets & fee data analytics tools.</p>
+          </div>
         </div>
       </div>
     </section>
+
+    <!-- Checkmark Feature Matrix & Credentials Grid -->
+    <section class="matrix-container" id="matrix">
+      <div>
+        <h4 class="matrix-col-title">Admissions & Students</h4>
+        <ul class="matrix-list">
+          <li class="matrix-item"><span class="check-icon">✓</span> Multi-Mod Admissions</li>
+          <li class="matrix-item"><span class="check-icon">✓</span> Centralized Retention</li>
+          <li class="matrix-item"><span class="check-icon">✓</span> Student Tracking</li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="matrix-col-title">Grading & Exams</h4>
+        <ul class="matrix-list">
+          <li class="matrix-item"><span class="check-icon">✓</span> Automated WAEC Grading</li>
+          <li class="matrix-item"><span class="check-icon">✓</span> Centralized Admin</li>
+          <li class="matrix-item"><span class="check-icon">✓</span> Performance Analytics</li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="matrix-col-title">Curriculum & Finance</h4>
+        <ul class="matrix-list">
+          <li class="matrix-item"><span class="check-icon">✓</span> NCCA Basic Curriculum</li>
+          <li class="matrix-item"><span class="check-icon">✓</span> Real-Time Data Analytics</li>
+          <li class="matrix-item"><span class="check-icon">✓</span> Integrated Fee Ledger</li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="matrix-col-title">Official Credentials</h4>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div class="badge-box-item">🇬🇭 SHS & Basic Schools</div>
+          <div class="badge-box-item">🛡️ GES & WAEC Ready</div>
+          <div class="badge-box-item">🔌 100% Offline Support</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Clean Minimal Footer -->
+    <footer class="footer">
+      <div style="font-weight:600; margin-bottom:6px; color:#334155;">
+        Unified Multi-School Administration Portal, Redefined.
+      </div>
+      <div>
+        &copy; 2026 EduManage360 Enterprise. All rights reserved.
+      </div>
+    </footer>
   </body>
 </html>

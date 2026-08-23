@@ -1,10 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse, FileResponse
+from fastapi.responses import RedirectResponse, FileResponse, JSONResponse
 import os
 
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 from .database import Base, engine, get_db
 from .routes import auth, students, attendance, results, reports, classes, subjects, programs, academic, notifications, settings, assignments, promotions, fees, timetable, discipline, departments, houses, messaging, exeat, academic_hierarchy, backup, rollover, cssps_enrollment, cumulative_records, super_admin, vouchers, assets, clearance
 
@@ -295,6 +296,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/health", tags=["system"])
 @app.get("/api/health", tags=["system"])
 def get_system_health(db: Session = Depends(get_db)):
     """

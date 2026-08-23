@@ -17,21 +17,22 @@
 
       :root {
         --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        --bg-gradient: linear-gradient(180deg, #edf4ff 0%, #f6f9fc 60%, #ffffff 100%);
-        --text-dark: #091e42;
-        --text-muted: #5e6c84;
+        --bg-slate: #0b1329;
+        --text-white: #ffffff;
+        --text-muted: #94a3b8;
         --primary-blue: #0284c7;
         --primary-blue-hover: #0369a1;
-        --card-border: #e2e8f0;
-        --shadow-floating: 0 20px 45px -12px rgba(15, 23, 42, 0.12), 0 8px 16px -6px rgba(15, 23, 42, 0.04);
-        --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 4px 10px -4px rgba(0, 0, 0, 0.03);
+        --glass-bg: rgba(255, 255, 255, 0.04);
+        --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+        --glass-hover-border: 1px solid rgba(2, 132, 199, 0.4);
+        --shadow-soft: 0 20px 45px -10px rgba(0, 0, 0, 0.5);
       }
 
       html, body {
         width: 100%;
         min-height: 100vh;
-        background: var(--bg-gradient) !important;
-        color: var(--text-dark) !important;
+        background-color: var(--bg-slate) !important;
+        color: var(--text-white) !important;
         font-family: var(--font-main) !important;
         line-height: 1.5;
         overflow-x: hidden;
@@ -48,15 +49,27 @@
         padding: 24px 40px;
       }
 
-      .brand-logo {
-        display: flex;
+      /* White Pill Badge Container around Logo for High Contrast */
+      .brand-logo-badge {
+        background: #ffffff;
+        padding: 8px 18px;
+        border-radius: 12px;
+        display: inline-flex;
         align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
         text-decoration: none;
+        transition: transform 0.2s, box-shadow 0.2s;
       }
 
-      .brand-logo img {
-        height: 54px;
-        max-width: 240px;
+      .brand-logo-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+      }
+
+      .brand-logo-badge img {
+        height: 42px;
+        max-width: 220px;
         object-fit: contain;
       }
 
@@ -74,7 +87,7 @@
       }
 
       .nav-item a {
-        color: #334155;
+        color: #cbd5e1;
         text-decoration: none;
         font-weight: 500;
         font-size: 1rem;
@@ -82,31 +95,27 @@
       }
 
       .nav-item a:hover {
-        color: var(--primary-blue);
+        color: #ffffff;
       }
 
-      .btn-login {
+      .btn-signin {
         background: var(--primary-blue);
         color: #ffffff !important;
         font-weight: 600;
         font-size: 1rem;
-        padding: 12px 32px;
-        border-radius: 10px;
+        padding: 10px 28px;
+        border-radius: 8px;
         text-decoration: none;
-        transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+        transition: background 0.2s, transform 0.2s;
         box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
       }
 
-      .btn-login:hover {
+      .btn-signin:hover {
         background: var(--primary-blue-hover);
         transform: translateY(-1px);
-        box-shadow: 0 6px 18px rgba(2, 132, 199, 0.4);
       }
 
-      /* Hero Section (Side-by-Side 2-Column Layout) */
+      /* Hero Section (2-Column Side-by-Side Grid) */
       .hero-container {
         width: 100%;
         max-width: 1300px;
@@ -127,25 +136,25 @@
         font-weight: 900;
         letter-spacing: -0.035em;
         line-height: 1.12;
-        color: #0b1528;
+        color: #ffffff;
         margin-bottom: 32px;
       }
 
       .btn-demo {
-        background: var(--primary-blue);
-        color: #ffffff !important;
+        background: #ffffff;
+        color: #0f172a !important;
         font-weight: 700;
         font-size: 1.05rem;
         padding: 16px 36px;
-        border-radius: 10px;
+        border-radius: 8px;
         text-decoration: none;
         display: inline-block;
-        box-shadow: 0 8px 24px rgba(2, 132, 199, 0.35);
+        box-shadow: 0 8px 24px rgba(255, 255, 255, 0.15);
         transition: background 0.2s, transform 0.2s;
       }
 
       .btn-demo:hover {
-        background: var(--primary-blue-hover);
+        background: #f1f5f9;
         transform: translateY(-2px);
       }
 
@@ -155,19 +164,19 @@
       }
 
       .dashboard-mockup-card {
-        background: #ffffff;
-        border: 1px solid var(--card-border);
+        background: #0f172a;
+        border: var(--glass-border);
         border-radius: 16px;
-        box-shadow: var(--shadow-floating);
+        box-shadow: var(--shadow-soft);
         overflow: hidden;
         display: grid;
         grid-template-columns: 56px 1fr;
         min-height: 380px;
       }
 
-      /* Left Icon Nav Rail */
+      /* Left Icon Rail */
       .mockup-rail {
-        background: #0f172a;
+        background: #090d16;
         padding: 16px 0;
         display: flex;
         flex-direction: column;
@@ -195,20 +204,20 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #94a3b8;
+        color: #64748b;
         font-size: 1rem;
-        cursor: pointer;
       }
 
       .rail-icon.active {
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.1);
         color: #ffffff;
       }
 
       /* Main Mockup Dashboard Body */
       .mockup-main {
-        padding: 16px 20px;
-        background: #fafbfc;
+        padding: 18px 22px;
+        background: #ffffff;
+        color: #0f172a;
       }
 
       .mockup-topbar {
@@ -229,27 +238,6 @@
         width: 160px;
       }
 
-      .mockup-user {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.75rem;
-        color: #475569;
-        font-weight: 600;
-      }
-
-      .user-avatar {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: #0284c7;
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.65rem;
-      }
-
       .mockup-title {
         font-size: 1.15rem;
         font-weight: 800;
@@ -260,13 +248,13 @@
       /* Stats Row */
       .mockup-stats-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 10px;
         margin-bottom: 16px;
       }
 
       .stat-box {
-        background: #ffffff;
+        background: #fafafa;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 10px;
@@ -280,7 +268,7 @@
       }
 
       .stat-val {
-        font-size: 1.05rem;
+        font-size: 1.1rem;
         font-weight: 800;
         color: #0f172a;
       }
@@ -293,7 +281,7 @@
       }
 
       .chart-box {
-        background: #ffffff;
+        background: #fafafa;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 12px;
@@ -333,7 +321,7 @@
         margin-top: 6px;
       }
 
-      /* 4 Feature Cards Row (Below Hero) */
+      /* 4 Seamless Dark Glassmorphic Feature Cards Row (Below Hero) */
       .features-row-container {
         width: 100%;
         max-width: 1300px;
@@ -348,13 +336,12 @@
       }
 
       .feature-card {
-        background: #ffffff;
-        border: 1px solid var(--card-border);
+        background: var(--glass-bg);
+        border: var(--glass-border);
         border-radius: 16px;
-        padding: 28px 20px;
+        padding: 32px 24px;
         text-align: center;
-        box-shadow: var(--shadow-card);
-        transition: transform 0.25s, box-shadow 0.25s;
+        transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -362,30 +349,65 @@
 
       .feature-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 16px 30px -8px rgba(0, 0, 0, 0.08);
+        border: var(--glass-hover-border);
+        box-shadow: 0 12px 30px rgba(2, 132, 199, 0.15);
       }
 
       .feature-icon-badge {
-        width: 56px;
-        height: 56px;
+        width: 58px;
+        height: 58px;
         border-radius: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.6rem;
-        margin-bottom: 16px;
+        font-size: 1.7rem;
+        margin-bottom: 18px;
       }
 
-      .badge-blue { background: #e0f2fe; color: #0284c7; }
-      .badge-green { background: #d1fae5; color: #059669; }
-      .badge-emerald { background: #ccfbf1; color: #0d9488; }
-      .badge-chat { background: #e0e7ff; color: #4338ca; }
+      .badge-cyan { background: rgba(2, 132, 199, 0.2); color: #38bdf8; border: 1px solid rgba(2, 132, 199, 0.3); }
+      .badge-emerald { background: rgba(5, 150, 105, 0.2); color: #34d399; border: 1px solid rgba(5, 150, 105, 0.3); }
+      .badge-violet { background: rgba(147, 51, 234, 0.2); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.3); }
+      .badge-amber { background: rgba(217, 119, 6, 0.2); color: #fbbf24; border: 1px solid rgba(217, 119, 6, 0.3); }
 
       .feature-card-title {
-        font-size: 1.05rem;
+        font-size: 1.1rem;
         font-weight: 800;
-        color: #0f172a;
-        line-height: 1.35;
+        color: #ffffff;
+        margin-bottom: 10px;
+      }
+
+      .feature-card-desc {
+        font-size: 0.88rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+      }
+
+      /* Footer */
+      .footer {
+        width: 100%;
+        padding: 48px 40px;
+        text-align: center;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--text-muted);
+        font-size: 0.9rem;
+      }
+
+      .footer-links {
+        display: flex;
+        justify-content: center;
+        gap: 28px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .footer-links a {
+        color: #cbd5e1;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .footer-links a:hover {
+        color: #ffffff;
       }
 
       /* Responsive Media Queries */
@@ -413,22 +435,22 @@
   <body>
     <!-- Top Header Navigation -->
     <header class="navbar">
-      <a class="brand-logo" href="index.html">
+      <a class="brand-logo-badge" href="index.html">
         <img src="frontend/assets/logo_primary.png" alt="EduManage360 Logo" onerror="this.onerror=null; this.src='assets/logo_primary.png';" />
       </a>
 
       <div class="nav-links-container">
         <ul class="nav-menu">
           <li class="nav-item"><a href="#features">Features</a></li>
-          <li class="nav-item"><a href="#solutions">Solutions</a></li>
           <li class="nav-item"><a href="#pricing">Pricing</a></li>
-          <li class="nav-item"><a href="#support">Support</a></li>
+          <li class="nav-item"><a href="#resources">Resources</a></li>
+          <li class="nav-item"><a href="super-admin.html">Super-Admin</a></li>
         </ul>
-        <a class="btn-login" href="auth.html">Login</a>
+        <a class="btn-signin" href="auth.html">Sign In</a>
       </div>
     </header>
 
-    <!-- Hero Section (Side-by-Side 2-Column Layout) -->
+    <!-- Hero Section (2-Column Side-by-Side Grid) -->
     <main class="hero-container">
       <!-- Left Column: Big Headline + CTA -->
       <div class="hero-left">
@@ -457,10 +479,7 @@
           <div class="mockup-main">
             <div class="mockup-topbar">
               <div class="mockup-search">🔍 Search...</div>
-              <div class="mockup-user">
-                <div class="user-avatar">AD</div>
-                <span>Admin User</span>
-              </div>
+              <div style="font-size:0.75rem; font-weight:700; color:#0284c7;">Oct 2026 ▾</div>
             </div>
 
             <div class="mockup-title">Dashboard</div>
@@ -468,20 +487,16 @@
             <!-- Stats Boxes -->
             <div class="mockup-stats-grid">
               <div class="stat-box">
-                <div class="stat-label">Students</div>
-                <div class="stat-val">31,087</div>
+                <div class="stat-label">Total Students</div>
+                <div class="stat-val">13,934</div>
               </div>
               <div class="stat-box">
-                <div class="stat-label">Staff</div>
-                <div class="stat-val">3,250</div>
+                <div class="stat-label">Active Staff</div>
+                <div class="stat-val">364</div>
               </div>
               <div class="stat-box">
-                <div class="stat-label">Classes</div>
-                <div class="stat-val">1,591</div>
-              </div>
-              <div class="stat-box">
-                <div class="stat-label">Parents</div>
-                <div class="stat-val">$31.4K</div>
+                <div class="stat-label">Admissions</div>
+                <div class="stat-val">48</div>
               </div>
             </div>
 
@@ -498,7 +513,7 @@
               </div>
 
               <div class="chart-box">
-                <div class="chart-title">Fee Collection</div>
+                <div class="chart-title">Fee Collection Trend</div>
                 <div class="mini-line"></div>
               </div>
             </div>
@@ -507,29 +522,55 @@
       </div>
     </main>
 
-    <!-- 4 Feature Cards Row (Below Hero) -->
+    <!-- 4 Seamless Dark Glassmorphic Feature Cards Row (Below Hero) -->
     <section class="features-row-container" id="features">
       <div class="features-grid">
         <div class="feature-card">
-          <div class="feature-icon-badge badge-blue">🩻</div>
-          <h3 class="feature-card-title">Unified Student<br />Portal</h3>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon-badge badge-green">👤⚙️</div>
-          <h3 class="feature-card-title">Automated Staff<br />Management</h3>
+          <div class="feature-icon-badge badge-cyan">🎓</div>
+          <h3 class="feature-card-title">Student Management</h3>
+          <p class="feature-card-desc">Comprehensive profiles, attendance, WAEC/NCCA grades, and records in one secure hub.</p>
         </div>
 
         <div class="feature-card">
           <div class="feature-icon-badge badge-emerald">📈</div>
-          <h3 class="feature-card-title">Intelligent Analytics<br />& Reporting</h3>
+          <h3 class="feature-card-title">Dynamic Reporting</h3>
+          <p class="feature-card-desc">Generate insightful data visualizations, terminal report cards, position ranks, and broadsheets.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon-badge badge-chat">💬</div>
-          <h3 class="feature-card-title">Integrated Parent<br />Communication</h3>
+          <div class="feature-icon-badge badge-violet">💰</div>
+          <h3 class="feature-card-title">Financial Tools</h3>
+          <p class="feature-card-desc">Track tuition fees, issue digital payment receipts, and calculate arrear balances effortlessly.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-badge badge-amber">👥</div>
+          <h3 class="feature-card-title">Parent Portal</h3>
+          <p class="feature-card-desc">Foster strong engagement through real-time grade tracking, fee statements, and announcements.</p>
         </div>
       </div>
     </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div style="margin-bottom:20px;">
+        <a class="brand-logo-badge" href="index.html">
+          <img src="frontend/assets/logo_primary.png" alt="EduManage360 Logo" onerror="this.onerror=null; this.src='assets/logo_primary.png';" />
+        </a>
+      </div>
+      <div class="footer-links">
+        <a href="auth.html">School Portal</a>
+        <a href="super-admin.html">Super-Admin</a>
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#resources">Resources</a>
+      </div>
+      <div style="margin-bottom:12px;">
+        🟢 System Status: <strong>Operational (Production Release v2.4)</strong>
+      </div>
+      <div style="font-size:0.8rem; opacity:0.6;">
+        &copy; 2026 EduManage360 Enterprise. Unified Multi-School Administration Portal.
+      </div>
+    </footer>
   </body>
 </html>

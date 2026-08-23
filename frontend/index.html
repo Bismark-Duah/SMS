@@ -19,7 +19,7 @@
         --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         --bg-slate: #0b1329;
         --text-white: #ffffff;
-        --text-muted: #94a3b8;
+        --text-muted: #cbd5e1;
         --primary-blue: #0284c7;
         --primary-blue-hover: #0369a1;
         --glass-bg: rgba(255, 255, 255, 0.04);
@@ -46,7 +46,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 24px 40px;
+        padding: 28px 48px;
       }
 
       /* White Pill Badge Container around Logo for High Contrast */
@@ -120,9 +120,9 @@
         width: 100%;
         max-width: 1300px;
         margin: 0 auto;
-        padding: 40px 40px 60px;
+        padding: 40px 48px 60px;
         display: grid;
-        grid-template-columns: 1fr 1.1fr;
+        grid-template-columns: 1fr 1.15fr;
         gap: 48px;
         align-items: center;
       }
@@ -132,10 +132,10 @@
       }
 
       .hero-headline {
-        font-size: 3.4rem;
+        font-size: 3.2rem;
         font-weight: 900;
         letter-spacing: -0.035em;
-        line-height: 1.12;
+        line-height: 1.15;
         color: #ffffff;
         margin-bottom: 32px;
       }
@@ -213,11 +213,11 @@
         color: #ffffff;
       }
 
-      /* Main Mockup Dashboard Body */
+      /* Main Mockup Dashboard Body (Dark Theme Matching Reference) */
       .mockup-main {
         padding: 18px 22px;
-        background: #ffffff;
-        color: #0f172a;
+        background: #1e293b;
+        color: #ffffff;
       }
 
       .mockup-topbar {
@@ -226,11 +226,11 @@
         justify-content: space-between;
         margin-bottom: 16px;
         padding-bottom: 10px;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       }
 
       .mockup-search {
-        background: #f1f5f9;
+        background: rgba(255, 255, 255, 0.06);
         border-radius: 6px;
         padding: 6px 12px;
         font-size: 0.75rem;
@@ -241,36 +241,36 @@
       .mockup-title {
         font-size: 1.15rem;
         font-weight: 800;
-        color: #0f172a;
+        color: #ffffff;
         margin-bottom: 14px;
       }
 
       /* Stats Row */
       .mockup-stats-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 10px;
         margin-bottom: 16px;
       }
 
       .stat-box {
-        background: #fafafa;
-        border: 1px solid #e2e8f0;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 8px;
         padding: 10px;
       }
 
       .stat-label {
-        font-size: 0.68rem;
-        color: #64748b;
+        font-size: 0.65rem;
+        color: #94a3b8;
         font-weight: 600;
         margin-bottom: 2px;
       }
 
       .stat-val {
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 800;
-        color: #0f172a;
+        color: #ffffff;
       }
 
       /* Charts Grid */
@@ -281,8 +281,8 @@
       }
 
       .chart-box {
-        background: #fafafa;
-        border: 1px solid #e2e8f0;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 8px;
         padding: 12px;
       }
@@ -290,7 +290,7 @@
       .chart-title {
         font-size: 0.72rem;
         font-weight: 700;
-        color: #334155;
+        color: #cbd5e1;
         margin-bottom: 8px;
       }
 
@@ -315,8 +315,8 @@
       .mini-line {
         height: 70px;
         width: 100%;
-        background: linear-gradient(180deg, rgba(2, 132, 199, 0.15) 0%, rgba(255, 255, 255, 0) 100%);
-        border-top: 2px solid #0284c7;
+        background: linear-gradient(180deg, rgba(2, 132, 199, 0.25) 0%, rgba(2, 132, 199, 0) 100%);
+        border-top: 2px solid #38bdf8;
         border-radius: 4px;
         margin-top: 6px;
       }
@@ -326,13 +326,13 @@
         width: 100%;
         max-width: 1300px;
         margin: 20px auto 80px;
-        padding: 0 40px;
+        padding: 0 48px;
       }
 
       .features-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 20px;
+        gap: 24px;
       }
 
       .feature-card {
@@ -353,6 +353,7 @@
         box-shadow: 0 12px 30px rgba(2, 132, 199, 0.15);
       }
 
+      /* Glowing Neon Halo Icon Badges Matching Reference */
       .feature-icon-badge {
         width: 58px;
         height: 58px;
@@ -364,28 +365,48 @@
         margin-bottom: 18px;
       }
 
-      .badge-cyan { background: rgba(2, 132, 199, 0.2); color: #38bdf8; border: 1px solid rgba(2, 132, 199, 0.3); }
-      .badge-emerald { background: rgba(5, 150, 105, 0.2); color: #34d399; border: 1px solid rgba(5, 150, 105, 0.3); }
-      .badge-violet { background: rgba(147, 51, 234, 0.2); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.3); }
-      .badge-amber { background: rgba(217, 119, 6, 0.2); color: #fbbf24; border: 1px solid rgba(217, 119, 6, 0.3); }
+      .badge-cyan {
+        background: rgba(2, 132, 199, 0.25);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        box-shadow: 0 0 20px rgba(56, 189, 248, 0.45);
+      }
+      .badge-emerald {
+        background: rgba(5, 150, 105, 0.25);
+        color: #34d399;
+        border: 1px solid rgba(52, 211, 153, 0.4);
+        box-shadow: 0 0 20px rgba(52, 211, 153, 0.45);
+      }
+      .badge-violet {
+        background: rgba(147, 51, 234, 0.25);
+        color: #c084fc;
+        border: 1px solid rgba(192, 132, 252, 0.4);
+        box-shadow: 0 0 20px rgba(192, 132, 252, 0.45);
+      }
+      .badge-amber {
+        background: rgba(217, 119, 6, 0.25);
+        color: #fbbf24;
+        border: 1px solid rgba(251, 191, 36, 0.4);
+        box-shadow: 0 0 20px rgba(251, 191, 36, 0.45);
+      }
 
       .feature-card-title {
-        font-size: 1.1rem;
+        font-size: 1.15rem;
         font-weight: 800;
         color: #ffffff;
         margin-bottom: 10px;
       }
 
       .feature-card-desc {
-        font-size: 0.88rem;
-        color: var(--text-muted);
-        line-height: 1.5;
+        font-size: 0.9rem;
+        color: #cbd5e1;
+        line-height: 1.6;
       }
 
       /* Footer */
       .footer {
         width: 100%;
-        padding: 48px 40px;
+        padding: 48px 48px;
         text-align: center;
         border-top: 1px solid rgba(255, 255, 255, 0.08);
         color: var(--text-muted);
@@ -455,8 +476,10 @@
       <!-- Left Column: Big Headline + CTA -->
       <div class="hero-left">
         <h1 class="hero-headline">
-          Revolutionize Your School Administration.<br />
-          Centralized. Efficient. Unified.
+          Revolutionize Your<br />
+          School Administration.<br />
+          Centralized. Efficient.<br />
+          Unified.
         </h1>
         <a class="btn-demo" href="auth.html">
           Get a Free Demo
@@ -479,7 +502,7 @@
           <div class="mockup-main">
             <div class="mockup-topbar">
               <div class="mockup-search">🔍 Search...</div>
-              <div style="font-size:0.75rem; font-weight:700; color:#0284c7;">Oct 2026 ▾</div>
+              <div style="font-size:0.75rem; font-weight:700; color:#38bdf8;">Oct 2026 ▾</div>
             </div>
 
             <div class="mockup-title">Dashboard</div>
@@ -487,16 +510,20 @@
             <!-- Stats Boxes -->
             <div class="mockup-stats-grid">
               <div class="stat-box">
-                <div class="stat-label">Total Students</div>
-                <div class="stat-val">13,934</div>
+                <div class="stat-label">Total Analytics</div>
+                <div class="stat-val">$1.52K</div>
               </div>
               <div class="stat-box">
-                <div class="stat-label">Active Staff</div>
-                <div class="stat-val">364</div>
+                <div class="stat-label">Dynamic Reporting</div>
+                <div class="stat-val">3.77K</div>
               </div>
               <div class="stat-box">
-                <div class="stat-label">Admissions</div>
-                <div class="stat-val">48</div>
+                <div class="stat-label">Financial Tools</div>
+                <div class="stat-val">$350</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Parent Portal</div>
+                <div class="stat-val">3,300</div>
               </div>
             </div>
 
@@ -528,25 +555,25 @@
         <div class="feature-card">
           <div class="feature-icon-badge badge-cyan">🎓</div>
           <h3 class="feature-card-title">Student Management</h3>
-          <p class="feature-card-desc">Comprehensive profiles, attendance, WAEC/NCCA grades, and records in one secure hub.</p>
+          <p class="feature-card-desc">Examlasts management and administration, and student management.</p>
         </div>
 
         <div class="feature-card">
           <div class="feature-icon-badge badge-emerald">📈</div>
           <h3 class="feature-card-title">Dynamic Reporting</h3>
-          <p class="feature-card-desc">Generate insightful data visualizations, terminal report cards, position ranks, and broadsheets.</p>
+          <p class="feature-card-desc">Dynor dynamic reporting and software administrative camulaims.</p>
         </div>
 
         <div class="feature-card">
           <div class="feature-icon-badge badge-violet">💰</div>
           <h3 class="feature-card-title">Financial Tools</h3>
-          <p class="feature-card-desc">Track tuition fees, issue digital payment receipts, and calculate arrear balances effortlessly.</p>
+          <p class="feature-card-desc">Management comalytics to assess and their financial meancies.</p>
         </div>
 
         <div class="feature-card">
           <div class="feature-icon-badge badge-amber">👥</div>
           <h3 class="feature-card-title">Parent Portal</h3>
-          <p class="feature-card-desc">Foster strong engagement through real-time grade tracking, fee statements, and announcements.</p>
+          <p class="feature-card-desc">Parent portal to steet your parent portal, and proud of their parents.</p>
         </div>
       </div>
     </section>

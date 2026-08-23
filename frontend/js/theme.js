@@ -1170,7 +1170,272 @@
 
   // Boot breadcrumb after sidebar is mounted
   setTimeout(() => mountBreadcrumb(), 400);
+
+  // ═══════════════════════════════════════════════════════════════
+  // GLOBAL EDUBOT IN-APP COPILOT SYSTEM
+  // ═══════════════════════════════════════════════════════════════
+  const EDUBOT_KB = [
+    {
+      keys: ['score', 'marks', 'entry', 'grade', 'bulk', 'input score', 'enter marks', 'enter score'],
+      answer: '✍️ <b>Bulk Score Entry</b>:\n1. Open <b>Marks Entry</b> in sidebar.\n2. Select Class & Subject.\n3. Type marks and use <b>Arrow Keys</b> / <b>Enter</b> to jump between cells instantly.\n4. Real-time validation flags any score > 100.',
+      action: { label: '🚀 Open Marks Entry', href: 'bulk-entry.html' }
+    },
+    {
+      keys: ['broadsheet', 'rank', 'grading', 'a1', 'b2', 'waec', 'ges', 'position', 'terminal broadsheet'],
+      answer: '📈 <b>Class Broadsheet & Ranking</b>:\n• Broadsheet automatically computes Total Scores, WAEC Grade equivalents (A1-F9), and Class Ranks.\n• Click <b>🖨️ Print Broadsheet</b> for an A4 landscape official sheet.',
+      action: { label: '📈 Open Class Broadsheet', href: 'broadsheet.html' }
+    },
+    {
+      keys: ['fee', 'payment', 'record payment', 'receipt', 'balance', 'momo', 'owing', 'debtor'],
+      answer: '💰 <b>Fee Management</b>:\n• Search student name → Click <b>Record Payment</b>.\n• Supports MoMo, Bank, and Cash.\n• Receipts with official audit timestamps are generated automatically.',
+      action: { label: '💰 Open Fee Ledger', href: 'fees.html' }
+    },
+    {
+      keys: ['attendance', 'roll', 'present', 'absent', 'late', 'excused', 'take attendance'],
+      answer: '📋 <b>1-Tap Attendance Register</b>:\n• Tap <b>[ P ]</b>, <b>[ A ]</b>, <b>[ L ]</b>, or <b>[ E ]</b> pills for rapid roll marking.\n• Use <b>[ All Present ]</b> for 1-click batch marking.\n• Tally strip updates class attendance % in real time.',
+      action: { label: '📋 Open Attendance', href: 'attendance.html' }
+    },
+    {
+      keys: ['report card', 'terminal report', 'pdf', 'generate report', 'print report'],
+      answer: '📄 <b>Terminal Report Cards</b>:\n• Select Class & Term → Click <b>Generate Report Cards</b>.\n• Produces official portrait PDFs with school crest, grades, and headmaster signature line.',
+      action: { label: '📄 Open Report Cards', href: 'reports.html' }
+    },
+    {
+      keys: ['student', 'add student', 'enroll', 'admission', 'cssps', 'bece'],
+      answer: '🎓 <b>Student Management</b>:\n• Add single students via <b>Students → Add New</b>.\n• Or import full CSSPS / BECE placement batches in bulk from Excel/CSV.',
+      action: { label: '🎓 Open Student Directory', href: 'students.html' }
+    },
+    {
+      keys: ['exeat', 'leave', 'permission', 'out pass', 'boarding'],
+      answer: '🚪 <b>Exeat & Leave Passes</b>:\n• Log requests with departure date, expected return, and guardian contact.\n• Instant printable gate pass is produced upon approval.',
+      action: { label: '🚪 Open Exeat Manager', href: 'exeat.html' }
+    },
+    {
+      keys: ['discipline', 'incident', 'sanction', 'behaviour', 'punishment'],
+      answer: '⚖️ <b>Discipline Records</b>:\n• Log infractions, disciplinary hearings, sanctions, and parent notifications with full history tracking.',
+      action: { label: '⚖️ Open Discipline Records', href: 'discipline.html' }
+    },
+    {
+      keys: ['timetable', 'schedule', 'period', 'class routine'],
+      answer: '📅 <b>Timetable Builder</b>:\n• Allocate subjects and teachers to class periods with automatic teacher conflict detection.',
+      action: { label: '📅 Open Timetable', href: 'timetable.html' }
+    },
+    {
+      keys: ['super admin', 'multi school', 'switch school', 'all schools', 'backup', 'database'],
+      answer: '👑 <b>Super Admin & Multi-School</b>:\n• Manage institutions, switch school context, monitor system telemetry, and perform SQLite database backups.',
+      action: { label: '👑 Open Super Admin', href: 'super-admin.html' }
+    },
+    {
+      keys: ['user', 'password', 'reset password', 'account', 'role', 'permission'],
+      answer: '👤 <b>User & Role Management</b>:\n• Administrators can reset user passwords, assign roles (Teacher, Accountant, Form Master), and manage permissions.',
+      action: { label: '👤 Open Users Module', href: 'users.html' }
+    },
+    {
+      keys: ['message', 'sms', 'announcement', 'broadcast', 'parent notification'],
+      answer: '💬 <b>Bulk Messaging & Announcements</b>:\n• Send targeted broadcasts to staff, classes, or parents via internal messaging or bulk SMS.',
+      action: { label: '💬 Open Messaging Hub', href: 'messaging.html' }
+    },
+    {
+      keys: ['offline', 'internet', 'sync', 'sqlite'],
+      answer: '📴 <b>100% Offline Architecture</b>:\n• EduManage360 functions completely offline with local SQLite storage.\n• No internet connection is needed for daily operations.'
+    }
+  ];
+
+  const PAGE_CONTEXT_MAP = {
+    'fees.html': {
+      title: 'Fees Copilot',
+      greeting: '👋 Hello! Need help logging payments, reconciling MoMo, or viewing fee defaulters?',
+      chips: ['Record Payment', 'Debtor List', 'Print Receipt', 'MoMo Reconcile']
+    },
+    'broadsheet.html': {
+      title: 'Broadsheet Copilot',
+      greeting: '👋 Welcome to Class Broadsheets! Need help with WAEC score weighting, ranks, or printing?',
+      chips: ['Class Rank Formula', 'WAEC Grading Scale', 'Print Broadsheet', 'Form Master Remarks']
+    },
+    'bulk-entry.html': {
+      title: 'Marks Entry Copilot',
+      greeting: '👋 Working on student marks? Use keyboard arrow keys to jump cells at top speed.',
+      chips: ['Keyboard Shortcuts', 'Score Validation', 'Class Broadsheet', 'Report Cards']
+    },
+    'attendance.html': {
+      title: 'Attendance Copilot',
+      greeting: '👋 Ready to take attendance? Tap P/A/L pills or use Batch All Present for 1-click marking.',
+      chips: ['Rapid Marking', 'Monthly Register', 'Absence Alerts', 'Print Register']
+    },
+    'students.html': {
+      title: 'Student Directory Copilot',
+      greeting: '👋 Managing student profiles? Use the quick filter chips above to filter by Boys, Girls, or Boarders.',
+      chips: ['Add Student', 'CSSPS Import', 'Filter Chips', 'House Allocation']
+    },
+    'super-admin.html': {
+      title: 'Super Admin Copilot',
+      greeting: '👑 Welcome, Super Administrator! Manage institutions, database backups, and health diagnostics.',
+      chips: ['Switch School', 'Backup Database', 'Add School', 'User Roles']
+    },
+    'dashboard.html': {
+      title: 'Dashboard Copilot',
+      greeting: '👋 Welcome to your Executive Overview! What module would you like to explore today?',
+      chips: ['Enter Marks', 'Record Fees', 'Take Attendance', 'Class Broadsheet']
+    }
+  };
+
+  function mountEduBotGlobal() {
+    // Avoid double injection if global launcher or local edubot toggle is present
+    if (document.getElementById('edubot-global-launcher') || document.getElementById('edubot-toggle')) return;
+    if (!document.body) return;
+
+    const curPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase().split('?')[0];
+    const ctx = PAGE_CONTEXT_MAP[curPage] || {
+      title: 'EduBot Copilot',
+      greeting: '👋 Hi! I\'m <b>EduBot</b>, your in-app assistant. How can I help you today?',
+      chips: ['Enter Marks', 'Class Broadsheet', 'Record Payment', 'Take Attendance']
+    };
+
+    // 1. Create Floating Launcher
+    const launcher = document.createElement('button');
+    launcher.id = 'edubot-global-launcher';
+    launcher.className = 'no-print';
+    launcher.setAttribute('aria-label', 'Open EduBot Assistant');
+    launcher.setAttribute('title', 'EduBot In-App Copilot (Alt+E)');
+    launcher.innerHTML = '💬<span class="edubot-launcher-pulse"></span>';
+    document.body.appendChild(launcher);
+
+    // 2. Create Floating Dialog Modal
+    const modal = document.createElement('div');
+    modal.id = 'edubot-global-modal';
+    modal.className = 'no-print';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-label', 'EduBot Assistant');
+    modal.innerHTML = `
+      <div class="edubot-modal-header">
+        <div class="edubot-header-left">
+          <div class="edubot-avatar-box">🤖</div>
+          <div class="edubot-title-wrap">
+            <h4>EduBot Copilot</h4>
+            <span class="edubot-context-pill">● ${ctx.title} · Offline Ready</span>
+          </div>
+        </div>
+        <button class="edubot-close-btn" id="edubot-close-btn" aria-label="Close">✕</button>
+      </div>
+      <div class="edubot-modal-body" id="edubot-modal-msgs"></div>
+      <div class="edubot-chips-bar" id="edubot-modal-chips"></div>
+      <div class="edubot-input-footer">
+        <input id="edubot-global-input" type="text" placeholder="Ask EduBot anything (or press ?)…" autocomplete="off" />
+        <button id="edubot-global-send" aria-label="Send">➤</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const msgsBox = document.getElementById('edubot-modal-msgs');
+    const chipsBox = document.getElementById('edubot-modal-chips');
+    const input = document.getElementById('edubot-global-input');
+    const sendBtn = document.getElementById('edubot-global-send');
+    const closeBtn = document.getElementById('edubot-close-btn');
+
+    let isOpen = false;
+
+    function renderMessage(text, role, action) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `edubot-chat-msg ${role}`;
+      let content = text.replace(/\n/g, '<br/>');
+      if (action && action.href) {
+        content += `<br/><a href="${action.href}" class="edubot-deep-btn">${action.label} →</a>`;
+      }
+      msgDiv.innerHTML = content;
+      msgsBox.appendChild(msgDiv);
+      msgsBox.scrollTop = msgsBox.scrollHeight;
+    }
+
+    function showTyping() {
+      const t = document.createElement('div');
+      t.className = 'edubot-typing-box';
+      t.id = 'edubot-typing-indicator';
+      t.innerHTML = '<span></span><span></span><span></span>';
+      msgsBox.appendChild(t);
+      msgsBox.scrollTop = msgsBox.scrollHeight;
+    }
+
+    function hideTyping() {
+      const t = document.getElementById('edubot-typing-indicator');
+      if (t) t.remove();
+    }
+
+    function renderChips(chipsList) {
+      chipsBox.innerHTML = '';
+      (chipsList || ctx.chips).forEach(chip => {
+        const btn = document.createElement('button');
+        btn.className = 'edubot-qr-chip';
+        btn.textContent = chip;
+        btn.onclick = () => handleSend(chip);
+        chipsBox.appendChild(btn);
+      });
+    }
+
+    function findAnswer(query) {
+      const q = query.toLowerCase();
+      for (const item of EDUBOT_KB) {
+        if (item.keys.some(k => q.includes(k))) return item;
+      }
+      return {
+        answer: "🤔 I'm not sure about that specific query. You can ask about <b>marks entry</b>, <b>broadsheets</b>, <b>fees</b>, <b>attendance</b>, or <b>report cards</b>, or use the Command Palette (<b>Ctrl+K</b>).",
+        action: null
+      };
+    }
+
+    function handleSend(text) {
+      const q = (text || input.value).trim();
+      if (!q) return;
+      renderMessage(q, 'user');
+      input.value = '';
+      chipsBox.innerHTML = '';
+      showTyping();
+      setTimeout(() => {
+        hideTyping();
+        const res = findAnswer(q);
+        renderMessage(res.answer, 'bot', res.action);
+        renderChips(ctx.chips);
+      }, 450);
+    }
+
+    function toggleModal(open) {
+      isOpen = open !== undefined ? open : !isOpen;
+      modal.classList.toggle('open', isOpen);
+      launcher.classList.toggle('open', isOpen);
+      launcher.innerHTML = isOpen ? '✕' : '💬<span class="edubot-launcher-pulse"></span>';
+      if (isOpen) {
+        if (msgsBox.children.length === 0) {
+          renderMessage(ctx.greeting, 'bot');
+          renderChips(ctx.chips);
+        }
+        setTimeout(() => input.focus(), 150);
+      }
+    }
+
+    launcher.addEventListener('click', () => toggleModal());
+    closeBtn.addEventListener('click', () => toggleModal(false));
+    sendBtn.addEventListener('click', () => handleSend());
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleSend();
+    });
+
+    // Global keyboard shortcut: Alt+E or '?' when not typing in an input
+    document.addEventListener('keydown', (e) => {
+      if (e.altKey && (e.key === 'e' || e.key === 'E')) {
+        e.preventDefault();
+        toggleModal();
+      } else if (e.key === '?' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        toggleModal(true);
+      } else if (e.key === 'Escape' && isOpen) {
+        toggleModal(false);
+      }
+    });
+  }
+
+  // Boot Global EduBot Copilot
+  setTimeout(() => mountEduBotGlobal(), 450);
 })();
+
 
 
 

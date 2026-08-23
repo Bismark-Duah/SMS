@@ -281,14 +281,4 @@ window.handleThemeSelectChange = async function(val) {
 document.addEventListener('DOMContentLoaded', () => {
   if (window.applySchoolModeVisibility) window.applySchoolModeVisibility();
 });
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system_theme: val })
-      });
-    } catch (_) {}
-  }
-};
 
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.applySchoolModeVisibility) window.applySchoolModeVisibility();
-});

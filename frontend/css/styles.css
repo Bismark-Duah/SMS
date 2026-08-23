@@ -1047,3 +1047,230 @@ thead th {
     padding: 14px 10px !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ENTERPRISE UI ELEVATION — EMPTY STATES, SKELETON LOADERS,
+   PULSE BADGES, TABULAR NUMERICS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Empty State Component ─────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 24px;
+  text-align: center;
+  gap: 12px;
+}
+
+.empty-state-icon {
+  font-size: 3.5rem;
+  line-height: 1;
+  animation: emptyPulse 2.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 16px rgba(79, 70, 229, 0.25));
+}
+
+@keyframes emptyPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%       { transform: scale(1.08); opacity: 1; }
+}
+
+.empty-state-title {
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary, #f8fafc);
+  margin: 0;
+}
+
+.empty-state-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #94a3b8);
+  max-width: 280px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.empty-state-btn {
+  margin-top: 8px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, var(--primary, #4f46e5), #6366f1);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.2px;
+}
+
+.empty-state-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
+}
+
+/* ── Skeleton Loader Shimmer ───────────────────────────────────── */
+.skeleton {
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.10) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+}
+
+.skeleton-text.wide  { width: 75%; }
+.skeleton-text.mid   { width: 55%; }
+.skeleton-text.short { width: 35%; }
+
+.skeleton-num {
+  height: 32px;
+  width: 80px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+/* Stat card loading state */
+.stat-card.loading .stat-value,
+.stat-card.loading .stat-label {
+  visibility: hidden;
+}
+
+.stat-card.loading::after {
+  content: '';
+  position: absolute;
+  inset: 18px;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.10) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* ── Pulse Badge Status Indicators ────────────────────────────── */
+.pulse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  animation: pulseBeat 2s ease-in-out infinite;
+  opacity: 0;
+}
+
+@keyframes pulseBeat {
+  0%   { transform: scale(0.8); opacity: 0.7; }
+  70%  { transform: scale(2.2); opacity: 0; }
+  100% { opacity: 0; }
+}
+
+.pulse-dot.green  { background: #10b981; }
+.pulse-dot.green::after  { background: rgba(16, 185, 129, 0.5); }
+
+.pulse-dot.amber  { background: #f59e0b; }
+.pulse-dot.amber::after  { background: rgba(245, 158, 11, 0.5); }
+
+.pulse-dot.red    { background: #ef4444; }
+.pulse-dot.red::after    { background: rgba(239, 68, 68, 0.5); }
+
+.pulse-dot.cyan   { background: #06b6d4; }
+.pulse-dot.cyan::after   { background: rgba(6, 182, 212, 0.5); }
+
+/* Status chip with pulse dot */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.status-chip.active  { background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25); }
+.status-chip.pending { background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25); }
+.status-chip.danger  { background: rgba(239, 68, 68, 0.12);  color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25); }
+
+/* ── Bloomberg-Style Tabular Numeric Alignment ─────────────────── */
+.tabular-num,
+.stat-value,
+.fee-amount,
+.financial-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.3px;
+}
+
+/* ── Sidebar Section Group Labels ──────────────────────────────── */
+.nav-section-label {
+  padding: 14px 16px 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary, #94a3b8);
+  opacity: 0.6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: opacity 0.2s ease;
+  user-select: none;
+}
+
+.nav-section-label:hover { opacity: 1; }
+
+.nav-section-label .section-chevron {
+  font-size: 0.6rem;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.7;
+}
+
+.nav-section.collapsed .section-chevron {
+  transform: rotate(-90deg);
+}
+
+.nav-section-items {
+  overflow: hidden;
+  max-height: 600px;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+  opacity: 1;
+}
+
+.nav-section.collapsed .nav-section-items {
+  max-height: 0;
+  opacity: 0;
+}
+

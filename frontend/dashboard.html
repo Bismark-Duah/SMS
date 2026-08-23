@@ -203,48 +203,48 @@
 
       <!-- Stats Row (admin only) -->
       <div id="statsRow" style="display:none;">
-        <div class="section-heading">📊 Live Overview</div>
+        <div class="section-heading"><span class="pulse-dot green" title="Live data"></span>📊 Live Overview</div>
         <div class="stats-grid">
-          <div class="stat-card indigo">
+          <div class="stat-card indigo loading">
             <span class="stat-icon">👨‍🎓</span>
             <span class="stat-label">Active Students</span>
-            <span class="stat-value" id="statStudents">—</span>
+            <span class="stat-value tabular-num" id="statStudents">—</span>
             <span class="stat-sub" id="statStudentsSub"></span>
           </div>
-          <div class="stat-card green">
+          <div class="stat-card green loading">
             <span class="stat-icon">✅</span>
             <span class="stat-label">Attendance Today</span>
-            <span class="stat-value" id="statAttendance">—</span>
+            <span class="stat-value tabular-num" id="statAttendance">—</span>
             <span class="stat-sub" id="statAttendanceSub"></span>
           </div>
-          <div class="stat-card cyan">
+          <div class="stat-card cyan loading">
             <span class="stat-icon">🏫</span>
             <span class="stat-label">Classes</span>
-            <span class="stat-value" id="statClasses">—</span>
+            <span class="stat-value tabular-num" id="statClasses">—</span>
             <span class="stat-sub" id="statClassesSub"></span>
           </div>
-          <div class="stat-card amber">
+          <div class="stat-card amber loading">
             <span class="stat-icon">📅</span>
             <span class="stat-label">Current Term</span>
-            <span class="stat-value" id="statTerm" style="font-size:1.1rem;">—</span>
+            <span class="stat-value tabular-num" id="statTerm" style="font-size:1.1rem;">—</span>
             <span class="stat-sub" id="statTermSub"></span>
           </div>
-          <div class="stat-card red">
+          <div class="stat-card red loading">
             <span class="stat-icon">🔔</span>
             <span class="stat-label">Unread Alerts</span>
-            <span class="stat-value" id="statAlerts">—</span>
+            <span class="stat-value tabular-num" id="statAlerts">—</span>
             <span class="stat-sub"></span>
           </div>
-          <div class="stat-card orange">
+          <div class="stat-card orange loading">
             <span class="stat-icon">💰</span>
             <span class="stat-label">Outstanding Fees</span>
-            <span class="stat-value" id="statFees" style="font-size:1.1rem;">—</span>
+            <span class="stat-value tabular-num" id="statFees" style="font-size:1.1rem;">—</span>
             <span class="stat-sub" id="statFeesSub"></span>
           </div>
-          <div class="stat-card indigo" id="statHousesCard">
+          <div class="stat-card indigo loading" id="statHousesCard">
             <span class="stat-icon">🏠</span>
             <span class="stat-label">Boarding Houses</span>
-            <span class="stat-value" id="statHouses">—</span>
+            <span class="stat-value tabular-num" id="statHouses">—</span>
             <span class="stat-sub" id="statHousesSub"></span>
           </div>
         </div>

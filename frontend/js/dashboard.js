@@ -366,6 +366,11 @@ async function loadDashboardStats() {
     loadFeesStat(),
     loadHousesStat(),
   ]);
+
+  // Remove skeleton loading shimmer from all stat cards
+  document.querySelectorAll('.stat-card.loading').forEach(card => {
+    card.classList.remove('loading');
+  });
 }
 
 // ── Analytics charts ──────────────────────────────────────────────────────────

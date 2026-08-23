@@ -295,6 +295,52 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/api/health", tags=["system"])
+def get_system_health(db: Session = Depends(get_db)):
+    """
+    Enterprise health & telemetry endpoint for container orchestrators (Render / Azure / AWS).
+    Checks database connection responsiveness and reports engine status.
+    """
+    import time
+    start_time = time.time()
+    try:
+        from sqlalchemy import text
+        from .models import School, User
+        db.execute(text("SELECT 1"))
+        latency_ms = round((time.time() - start_time) * 1000, 2)
+        
+        db_url = os.getenv("DATABASE_URL", "sqlite")
+        engine_type = "PostgreSQL" if "postgres" in db_url.lower() else "SQLite (Offline-First)"
+        
+        schools_count = db.query(School).count()
+        users_count = db.query(User).count()
+
+        return {
+            "status": "healthy",
+            "environment": "cloud_production" if "postgres" in db_url.lower() else "offline_local",
+            "database": {
+                "engine": engine_type,
+                "latency_ms": latency_ms,
+                "status": "connected"
+            },
+            "metrics": {
+                "registered_schools": schools_count,
+                "total_users": users_count
+            },
+            "version": "4.2.0"
+        }
+    except Exception as err:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "degraded",
+                "database": {
+                    "status": "error",
+                    "error": str(err)
+                }
+            }
+        )
+
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(students.router, prefix="/api/students", tags=["students"])
 app.include_router(attendance.router, prefix="/api/attendance", tags=["attendance"])

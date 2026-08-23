@@ -631,21 +631,397 @@
     }
   };
 
-  // ── 5. Global Keyboard Shortcuts (Ctrl + K or '/') ─────────────────────────
+  // ── 5. Command Palette (Ctrl+K) ────────────────────────────────────────────
+  const CMD_PAGES = [
+    { icon: '📊', label: 'Dashboard',              href: 'dashboard.html',        group: 'General' },
+    { icon: '👥', label: 'Students',               href: 'students.html',         group: 'Academic' },
+    { icon: '🏫', label: 'Classes',                href: 'classes.html',          group: 'Academic' },
+    { icon: '📚', label: 'Subjects',               href: 'subjects.html',         group: 'Academic' },
+    { icon: '🎯', label: 'Programs',               href: 'programs.html',         group: 'Academic' },
+    { icon: '🏢', label: 'Departments',            href: 'departments.html',      group: 'Academic' },
+    { icon: '📅', label: 'Timetable',              href: 'timetable.html',        group: 'Academic' },
+    { icon: '👩‍🏫', label: 'Teacher Assignments',  href: 'assignments.html',      group: 'Academic' },
+    { icon: '📋', label: 'Attendance',             href: 'attendance.html',       group: 'Student Life' },
+    { icon: '🏠', label: 'Houses & Dorms',         href: 'houses.html',           group: 'Student Life' },
+    { icon: '🎟️', label: 'Exeat Management',       href: 'exeat.html',            group: 'Student Life' },
+    { icon: '⚖️', label: 'Discipline Records',     href: 'discipline.html',       group: 'Student Life' },
+    { icon: '🎓', label: 'Promotions',             href: 'promotions.html',       group: 'Student Life' },
+    { icon: '🎓', label: 'Final Year Clearance',   href: 'clearance.html',        group: 'Student Life' },
+    { icon: '✍️', label: 'Results / Marks Entry',  href: 'bulk-entry.html',       group: 'Assessment' },
+    { icon: '📈', label: 'Class Broadsheet',       href: 'broadsheet.html',       group: 'Assessment' },
+    { icon: '📄', label: 'Report Cards',           href: 'reports.html',          group: 'Assessment' },
+    { icon: '📁', label: 'Cumulative Record',      href: 'cumulative-record.html',group: 'Assessment' },
+    { icon: '💰', label: 'Fee Management',         href: 'fees.html',             group: 'Finance' },
+    { icon: '🗄️', label: 'Asset Management',       href: 'assets.html',           group: 'Finance' },
+    { icon: '💬', label: 'Bulk Messaging',         href: 'messaging.html',        group: 'Communications' },
+    { icon: '👨‍👩‍👧', label: 'Parent Portal',       href: 'parent-view.html',      group: 'Communications' },
+    { icon: '👤', label: 'Users',                  href: 'users.html',            group: 'Admin' },
+    { icon: '🛠️', label: 'Data Tools',             href: 'data-tools.html',       group: 'Admin' },
+    { icon: '⚙️', label: 'Settings',              href: 'settings.html',         group: 'Admin' },
+  ];
+
+  const CMD_ALIASES = {
+    'grade': ['Results', 'Broadsheet', 'Report Cards'],
+    'payment': ['Fee Management'],
+    'money': ['Fee Management'],
+    'house': ['Houses & Dorms'],
+    'dorm': ['Houses & Dorms'],
+    'boarding': ['Houses & Dorms', 'Exeat Management'],
+    'mark': ['Results / Marks Entry', 'Attendance'],
+    'score': ['Results / Marks Entry'],
+    'class': ['Classes', 'Class Broadsheet', 'Teacher Assignments'],
+    'teacher': ['Teacher Assignments', 'Subjects'],
+    'parent': ['Parent Portal'],
+    'message': ['Bulk Messaging'],
+    'sms': ['Bulk Messaging'],
+    'user': ['Users'],
+    'config': ['Settings'],
+    'setup': ['Settings'],
+    'tool': ['Data Tools'],
+    'report': ['Report Cards', 'Class Broadsheet'],
+    'enroll': ['Students', 'Promotions'],
+    'leave': ['Exeat Management'],
+  };
+
+  let cmdActiveIdx = 0;
+  let cmdOverlay = null;
+  let cmdFilteredItems = [];
+
+  function buildCmdResults(query) {
+    const q = (query || '').toLowerCase().trim();
+    let items = CMD_PAGES;
+
+    if (q) {
+      // Expand aliases
+      let expandedTerms = [q];
+      Object.keys(CMD_ALIASES).forEach(alias => {
+        if (q.includes(alias) || alias.includes(q)) {
+          expandedTerms = expandedTerms.concat(CMD_ALIASES[alias].map(s => s.toLowerCase()));
+        }
+      });
+
+      items = CMD_PAGES.filter(p =>
+        expandedTerms.some(term =>
+          p.label.toLowerCase().includes(term) ||
+          p.group.toLowerCase().includes(term) ||
+          p.href.toLowerCase().includes(term)
+        )
+      );
+    }
+
+    cmdFilteredItems = items;
+    cmdActiveIdx = 0;
+
+    const container = document.getElementById('cmdResults');
+    if (!container) return;
+
+    if (items.length === 0) {
+      container.innerHTML = `<div class="cmd-empty">No results for "<strong>${query}</strong>"</div>`;
+      return;
+    }
+
+    // Group items
+    const groups = {};
+    items.forEach(item => {
+      if (!groups[item.group]) groups[item.group] = [];
+      groups[item.group].push(item);
+    });
+
+    let html = '';
+    let globalIdx = 0;
+    Object.keys(groups).forEach(groupName => {
+      if (!q) html += `<div class="cmd-section-label">${groupName}</div>`;
+      groups[groupName].forEach(item => {
+        const idx = globalIdx++;
+        html += `
+          <div class="cmd-item ${idx === 0 ? 'active' : ''}" data-idx="${idx}" data-href="${item.href}" onclick="window._cmdNavigate('${item.href}')">
+            <span class="cmd-item-icon">${item.icon}</span>
+            <span class="cmd-item-label">${item.label}</span>
+            ${q ? '' : `<span class="cmd-item-group">${item.group}</span>`}
+          </div>`;
+      });
+    });
+
+    container.innerHTML = html;
+  }
+
+  function cmdUpdateActive() {
+    const items = document.querySelectorAll('#cmdResults .cmd-item');
+    items.forEach((el, i) => el.classList.toggle('active', i === cmdActiveIdx));
+    if (items[cmdActiveIdx]) {
+      items[cmdActiveIdx].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  window._cmdNavigate = function(href) {
+    closeCmdPalette();
+    window.location.href = href;
+  };
+
+  function closeCmdPalette() {
+    if (cmdOverlay && cmdOverlay.parentNode) {
+      cmdOverlay.style.animation = 'overlayFadeIn 0.12s ease reverse both';
+      setTimeout(() => cmdOverlay && cmdOverlay.parentNode && cmdOverlay.parentNode.removeChild(cmdOverlay), 120);
+    }
+    cmdOverlay = null;
+  }
+
+  function openCmdPalette() {
+    if (cmdOverlay) { closeCmdPalette(); return; }
+
+    cmdOverlay = document.createElement('div');
+    cmdOverlay.className = 'cmd-overlay';
+    cmdOverlay.id = 'cmdPaletteOverlay';
+    cmdOverlay.innerHTML = `
+      <div class="cmd-modal" id="cmdModal" role="dialog" aria-label="Command Palette">
+        <div class="cmd-search-row">
+          <span class="cmd-search-icon">🔍</span>
+          <input type="text" class="cmd-input" id="cmdInput" placeholder="Search pages, actions..." autocomplete="off" spellcheck="false" />
+          <span class="cmd-esc-hint">ESC</span>
+        </div>
+        <div class="cmd-results" id="cmdResults"></div>
+        <div class="cmd-footer">
+          <span class="cmd-hint"><kbd>↑↓</kbd> navigate</span>
+          <span class="cmd-hint"><kbd>↵</kbd> open</span>
+          <span class="cmd-hint"><kbd>ESC</kbd> close</span>
+        </div>
+      </div>`;
+
+    document.body.appendChild(cmdOverlay);
+
+    // Close on overlay click (outside modal)
+    cmdOverlay.addEventListener('click', (e) => {
+      if (e.target === cmdOverlay) closeCmdPalette();
+    });
+
+    const input = document.getElementById('cmdInput');
+    if (input) {
+      input.addEventListener('input', (e) => buildCmdResults(e.target.value));
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          cmdActiveIdx = Math.min(cmdActiveIdx + 1, cmdFilteredItems.length - 1);
+          cmdUpdateActive();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          cmdActiveIdx = Math.max(cmdActiveIdx - 1, 0);
+          cmdUpdateActive();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (cmdFilteredItems[cmdActiveIdx]) {
+            window._cmdNavigate(cmdFilteredItems[cmdActiveIdx].href);
+          }
+        } else if (e.key === 'Escape') {
+          closeCmdPalette();
+        }
+      });
+      setTimeout(() => input.focus(), 30);
+    }
+
+    buildCmdResults('');
+  }
+
+  // ── 5b. Global keyboard shortcuts ──────────────────────────────────────────
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey && e.key.toLowerCase() === 'k') || (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName))) {
+    // Ctrl+K or '/' outside inputs → open command palette
+    if ((e.ctrlKey && e.key.toLowerCase() === 'k') ||
+        (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName))) {
       e.preventDefault();
-      const sidebar = document.querySelector('.app-sidebar');
-      if (sidebar && sidebar.classList.contains('collapsed')) {
-        window.toggleSidebarCollapse();
-      }
-      const filterInput = document.getElementById('sidebarFilterInput');
-      if (filterInput) {
-        filterInput.focus();
-        filterInput.select();
-      }
+      openCmdPalette();
+    }
+    // Global escape to close command palette
+    if (e.key === 'Escape' && cmdOverlay) {
+      closeCmdPalette();
     }
   });
+
+  // ── 6. Notification Bell ────────────────────────────────────────────────────
+  let notifPanelOpen = false;
+  let notifReadIds = new Set(JSON.parse(localStorage.getItem('notif_read_ids') || '[]'));
+
+  async function loadNotificationBell() {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
+    const currentPage = (window.location.pathname.split('/').pop() || '').toLowerCase();
+    const publicPages = ['index.html', 'auth.html', 'login.html', ''];
+    if (publicPages.includes(currentPage)) return;
+
+    const topbar = document.querySelector('.topbar');
+    if (!topbar || topbar.querySelector('.notif-bell-btn')) return;
+
+    // Build bell button container
+    const controlsDiv = document.createElement('div');
+    controlsDiv.className = 'topbar-controls';
+    controlsDiv.id = 'topbarControls';
+
+    const bellBtn = document.createElement('button');
+    bellBtn.className = 'notif-bell-btn';
+    bellBtn.id = 'notifBellBtn';
+    bellBtn.title = 'Notifications';
+    bellBtn.setAttribute('aria-label', 'Notifications');
+    bellBtn.innerHTML = '🔔';
+
+    controlsDiv.appendChild(bellBtn);
+    topbar.appendChild(controlsDiv);
+
+    // Fetch notifications from existing endpoints
+    const notifications = await fetchNotifications(token);
+    const unread = notifications.filter(n => !notifReadIds.has(n.id));
+
+    if (unread.length > 0) {
+      const badge = document.createElement('span');
+      badge.className = 'notif-badge';
+      badge.id = 'notifBadge';
+      badge.textContent = unread.length > 9 ? '9+' : unread.length;
+      bellBtn.appendChild(badge);
+    }
+
+    bellBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNotifPanel(notifications, controlsDiv);
+    });
+
+    // Close panel when clicking outside
+    document.addEventListener('click', (e) => {
+      if (notifPanelOpen && !controlsDiv.contains(e.target)) {
+        closeNotifPanel();
+      }
+    });
+  }
+
+  async function fetchNotifications(token) {
+    const notifications = [];
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const API = window.API_BASE || (window.location.hostname === 'localhost' ? 'http://localhost:8000/api' : '/api');
+
+    try {
+      // Check outstanding fees
+      const feesRes = await fetch(`${API}/fees/summary`, { headers });
+      if (feesRes.ok) {
+        const fees = await feesRes.json();
+        const outstanding = fees.total_outstanding_amount || fees.outstanding || 0;
+        const count = fees.students_with_outstanding || fees.outstanding_count || 0;
+        if (outstanding > 0 || count > 0) {
+          notifications.push({
+            id: 'fees-outstanding',
+            icon: '💰',
+            text: count > 0 ? `${count} students have outstanding fee balances` : 'Outstanding fee balances detected',
+            href: 'fees.html',
+            time: 'Finance',
+            unread: true,
+          });
+        }
+      }
+    } catch (_) {}
+
+    try {
+      // Check today's attendance
+      const attRes = await fetch(`${API}/attendance/today-stats`, { headers });
+      if (attRes.ok) {
+        const att = await attRes.json();
+        if (!att.total_marked || att.total_marked === 0) {
+          notifications.push({
+            id: 'attendance-not-marked',
+            icon: '📋',
+            text: "Today's attendance hasn't been marked yet",
+            href: 'attendance.html',
+            time: 'Today',
+            unread: true,
+          });
+        }
+      }
+    } catch (_) {}
+
+    try {
+      // Check pending exeat requests
+      const exeatRes = await fetch(`${API}/exeat/?status=pending`, { headers });
+      if (exeatRes.ok) {
+        const exeats = await exeatRes.json();
+        const pending = Array.isArray(exeats) ? exeats.filter(e => (e.status || '').toLowerCase() === 'pending') : [];
+        if (pending.length > 0) {
+          notifications.push({
+            id: 'exeat-pending',
+            icon: '🎟️',
+            text: `${pending.length} exeat request${pending.length > 1 ? 's' : ''} awaiting approval`,
+            href: 'exeat.html',
+            time: 'Boarding',
+            unread: true,
+          });
+        }
+      }
+    } catch (_) {}
+
+    // Filter out already-read items for unread count, but keep all for display
+    return notifications;
+  }
+
+  function toggleNotifPanel(notifications, container) {
+    if (notifPanelOpen) {
+      closeNotifPanel();
+      return;
+    }
+
+    notifPanelOpen = true;
+    const unread = notifications.filter(n => !notifReadIds.has(n.id));
+
+    let itemsHtml = '';
+    if (notifications.length === 0) {
+      itemsHtml = `<div class="notif-empty">✅ You're all caught up!</div>`;
+    } else {
+      notifications.forEach(n => {
+        const isUnread = !notifReadIds.has(n.id);
+        itemsHtml += `
+          <a href="${n.href}" class="notif-item ${isUnread ? 'unread' : ''}" onclick="window._markNotifRead('${n.id}')">
+            <span class="notif-item-icon">${n.icon}</span>
+            <div class="notif-item-body">
+              <div class="notif-item-text">${n.text}</div>
+              <div class="notif-item-time">${n.time}</div>
+            </div>
+          </a>`;
+      });
+    }
+
+    const panel = document.createElement('div');
+    panel.className = 'notif-panel';
+    panel.id = 'notifPanel';
+    panel.innerHTML = `
+      <div class="notif-panel-header">
+        <span class="notif-panel-title">🔔 Notifications</span>
+        ${unread.length > 0 ? `<button class="notif-mark-all" onclick="window._markAllNotifsRead()">Mark all read</button>` : ''}
+      </div>
+      <div class="notif-list">${itemsHtml}</div>`;
+
+    container.appendChild(panel);
+  }
+
+  function closeNotifPanel() {
+    const panel = document.getElementById('notifPanel');
+    if (panel) panel.parentNode.removeChild(panel);
+    notifPanelOpen = false;
+  }
+
+  window._markNotifRead = function(id) {
+    notifReadIds.add(id);
+    localStorage.setItem('notif_read_ids', JSON.stringify([...notifReadIds]));
+    const badge = document.getElementById('notifBadge');
+    if (badge) badge.parentNode.removeChild(badge);
+  };
+
+  window._markAllNotifsRead = function() {
+    document.querySelectorAll('.notif-item').forEach(el => {
+      const onclick = el.getAttribute('onclick') || '';
+      const match = onclick.match(/'([^']+)'/);
+      if (match) notifReadIds.add(match[1]);
+    });
+    localStorage.setItem('notif_read_ids', JSON.stringify([...notifReadIds]));
+    const badge = document.getElementById('notifBadge');
+    if (badge) badge.parentNode.removeChild(badge);
+    document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+    const markAllBtn = document.querySelector('.notif-mark-all');
+    if (markAllBtn) markAllBtn.parentNode.removeChild(markAllBtn);
+    closeNotifPanel();
+  };
 
   // Immediate execution + DOMContentLoaded + load fallback
   const savedTheme = localStorage.getItem("system_theme") || "midnight";
@@ -684,6 +1060,9 @@
   }
   setTimeout(triggerSidebar, 50);
   setTimeout(triggerSidebar, 300);
+
+  // Inject notification bell after sidebar + topbar are fully mounted
+  setTimeout(() => loadNotificationBell(), 600);
 })();
 
 

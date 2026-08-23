@@ -621,15 +621,22 @@
     }
   });
 
-  // Immediate execution + DOMContentLoaded fallback
+  // Immediate execution + DOMContentLoaded + load fallback
   const savedTheme = localStorage.getItem("system_theme") || "midnight";
   window.applyTheme(savedTheme);
 
-  if (document.readyState === 'loading') {
-    document.addEventListener("DOMContentLoaded", () => window.applyLayout("sidebar"));
-  } else {
+  const triggerSidebar = () => {
     window.applyLayout("sidebar");
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener("DOMContentLoaded", triggerSidebar);
+    window.addEventListener("load", triggerSidebar);
+  } else {
+    triggerSidebar();
   }
+  setTimeout(triggerSidebar, 50);
+  setTimeout(triggerSidebar, 300);
 })();
 
 

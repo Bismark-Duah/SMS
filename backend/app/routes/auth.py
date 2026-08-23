@@ -88,23 +88,28 @@ def _seed_db(db: Session) -> None:
                 db.flush()
             roles_map[role_name] = role
 
-        # Seed users — generate random passwords on first install only
+        # Default passwords per role (users should change on first login)
+        DEFAULT_PASSWORDS = {
+            "superadmin": "superadmin123!",
+            "admin": "admin123!",
+            "teacher": "Welcome123!",
+        }
         first_run_entries = []
         for user_data in DEFAULT_USER_TEMPLATES:
             existing = db.query(User).filter(User.username == user_data["username"]).first()
             if not existing:
-                random_password = secrets.token_urlsafe(12)
+                default_password = DEFAULT_PASSWORDS.get(user_data["username"], "Welcome123!")
                 new_user = User(
                     username=user_data["username"],
                     email=user_data["email"],
-                    password_hash=_hash_password(random_password),
+                    password_hash=_hash_password(default_password),
                     is_active=True,
                 )
                 for role_name in user_data["roles"]:
                     if role_name in roles_map:
                         new_user.roles.append(roles_map[role_name])
                 db.add(new_user)
-                first_run_entries.append(f"  {user_data['username']}: {random_password}")
+                first_run_entries.append(f"  {user_data['username']}: {default_password}")
         db.commit()
 
         # Write first-run credentials to file so admin can find them
@@ -493,7 +498,7 @@ async def import_users_csv(file: UploadFile = File(...), db: Session = Depends(g
 
             email = clean_row.get("email") or clean_row.get("e-mail")
             gender = clean_row.get("gender")
-            raw_password = clean_row.get("password") or clean_row.get("pass") or "Welcome123"
+            raw_password = clean_row.get("password") or clean_row.get("pass") or "Welcome123!"
 
             raw_roles_str = clean_row.get("roles") or clean_row.get("role") or clean_row.get("user_role") or clean_row.get("user_roles")
             assigned_roles = []

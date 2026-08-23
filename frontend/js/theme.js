@@ -1280,11 +1280,13 @@
   };
 
   function mountEduBotGlobal() {
+    const curPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase().split('?')[0];
+    const publicPages = ['index.html', 'auth.html', 'login.html', ''];
+    if (publicPages.includes(curPage)) return;
+
     // Avoid double injection if global launcher or local edubot toggle is present
     if (document.getElementById('edubot-global-launcher') || document.getElementById('edubot-toggle')) return;
     if (!document.body) return;
-
-    const curPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase().split('?')[0];
     const ctx = PAGE_CONTEXT_MAP[curPage] || {
       title: 'EduBot Copilot',
       greeting: '👋 Hi! I\'m <b>EduBot</b>, your in-app assistant. How can I help you today?',

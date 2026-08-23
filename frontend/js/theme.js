@@ -580,11 +580,37 @@
 
     document.body.prepend(sidebar);
 
-    // Remove any previously auto-injected hamburger buttons if present
-    const existingHamburger = document.querySelector('.mobile-sidebar-toggle-btn');
-    if (existingHamburger) {
-      existingHamburger.remove();
+    // Auto-inject mobile hamburger button into .topbar if present
+    const topbar = document.querySelector('.topbar');
+    if (topbar && !topbar.querySelector('.mobile-hamburger-btn')) {
+      const topbarFirstChild = topbar.firstElementChild;
+      const hamburger = document.createElement('button');
+      hamburger.type = 'button';
+      hamburger.className = 'mobile-hamburger-btn';
+      hamburger.setAttribute('aria-label', 'Open Navigation Menu');
+      hamburger.innerHTML = '☰';
+      hamburger.onclick = (e) => {
+        e.stopPropagation();
+        window.toggleMobileSidebar();
+      };
+
+      if (topbarFirstChild) {
+        topbarFirstChild.prepend(hamburger);
+      } else {
+        topbar.prepend(hamburger);
+      }
     }
+
+    // Auto-close sidebar on mobile when a navigation link is clicked
+    sidebar.addEventListener('click', (e) => {
+      const item = e.target.closest('.sidebar-item');
+      if (item && window.innerWidth <= 768) {
+        const sidebarEl = document.querySelector('.app-sidebar');
+        if (sidebarEl && sidebarEl.classList.contains('open')) {
+          window.toggleMobileSidebar();
+        }
+      }
+    });
 
     const filterInput = document.getElementById('sidebarFilterInput');
     if (filterInput) {

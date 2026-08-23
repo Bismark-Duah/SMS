@@ -248,7 +248,8 @@
   };
 
   window.mountSidebarNav = function () {
-    const rawPath = (window.location.pathname.split("/").pop() || "").toLowerCase();
+    if (document.body && (document.body.id === "public-landing-page" || document.body.classList.contains("public-landing-page"))) return;
+    const rawPath = (window.location.pathname.split("/").pop() || "").toLowerCase().split("?")[0];
     const publicPages = ["index.html", "auth.html", "login.html", ""];
     if (publicPages.includes(rawPath)) return;
     if (document.querySelector(".app-sidebar")) return;

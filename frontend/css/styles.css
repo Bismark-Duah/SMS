@@ -100,6 +100,22 @@ body {
   line-height: 1.6;
 }
 
+/* Public Landing Page Full-Width Reset */
+body#public-landing-page, body.public-landing-page {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+body#public-landing-page .app-sidebar, body.public-landing-page .app-sidebar {
+  display: none !important;
+  width: 0 !important;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;

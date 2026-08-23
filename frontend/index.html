@@ -1,520 +1,858 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EduManage360 – Transform Your Educational Ecosystem</title>
-    <meta name="description" content="The complete, multi-school administration portal designed for modern institutional success." />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-      *, *::before, *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduManage360 – One Platform. Every School. Complete Control.</title>
+  <meta name="description" content="The unified school management system built for Ghanaian institutions. Manage students, fees, attendance, reports and more — all offline." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-      :root {
-        --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        --bg-radial: radial-gradient(circle at 90% 10%, rgba(16, 185, 129, 0.12) 0%, rgba(2, 132, 199, 0.06) 40%, #ffffff 75%);
-        --text-dark: #0f172a;
-        --text-muted: #475569;
-        --primary-teal: #059669;
-        --primary-teal-hover: #047857;
-        --primary-blue: #0284c7;
-        --card-border: #e2e8f0;
-        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-        --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 4px 10px -4px rgba(0, 0, 0, 0.02);
-        --shadow-lg: 0 20px 40px -12px rgba(5, 150, 105, 0.15);
-      }
+  <style>
+    /* ─── Reset & Root ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      html, body {
-        width: 100%;
-        min-height: 100vh;
-        background: var(--bg-radial) !important;
-        color: var(--text-dark) !important;
-        font-family: var(--font-main) !important;
-        line-height: 1.5;
-        overflow-x: hidden;
-      }
+    :root {
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --teal:        #059669;
+      --teal-dark:   #047857;
+      --teal-light:  #d1fae5;
+      --blue:        #0284c7;
+      --ink:         #0f172a;
+      --ink-light:   #334155;
+      --muted:       #64748b;
+      --border:      #e2e8f0;
+      --bg:          #ffffff;
+      --bg-soft:     #f8fafc;
+      --radius-sm:   8px;
+      --radius-md:   14px;
+      --radius-lg:   20px;
+      --radius-pill: 999px;
+      --shadow-card: 0 4px 24px -4px rgba(15,23,42,.08), 0 1px 4px rgba(15,23,42,.04);
+      --shadow-btn:  0 4px 14px rgba(5,150,105,.30);
+      --transition:  .18s cubic-bezier(.4,0,.2,1);
+    }
 
-      /* Navigation Header */
-      .navbar {
-        width: 100%;
-        max-width: 1280px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 24px 40px;
-      }
+    html, body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
 
-      .brand-logo img {
-        height: 52px;
-        max-width: 240px;
-        object-fit: contain;
-      }
+    /* ─── Teal radial glow top-right ───────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -180px; right: -180px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(5,150,105,.10) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
 
-      .nav-links-container {
-        display: flex;
-        align-items: center;
-        gap: 36px;
-      }
+    /* ─── Utility ───────────────────────────────────── */
+    .container { max-width: 1160px; margin: 0 auto; padding: 0 32px; }
+    a { color: inherit; text-decoration: none; }
 
-      .nav-menu {
-        display: flex;
-        align-items: center;
-        gap: 28px;
-        list-style: none;
-      }
+    /* ─── NAVBAR ────────────────────────────────────── */
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 1160px; margin: 0 auto;
+      padding: 0 32px; height: 66px;
+    }
+    .nav-brand img {
+      height: 44px; max-width: 180px; object-fit: contain; display: block;
+    }
+    .nav-links { display: flex; align-items: center; gap: 36px; list-style: none; }
+    .nav-links a {
+      font-size: .92rem; font-weight: 600; color: var(--ink-light);
+      transition: color var(--transition);
+    }
+    .nav-links a:hover { color: var(--teal); }
+    .nav-actions { display: flex; align-items: center; gap: 12px; }
+    .btn-ghost {
+      font-size: .92rem; font-weight: 700; color: var(--ink);
+      border: 1.5px solid var(--border); border-radius: var(--radius-pill);
+      padding: 8px 22px; transition: border-color var(--transition), color var(--transition);
+    }
+    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+    .btn-primary {
+      font-size: .92rem; font-weight: 700; color: #fff;
+      background: var(--teal); border-radius: var(--radius-pill);
+      padding: 9px 22px; box-shadow: var(--shadow-btn);
+      transition: background var(--transition), transform var(--transition);
+    }
+    .btn-primary:hover { background: var(--teal-dark); transform: translateY(-1px); }
 
-      .nav-item a {
-        color: #334155;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.95rem;
-        transition: color 0.2s;
-      }
+    /* ─── HERO ──────────────────────────────────────── */
+    .hero {
+      padding: 90px 0 70px;
+      position: relative; z-index: 1;
+    }
+    .hero-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      align-items: center; gap: 60px;
+    }
+    .hero-left { display: flex; flex-direction: column; gap: 0; }
 
-      .nav-item a:hover {
-        color: var(--primary-teal);
-      }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--teal-light); color: var(--teal-dark);
+      font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+      border-radius: var(--radius-pill); padding: 5px 14px;
+      margin-bottom: 22px; width: fit-content;
+    }
+    .hero-badge::before { content: '●'; font-size: .5rem; }
 
-      .btn-login {
-        background: var(--primary-teal);
-        color: #ffffff !important;
-        font-weight: 700;
-        font-size: 0.95rem;
-        padding: 10px 28px;
-        border-radius: 20px;
-        text-decoration: none;
-        transition: background 0.2s, transform 0.2s;
-        box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
-      }
+    .hero-headline {
+      font-size: clamp(2.4rem, 4vw, 3.5rem);
+      font-weight: 900; letter-spacing: -.04em; line-height: 1.12;
+      color: var(--ink); margin-bottom: 20px;
+    }
+    .hero-headline .accent { color: var(--teal); }
 
-      .btn-login:hover {
-        background: var(--primary-teal-hover);
-        transform: translateY(-1px);
-      }
+    .hero-sub {
+      font-size: 1.08rem; color: var(--muted); font-weight: 500;
+      max-width: 440px; margin-bottom: 36px; line-height: 1.7;
+    }
 
-      /* Hero Section (Centered Layout) */
-      .hero-section {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 40px 24px 30px;
-        text-align: center;
-      }
+    .hero-ctas { display: flex; align-items: center; gap: 14px; margin-bottom: 40px; flex-wrap: wrap; }
+    .btn-hero-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 1rem; font-weight: 700; color: #fff;
+      background: var(--teal); border-radius: var(--radius-pill);
+      padding: 13px 28px; box-shadow: var(--shadow-btn);
+      transition: background var(--transition), transform var(--transition);
+    }
+    .btn-hero-primary:hover { background: var(--teal-dark); transform: translateY(-2px); }
+    .btn-hero-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 1rem; font-weight: 700; color: var(--ink);
+      border: 1.5px solid var(--border); border-radius: var(--radius-pill);
+      padding: 12px 24px; transition: border-color var(--transition), color var(--transition);
+    }
+    .btn-hero-ghost:hover { border-color: var(--teal); color: var(--teal); }
+    .play-circle {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--teal-light); color: var(--teal);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .7rem; padding-left: 2px;
+    }
 
-      .hero-title {
-        font-size: 3.4rem;
-        font-weight: 900;
-        letter-spacing: -0.035em;
-        line-height: 1.15;
-        color: #0f172a;
-        margin-bottom: 16px;
-      }
+    .trust-badges { display: flex; flex-wrap: wrap; gap: 10px; }
+    .trust-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--bg-soft); border: 1px solid var(--border);
+      border-radius: var(--radius-pill); padding: 5px 14px;
+      font-size: .8rem; font-weight: 600; color: var(--ink-light);
+    }
 
-      .hero-subtitle {
-        font-size: 1.2rem;
-        color: var(--text-muted);
-        max-width: 760px;
-        margin: 0 auto 40px;
-        font-weight: 500;
-      }
+    /* ─── Dashboard Mockup Card ─────────────────────── */
+    .hero-mockup {
+      position: relative;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 24px 64px -12px rgba(15,23,42,.14), 0 4px 12px rgba(15,23,42,.05);
+      overflow: hidden;
+    }
+    .mockup-topbar {
+      background: var(--ink); padding: 10px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .mockup-topbar-brand { font-size: .75rem; font-weight: 700; color: #fff; }
+    .mockup-topbar-user {
+      font-size: .7rem; color: rgba(255,255,255,.6); font-weight: 500;
+    }
+    .mockup-body { padding: 16px; }
+    .mockup-greeting { font-size: .72rem; color: var(--muted); margin-bottom: 10px; }
+    .mockup-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 8px; margin-bottom: 14px;
+    }
+    .m-stat {
+      background: var(--bg-soft); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 8px; text-align: center;
+    }
+    .m-stat-val { font-size: 1.1rem; font-weight: 800; color: var(--ink); }
+    .m-stat-lbl { font-size: .62rem; color: var(--muted); font-weight: 500; }
+    .m-stat-trend { font-size: .58rem; color: var(--teal); font-weight: 700; }
+    .mockup-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .mockup-chart-box {
+      background: var(--bg-soft); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px;
+    }
+    .m-chart-title { font-size: .65rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+    .mini-line-chart { display: flex; align-items: flex-end; gap: 4px; height: 40px; }
+    .mlc-bar {
+      flex: 1; border-radius: 2px 2px 0 0;
+      background: linear-gradient(to top, var(--teal), #34d399);
+      opacity: .8;
+    }
+    .donut-wrap { display: flex; justify-content: center; align-items: center; height: 56px; }
+    .donut-svg circle { transition: stroke-dasharray .4s; }
+    .mockup-recent { background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; }
+    .m-recent-title { font-size: .65rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+    .m-recent-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border); }
+    .m-recent-item:last-child { border: none; }
+    .m-recent-name { font-size: .63rem; font-weight: 600; color: var(--ink-light); }
+    .m-recent-time { font-size: .58rem; color: var(--muted); }
+    .m-badge { font-size: .55rem; font-weight: 700; border-radius: 4px; padding: 2px 6px; }
+    .m-badge-green { background: #dcfce7; color: #15803d; }
+    .m-badge-amber { background: #fef9c3; color: #a16207; }
+    .m-badge-blue  { background: #dbeafe; color: #1d4ed8; }
 
-      /* Central Emblem Graphic Showcase */
-      .emblem-showcase-container {
-        position: relative;
-        max-width: 720px;
-        margin: 0 auto 40px;
-        padding: 40px;
-        background: #ffffff;
-        border: 1px solid var(--card-border);
-        border-radius: 24px;
-        box-shadow: var(--shadow-lg);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-      }
+    /* ─── FEATURES SECTION ──────────────────────────── */
+    .features-section { padding: 90px 0; background: var(--bg-soft); position: relative; z-index: 1; }
+    .section-label {
+      text-align: center; font-size: .78rem; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--teal);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      text-align: center; font-size: clamp(1.8rem, 3vw, 2.4rem);
+      font-weight: 900; letter-spacing: -.03em; color: var(--ink);
+      margin-bottom: 14px;
+    }
+    .section-sub {
+      text-align: center; font-size: 1rem; color: var(--muted);
+      font-weight: 500; max-width: 500px; margin: 0 auto 52px;
+    }
 
-      .platform-tour-badge {
-        position: absolute;
-        left: 24px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: 30px;
-        padding: 10px 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 700;
-        font-size: 0.9rem;
-        color: #0f172a;
-        box-shadow: var(--shadow-md);
-        text-decoration: none;
-        transition: transform 0.2s;
-      }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .feature-card {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 28px 24px;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: ''; position: absolute; top: 0; left: 0;
+      width: 3px; height: 0; background: var(--teal);
+      transition: height .25s ease; border-radius: 0 0 2px 0;
+    }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-card); border-color: rgba(5,150,105,.2); }
+    .feature-card:hover::before { height: 100%; }
 
-      .platform-tour-badge:hover {
-        transform: translateY(-50%) scale(1.05);
-      }
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; margin-bottom: 16px;
+    }
+    .icon-teal   { background: #d1fae5; }
+    .icon-blue   { background: #dbeafe; }
+    .icon-violet { background: #ede9fe; }
+    .icon-amber  { background: #fef3c7; }
+    .icon-rose   { background: #ffe4e6; }
+    .icon-slate  { background: #f1f5f9; }
 
-      .play-icon {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: var(--primary-teal);
-        color: #ffffff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.75rem;
-      }
+    .feature-title {
+      font-size: 1rem; font-weight: 800; color: var(--ink); margin-bottom: 6px;
+    }
+    .feature-desc { font-size: .875rem; color: var(--muted); line-height: 1.65; }
 
-      .central-emblem-icon {
-        width: 180px;
-        height: 180px;
-        background: linear-gradient(135deg, #059669 0%, #0284c7 100%);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #ffffff;
-        font-size: 5rem;
-        box-shadow: 0 16px 36px rgba(5, 150, 105, 0.3);
-        margin-bottom: 20px;
-      }
+    /* ─── CTA BANNER ────────────────────────────────── */
+    .cta-section { padding: 90px 0; position: relative; z-index: 1; }
+    .cta-card {
+      background: var(--ink); border-radius: 24px;
+      padding: 64px 48px; text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .cta-card::before {
+      content: ''; position: absolute; top: -120px; right: -120px;
+      width: 400px; height: 400px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(5,150,105,.25), transparent 70%);
+      pointer-events: none;
+    }
+    .cta-card::after {
+      content: ''; position: absolute; bottom: -80px; left: -80px;
+      width: 300px; height: 300px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(2,132,199,.15), transparent 70%);
+      pointer-events: none;
+    }
+    .cta-eyebrow {
+      font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: rgba(255,255,255,.5); margin-bottom: 16px;
+    }
+    .cta-headline {
+      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+      font-weight: 900; letter-spacing: -.04em; line-height: 1.18;
+      color: #fff; margin-bottom: 14px; position: relative; z-index: 1;
+    }
+    .cta-headline .accent { color: #34d399; }
+    .cta-sub {
+      font-size: 1rem; color: rgba(255,255,255,.6); font-weight: 500;
+      max-width: 440px; margin: 0 auto 36px; line-height: 1.7; position: relative; z-index: 1;
+    }
+    .cta-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; position: relative; z-index: 1; }
+    .btn-cta-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: .95rem; font-weight: 700; color: var(--ink);
+      background: #fff; border-radius: var(--radius-pill);
+      padding: 13px 28px; transition: background var(--transition), transform var(--transition);
+    }
+    .btn-cta-primary:hover { background: #f0fdf4; transform: translateY(-2px); }
+    .btn-cta-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: .95rem; font-weight: 700; color: #fff;
+      border: 1.5px solid rgba(255,255,255,.25); border-radius: var(--radius-pill);
+      padding: 12px 26px; transition: border-color var(--transition), background var(--transition);
+    }
+    .btn-cta-ghost:hover { border-color: rgba(255,255,255,.6); background: rgba(255,255,255,.05); }
 
-      .emblem-banner {
-        background: linear-gradient(90deg, #059669, #0284c7);
-        color: #ffffff;
-        font-weight: 800;
-        font-size: 0.85rem;
-        padding: 6px 24px;
-        border-radius: 20px;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-      }
+    /* ─── FOOTER ────────────────────────────────────── */
+    .footer { border-top: 1px solid var(--border); padding: 48px 0 32px; position: relative; z-index: 1; }
+    .footer-inner {
+      display: grid; grid-template-columns: 1.8fr 1fr 1fr 1fr;
+      gap: 40px; margin-bottom: 40px;
+    }
+    .footer-brand img { height: 38px; object-fit: contain; margin-bottom: 12px; }
+    .footer-brand p { font-size: .85rem; color: var(--muted); max-width: 220px; line-height: 1.6; }
+    .footer-col-title { font-size: .8rem; font-weight: 800; color: var(--ink); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 14px; }
+    .footer-links { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+    .footer-links a { font-size: .875rem; color: var(--muted); font-weight: 500; transition: color var(--transition); }
+    .footer-links a:hover { color: var(--teal); }
+    .footer-contact-item { font-size: .875rem; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+    .footer-bottom {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 24px; border-top: 1px solid var(--border);
+      font-size: .8rem; color: var(--muted); flex-wrap: wrap; gap: 8px;
+    }
 
-      /* Horizontal Category Pill Bar */
-      .category-pill-bar {
-        max-width: 900px;
-        margin: 0 auto 60px;
-        background: #ffffff;
-        border: 1px solid var(--card-border);
-        border-radius: 30px;
-        padding: 12px 28px;
-        display: flex;
-        align-items: center;
-        justify-content: space-around;
-        box-shadow: var(--shadow-sm);
-        flex-wrap: wrap;
-        gap: 16px;
-      }
+    /* ─── EDUBOT WIDGET ─────────────────────────────── */
+    #edubot-toggle {
+      position: fixed; bottom: 28px; right: 28px; z-index: 1000;
+      width: 58px; height: 58px; border-radius: 50%;
+      background: var(--teal); color: #fff;
+      border: none; cursor: pointer; font-size: 1.4rem;
+      box-shadow: 0 8px 24px rgba(5,150,105,.4);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform var(--transition), background var(--transition);
+    }
+    #edubot-toggle:hover { background: var(--teal-dark); transform: scale(1.08); }
+    #edubot-toggle.open { background: var(--ink); }
 
-      .pill-item {
-        font-weight: 700;
-        font-size: 0.9rem;
-        color: #334155;
-        text-decoration: none;
-        transition: color 0.2s;
-      }
+    #edubot-window {
+      position: fixed; bottom: 100px; right: 28px; z-index: 999;
+      width: 360px; background: #fff;
+      border: 1px solid var(--border); border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(15,23,42,.16);
+      display: none; flex-direction: column;
+      overflow: hidden; animation: slideUp .22s ease;
+    }
+    #edubot-window.open { display: flex; }
 
-      .pill-item:hover {
-        color: var(--primary-teal);
-      }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-      /* Section: Unified Control for Every Institution */
-      .unified-section {
-        max-width: 1150px;
-        margin: 0 auto 60px;
-        padding: 0 24px;
-        text-align: center;
-      }
+    .bot-header {
+      background: var(--ink); padding: 16px 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .bot-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--teal); display: flex; align-items: center;
+      justify-content: center; font-size: 1.1rem; flex-shrink: 0;
+    }
+    .bot-header-info h4 { font-size: .9rem; font-weight: 700; color: #fff; }
+    .bot-header-info p  { font-size: .72rem; color: rgba(255,255,255,.55); }
+    .bot-status-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #34d399;
+      display: inline-block; margin-right: 5px;
+    }
 
-      .section-title {
-        font-size: 2.2rem;
-        font-weight: 800;
-        color: #0f172a;
-        margin-bottom: 36px;
-      }
+    .bot-messages {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px; max-height: 320px;
+      scrollbar-width: thin;
+    }
+    .bot-msg {
+      max-width: 88%; padding: 10px 14px; border-radius: 14px;
+      font-size: .85rem; line-height: 1.55; font-weight: 500;
+      animation: msgIn .18s ease;
+    }
+    @keyframes msgIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
+    .bot-msg.bot { background: var(--bg-soft); color: var(--ink); border-radius: 4px 14px 14px 14px; align-self: flex-start; }
+    .bot-msg.user { background: var(--teal); color: #fff; border-radius: 14px 4px 14px 14px; align-self: flex-end; }
+    .bot-typing { display: flex; align-items: center; gap: 4px; padding: 10px 14px; background: var(--bg-soft); border-radius: 4px 14px 14px 14px; align-self: flex-start; width: fit-content; }
+    .bot-typing span { width: 7px; height: 7px; background: var(--muted); border-radius: 50%; animation: bounce .9s infinite; }
+    .bot-typing span:nth-child(2) { animation-delay: .15s; }
+    .bot-typing span:nth-child(3) { animation-delay: .30s; }
+    @keyframes bounce { 0%,80%,100% { transform: scale(1); } 40% { transform: scale(1.4); } }
 
-      .unified-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 24px;
-        margin-bottom: 50px;
-      }
+    .bot-quick-replies {
+      padding: 0 16px 10px; display: flex; flex-wrap: wrap; gap: 7px;
+    }
+    .qr-btn {
+      font-size: .75rem; font-weight: 600; color: var(--teal);
+      background: var(--teal-light); border: none; border-radius: var(--radius-pill);
+      padding: 5px 12px; cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+    }
+    .qr-btn:hover { background: var(--teal); color: #fff; }
 
-      .unified-card {
-        background: #ffffff;
-        border: 1px solid var(--card-border);
-        border-radius: 16px;
-        padding: 28px 24px;
-        text-align: left;
-        box-shadow: var(--shadow-md);
-        display: flex;
-        align-items: flex-start;
-        gap: 16px;
-        transition: transform 0.2s;
-      }
+    .bot-input-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 16px; border-top: 1px solid var(--border);
+    }
+    #bot-input {
+      flex: 1; border: 1.5px solid var(--border); border-radius: var(--radius-pill);
+      padding: 8px 14px; font-size: .85rem; font-family: var(--font);
+      outline: none; transition: border-color var(--transition); color: var(--ink);
+    }
+    #bot-input:focus { border-color: var(--teal); }
+    #bot-send {
+      width: 36px; height: 36px; border-radius: 50%; border: none;
+      background: var(--teal); color: #fff; cursor: pointer; font-size: .9rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: background var(--transition);
+    }
+    #bot-send:hover { background: var(--teal-dark); }
 
-      .unified-card:hover {
-        transform: translateY(-3px);
-      }
+    /* ─── Responsive ─────────────────────────────────── */
+    @media (max-width: 960px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .hero-sub { max-width: 100%; }
+      .hero-right { display: none; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .footer-inner { grid-template-columns: 1fr 1fr; }
+      .nav-links { display: none; }
+    }
+    @media (max-width: 600px) {
+      .container { padding: 0 20px; }
+      .navbar-inner { padding: 0 20px; }
+      .hero { padding: 60px 0 50px; }
+      .hero-headline { font-size: 2.2rem; }
+      .features-grid { grid-template-columns: 1fr; }
+      .footer-inner { grid-template-columns: 1fr; }
+      .cta-card { padding: 48px 24px; }
+      #edubot-window { width: calc(100vw - 40px); right: 20px; }
+    }
+  </style>
+</head>
+<body>
 
-      .unified-icon {
-        width: 46px;
-        height: 46px;
-        border-radius: 12px;
-        background: #d1fae5;
-        color: #059669;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.4rem;
-        flex-shrink: 0;
-      }
-
-      .unified-card-title {
-        font-size: 1.1rem;
-        font-weight: 800;
-        color: #0f172a;
-        margin-bottom: 4px;
-      }
-
-      .unified-card-desc {
-        font-size: 0.88rem;
-        color: var(--text-muted);
-      }
-
-      /* Checkmark Feature Matrix & School Badges */
-      .matrix-container {
-        max-width: 1100px;
-        margin: 0 auto 60px;
-        background: #ffffff;
-        border: 1px solid var(--card-border);
-        border-radius: 20px;
-        padding: 36px 40px;
-        box-shadow: var(--shadow-sm);
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 28px;
-      }
-
-      .matrix-col-title {
-        font-size: 0.95rem;
-        font-weight: 800;
-        color: #0f172a;
-        margin-bottom: 16px;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-      }
-
-      .matrix-list {
-        list-style: none;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .matrix-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: #334155;
-      }
-
-      .check-icon {
-        color: #059669;
-        font-weight: 800;
-        font-size: 1rem;
-      }
-
-      /* Badge list col 4 */
-      .badge-box-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 8px 12px;
-        font-weight: 700;
-        font-size: 0.85rem;
-        color: #0f172a;
-      }
-
-      /* Clean Minimal Footer */
-      .footer {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 28px 24px;
-        text-align: center;
-        border-top: 1px solid var(--card-border);
-        color: var(--text-muted);
-        font-size: 0.85rem;
-      }
-
-      /* Responsive Media Queries */
-      @media (max-width: 900px) {
-        .hero-title { font-size: 2.4rem; }
-        .unified-grid { grid-template-columns: 1fr; }
-        .matrix-container { grid-template-columns: repeat(2, 1fr); }
-        .platform-tour-badge { position: relative; left: 0; top: 0; transform: none; margin-bottom: 20px; }
-      }
-
-      @media (max-width: 600px) {
-        .navbar { padding: 16px 20px; }
-        .matrix-container { grid-template-columns: 1fr; }
-        .category-pill-bar { display: none; }
-        .nav-menu { display: none; }
-      }
-    </style>
-  </head>
-  <body>
-    <!-- Top Header Navigation -->
-    <header class="navbar">
-      <a class="brand-logo" href="index.html">
-        <img src="frontend/assets/logo_primary.png" alt="EduManage360 Logo" onerror="this.onerror=null; this.src='assets/logo_primary.png';" />
+  <!-- ══════════════ NAVBAR ══════════════ -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a class="nav-brand" href="index.html">
+        <img src="frontend/assets/logo_primary.png" alt="EduManage360"
+             onerror="this.onerror=null;this.src='assets/logo_primary.png';" />
       </a>
-
-      <div class="nav-links-container">
-        <ul class="nav-menu">
-          <li class="nav-item"><a href="#solutions">Platform ▾</a></li>
-          <li class="nav-item"><a href="#unified">Solutions ▾</a></li>
-          <li class="nav-item"><a href="#matrix">Success Stories</a></li>
-          <li class="nav-item"><a href="#matrix">Pricing</a></li>
-          <li class="nav-item"><a href="super-admin.html">Super-Admin</a></li>
-        </ul>
-        <a class="btn-login" href="auth.html">Log In</a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="super-admin.html">Super Admin</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a class="btn-ghost" href="auth.html">Log In</a>
+        <a class="btn-primary" href="auth.html">Get Started Free</a>
       </div>
-    </header>
+    </div>
+  </nav>
 
-    <!-- Hero Section (Centered Layout with Emblem Showcase) -->
-    <main class="hero-section">
-      <h1 class="hero-title">
-        Transform Your Educational<br />
-        Ecosystem with EduManage360
-      </h1>
-      <p class="hero-subtitle">
-        The complete, multi-school administration portal designed for modern institutional success.
-      </p>
+  <!-- ══════════════ HERO ══════════════ -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-grid">
 
-      <!-- Central Emblem Showcase Graphic -->
-      <div class="emblem-showcase-container">
-        <a class="platform-tour-badge" href="auth.html">
-          <div class="play-icon">▶</div>
-          <span>Platform Tour</span>
-        </a>
+        <!-- Left -->
+        <div class="hero-left">
+          <div class="hero-badge">Now live in Ghana</div>
 
-        <div class="central-emblem-icon">
-          🎓
-        </div>
+          <h1 class="hero-headline">
+            One Platform.<br/>
+            Every School.<br/>
+            <span class="accent">Complete Control.</span>
+          </h1>
 
-        <div class="emblem-banner">
-          THE MULTI-SCHOOL ADMIN PORTAL
-        </div>
-      </div>
-    </main>
+          <p class="hero-sub">
+            EduManage360 helps schools manage students, academics, staff,
+            finances and operations — from one secure, unified platform
+            that works 100% offline.
+          </p>
 
-    <!-- Horizontal Category Pill Bar -->
-    <nav class="category-pill-bar" id="solutions">
-      <a class="pill-item" href="auth.html">Integrated Admissions</a>
-      <span style="opacity:0.3;">•</span>
-      <a class="pill-item" href="auth.html">WAEC & NCCA Grading</a>
-      <span style="opacity:0.3;">•</span>
-      <a class="pill-item" href="auth.html">Integrated School Finance</a>
-      <span style="opacity:0.3;">•</span>
-      <a class="pill-item" href="auth.html">Success Stories</a>
-      <span style="opacity:0.3;">•</span>
-      <a class="pill-item" href="auth.html">Data Analytics</a>
-    </nav>
+          <div class="hero-ctas">
+            <a class="btn-hero-primary" href="auth.html">
+              Get Started Free →
+            </a>
+            <a class="btn-hero-ghost" href="auth.html">
+              <div class="play-circle">▶</div>
+              Watch Demo
+            </a>
+          </div>
 
-    <!-- Section: Unified Control for Every Institution -->
-    <section class="unified-section" id="unified">
-      <h2 class="section-title">Unified Control for Every Institution</h2>
-
-      <div class="unified-grid">
-        <div class="unified-card">
-          <div class="unified-icon">🏫</div>
-          <div>
-            <h3 class="unified-card-title">Multi-School Coordination</h3>
-            <p class="unified-card-desc">Multi-school coordination & campus management across Ghana.</p>
+          <div class="trust-badges">
+            <span class="trust-badge">🔒 Secure & Reliable</span>
+            <span class="trust-badge">📴 Works Offline</span>
+            <span class="trust-badge">🏫 Multi-School</span>
+            <span class="trust-badge">🇬🇭 Ghana-Built</span>
           </div>
         </div>
 
-        <div class="unified-card">
-          <div class="unified-icon">⚙️</div>
-          <div>
-            <h3 class="unified-card-title">Centralized Admin</h3>
-            <p class="unified-card-desc">Complete centralized admin controls, staff assignments & security.</p>
+        <!-- Right — Dashboard Mockup -->
+        <div class="hero-right">
+          <div class="hero-mockup">
+            <div class="mockup-topbar">
+              <span class="mockup-topbar-brand">⬡ EduManage360</span>
+              <span class="mockup-topbar-user">Welcome back, Administrator 👋</span>
+            </div>
+            <div class="mockup-body">
+              <p class="mockup-greeting">Dashboard · Academic Year 2024/2025</p>
+              <div class="mockup-stats">
+                <div class="m-stat">
+                  <div class="m-stat-val">1,284</div>
+                  <div class="m-stat-lbl">Students</div>
+                  <div class="m-stat-trend">▲ 12% this month</div>
+                </div>
+                <div class="m-stat">
+                  <div class="m-stat-val">86</div>
+                  <div class="m-stat-lbl">Teachers</div>
+                  <div class="m-stat-trend">▲ 6% this term</div>
+                </div>
+                <div class="m-stat">
+                  <div class="m-stat-val">42</div>
+                  <div class="m-stat-lbl">Classes</div>
+                  <div class="m-stat-trend">▲ 5% this term</div>
+                </div>
+                <div class="m-stat">
+                  <div class="m-stat-val">12</div>
+                  <div class="m-stat-lbl">Institutions</div>
+                  <div class="m-stat-trend">All active</div>
+                </div>
+              </div>
+
+              <div class="mockup-row">
+                <div class="mockup-chart-box">
+                  <div class="m-chart-title">Student Overview</div>
+                  <div class="mini-line-chart">
+                    <div class="mlc-bar" style="height:55%"></div>
+                    <div class="mlc-bar" style="height:72%"></div>
+                    <div class="mlc-bar" style="height:60%"></div>
+                    <div class="mlc-bar" style="height:88%"></div>
+                    <div class="mlc-bar" style="height:75%"></div>
+                    <div class="mlc-bar" style="height:95%"></div>
+                    <div class="mlc-bar" style="height:82%"></div>
+                  </div>
+                </div>
+                <div class="mockup-chart-box">
+                  <div class="m-chart-title">Pass Rate</div>
+                  <div class="donut-wrap">
+                    <svg width="56" height="56" viewBox="0 0 56 56">
+                      <circle cx="28" cy="28" r="22" fill="none" stroke="#e2e8f0" stroke-width="8"/>
+                      <circle cx="28" cy="28" r="22" fill="none" stroke="#059669" stroke-width="8"
+                              stroke-dasharray="117 21" stroke-linecap="round"
+                              transform="rotate(-90 28 28)"/>
+                      <text x="28" y="33" text-anchor="middle" font-size="11" font-weight="800" fill="#0f172a">85%</text>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mockup-recent">
+                <div class="m-recent-title">Recent Activity</div>
+                <div class="m-recent-item">
+                  <span class="m-recent-name">New student admission</span>
+                  <span class="m-badge m-badge-green">Approved</span>
+                  <span class="m-recent-time">15 min ago</span>
+                </div>
+                <div class="m-recent-item">
+                  <span class="m-recent-name">Fee payment recorded</span>
+                  <span class="m-badge m-badge-blue">Paid</span>
+                  <span class="m-recent-time">1 hr ago</span>
+                </div>
+                <div class="m-recent-item">
+                  <span class="m-recent-name">Term results published</span>
+                  <span class="m-badge m-badge-amber">Pending</span>
+                  <span class="m-recent-time">3 hrs ago</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="unified-card">
-          <div class="unified-icon">📊</div>
-          <div>
-            <h3 class="unified-card-title">Data Analytics</h3>
-            <p class="unified-card-desc">Analysis, performance broadsheets & fee data analytics tools.</p>
-          </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ FEATURES ══════════════ -->
+  <section class="features-section" id="features">
+    <div class="container">
+      <div class="section-label">Core Modules</div>
+      <h2 class="section-title">Everything your school needs.<br/>Nothing it doesn't.</h2>
+      <p class="section-sub">29 integrated modules covering every aspect of school administration — all in one platform.</p>
+
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <div class="feature-icon icon-teal">🎓</div>
+          <h3 class="feature-title">Student Management</h3>
+          <p class="feature-desc">Admissions, BECE/CSSPS enrollment, student profiles, house allocation and academic history — all in one place.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-amber">💰</div>
+          <h3 class="feature-title">Fee & Finance Tools</h3>
+          <p class="feature-desc">Record payments, track outstanding balances, generate receipts and monitor school revenue in real time.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-blue">📊</div>
+          <h3 class="feature-title">Reports & Broadsheets</h3>
+          <p class="feature-desc">One-click terminal report cards (PDF), class broadsheets, cumulative records and attendance summaries.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-violet">✅</div>
+          <h3 class="feature-title">Attendance Tracking</h3>
+          <p class="feature-desc">Daily class attendance with instant reports, absence alerts and term-end attendance analytics per student.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-rose">💬</div>
+          <h3 class="feature-title">Communication Hub</h3>
+          <p class="feature-desc">Internal staff messaging, parent portal access, exeat management, discipline records and announcements.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon icon-slate">🏫</div>
+          <h3 class="feature-title">Multi-School Admin</h3>
+          <p class="feature-desc">Manage all your schools from one super-admin control panel with role-based access for every institution.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ CTA BANNER ══════════════ -->
+  <section class="cta-section" id="contact">
+    <div class="container">
+      <div class="cta-card">
+        <p class="cta-eyebrow">Get in touch</p>
+        <h2 class="cta-headline">Ready to bring EduManage360<br/>to <span class="accent">your school?</span></h2>
+        <p class="cta-sub">Every school is unique. Get a plan tailored to your institution's size and needs — no commitment required.</p>
+        <div class="cta-actions">
+          <a class="btn-cta-primary" href="auth.html">Request a Demo →</a>
+          <a class="btn-cta-ghost" href="auth.html">Talk to Our Team</a>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- Checkmark Feature Matrix & Credentials Grid -->
-    <section class="matrix-container" id="matrix">
-      <div>
-        <h4 class="matrix-col-title">Admissions & Students</h4>
-        <ul class="matrix-list">
-          <li class="matrix-item"><span class="check-icon">✓</span> Multi-Mod Admissions</li>
-          <li class="matrix-item"><span class="check-icon">✓</span> Centralized Retention</li>
-          <li class="matrix-item"><span class="check-icon">✓</span> Student Tracking</li>
-        </ul>
-      </div>
-
-      <div>
-        <h4 class="matrix-col-title">Grading & Exams</h4>
-        <ul class="matrix-list">
-          <li class="matrix-item"><span class="check-icon">✓</span> Automated WAEC Grading</li>
-          <li class="matrix-item"><span class="check-icon">✓</span> Centralized Admin</li>
-          <li class="matrix-item"><span class="check-icon">✓</span> Performance Analytics</li>
-        </ul>
-      </div>
-
-      <div>
-        <h4 class="matrix-col-title">Curriculum & Finance</h4>
-        <ul class="matrix-list">
-          <li class="matrix-item"><span class="check-icon">✓</span> NCCA Basic Curriculum</li>
-          <li class="matrix-item"><span class="check-icon">✓</span> Real-Time Data Analytics</li>
-          <li class="matrix-item"><span class="check-icon">✓</span> Integrated Fee Ledger</li>
-        </ul>
-      </div>
-
-      <div>
-        <h4 class="matrix-col-title">Official Credentials</h4>
-        <div style="display:flex; flex-direction:column; gap:10px;">
-          <div class="badge-box-item">🇬🇭 SHS & Basic Schools</div>
-          <div class="badge-box-item">🛡️ GES & WAEC Ready</div>
-          <div class="badge-box-item">🔌 100% Offline Support</div>
+  <!-- ══════════════ FOOTER ══════════════ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <img src="frontend/assets/logo_primary.png" alt="EduManage360"
+               onerror="this.onerror=null;this.src='assets/logo_primary.png';" />
+          <p>The unified school management system built for Ghanaian institutions.</p>
+        </div>
+        <div>
+          <h4 class="footer-col-title">Product</h4>
+          <ul class="footer-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="auth.html">School Portal</a></li>
+            <li><a href="super-admin.html">Super Admin</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="footer-col-title">Company</h4>
+          <ul class="footer-links">
+            <li><a href="#contact">About Us</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li><a href="#contact">Request Demo</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="footer-col-title">Contact</h4>
+          <p class="footer-contact-item">🇬🇭 Kumasi, Ghana</p>
+          <p class="footer-contact-item">📧 info@edumanage360.com</p>
+          <p class="footer-contact-item">📞 +233 20 123 4567</p>
         </div>
       </div>
-    </section>
+      <div class="footer-bottom">
+        <span>&copy; 2026 EduManage360 Enterprise. All rights reserved.</span>
+        <span>Unified Multi-School Administration Portal, Redefined.</span>
+      </div>
+    </div>
+  </footer>
 
-    <!-- Clean Minimal Footer -->
-    <footer class="footer">
-      <div style="font-weight:600; margin-bottom:6px; color:#334155;">
-        Unified Multi-School Administration Portal, Redefined.
+  <!-- ══════════════ EDUBOT WIDGET ══════════════ -->
+  <button id="edubot-toggle" title="Ask EduBot" aria-label="Open EduBot Assistant">💬</button>
+
+  <div id="edubot-window" role="dialog" aria-label="EduBot Assistant">
+    <div class="bot-header">
+      <div class="bot-avatar">🤖</div>
+      <div class="bot-header-info">
+        <h4>EduBot</h4>
+        <p><span class="bot-status-dot"></span>Powered by EduManage360 · Always Online</p>
       </div>
-      <div>
-        &copy; 2026 EduManage360 Enterprise. All rights reserved.
-      </div>
-    </footer>
-  </body>
+    </div>
+    <div class="bot-messages" id="bot-messages"></div>
+    <div class="bot-quick-replies" id="quick-replies"></div>
+    <div class="bot-input-row">
+      <input id="bot-input" type="text" placeholder="Ask me anything…" autocomplete="off" />
+      <button id="bot-send" aria-label="Send">➤</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ SCRIPTS ══════════════ -->
+  <script>
+    /* ── EduBot Knowledge Base (100% Offline) ──────────── */
+    const KB = [
+      {
+        keys: ['add student','new student','enroll student','register student','admission'],
+        answer: '🎓 To add a student:\n1. Log in → go to <b>Students</b>\n2. Click <b>Add New Student</b>\n3. Fill in the student details and save.\n\nFor CSSPS/BECE placements, use the <b>Enrollment</b> module.'
+      },
+      {
+        keys: ['fee','payment','record payment','fee balance','fee ledger','outstanding'],
+        answer: '💰 To record a fee payment:\n1. Go to <b>Fees</b> in the sidebar\n2. Search for the student\n3. Click <b>Record Payment</b>, enter the amount and save.\n\nReceipts are auto-generated for each transaction.'
+      },
+      {
+        keys: ['attendance','take attendance','mark attendance','absent','present'],
+        answer: '✅ To take attendance:\n1. Go to <b>Attendance</b>\n2. Select the class and date\n3. Mark each student Present or Absent and submit.\n\nTerm-end attendance reports are auto-generated.'
+      },
+      {
+        keys: ['report card','report','terminal report','generate report','broadsheet','pdf'],
+        answer: '📄 To generate a report card:\n1. Go to <b>Reports</b>\n2. Select the academic term and class\n3. Click <b>Generate Report Card</b> — a PDF is produced instantly.\n\nBroadsheets for the full class are also available.'
+      },
+      {
+        keys: ['exeat','out pass','leave','permission'],
+        answer: '🚪 To issue an exeat:\n1. Go to <b>Exeat</b>\n2. Click <b>New Exeat Request</b>\n3. Enter the student name, destination and return date, then approve.'
+      },
+      {
+        keys: ['timetable','schedule','class schedule','period'],
+        answer: '📅 To build a timetable:\n1. Go to <b>Timetable</b>\n2. Select a class\n3. Assign subjects and teachers to each period.\n\nConflicts are automatically detected.'
+      },
+      {
+        keys: ['discipline','incident','behaviour','sanction','warning'],
+        answer: '⚖️ To log a discipline incident:\n1. Go to <b>Discipline</b>\n2. Click <b>New Incident</b>\n3. Select the student, describe the incident and apply a sanction if needed.'
+      },
+      {
+        keys: ['message','messaging','send message','communication','staff message'],
+        answer: '💬 To send an internal message:\n1. Go to <b>Messaging</b>\n2. Click <b>New Message</b>\n3. Select recipient(s) — staff, teachers or parents — and send.'
+      },
+      {
+        keys: ['password','reset password','forgot password','login','log in','access'],
+        answer: '🔐 Password reset:\n1. Contact your school administrator\n2. They can reset your password from <b>Users</b> → select user → <b>Reset Password</b>.\n\nDefault login page: <a href="auth.html">auth.html</a>'
+      },
+      {
+        keys: ['multi school','multiple schools','super admin','all schools','school group'],
+        answer: '🏫 Yes! EduManage360 supports multiple schools.\nThe <b>Super Admin</b> panel lets you:\n• View all schools at a glance\n• Switch between institutions\n• Monitor students, fees & staff across all schools from one dashboard.'
+      },
+      {
+        keys: ['offline','internet','no internet','works offline','connection'],
+        answer: '📴 EduManage360 works 100% offline.\nAll data is stored locally using SQLite — no internet connection is required for daily operations including attendance, fees, reports and messaging.'
+      },
+      {
+        keys: ['backup','restore','data backup','database'],
+        answer: '💾 To back up your data:\n1. Go to <b>Data Tools</b> or <b>Settings</b>\n2. Click <b>Backup Database</b>\n3. Save the backup file to a secure location.\n\nRestore is equally straightforward from the same screen.'
+      },
+      {
+        keys: ['parent','parent portal','guardian','parent view'],
+        answer: '👨‍👩‍👧 Parents can log in via the <b>Parent Portal</b> to:\n• View their child\'s results and attendance\n• Check fee balance\n• Read school announcements\n\nParent accounts are created by the school administrator.'
+      },
+      {
+        keys: ['hello','hi','hey','good morning','good afternoon','start','help'],
+        answer: '👋 Hello! I\'m <b>EduBot</b>, your EduManage360 assistant.\n\nI can help you with:\n• Adding students & recording fees\n• Attendance & reports\n• Exeat, discipline & timetable\n• Multi-school admin & login\n\nWhat do you need help with today?'
+      }
+    ];
+
+    const FALLBACK = "🤔 I'm not sure about that one. Please:\n• Try rephrasing your question\n• Contact your school administrator\n• Or visit the <a href='auth.html'>login page</a> to get started.";
+
+    function findAnswer(text) {
+      const t = text.toLowerCase();
+      for (const entry of KB) {
+        if (entry.keys.some(k => t.includes(k))) return entry.answer;
+      }
+      return FALLBACK;
+    }
+
+    /* ── DOM refs ── */
+    const toggle   = document.getElementById('edubot-toggle');
+    const win      = document.getElementById('edubot-window');
+    const msgs     = document.getElementById('bot-messages');
+    const input    = document.getElementById('bot-input');
+    const sendBtn  = document.getElementById('bot-send');
+    const quickRep = document.getElementById('quick-replies');
+    let opened = false;
+
+    const QUICK = ['Add a student', 'Record a payment', 'Take attendance', 'Generate report card', 'Exeat / out pass'];
+
+    function appendMsg(text, role) {
+      const div = document.createElement('div');
+      div.className = `bot-msg ${role}`;
+      div.innerHTML = text.replace(/\n/g, '<br/>');
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function showTyping() {
+      const t = document.createElement('div');
+      t.className = 'bot-typing'; t.id = 'typing-indicator';
+      t.innerHTML = '<span></span><span></span><span></span>';
+      msgs.appendChild(t);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function hideTyping() {
+      const t = document.getElementById('typing-indicator');
+      if (t) t.remove();
+    }
+
+    function buildQuickReplies() {
+      quickRep.innerHTML = '';
+      QUICK.forEach(q => {
+        const btn = document.createElement('button');
+        btn.className = 'qr-btn'; btn.textContent = q;
+        btn.onclick = () => sendMessage(q);
+        quickRep.appendChild(btn);
+      });
+    }
+
+    function sendMessage(text) {
+      const msg = text.trim();
+      if (!msg) return;
+      appendMsg(msg, 'user');
+      input.value = '';
+      quickRep.innerHTML = '';
+      showTyping();
+      setTimeout(() => {
+        hideTyping();
+        appendMsg(findAnswer(msg), 'bot');
+        buildQuickReplies();
+      }, 700);
+    }
+
+    toggle.addEventListener('click', () => {
+      opened = !opened;
+      win.classList.toggle('open', opened);
+      toggle.classList.toggle('open', opened);
+      toggle.textContent = opened ? '✕' : '💬';
+      if (opened && msgs.children.length === 0) {
+        appendMsg('👋 Hi! I\'m <b>EduBot</b>. Ask me anything about EduManage360.', 'bot');
+        buildQuickReplies();
+      }
+    });
+
+    sendBtn.addEventListener('click', () => sendMessage(input.value));
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(input.value); });
+  </script>
+
+</body>
 </html>

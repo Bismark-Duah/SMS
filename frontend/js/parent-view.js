@@ -87,14 +87,21 @@ function onChildChange() {
   document.getElementById('viewBtn').disabled = false;
 }
 
+window.downloadSelectedChildReportCard = function() {
+  if (!currentChildId) return;
+  window.open(`report-card.html?student_id=${currentChildId}`, '_blank');
+};
+
 // ── Main dashboard loader ─────────────────────────────────────
 async function loadChildDashboard() {
   const childId = document.getElementById('child_id').value;
   if (!childId) return;
   currentChildId = childId;
 
-  // Show dashboard container
+  // Show dashboard container & report card action
   document.getElementById('childDashboard').style.display = 'block';
+  const downloadBtn = document.getElementById('downloadReportCardBtn');
+  if (downloadBtn) downloadBtn.style.display = 'inline-flex';
 
   // Update hero subtitle
   const child = allChildren.find(c => String(c.id) === String(childId));

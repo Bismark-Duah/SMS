@@ -186,21 +186,24 @@ async function loadClassRoll() {
     document.getElementById('rollBody').innerHTML = students.map((s, i) => {
       const currentStatus = existingMap[s.id] || 'Present';
       return `
-        <tr>
+        <tr data-student-id="${s.id}" class="attendance-row">
           <td>${i + 1}</td>
-          <td><strong>${s.student_code}</strong></td>
-          <td>${s.full_name}</td>
+          <td><strong>${escapeHtml(s.student_code)}</strong></td>
+          <td style="font-weight:600;">${escapeHtml(s.full_name)}</td>
           <td>
-            <select class="status-select" data-student-id="${s.id}" style="padding:6px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-primary); min-width:110px;">
-              ${['Present','Absent','Late','Excused'].map(st =>
-                `<option value="${st}" ${st === currentStatus ? 'selected' : ''}>${st}</option>`
-              ).join('')}
-            </select>
+            <input type="hidden" class="status-value" data-student-id="${s.id}" value="${currentStatus}">
+            <div class="att-toggle-group" data-student-id="${s.id}">
+              <button type="button" class="att-btn present ${currentStatus === 'Present' ? 'active' : ''}" onclick="setRowStatus(${s.id}, 'Present')">P</button>
+              <button type="button" class="att-btn absent ${currentStatus === 'Absent' ? 'active' : ''}" onclick="setRowStatus(${s.id}, 'Absent')">A</button>
+              <button type="button" class="att-btn late ${currentStatus === 'Late' ? 'active' : ''}" onclick="setRowStatus(${s.id}, 'Late')">L</button>
+              <button type="button" class="att-btn excused ${currentStatus === 'Excused' ? 'active' : ''}" onclick="setRowStatus(${s.id}, 'Excused')">E</button>
+            </div>
           </td>
         </tr>`;
     }).join('');
 
     document.getElementById('rollCard').style.display = 'block';
+    updateAttendanceTally();
     rollMsg.innerHTML = '';
     document.getElementById('submitMsg').innerHTML = '';
   } catch (e) {
@@ -208,13 +211,63 @@ async function loadClassRoll() {
   }
 }
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function setRowStatus(studentId, status) {
+  const hiddenInput = document.querySelector(`.status-value[data-student-id="${studentId}"]`);
+  if (hiddenInput) hiddenInput.value = status;
+
+  const toggleGroup = document.querySelector(`.att-toggle-group[data-student-id="${studentId}"]`);
+  if (toggleGroup) {
+    toggleGroup.querySelectorAll('.att-btn').forEach(btn => btn.classList.remove('active'));
+    const targetBtn = toggleGroup.querySelector(`.att-btn.${status.toLowerCase()}`);
+    if (targetBtn) targetBtn.classList.add('active');
+  }
+
+  updateAttendanceTally();
+}
+
+function updateAttendanceTally() {
+  const values = Array.from(document.querySelectorAll('.status-value')).map(el => el.value);
+  const total = values.length;
+  if (total === 0) return;
+
+  const present = values.filter(v => v === 'Present').length;
+  const absent  = values.filter(v => v === 'Absent').length;
+  const late    = values.filter(v => v === 'Late').length;
+  const excused = values.filter(v => v === 'Excused').length;
+
+  const pct = Math.round(((present + late) / total) * 100);
+
+  const elP = document.getElementById('tallyPresent');
+  const elA = document.getElementById('tallyAbsent');
+  const elL = document.getElementById('tallyLate');
+  const elE = document.getElementById('tallyExcused');
+  const elPct = document.getElementById('tallyPct');
+
+  if (elP) elP.textContent = present;
+  if (elA) elA.textContent = absent;
+  if (elL) elL.textContent = late;
+  if (elE) elE.textContent = excused;
+  if (elPct) elPct.textContent = `${pct}% Present`;
+}
+
 function markAll(status) {
-  document.querySelectorAll('.status-select').forEach(sel => { sel.value = status; });
+  document.querySelectorAll('.status-value').forEach(sel => { sel.value = status; });
+  document.querySelectorAll('.att-toggle-group').forEach(group => {
+    group.querySelectorAll('.att-btn').forEach(btn => btn.classList.remove('active'));
+    const target = group.querySelector(`.att-btn.${status.toLowerCase()}`);
+    if (target) target.classList.add('active');
+  });
+  updateAttendanceTally();
 }
 
 async function submitBulkAttendance() {
   const date    = document.getElementById('mark_date').value;
-  const rows    = document.querySelectorAll('.status-select');
+  const rows    = document.querySelectorAll('.status-value');
   const submitMsg = document.getElementById('submitMsg');
 
   if (rows.length === 0) {

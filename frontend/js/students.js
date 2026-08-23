@@ -301,6 +301,27 @@ function initials(name) {
   return name ? name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() : '?';
 }
 
+function getHarmonicGradient(name) {
+  let hash = 0;
+  const str = name || 'Student';
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h1 = Math.abs(hash) % 360;
+  const h2 = (h1 + 45) % 360;
+  return `linear-gradient(135deg, hsl(${h1}, 70%, 45%), hsl(${h2}, 80%, 35%))`;
+}
+
+let currentQuickFilter = 'all';
+
+window.setStudentQuickFilter = function(filterKey) {
+  currentQuickFilter = filterKey;
+  document.querySelectorAll('#studentQuickChips .filter-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.filter === filterKey);
+  });
+  filterStudents();
+};
+
 // ── Load Students ─────────────────────────────────────────────────────────────
 window.loadStudents = async function() {
   applyStudentUIRestrictions();
@@ -362,7 +383,16 @@ function renderTable(students) {
 
   const colCount = isSuperAdmin ? 9 : 8;
   if (!students || students.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;padding:24px;opacity:.6">No students found.</td></tr>`;
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="${colCount}" style="padding:0;">
+          <div class="empty-state">
+            <div class="empty-state-icon">👨‍🎓</div>
+            <div class="empty-state-title">No Students Found</div>
+            <div class="empty-state-desc">No student records match your current search or filter criteria.</div>
+          </div>
+        </td>
+      </tr>`;
     return;
   }
 
@@ -388,7 +418,7 @@ function renderTable(students) {
       <tr class="${isInactive ? 'inactive-row' : ''}">
         <td>
           <div class="student-row-info">
-            <div class="student-avatar">${initials(s.full_name)}</div>
+            <div class="student-avatar-harmonic" style="background:${getHarmonicGradient(s.full_name)}">${initials(s.full_name)}</div>
             <div>
               <div style="font-weight:600;">${escapeHtml(s.full_name || '')}</div>
               <div style="font-size:0.78rem; opacity:0.65;">${subDetail}</div>
@@ -437,7 +467,19 @@ window.filterStudents = function() {
     const matchesClass = !classVal || String(s.class_section_id) === String(classVal);
     const matchesSchool = !schoolVal || String(s.school_id) === String(schoolVal);
 
-    return matchesSearch && matchesClass && matchesSchool;
+    // Quick filter criteria
+    let matchesQuick = true;
+    if (currentQuickFilter === 'boys') {
+      matchesQuick = (s.gender || '').toUpperCase().startsWith('M');
+    } else if (currentQuickFilter === 'girls') {
+      matchesQuick = (s.gender || '').toUpperCase().startsWith('F');
+    } else if (currentQuickFilter === 'boarders') {
+      matchesQuick = s.residential_status === 'B';
+    } else if (currentQuickFilter === 'day') {
+      matchesQuick = s.residential_status === 'D';
+    }
+
+    return matchesSearch && matchesClass && matchesSchool && matchesQuick;
   });
 
   renderTable(filtered);

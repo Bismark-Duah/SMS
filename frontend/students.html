@@ -83,6 +83,15 @@
       <!-- PANEL 1: Student Directory -->
       <div id="panelList" class="tab-panel">
         <section class="card">
+          <!-- Quick Filter Chips -->
+          <div class="filter-chip-group" id="studentQuickChips">
+            <div class="filter-chip active" data-filter="all" onclick="setStudentQuickFilter('all')">All Students</div>
+            <div class="filter-chip" data-filter="boys" onclick="setStudentQuickFilter('boys')">👦 Boys</div>
+            <div class="filter-chip" data-filter="girls" onclick="setStudentQuickFilter('girls')">👧 Girls</div>
+            <div class="filter-chip" data-filter="boarders" onclick="setStudentQuickFilter('boarders')">🏠 Boarders</div>
+            <div class="filter-chip" data-filter="day" onclick="setStudentQuickFilter('day')">🎒 Day Students</div>
+          </div>
+
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
             <input type="text" id="studentSearch" name="student_search_query_no_autofill" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" value="" placeholder="🔍 Search name, code or guardian..." style="flex:1; min-width:200px;" oninput="filterStudents()" />
             <select id="schoolFilter" onchange="filterStudents()" style="min-width:160px; display:none;">

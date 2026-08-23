@@ -364,6 +364,14 @@ def serve_auth():
 def serve_login():
     return _serve("login.html")
 
+@app.get("/manifest.json")
+def serve_manifest():
+    return FileResponse(os.path.join(frontend_dir, "manifest.json"), media_type="application/manifest+json")
+
+@app.get("/sw.js")
+def serve_sw():
+    return FileResponse(os.path.join(frontend_dir, "sw.js"), media_type="application/javascript")
+
 @app.get("/enrollment.html")
 def serve_enrollment():
     return _serve("enrollment.html")

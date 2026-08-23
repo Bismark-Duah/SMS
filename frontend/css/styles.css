@@ -943,7 +943,15 @@ thead th {
     margin-right: -4px;
   }
 
-  /* Responsive Dialogs & Modals */
+}
+
+/* Mobile Bottom-Sheet Dialogs & Form Stacking: <= 600px */
+@media screen and (max-width: 600px) {
+  .modal {
+    padding: 12px 10px 0 !important;
+    align-items: flex-end !important;
+  }
+
   .modal-content {
     width: 100% !important;
     max-width: 100% !important;

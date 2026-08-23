@@ -651,6 +651,27 @@
   const savedTheme = localStorage.getItem("system_theme") || "midnight";
   window.applyTheme(savedTheme);
 
+  // ── 6. PWA & Offline Service Worker Registration ───────────────────────────
+  if (!document.querySelector('link[rel="manifest"]')) {
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = '/manifest.json';
+    document.head.appendChild(manifestLink);
+  }
+
+  if (!document.querySelector('meta[name="theme-color"]')) {
+    const themeMeta = document.createElement('meta');
+    themeMeta.name = 'theme-color';
+    themeMeta.content = '#0f172a';
+    document.head.appendChild(themeMeta);
+  }
+
+  if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+
   const triggerSidebar = () => {
     window.applyLayout("sidebar");
   };

@@ -1,0 +1,24 @@
+{
+  "name": "eduManage360 — School ERP & Master Administration",
+  "short_name": "eduManage360",
+  "description": "Comprehensive School Management ERP and Multi-School Master Administration Platform.",
+  "start_url": "/dashboard.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/assets/logo_compact.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/logo_primary.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

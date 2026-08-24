@@ -1,5 +1,5 @@
 // eduManage360 Offline-First Service Worker
-const CACHE_NAME = 'edumanage360-v4.4';
+const CACHE_NAME = 'edumanage360-v4.5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -42,22 +42,41 @@ self.addEventListener('fetch', (event) => {
   // Skip API network requests so live database changes are never stale
   if (event.request.url.includes('/api/')) return;
 
+  const isHtmlNavigation = event.request.mode === 'navigate' ||
+    (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html'));
+
+  if (isHtmlNavigation) {
+    // Network-First for HTML pages: Always fetch latest from server, fallback to cache offline
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => cached || caches.match('/index.html') || caches.match('/auth.html'));
+        })
+    );
+    return;
+  }
+
+  // Stale-While-Revalidate for CSS, JS, and image assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch fresh copy in background to keep cache updated
-        fetch(event.request).then((networkResponse) => {
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
           }
-        }).catch(() => {});
-        return cachedResponse;
-      }
-      return fetch(event.request).catch(() => {
-        if (event.request.headers.get('accept').includes('text/html')) {
-          return caches.match('/auth.html') || caches.match('/index.html');
-        }
-      });
+          return networkResponse;
+        })
+        .catch(() => {});
+
+      return cachedResponse || fetchPromise;
     })
   );
 });

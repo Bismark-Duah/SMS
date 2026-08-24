@@ -277,7 +277,7 @@ def list_privileges(db: Session = Depends(get_db), current_user: User = Depends(
     # 3. House Masters / Mistresses & Assistants
     house_query = db.query(House)
     if school_id is not None and hasattr(House, "school_id"):
-        house_query = house_query.filter((House.school_id == school_id) | (House.school_id == 1) | (House.school_id.is_(None)))
+        house_query = house_query.filter((House.school_id == school_id) | (House.school_id.is_(None)))
     houses = house_query.all()
 
     for h in houses:

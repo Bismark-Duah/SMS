@@ -388,10 +388,11 @@ def delete_school(
     Permanently deletes a registered school account and its associated data, 
     after automatically saving a timestamped pre-delete JSON backup.
     """
-    if school_id == 1:
+    total_schools = db.query(School).count()
+    if total_schools <= 1:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete default primary school template (School ID 1)."
+            detail="Cannot delete the only registered school in the system. At least one school must exist."
         )
 
     school = db.query(School).filter(School.id == school_id).first()

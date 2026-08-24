@@ -217,11 +217,11 @@ def login(payload: dict, db: Session = Depends(get_db)):
             if not school and user.school_id:
                 school = db.query(School).filter(School.id == user.school_id).first()
             if not school:
-                school = db.query(School).filter(School.id == 1).first()
+                school = db.query(School).order_by(School.id.asc()).first()
 
             school_mode = school.school_mode if school else "COMBINED"
             school_name = school.name if school else "School System"
-            school_id = school.id if school else 1
+            school_id = school.id if school else None
 
             if school and school.status == "SUSPENDED":
                 return JSONResponse(

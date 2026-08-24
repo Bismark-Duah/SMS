@@ -21,7 +21,7 @@ def list_subjects(
     school_id = get_school_id(current_user, x_school_id)
     query = db.query(Subject)
     if school_id is not None and hasattr(Subject, "school_id"):
-        query = query.filter((Subject.school_id == school_id) | (Subject.school_id == 1) | (Subject.school_id.is_(None)))
+        query = query.filter((Subject.school_id == school_id) | (Subject.school_id.is_(None)))
     
     # Check active school_mode for the school or system default
     school_mode = None
@@ -93,7 +93,7 @@ def get_subject(
     school_id = get_school_id(current_user, x_school_id)
     query = db.query(Subject).filter(Subject.id == subject_id)
     if school_id is not None and hasattr(Subject, "school_id"):
-        query = query.filter((Subject.school_id == school_id) | (Subject.school_id == 1) | (Subject.school_id.is_(None)))
+        query = query.filter((Subject.school_id == school_id) | (Subject.school_id.is_(None)))
     item = query.first()
     if not item:
         raise HTTPException(status_code=404, detail="Subject not found")

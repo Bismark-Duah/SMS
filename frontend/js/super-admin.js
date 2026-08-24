@@ -123,9 +123,9 @@ async function loadSuperAdminDashboard() {
             <button class="btn" style="padding:4px 10px; font-size:0.8rem; background:#0284c7; border-color:#0369a1; color:#fff; margin-right:4px;" onclick="downloadSchoolBackup(${s.id}, '${s.code}')">📥 Backup</button>
             <button class="btn primary" style="padding:4px 10px; font-size:0.8rem;" onclick="enterSchoolView(${s.id}, '${escapeJsQuotes(s.name)}', '${s.school_mode}', '${escapeJsQuotes(s.code || '')}')">👁 Enter View</button>
             <button class="btn ${s.status === 'ACTIVE' ? 'danger' : ''}" style="padding:4px 10px; font-size:0.8rem; margin-left:4px;" onclick="toggleSchoolStatus(${s.id}, '${s.status}')">${s.status === 'ACTIVE' ? 'Suspend' : 'Activate'}</button>
-            ${s.id !== 1
-              ? `<button class="btn danger" style="padding:4px 10px; font-size:0.8rem; margin-left:4px; background:#dc2626; border-color:#b91c1c;" onclick="deleteSchool(${s.id}, '${escapeJsQuotes(s.name)}')">🗑 Delete</button>`
-              : `<button class="btn" disabled title="Default school cannot be deleted" style="padding:4px 10px; font-size:0.8rem; margin-left:4px; background:#374151; border-color:#4b5563; color:#6b7280; cursor:not-allowed; opacity:0.55;">🗑 Delete</button>`
+            ${schools.length > 1
+              ? `<button class="btn danger" style="padding:4px 10px; font-size:0.8rem; margin-left:4px; background:#dc2626; border-color:#b91c1c;" onclick="deleteSchool(${s.id}, '${escapeJsQuotes(s.name)}', '${escapeJsQuotes(s.code || '')}')">🗑 Delete</button>`
+              : `<button class="btn" disabled title="Cannot delete the only registered school" style="padding:4px 10px; font-size:0.8rem; margin-left:4px; background:#374151; border-color:#4b5563; color:#6b7280; cursor:not-allowed; opacity:0.55;">🗑 Delete</button>`
             }
           </td>
         </tr>
@@ -142,12 +142,15 @@ function escapeJsQuotes(str) {
   return str.replace(/'/g, "\\'");
 }
 
-async function deleteSchool(schoolId, schoolName) {
-  if (schoolId === 1) {
-    alert("Primary default school template (ID 1) cannot be deleted.");
+async function deleteSchool(schoolId, schoolName, schoolCode) {
+  const codeToMatch = (schoolCode || String(schoolId)).trim();
+  const input = prompt(`⚠️ CAUTION: PERMANENT TENANT DELETION\n\nYou are about to permanently delete:\n• School: ${schoolName}\n• Code: ${codeToMatch}\n\nAll student records, scores, classes, and tenant data will be purged.\nAn automatic pre-deletion JSON backup will be created.\n\nTo confirm, type '${codeToMatch}' below:`);
+
+  if (!input) return;
+  if (input.trim().toUpperCase() !== codeToMatch.toUpperCase()) {
+    alert(`❌ Deletion aborted: Confirmation input did not match '${codeToMatch}'.`);
     return;
   }
-  if (!confirm(`CAUTION: Are you sure you want to PERMANENTLY delete '${schoolName}'?\n\nAn automatic pre-deletion JSON backup will be created before deletion.`)) return;
 
   try {
     const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}`, {
@@ -156,7 +159,7 @@ async function deleteSchool(schoolId, schoolName) {
     });
     const data = await res.json();
     if (res.ok) {
-      alert(`✔ ${data.message}\nPre-deletion backup saved to: ${data.backup_saved_to}`);
+      alert(`✔ ${data.message}\n\nPre-deletion backup saved to:\n${data.backup_saved_to}`);
       loadSuperAdminDashboard();
     } else {
       alert(data.detail || 'Could not delete school.');

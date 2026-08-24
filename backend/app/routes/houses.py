@@ -32,7 +32,7 @@ def list_houses(db: Session = Depends(get_db), current_user: User = Depends(get_
     school_id = get_school_id(current_user)
     query = db.query(House)
     if school_id is not None and hasattr(House, "school_id"):
-        query = query.filter((House.school_id == school_id) | (House.school_id == 1) | (House.school_id.is_(None)))
+        query = query.filter((House.school_id == school_id) | (House.school_id.is_(None)))
 
     # ── Role-based scoping ─────────────────────────────────────────────────────
     scope = get_user_assigned_scope(current_user, db)

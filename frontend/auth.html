@@ -85,7 +85,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        padding: 16px 28px;
+        padding: 36px 40px;
         background: linear-gradient(135deg, rgba(79,70,229,.18) 0%, rgba(6,182,212,.10) 100%);
         border-right: 1px solid var(--border);
         text-align: center;
@@ -111,11 +111,11 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-bottom: 12px;
+        margin-bottom: 22px;
       }
       .orbit-ring {
         position: absolute;
-        width: 190px; height: 190px;
+        width: 210px; height: 210px;
         border-radius: 50%;
         border: 1.5px solid rgba(99,102,241,.25);
         animation: orbitSpin 18s linear infinite;
@@ -132,7 +132,7 @@
       }
       .orbit-ring-2 {
         position: absolute;
-        width: 230px; height: 230px;
+        width: 250px; height: 250px;
         border-radius: 50%;
         border: 1px solid rgba(6,182,212,.15);
         animation: orbitSpin 28s linear infinite reverse;
@@ -140,13 +140,13 @@
       @keyframes orbitSpin { to { transform: rotate(360deg); } }
 
       .hero-logo-img {
-        max-width: 140px;
+        max-width: 155px;
         width: 100%;
         height: auto;
-        border-radius: 14px;
+        border-radius: 16px;
         box-shadow: 0 12px 36px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08);
         background: #ffffff;
-        padding: 6px 12px;
+        padding: 8px 14px;
         box-sizing: border-box;
         position: relative;
         z-index: 1;
@@ -154,125 +154,46 @@
 
       .left-panel h1 {
         font-family: 'Outfit', sans-serif;
-        font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+        font-size: clamp(1.45rem, 2.5vw, 2rem);
         font-weight: 800;
         letter-spacing: -.5px;
         line-height: 1.2;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
         color: var(--text);
       }
 
       .left-panel .tagline {
-        font-size: .84rem;
+        font-size: .88rem;
         color: var(--muted);
         font-style: italic;
-        margin-bottom: 14px;
-      }
-
-      /* Platform Stats Row */
-      .platform-stats {
-        display: flex;
-        gap: 16px;
-        margin-bottom: 14px;
-        justify-content: center;
-      }
-      .pstat {
-        text-align: center;
-      }
-      .pstat-num {
-        font-family: 'Outfit', sans-serif;
-        font-size: 1.25rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #a5b4fc, #67e8f9);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        line-height: 1;
-      }
-      .pstat-label {
-        font-size: .65rem;
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: .5px;
-        margin-top: 2px;
-      }
-      .pstat-divider {
-        width: 1px;
-        background: var(--border);
-        align-self: stretch;
-        margin: 2px 0;
+        margin-bottom: 26px;
       }
 
       .features {
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: 9px;
         width: 100%;
-        max-width: 300px;
+        max-width: 320px;
         text-align: left;
       }
 
       .feature {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 6px 12px;
+        gap: 12px;
+        padding: 9px 14px;
         background: rgba(255,255,255,.04);
         border: 1px solid var(--border);
-        border-radius: 8px;
-        font-size: .80rem;
+        border-radius: 10px;
+        font-size: .84rem;
         color: var(--muted);
         backdrop-filter: blur(8px);
         transition: var(--transition);
       }
 
       .feature:hover { background: rgba(255,255,255,.08); color: var(--text); }
-      .feature-icon { font-size: .95rem; flex-shrink: 0; }
-
-      /* Testimonial card */
-      .testimonial-card {
-        margin-top: 12px;
-        padding: 12px 14px;
-        background: rgba(30, 41, 59, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 12px;
-        width: 100%;
-        max-width: 300px;
-        text-align: left;
-        backdrop-filter: blur(12px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-      }
-      .testimonial-text {
-        font-size: .83rem;
-        color: #e2e8f0;
-        line-height: 1.5;
-        margin-bottom: 8px;
-        font-weight: 500;
-      }
-      .testimonial-author {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .testimonial-avatar {
-        width: 26px; height: 26px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #6366f1, #06b6d4);
-        display: flex; align-items: center; justify-content: center;
-        font-size: .72rem;
-        font-weight: 700;
-        color: white;
-        flex-shrink: 0;
-      }
-      .testimonial-name {
-        font-size: .76rem;
-        font-weight: 600;
-        color: #cbd5e1;
-      }
-      .testimonial-role {
-        font-size: .68rem;
-        color: #94a3b8;
-      }
+      .feature-icon { font-size: 1rem; flex-shrink: 0; }
 
       /* ── Right panel — login form ── */
       .right-panel {
@@ -478,42 +399,12 @@
         <h1 id="leftSchoolName">eduManage360</h1>
         <p class="tagline" id="leftMotto">Unified multi-school administration portal.</p>
 
-        <!-- Live platform stats -->
-        <div class="platform-stats">
-          <div class="pstat">
-            <div class="pstat-num">200+</div>
-            <div class="pstat-label">Schools</div>
-          </div>
-          <div class="pstat-divider"></div>
-          <div class="pstat">
-            <div class="pstat-num">50K+</div>
-            <div class="pstat-label">Students</div>
-          </div>
-          <div class="pstat-divider"></div>
-          <div class="pstat">
-            <div class="pstat-num">12</div>
-            <div class="pstat-label">Districts</div>
-          </div>
-        </div>
-
         <div class="features">
           <div class="feature"><span class="feature-icon">👨‍🎓</span> Student Records &amp; Profiles</div>
           <div class="feature"><span class="feature-icon">📊</span> Results &amp; Grade Reports</div>
           <div class="feature"><span class="feature-icon">📅</span> Attendance Tracking</div>
           <div class="feature"><span class="feature-icon">💰</span> Fee Management</div>
           <div class="feature"><span class="feature-icon">📣</span> Announcements &amp; Notices</div>
-        </div>
-
-        <!-- Testimonial card -->
-        <div class="testimonial-card">
-          <p class="testimonial-text">"eduManage360 transformed how we manage our school. Everything from attendance to report cards is now effortless."</p>
-          <div class="testimonial-author">
-            <div class="testimonial-avatar">AK</div>
-            <div>
-              <div class="testimonial-name">Mr. A. Kofi Mensah</div>
-              <div class="testimonial-role">Headmaster, Atwima SHS</div>
-            </div>
-          </div>
         </div>
       </div>
 

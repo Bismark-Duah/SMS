@@ -35,7 +35,10 @@ def create_jwt(payload: dict, secret: str = None, expires_in: int = None) -> str
     payload["exp"] = now + expires_in
 
     if pyjwt:
-        return pyjwt.encode(payload, secret, algorithm="HS256")
+        token = pyjwt.encode(payload, secret, algorithm="HS256")
+        if isinstance(token, bytes):
+            token = token.decode("utf-8")
+        return token
 
     header = {"alg": "HS256", "typ": "JWT"}
     header_b64 = base64url_encode(json.dumps(header).encode('utf-8'))

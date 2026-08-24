@@ -504,8 +504,17 @@
             body: JSON.stringify({ username, password }),
           });
 
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.detail || 'Login failed. Check your credentials.');
+          let data;
+          try {
+            data = await res.json();
+          } catch (_) {
+            data = null;
+          }
+
+          if (!res.ok) {
+            const errMsg = (data && data.detail) || (res.status >= 500 ? 'Server error occurred. Please check backend console.' : 'Login failed. Check your credentials.');
+            throw new Error(errMsg);
+          }
 
           // Resolve highest priority leadership persona
           const rolesList = data.roles || [data.role];

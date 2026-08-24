@@ -4,6 +4,7 @@ import os
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 try:
     import bcrypt
@@ -44,13 +45,16 @@ DEFAULT_USER_TEMPLATES = [
     {"username": "superadmin", "email": "superadmin@system.local", "roles": ["super_admin"]},
 ]
 
-def _hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-get_password_hash = _hash_password
-
 def _legacy_sha256_hash(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+def _hash_password(password: str) -> str:
+    try:
+        return pwd_context.hash(password)
+    except Exception:
+        return _legacy_sha256_hash(password)
+
+get_password_hash = _hash_password
 
 def _verify_password(plain_password: str, hashed_password: str) -> tuple[bool, bool]:
     """
@@ -129,109 +133,132 @@ def _seed_db(db: Session) -> None:
 
 @router.post("/login", dependencies=[Depends(rate_limit_auth)])
 def login(payload: dict, db: Session = Depends(get_db)):
-    username = (payload or {}).get("username", "").strip()
-    password = (payload or {}).get("password", "")
+    try:
+        username = (payload or {}).get("username", "").strip()
+        password = (payload or {}).get("password", "")
 
-    if not username or not password:
-        return JSONResponse(status_code=401, content={"detail": "Invalid username or password"})
-
-    _seed_db(db)
-
-    user = db.query(User).filter(User.username == username, User.is_active.is_(True)).first()
-    if not user:
-        return JSONResponse(status_code=401, content={"detail": "Invalid username or password"})
-
-    is_valid, needs_rehash = _verify_password(password, user.password_hash)
-    if not is_valid:
-        # Seamlessly accept Superadmin123! or superadmin123! for superadmin account and update hash
-        if user.username.lower() == "superadmin" and password in ("Superadmin123!", "superadmin123!"):
-            user.password_hash = _hash_password(password)
-            db.commit()
-            is_valid = True
-        else:
+        if not username or not password:
             return JSONResponse(status_code=401, content={"detail": "Invalid username or password"})
 
-    # Transparently upgrade legacy SHA-256 hashes to bcrypt on successful login
-    if needs_rehash:
-        user.password_hash = _hash_password(password)
-        db.commit()
+        try:
+            _seed_db(db)
+        except Exception:
+            db.rollback()
 
-    # Guarantee superadmin account has super_admin role
-    if user.username == "superadmin":
-        super_role = db.query(Role).filter(Role.name == "super_admin").first()
-        if super_role and super_role not in user.roles:
-            user.roles.append(super_role)
-            db.commit()
+        user = db.query(User).filter(
+            func.lower(User.username) == username.lower(),
+            User.is_active.is_(True)
+        ).first()
 
-    role_names = [r.name for r in user.roles]
+        if not user:
+            return JSONResponse(status_code=401, content={"detail": "Invalid username or password"})
 
-    # Dynamically resolve leadership assignment roles
-    if "form_master" not in role_names:
-        if db.query(ClassSection).filter(ClassSection.form_master_id == user.id).first():
-            role_names.append("form_master")
-    if "house_master" not in role_names:
-        if db.query(House).filter(House.house_master_id == user.id).first():
-            role_names.append("house_master")
-    if "hod" not in role_names:
-        if db.query(Department).filter(Department.hod_id == user.id).first():
-            role_names.append("hod")
+        is_valid, needs_rehash = _verify_password(password, user.password_hash)
+        if not is_valid:
+            # Seamlessly accept Superadmin123! or superadmin123! for superadmin account and update hash
+            if user.username.lower() == "superadmin" and password in ("Superadmin123!", "superadmin123!"):
+                try:
+                    user.password_hash = _hash_password(password)
+                    db.commit()
+                except Exception:
+                    db.rollback()
+                is_valid = True
+            else:
+                return JSONResponse(status_code=401, content={"detail": "Invalid username or password"})
 
-    is_super_admin = "super_admin" in role_names or user.username == "superadmin"
-    if is_super_admin:
-        primary_role = "super_admin"
-        if "super_admin" not in role_names:
-            role_names.append("super_admin")
-    else:
-        primary_role = user.roles[0].name if user.roles else "teacher"
+        # Transparently upgrade legacy SHA-256 hashes to bcrypt on successful login
+        if needs_rehash:
+            try:
+                user.password_hash = _hash_password(password)
+                db.commit()
+            except Exception:
+                db.rollback()
 
-    is_super_admin = "super_admin" in role_names
-    
-    if is_super_admin:
-        school_mode = "COMBINED"
-        school_name = "Master System Portal"
-        school_id = None
-    else:
-        school = user.school
-        if not school and user.school_id:
-            school = db.query(School).filter(School.id == user.school_id).first()
-        if not school:
-            school = db.query(School).filter(School.id == 1).first()
+        # Guarantee superadmin account has super_admin role
+        if user.username.lower() == "superadmin":
+            super_role = db.query(Role).filter(Role.name == "super_admin").first()
+            if super_role and super_role not in user.roles:
+                user.roles.append(super_role)
+                try:
+                    db.commit()
+                except Exception:
+                    db.rollback()
 
-        school_mode = school.school_mode if school else "COMBINED"
-        school_name = school.name if school else "School System"
-        school_id = school.id if school else 1
+        role_names = [r.name for r in user.roles]
 
-        if school and school.status == "SUSPENDED":
-            return JSONResponse(
-                status_code=403,
-                content={"detail": "Access Denied: Your school's account has been suspended by the Super-Admin. Please contact support."}
-            )
+        # Dynamically resolve leadership assignment roles
+        if "form_master" not in role_names:
+            if db.query(ClassSection).filter(ClassSection.form_master_id == user.id).first():
+                role_names.append("form_master")
+        if "house_master" not in role_names:
+            if db.query(House).filter(House.house_master_id == user.id).first():
+                role_names.append("house_master")
+        if "hod" not in role_names:
+            if db.query(Department).filter(Department.hod_id == user.id).first():
+                role_names.append("hod")
 
-    # Generate JWT token
-    token = create_jwt({
-        "user_id": user.id,
-        "username": user.username,
-        "school_id": school_id,
-        "roles": role_names
-    })
-    
-    return JSONResponse(
-        status_code=200,
-        content={
-            "message": "Login successful", 
-            "username": user.username, 
-            "role": primary_role,
-            "roles": role_names,
+        is_super_admin = "super_admin" in role_names or user.username.lower() == "superadmin"
+        if is_super_admin:
+            primary_role = "super_admin"
+            if "super_admin" not in role_names:
+                role_names.append("super_admin")
+        else:
+            primary_role = user.roles[0].name if user.roles else "teacher"
+
+        is_super_admin = "super_admin" in role_names
+        school = None
+        
+        if is_super_admin:
+            school_mode = "COMBINED"
+            school_name = "Master System Portal"
+            school_id = None
+        else:
+            school = user.school
+            if not school and user.school_id:
+                school = db.query(School).filter(School.id == user.school_id).first()
+            if not school:
+                school = db.query(School).filter(School.id == 1).first()
+
+            school_mode = school.school_mode if school else "COMBINED"
+            school_name = school.name if school else "School System"
+            school_id = school.id if school else 1
+
+            if school and school.status == "SUSPENDED":
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Access Denied: Your school's account has been suspended by the Super-Admin. Please contact support."}
+                )
+
+        # Generate JWT token
+        token = create_jwt({
             "user_id": user.id,
+            "username": user.username,
             "school_id": school_id,
-            "school_name": school_name,
-            "school_code": school.code if (not is_super_admin and school) else None,
-            "school_mode": school_mode,
-            "is_super_admin": is_super_admin,
-            "access_token": token,
-            "token_type": "bearer"
-        },
-    )
+            "roles": role_names
+        })
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "Login successful", 
+                "username": user.username, 
+                "role": primary_role,
+                "roles": role_names,
+                "user_id": user.id,
+                "school_id": school_id,
+                "school_name": school_name,
+                "school_code": school.code if (not is_super_admin and school) else None,
+                "school_mode": school_mode,
+                "is_super_admin": is_super_admin,
+                "access_token": token,
+                "token_type": "bearer"
+            },
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"An unexpected error occurred during login: {str(e)}"}
+        )
 
 @router.get("/me")
 def get_current_user_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

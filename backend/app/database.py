@@ -50,11 +50,17 @@ Base = declarative_base()
 
 
 def run_migrations():
-    from sqlalchemy import text
+    from sqlalchemy import text, inspect
     Base.metadata.create_all(bind=engine)
-    with engine.connect() as conn:
-        # ── Houses columns ──────────────────────────────────────────────────
-        house_columns = [
+
+    try:
+        inspector = inspect(engine)
+    except Exception as e:
+        print("Migration inspector error:", e)
+        return
+
+    table_columns_map = {
+        "houses": [
             ("house_type", "VARCHAR DEFAULT 'BOARDING'"),
             ("school_id", "INTEGER REFERENCES schools(id)"),
             ("senior_in_charge_id", "INTEGER REFERENCES users(id)"),
@@ -63,19 +69,8 @@ def run_migrations():
             ("senior_in_charge_girls_id", "INTEGER REFERENCES users(id)"),
             ("house_master_girls_id", "INTEGER REFERENCES users(id)"),
             ("assistant_house_master_girls_id", "INTEGER REFERENCES users(id)")
-        ]
-        for col_name, col_type in house_columns:
-            try:
-                conn.execute(text(f"SELECT {col_name} FROM houses LIMIT 1"))
-            except Exception:
-                try:
-                    conn.execute(text(f"ALTER TABLE houses ADD COLUMN {col_name} {col_type}"))
-                    conn.commit()
-                except Exception:
-                    pass
-
-        # ── Schools columns ─────────────────────────────────────────────────
-        school_columns = [
+        ],
+        "schools": [
             ("school_mode", "VARCHAR DEFAULT 'COMBINED'"),
             ("boarding_type", "VARCHAR DEFAULT 'BOARDING_AND_DAY'"),
             ("status", "VARCHAR DEFAULT 'ACTIVE'"),
@@ -83,36 +78,14 @@ def run_migrations():
             ("phone", "VARCHAR"),
             ("email", "VARCHAR"),
             ("logo_url", "VARCHAR")
-        ]
-        for col_name, col_type in school_columns:
-            try:
-                conn.execute(text(f"SELECT {col_name} FROM schools LIMIT 1"))
-            except Exception:
-                try:
-                    conn.execute(text(f"ALTER TABLE schools ADD COLUMN {col_name} {col_type}"))
-                    conn.commit()
-                except Exception:
-                    pass
-
-        # ── Subject columns ─────────────────────────────────────────────────
-        subject_columns = [
+        ],
+        "subjects": [
             ("category", "VARCHAR DEFAULT 'Core'"),
             ("group_code", "VARCHAR"),
             ("assessment_type", "VARCHAR DEFAULT 'External_WASSCE'"),
             ("school_level", "VARCHAR DEFAULT 'SHS'")
-        ]
-        for col_name, col_type in subject_columns:
-            try:
-                conn.execute(text(f"SELECT {col_name} FROM subjects LIMIT 1"))
-            except Exception:
-                try:
-                    conn.execute(text(f"ALTER TABLE subjects ADD COLUMN {col_name} {col_type}"))
-                    conn.commit()
-                except Exception:
-                    pass
-
-        # ── Student columns ─────────────────────────────────────────────────
-        student_columns = [
+        ],
+        "students": [
             ("first_name", "VARCHAR"),
             ("middle_name", "VARCHAR"),
             ("last_name", "VARCHAR"),
@@ -135,56 +108,48 @@ def run_migrations():
             ("hobbies_talents", "TEXT"),
             ("awards", "TEXT"),
             ("elective_combination", "VARCHAR")
-        ]
-        try:
-            conn.execute(text("SELECT code FROM programs LIMIT 1"))
-        except Exception:
-            try:
-                conn.execute(text("ALTER TABLE programs ADD COLUMN code VARCHAR"))
-                conn.commit()
-            except Exception:
-                pass
-
-        try:
-            conn.execute(text("SELECT school_id FROM programs LIMIT 1"))
-        except Exception:
-            try:
-                conn.execute(text("ALTER TABLE programs ADD COLUMN school_id INTEGER REFERENCES schools(id)"))
-                conn.commit()
-            except Exception:
-                pass
-
-        try:
-            conn.execute(text("SELECT school_id FROM departments LIMIT 1"))
-        except Exception:
-            try:
-                conn.execute(text("ALTER TABLE departments ADD COLUMN school_id INTEGER REFERENCES schools(id)"))
-                conn.commit()
-            except Exception:
-                pass
-
-        for col_name, col_type in student_columns:
-            try:
-                conn.execute(text(f"SELECT {col_name} FROM students LIMIT 1"))
-            except Exception:
-                try:
-                    conn.execute(text(f"ALTER TABLE students ADD COLUMN {col_name} {col_type}"))
-                    conn.commit()
-                except Exception:
-                    pass
-
-        score_columns = [
+        ],
+        "programs": [
+            ("code", "VARCHAR"),
+            ("school_id", "INTEGER REFERENCES schools(id)")
+        ],
+        "departments": [
+            ("school_id", "INTEGER REFERENCES schools(id)")
+        ],
+        "class_sections": [
+            ("program_id", "INTEGER REFERENCES programs(id)"),
+            ("form_master_id", "INTEGER REFERENCES users(id)")
+        ],
+        "users": [
+            ("gender", "VARCHAR"),
+            ("department_id", "INTEGER REFERENCES departments(id)"),
+            ("school_id", "INTEGER REFERENCES schools(id)")
+        ],
+        "scores": [
             ("approval_status", "VARCHAR DEFAULT 'DRAFT'")
+        ],
+        "semesters": [
+            ("start_date", "TIMESTAMP" if not is_sqlite else "DATETIME"),
+            ("end_date", "TIMESTAMP" if not is_sqlite else "DATETIME")
         ]
-        for col_name, col_type in score_columns:
+    }
+
+    with engine.connect() as conn:
+        for table_name, columns in table_columns_map.items():
             try:
-                conn.execute(text(f"SELECT {col_name} FROM scores LIMIT 1"))
-            except Exception:
-                try:
-                    conn.execute(text(f"ALTER TABLE scores ADD COLUMN {col_name} {col_type}"))
-                    conn.commit()
-                except Exception:
-                    pass
+                if not inspector.has_table(table_name):
+                    continue
+                existing_cols = {c["name"].lower() for c in inspector.get_columns(table_name)}
+                for col_name, col_type in columns:
+                    if col_name.lower() not in existing_cols:
+                        try:
+                            conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type}"))
+                            conn.commit()
+                        except Exception as add_err:
+                            conn.rollback()
+                            print(f"Notice: Could not add column {col_name} to {table_name}: {add_err}")
+            except Exception as table_err:
+                print(f"Notice: Migration inspection for table {table_name}: {table_err}")
 
 def get_db():
     db = SessionLocal()
@@ -192,5 +157,6 @@ def get_db():
         yield db
     finally:
         db.close()
+
 
 

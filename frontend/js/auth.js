@@ -32,8 +32,17 @@ if (form) {
         body: JSON.stringify(payload)
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Login failed');
+      let data;
+      try {
+        data = await response.json();
+      } catch (_) {
+        data = null;
+      }
+
+      if (!response.ok) {
+        const errMsg = (data && data.detail) || (response.status >= 500 ? 'Server error occurred. Please check backend console.' : 'Login failed');
+        throw new Error(errMsg);
+      }
 
       // Resolve highest priority leadership persona
       const rolesList = data.roles || [data.role];

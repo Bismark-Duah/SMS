@@ -466,3 +466,517 @@ def delete_school(
         "school_id": school_id,
         "backup_saved_to": backup_path
     }
+
+
+class CloudSyncSchema(BaseModel):
+    remote_url: str
+    username: str = "superadmin"
+    password: str
+    sync_mode: str = "MIRROR"  # MIRROR or MERGE
+
+
+@router.get("/export-all-schools")
+def export_all_schools(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Exports a comprehensive JSON snapshot of ALL registered schools and their complete
+    relational data (students, classes, subjects, staff, fees, attendance, scores).
+    """
+    from ..models import (
+        SchoolStage, Department, Program, House, Dormitory, ClassSection,
+        Subject, User, Student, StudentGuardian, StudentHealth, Fee, Payment,
+        Attendance, Score, Setting, UniformItem
+    )
+
+    schools = db.query(School).all()
+    exported_schools = []
+
+    for s in schools:
+        stages = db.query(SchoolStage).filter(SchoolStage.school_id == s.id).all()
+        departments = db.query(Department).filter(Department.school_id == s.id).all()
+        programs = db.query(Program).filter(Program.school_id == s.id).all()
+        houses = db.query(House).filter(House.school_id == s.id).all()
+        house_ids = [h.id for h in houses]
+        dormitories = db.query(Dormitory).filter(Dormitory.house_id.in_(house_ids)).all() if house_ids else []
+        classes = db.query(ClassSection).filter(ClassSection.school_id == s.id).all() if hasattr(ClassSection, 'school_id') else db.query(ClassSection).all()
+        subjects = db.query(Subject).all()
+        users = db.query(User).filter(User.school_id == s.id).all()
+        students = db.query(Student).filter(Student.school_id == s.id).all()
+        student_ids = [st.id for st in students]
+
+        guardians = db.query(StudentGuardian).filter(StudentGuardian.student_id.in_(student_ids)).all() if student_ids else []
+        health_records = db.query(StudentHealth).filter(StudentHealth.student_id.in_(student_ids)).all() if student_ids else []
+        fees = db.query(Fee).filter(Fee.student_id.in_(student_ids)).all() if student_ids else []
+        fee_ids = [f.id for f in fees]
+        payments = db.query(Payment).filter(Payment.fee_id.in_(fee_ids)).all() if fee_ids else []
+        attendances = db.query(Attendance).filter(Attendance.student_id.in_(student_ids)).all() if student_ids else []
+        scores = db.query(Score).filter(Score.student_id.in_(student_ids)).all() if student_ids else []
+        settings = db.query(Setting).filter(Setting.school_id == s.id).all()
+
+        exported_schools.append({
+            "school": {
+                "name": s.name,
+                "code": s.code,
+                "school_mode": s.school_mode,
+                "boarding_type": s.boarding_type,
+                "status": s.status,
+                "address": s.address,
+                "phone": s.phone,
+                "email": s.email,
+                "logo_url": s.logo_url
+            },
+            "stages": [{"stage_type": st.stage_type, "is_active": st.is_active, "label": st.label} for st in stages],
+            "departments": [{"name": d.name, "description": d.description} for d in departments],
+            "programs": [{"name": p.name, "description": p.description} for p in programs],
+            "houses": [{"name": h.name, "gender": h.gender, "house_type": getattr(h, 'house_type', 'BOARDING')} for h in houses],
+            "dormitories": [{"name": d.name, "capacity": d.capacity, "house_name": d.house.name if d.house else None} for d in dormitories],
+            "classes": [{"name": c.name, "level": c.level, "stage_type": getattr(c, 'stage_type', None)} for c in classes],
+            "subjects": [{"name": sub.name, "code": sub.code, "is_core": sub.is_core, "category": sub.category, "school_level": getattr(sub, 'school_level', 'SHS')} for sub in subjects],
+            "users": [
+                {
+                    "username": u.username,
+                    "email": u.email,
+                    "password_hash": u.password_hash,
+                    "gender": u.gender,
+                    "is_active": u.is_active,
+                    "roles": [r.name for r in u.roles]
+                }
+                for u in users
+            ],
+            "students": [
+                {
+                    "student_code": st.student_code,
+                    "full_name": st.full_name,
+                    "first_name": st.first_name,
+                    "last_name": st.last_name,
+                    "other_names": getattr(st, 'other_names', None),
+                    "gender": st.gender,
+                    "date_of_birth": str(st.date_of_birth) if st.date_of_birth else None,
+                    "class_name": st.class_section.name if st.class_section else None,
+                    "house_name": st.house.name if st.house else None,
+                    "dormitory_name": st.dormitory.name if st.dormitory else None,
+                    "residential_status": st.residential_status,
+                    "program_name": st.program_name,
+                    "bece_index_number": st.bece_index_number,
+                    "enrollment_status": getattr(st, 'enrollment_status', 'PLACED'),
+                    "is_active": st.is_active
+                }
+                for st in students
+            ],
+            "guardians": [
+                {
+                    "student_code": g.student.student_code if g.student else None,
+                    "guardian_name": g.guardian_name,
+                    "relationship_type": g.relationship_type,
+                    "primary_phone": g.primary_phone,
+                    "alternative_phone": g.alternative_phone,
+                    "occupation": g.occupation,
+                    "residential_address": g.residential_address
+                }
+                for g in guardians
+            ],
+            "health_records": [
+                {
+                    "student_code": hr.student.student_code if hr.student else None,
+                    "blood_group": hr.blood_group,
+                    "allergies": hr.allergies,
+                    "chronic_conditions": hr.chronic_conditions,
+                    "emergency_contact": hr.emergency_contact
+                }
+                for hr in health_records
+            ],
+            "fees": [
+                {
+                    "student_code": f.student.student_code if f.student else None,
+                    "amount_due": f.amount_due,
+                    "amount_paid": f.amount_paid,
+                    "term": f.term,
+                    "academic_year": f.academic_year
+                }
+                for f in fees
+            ],
+            "payments": [
+                {
+                    "student_code": p.fee.student.student_code if p.fee and p.fee.student else None,
+                    "amount": p.amount,
+                    "payment_method": p.payment_method,
+                    "receipt_number": p.receipt_number,
+                    "payment_date": str(p.payment_date) if p.payment_date else None
+                }
+                for p in payments
+            ],
+            "attendances": [
+                {
+                    "student_code": a.student.student_code if a.student else None,
+                    "date": str(a.date) if a.date else None,
+                    "status": a.status,
+                    "term": getattr(a, 'term', None),
+                    "academic_year": getattr(a, 'academic_year', None)
+                }
+                for a in attendances
+            ],
+            "scores": [
+                {
+                    "student_code": sc.student.student_code if sc.student else None,
+                    "subject_code": sc.subject.code if sc.subject else None,
+                    "class_score": sc.class_score,
+                    "exam_score": sc.exam_score,
+                    "total_score": sc.total_score,
+                    "grade": sc.grade,
+                    "remarks": sc.remarks,
+                    "term": sc.term,
+                    "academic_year": sc.academic_year
+                }
+                for sc in scores
+            ],
+            "settings": {st.key: st.value for st in settings}
+        })
+
+    return {
+        "status": "success",
+        "exported_at": datetime.now().isoformat(),
+        "total_schools": len(exported_schools),
+        "schools": exported_schools
+    }
+
+
+@router.post("/sync-from-cloud")
+def sync_from_cloud(
+    payload: CloudSyncSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    1-Click Master Cloud Sync: Connects to live Render/Cloud instance via API,
+    authenticates as Super-Admin, downloads all schools & entities, and synchronizes
+    the local offline SQLite database seamlessly.
+    """
+    import urllib.request
+    import urllib.error
+    import json
+    import ssl
+
+    remote_base = payload.remote_url.strip().rstrip("/")
+    if not remote_base.startswith("http://") and not remote_base.startswith("https://"):
+        raise HTTPException(status_code=400, detail="Invalid Remote Cloud URL. Must start with http:// or https://")
+
+    # SSL Context that works reliably across environments
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    # 1. Authenticate with Remote Server
+    login_url = f"{remote_base}/api/auth/login"
+    login_data = json.dumps({
+        "username": payload.username,
+        "password": payload.password
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        login_url,
+        data=login_data,
+        headers={"Content-Type": "application/json", "User-Agent": "eduManage360-LocalSync/4.6"}
+    )
+
+    try:
+        with urllib.request.urlopen(req, context=ctx, timeout=20) as resp:
+            login_resp = json.loads(resp.read().decode("utf-8"))
+            access_token = login_resp.get("access_token")
+            if not access_token:
+                raise HTTPException(status_code=400, detail="Remote server did not return an access token.")
+    except urllib.error.HTTPError as e:
+        err_msg = f"Remote authentication failed (HTTP {e.code}). Please verify your Super-Admin password."
+        try:
+            body = json.loads(e.read().decode("utf-8"))
+            if "detail" in body:
+                err_msg = f"Remote authentication error: {body['detail']}"
+        except Exception:
+            pass
+        raise HTTPException(status_code=400, detail=err_msg)
+    except urllib.error.URLError as e:
+        raise HTTPException(status_code=502, detail=f"Cannot reach remote cloud server at {remote_base}: {str(e.reason)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to connect to remote server: {str(e)}")
+
+    # 2. Fetch Complete Master Export from Remote Server
+    export_url = f"{remote_base}/api/super-admin/export-all-schools"
+    req_export = urllib.request.Request(
+        export_url,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "User-Agent": "eduManage360-LocalSync/4.6"
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(req_export, context=ctx, timeout=45) as resp:
+            export_data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise HTTPException(status_code=e.code, detail=f"Failed to retrieve data from remote server (HTTP {e.code})")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error downloading data snapshot: {str(e)}")
+
+    remote_schools = export_data.get("schools", [])
+
+    # 3. Apply Sync into Local SQLite Database
+    from ..models import (
+        Base, SchoolStage, Department, Program, House, Dormitory, ClassSection,
+        Subject, User, Role, Student, StudentGuardian, StudentHealth, Fee, Payment,
+        Attendance, Score, Setting, UniformItem
+    )
+
+    total_imported_students = 0
+    total_imported_users = 0
+
+    try:
+        if payload.sync_mode.upper() == "MIRROR":
+            # Wipe local tenant tables while retaining roles and superadmin
+            for table in reversed(Base.metadata.sorted_tables):
+                if table.name in ['roles', 'user_roles']:
+                    continue
+                if table.name == 'users':
+                    db.execute(table.delete().where(table.c.username != 'superadmin'))
+                else:
+                    db.execute(table.delete())
+
+        # Cache available roles
+        roles_by_name = {r.name: r for r in db.query(Role).all()}
+
+        for s_data in remote_schools:
+            sc_info = s_data.get("school", {})
+            school = School(
+                name=sc_info.get("name"),
+                code=sc_info.get("code"),
+                school_mode=sc_info.get("school_mode", "COMBINED"),
+                boarding_type=sc_info.get("boarding_type", "BOARDING_AND_DAY"),
+                status=sc_info.get("status", "ACTIVE"),
+                address=sc_info.get("address"),
+                phone=sc_info.get("phone"),
+                email=sc_info.get("email"),
+                logo_url=sc_info.get("logo_url")
+            )
+            db.add(school)
+            db.flush()
+
+            # Stages
+            for stg in s_data.get("stages", []):
+                db.add(SchoolStage(
+                    school_id=school.id,
+                    stage_type=stg.get("stage_type"),
+                    is_active=stg.get("is_active", True),
+                    label=stg.get("label")
+                ))
+
+            # Departments
+            dept_map = {}
+            for dept in s_data.get("departments", []):
+                d_obj = Department(name=dept["name"], description=dept.get("description"), school_id=school.id)
+                db.add(d_obj)
+                db.flush()
+                dept_map[dept["name"]] = d_obj.id
+
+            # Programs
+            for prog in s_data.get("programs", []):
+                db.add(Program(name=prog["name"], description=prog.get("description"), school_id=school.id))
+
+            # Houses & Dormitories
+            house_map = {}
+            for h in s_data.get("houses", []):
+                h_obj = House(
+                    name=h["name"],
+                    gender=h.get("gender", "Mixed"),
+                    house_type=h.get("house_type", "BOARDING"),
+                    school_id=school.id
+                )
+                db.add(h_obj)
+                db.flush()
+                house_map[h["name"]] = h_obj.id
+
+            dorm_map = {}
+            for d in s_data.get("dormitories", []):
+                h_id = house_map.get(d.get("house_name"))
+                if h_id:
+                    d_obj = Dormitory(name=d["name"], capacity=d.get("capacity", 30), house_id=h_id)
+                    db.add(d_obj)
+                    db.flush()
+                    dorm_map[d["name"]] = d_obj.id
+
+            # Classes
+            class_map = {}
+            for c in s_data.get("classes", []):
+                c_kwargs = {"name": c["name"], "level": c.get("level", "SHS 1")}
+                if hasattr(ClassSection, 'stage_type'):
+                    c_kwargs["stage_type"] = c.get("stage_type")
+                if hasattr(ClassSection, 'school_id'):
+                    c_kwargs["school_id"] = school.id
+                c_obj = ClassSection(**c_kwargs)
+                db.add(c_obj)
+                db.flush()
+                class_map[c["name"]] = c_obj.id
+
+            # Subjects
+            subject_map = {}
+            for sub in s_data.get("subjects", []):
+                existing_sub = db.query(Subject).filter(Subject.code == sub.get("code")).first()
+                if not existing_sub:
+                    sub_kwargs = {
+                        "name": sub["name"],
+                        "code": sub["code"],
+                        "is_core": sub.get("is_core", True),
+                        "category": sub.get("category", "Core")
+                    }
+                    if hasattr(Subject, 'school_level'):
+                        sub_kwargs["school_level"] = sub.get("school_level", "SHS")
+                    existing_sub = Subject(**sub_kwargs)
+                    db.add(existing_sub)
+                    db.flush()
+                subject_map[sub["code"]] = existing_sub.id
+
+            # Users
+            for u in s_data.get("users", []):
+                if u["username"] == "superadmin":
+                    continue
+                user_obj = User(
+                    username=u["username"],
+                    email=u.get("email"),
+                    password_hash=u.get("password_hash"),
+                    gender=u.get("gender"),
+                    is_active=u.get("is_active", True),
+                    school_id=school.id
+                )
+                for r_name in u.get("roles", []):
+                    if r_name in roles_by_name:
+                        user_obj.roles.append(roles_by_name[r_name])
+                db.add(user_obj)
+                total_imported_users += 1
+
+            # Students
+            student_map = {}
+            for st in s_data.get("students", []):
+                st_obj = Student(
+                    student_code=st["student_code"],
+                    full_name=st["full_name"],
+                    first_name=st.get("first_name"),
+                    last_name=st.get("last_name"),
+                    gender=st.get("gender", "Male"),
+                    date_of_birth=st.get("date_of_birth"),
+                    class_section_id=class_map.get(st.get("class_name")),
+                    house_id=house_map.get(st.get("house_name")),
+                    dormitory_id=dorm_map.get(st.get("dormitory_name")),
+                    residential_status=st.get("residential_status", "Day"),
+                    program_name=st.get("program_name"),
+                    bece_index_number=st.get("bece_index_number"),
+                    is_active=st.get("is_active", True),
+                    school_id=school.id
+                )
+                if hasattr(Student, 'enrollment_status'):
+                    st_obj.enrollment_status = st.get("enrollment_status", "PLACED")
+                db.add(st_obj)
+                db.flush()
+                student_map[st["student_code"]] = st_obj.id
+                total_imported_students += 1
+
+            # Guardians
+            for g in s_data.get("guardians", []):
+                st_id = student_map.get(g.get("student_code"))
+                if st_id:
+                    db.add(StudentGuardian(
+                        student_id=st_id,
+                        guardian_name=g["guardian_name"],
+                        relationship_type=g.get("relationship_type", "Parent"),
+                        primary_phone=g.get("primary_phone", "0000000000"),
+                        alternative_phone=g.get("alternative_phone"),
+                        occupation=g.get("occupation"),
+                        residential_address=g.get("residential_address")
+                    ))
+
+            # Health Records
+            for hr in s_data.get("health_records", []):
+                st_id = student_map.get(hr.get("student_code"))
+                if st_id:
+                    db.add(StudentHealth(
+                        student_id=st_id,
+                        blood_group=hr.get("blood_group"),
+                        allergies=hr.get("allergies"),
+                        chronic_conditions=hr.get("chronic_conditions"),
+                        emergency_contact=hr.get("emergency_contact")
+                    ))
+
+            # Fees & Payments
+            fee_map = {}
+            for f in s_data.get("fees", []):
+                st_id = student_map.get(f.get("student_code"))
+                if st_id:
+                    f_obj = Fee(
+                        student_id=st_id,
+                        amount_due=f.get("amount_due", 0.0),
+                        amount_paid=f.get("amount_paid", 0.0),
+                        term=f.get("term", "Term 1"),
+                        academic_year=f.get("academic_year", "2025/2026")
+                    )
+                    db.add(f_obj)
+                    db.flush()
+                    fee_map[f.get("student_code")] = f_obj.id
+
+            for p in s_data.get("payments", []):
+                f_id = fee_map.get(p.get("student_code"))
+                if f_id:
+                    db.add(Payment(
+                        fee_id=f_id,
+                        amount=p.get("amount", 0.0),
+                        payment_method=p.get("payment_method", "Cash"),
+                        receipt_number=p.get("receipt_number", "REC-001")
+                    ))
+
+            # Attendance
+            for a in s_data.get("attendances", []):
+                st_id = student_map.get(a.get("student_code"))
+                if st_id:
+                    a_kwargs = {
+                        "student_id": st_id,
+                        "status": a.get("status", "Present")
+                    }
+                    if hasattr(Attendance, 'term'):
+                        a_kwargs["term"] = a.get("term", "Term 1")
+                    if hasattr(Attendance, 'academic_year'):
+                        a_kwargs["academic_year"] = a.get("academic_year", "2025/2026")
+                    db.add(Attendance(**a_kwargs))
+
+            # Scores
+            for sc in s_data.get("scores", []):
+                st_id = student_map.get(sc.get("student_code"))
+                sub_id = subject_map.get(sc.get("subject_code"))
+                if st_id and sub_id:
+                    db.add(Score(
+                        student_id=st_id,
+                        subject_id=sub_id,
+                        class_score=sc.get("class_score", 0.0),
+                        exam_score=sc.get("exam_score", 0.0),
+                        total_score=sc.get("total_score", 0.0),
+                        grade=sc.get("grade", "A"),
+                        remarks=sc.get("remarks", "Good"),
+                        term=sc.get("term", "Term 1"),
+                        academic_year=sc.get("academic_year", "2025/2026")
+                    ))
+
+            # Settings
+            for k, v in s_data.get("settings", {}).items():
+                db.add(Setting(key=k, value=str(v), school_id=school.id))
+
+        db.commit()
+
+        return {
+            "status": "success",
+            "message": f"Successfully synchronized {len(remote_schools)} school(s) and {total_imported_students} student(s) from cloud.",
+            "synced_schools": len(remote_schools),
+            "imported_students": total_imported_students,
+            "imported_users": total_imported_users,
+            "remote_url": remote_base
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database synchronization error: {str(e)}")
+

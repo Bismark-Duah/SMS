@@ -33,6 +33,7 @@
           <p style="margin:0;opacity:.7;font-size:.85rem;">Unified multi-school administration portal.</p>
         </div>
         <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <button class="btn" style="background:#0284c7; border-color:#0369a1; color:#fff; font-weight:600;" onclick="openCloudSyncModal()">🔄 Pull from Cloud</button>
           <button class="btn primary" onclick="openNewSchoolModal()">+ Register New School</button>
         </div>
       </header>
@@ -202,7 +203,51 @@
       </div>
     </div>
 
-    <script src="js/guard.js?v=4.62"></script>
-    <script src="js/super-admin.js?v=4.62"></script>
+    <!-- Cloud Pull & Sync Modal -->
+    <div id="cloudSyncModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; backdrop-filter:blur(8px); justify-content:center; align-items:center; padding:16px;">
+      <div class="card" style="max-width:520px; width:100%; padding:28px; background:var(--card-bg, #1e293b); border:1px solid var(--border-color, #334155); border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.6);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+            <span>🔄</span> 1-Click Master Cloud Sync
+          </h3>
+          <button type="button" onclick="closeCloudSyncModal()" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer;">✕</button>
+        </div>
+
+        <p style="font-size:0.85rem; color:#94a3b8; margin:0 0 16px 0; line-height:1.45;">
+          Connect securely to your live Render deployment to pull all registered schools, students, classes, fees, and exam records into your local database.
+        </p>
+
+        <form id="cloudSyncForm" onsubmit="handleStartCloudSync(event)">
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Remote Render Cloud URL</label>
+            <input id="cloudSyncRemoteUrl" type="url" required placeholder="https://sms-1-4g9s.onrender.com"
+                   style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:0.9rem; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#fff;" />
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Super-Admin Password</label>
+            <input id="cloudSyncPassword" type="password" required placeholder="Enter superadmin password"
+                   style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:0.9rem; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#fff;" />
+          </div>
+
+          <div style="margin-bottom:18px;">
+            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Sync Mode</label>
+            <select id="cloudSyncMode" style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:0.85rem; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#fff;">
+              <option value="MIRROR">Mirror Cloud (Replace local database with exact live cloud copy)</option>
+            </select>
+          </div>
+
+          <div id="cloudSyncStatusMsg" style="margin-bottom:14px; font-size:0.85rem; display:none; padding:10px 12px; border-radius:6px;"></div>
+
+          <div style="display:flex; gap:10px; margin-top:20px;">
+            <button type="submit" id="cloudSyncSubmitBtn" class="btn" style="flex:1; padding:10px; background:#0284c7; border-color:#0369a1; color:#fff; font-weight:600;">Start Cloud Sync</button>
+            <button type="button" class="btn" onclick="closeCloudSyncModal()" style="flex:1; padding:10px;">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="js/guard.js?v=4.7"></script>
+    <script src="js/super-admin.js?v=4.7"></script>
   </body>
 </html>

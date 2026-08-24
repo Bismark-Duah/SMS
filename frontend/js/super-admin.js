@@ -387,4 +387,113 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
+// ── 1-Click Master Cloud Sync ────────────────────────────────────────────────
+window.openCloudSyncModal = function() {
+  const modal = document.getElementById('cloudSyncModal');
+  const urlInput = document.getElementById('cloudSyncRemoteUrl');
+  const pwdInput = document.getElementById('cloudSyncPassword');
+  const statusMsg = document.getElementById('cloudSyncStatusMsg');
+
+  if (urlInput) {
+    const savedUrl = localStorage.getItem('last_cloud_sync_url') || 'https://sms-1-4g9s.onrender.com';
+    urlInput.value = savedUrl;
+  }
+  if (pwdInput) pwdInput.value = '';
+  if (statusMsg) {
+    statusMsg.style.display = 'none';
+    statusMsg.innerHTML = '';
+  }
+
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeCloudSyncModal = function() {
+  const modal = document.getElementById('cloudSyncModal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.handleStartCloudSync = async function(event) {
+  event.preventDefault();
+
+  const remoteUrl = document.getElementById('cloudSyncRemoteUrl').value.trim();
+  const password = document.getElementById('cloudSyncPassword').value;
+  const syncMode = document.getElementById('cloudSyncMode').value;
+  const statusMsg = document.getElementById('cloudSyncStatusMsg');
+  const submitBtn = document.getElementById('cloudSyncSubmitBtn');
+
+  if (!remoteUrl || !password) {
+    alert('Please provide both the Remote Cloud URL and your Super-Admin password.');
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.style.opacity = '0.6';
+  submitBtn.innerHTML = '⏳ Synchronizing with Cloud...';
+
+  if (statusMsg) {
+    statusMsg.style.display = 'block';
+    statusMsg.style.background = 'rgba(2, 132, 199, 0.15)';
+    statusMsg.style.border = '1px solid #0284c7';
+    statusMsg.style.color = '#38bdf8';
+    statusMsg.innerHTML = 'Connecting to Render Cloud server, downloading live database snapshot...';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/sync-from-cloud`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        remote_url: remoteUrl,
+        username: 'superadmin',
+        password: password,
+        sync_mode: syncMode
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (statusMsg) {
+        statusMsg.style.display = 'block';
+        statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+        statusMsg.style.border = '1px solid #ef4444';
+        statusMsg.style.color = '#f87171';
+        statusMsg.innerHTML = `<strong>Sync Failed:</strong> ${data.detail || 'Could not synchronize with cloud.'}`;
+      } else {
+        alert(data.detail || 'Could not synchronize with cloud.');
+      }
+      return;
+    }
+
+    // Save URL for future convenience
+    localStorage.setItem('last_cloud_sync_url', remoteUrl);
+
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(16, 185, 129, 0.15)';
+      statusMsg.style.border = '1px solid #10b981';
+      statusMsg.style.color = '#34d399';
+      statusMsg.innerHTML = `<strong>✔ Sync Succeeded!</strong> ${data.message || 'All cloud data imported.'}`;
+    }
+
+    setTimeout(() => {
+      closeCloudSyncModal();
+      loadSuperAdminDashboard();
+    }, 1200);
+
+  } catch (err) {
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+      statusMsg.style.border = '1px solid #ef4444';
+      statusMsg.style.color = '#f87171';
+      statusMsg.innerHTML = `<strong>Network Error:</strong> ${err.message}`;
+    }
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '1';
+    submitBtn.innerHTML = 'Start Cloud Sync';
+  }
+};
+
 loadSuperAdminDashboard();

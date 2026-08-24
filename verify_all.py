@@ -46,10 +46,62 @@ def run_script(name):
         print("--------------------")
         return False, e.stderr or e.stdout
 
+def _bootstrap_test_environment():
+    try:
+        from backend.app.database import SessionLocal, Base, engine
+        from backend.app.models import User, Role, School, SchoolStage, user_roles
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        
+        # Clean up any orphan user_roles
+        valid_uids = [u.id for u in db.query(User.id).all()]
+        db.execute(user_roles.delete().where(~user_roles.c.user_id.in_(valid_uids)))
+        db.commit()
+
+        # Ensure default roles exist
+        from backend.app.routes.auth import DEFAULT_ROLES
+        for r_name in DEFAULT_ROLES:
+            if not db.query(Role).filter(Role.name == r_name).first():
+                db.add(Role(name=r_name))
+        db.commit()
+
+        # Ensure a default test school exists for unit tests
+        school = db.query(School).filter(School.id == 1).first()
+        if not school:
+            school = School(id=1, name="Test Academy", code="TEST-ACADEMY", school_mode="COMBINED", boarding_type="BOARDING_AND_DAY", status="ACTIVE")
+            db.add(school)
+            db.commit()
+
+        # Ensure default test admin exists
+        admin = db.query(User).filter(User.username == "admin").first()
+        admin_role = db.query(Role).filter(Role.name == "admin").first()
+        if not admin:
+            from backend.app.routes.auth import _hash_password
+            admin = User(
+                username="admin",
+                email="admin@test.com",
+                password_hash=_hash_password("admin123"),
+                school_id=school.id,
+                is_active=True
+            )
+            if admin_role:
+                admin.roles.append(admin_role)
+            db.add(admin)
+            db.commit()
+        elif admin_role and admin_role not in admin.roles:
+            admin.roles.append(admin_role)
+            db.commit()
+
+        db.close()
+    except Exception as e:
+        print(f"[NOTE] Test environment bootstrap: {e}")
+
 def run_all():
     print("==================================================")
     print(" SMS SYSTEM-WIDE UNIFIED VERIFICATION SUITE       ")
     print("==================================================")
+
+    _bootstrap_test_environment()
 
     test_scripts = [
         "tests/verify_promotions.py",

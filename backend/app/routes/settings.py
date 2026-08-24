@@ -55,10 +55,10 @@ def get_settings(db: Session = Depends(get_db), current_user: Optional[User] = D
     res["active_semester_id"] = str(curr_sem.id) if curr_sem else res.get("active_semester_id", "")
     res["system_theme"] = res.get("system_theme", "midnight")
     res["school_mode"] = res.get("school_mode", "COMBINED")
-    if res["school_mode"] == "BASIC_ONLY" and res.get("grading_standard") == "WAEC":
-        res["grading_standard"] = "BECE"
-    elif res["school_mode"] == "SHS_ONLY" and res.get("grading_standard") == "BECE":
-        res["grading_standard"] = "WAEC"
+    if res["school_mode"] == "BASIC_ONLY":
+        res["grading_standard"] = res.get("grading_standard") if res.get("grading_standard") in ("BECE", "PRIMARY") else "BECE"
+    elif res["school_mode"] == "SHS_ONLY":
+        res["grading_standard"] = res.get("grading_standard") if res.get("grading_standard") in ("WAEC", "WASSCE") else "WAEC"
     else:
         res["grading_standard"] = res.get("grading_standard", "WAEC")
     res["boarding_status"] = res.get("boarding_status", "BOARDING_AND_DAY")

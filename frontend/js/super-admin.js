@@ -124,7 +124,7 @@ async function loadSuperAdminDashboard() {
             <button class="btn primary" style="padding:4px 10px; font-size:0.8rem;" onclick="enterSchoolView(${s.id}, '${escapeJsQuotes(s.name)}', '${s.school_mode}', '${escapeJsQuotes(s.code || '')}')">👁 Enter View</button>
             <button class="btn ${s.status === 'ACTIVE' ? 'danger' : ''}" style="padding:4px 10px; font-size:0.8rem; margin-left:4px;" onclick="toggleSchoolStatus(${s.id}, '${s.status}')">${s.status === 'ACTIVE' ? 'Suspend' : 'Activate'}</button>
             ${schools.length > 1
-              ? `<button class="btn danger" style="padding:4px 10px; font-size:0.8rem; margin-left:4px; background:#dc2626; border-color:#b91c1c;" onclick="deleteSchool(${s.id}, '${escapeJsQuotes(s.name)}', '${escapeJsQuotes(s.code || '')}')">🗑 Delete</button>`
+              ? `<button class="btn danger" style="padding:4px 10px; font-size:0.8rem; margin-left:4px; background:#dc2626; border-color:#b91c1c;" onclick="openDeleteSchoolModal(${s.id}, '${escapeJsQuotes(s.name)}', '${escapeJsQuotes(s.code || '')}')">🗑 Delete</button>`
               : `<button class="btn" disabled title="Cannot delete the only registered school" style="padding:4px 10px; font-size:0.8rem; margin-left:4px; background:#374151; border-color:#4b5563; color:#6b7280; cursor:not-allowed; opacity:0.55;">🗑 Delete</button>`
             }
           </td>
@@ -142,15 +142,61 @@ function escapeJsQuotes(str) {
   return str.replace(/'/g, "\\'");
 }
 
-async function deleteSchool(schoolId, schoolName, schoolCode) {
-  const codeToMatch = (schoolCode || String(schoolId)).trim();
-  const input = prompt(`⚠️ CAUTION: PERMANENT TENANT DELETION\n\nYou are about to permanently delete:\n• School: ${schoolName}\n• Code: ${codeToMatch}\n\nAll student records, scores, classes, and tenant data will be purged.\nAn automatic pre-deletion JSON backup will be created.\n\nTo confirm, type '${codeToMatch}' below:`);
+function openDeleteSchoolModal(schoolId, schoolName, schoolCode) {
+  const modal = document.getElementById('deleteSchoolModal');
+  if (!modal) return;
+  const targetCode = (schoolCode || String(schoolId)).trim();
+  document.getElementById('deleteSchoolModalId').value = String(schoolId);
+  document.getElementById('deleteSchoolModalTargetCode').value = targetCode;
+  document.getElementById('deleteSchoolModalName').textContent = `${schoolName} (${targetCode})`;
+  document.getElementById('deleteSchoolModalCodePrompt').textContent = targetCode;
+  
+  const inputEl = document.getElementById('deleteSchoolConfirmInput');
+  inputEl.value = '';
+  
+  const btn = document.getElementById('deleteSchoolConfirmBtn');
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+  btn.style.cursor = 'not-allowed';
+  
+  modal.style.display = 'flex';
+  setTimeout(() => inputEl.focus(), 50);
+}
 
-  if (!input) return;
-  if (input.trim().toUpperCase() !== codeToMatch.toUpperCase()) {
-    alert(`❌ Deletion aborted: Confirmation input did not match '${codeToMatch}'.`);
+function closeDeleteSchoolModal() {
+  const modal = document.getElementById('deleteSchoolModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function onDeleteSchoolInput(inputEl) {
+  const targetCode = (document.getElementById('deleteSchoolModalTargetCode').value || '').trim();
+  const typed = (inputEl.value || '').trim();
+  const btn = document.getElementById('deleteSchoolConfirmBtn');
+  if (typed.toUpperCase() === targetCode.toUpperCase()) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+  }
+}
+
+async function handleConfirmDeleteSchool(event) {
+  event.preventDefault();
+  const schoolId = document.getElementById('deleteSchoolModalId').value;
+  const targetCode = document.getElementById('deleteSchoolModalTargetCode').value;
+  const typed = document.getElementById('deleteSchoolConfirmInput').value.trim();
+
+  if (typed.toUpperCase() !== targetCode.toUpperCase()) {
+    alert(`❌ Input did not match required code '${targetCode}'.`);
     return;
   }
+
+  const btn = document.getElementById('deleteSchoolConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Purging...';
 
   try {
     const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}`, {
@@ -159,13 +205,17 @@ async function deleteSchool(schoolId, schoolName, schoolCode) {
     });
     const data = await res.json();
     if (res.ok) {
+      closeDeleteSchoolModal();
       alert(`✔ ${data.message}\n\nPre-deletion backup saved to:\n${data.backup_saved_to}`);
       loadSuperAdminDashboard();
     } else {
       alert(data.detail || 'Could not delete school.');
     }
   } catch (err) {
-    alert('Failed to delete school.');
+    alert('Failed to delete school. Check server logs.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Purge School';
   }
 }
 

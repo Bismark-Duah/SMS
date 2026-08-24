@@ -165,6 +165,44 @@
             <button type="button" class="btn" onclick="closeNewSchoolModal()" style="flex:1;">Cancel</button>
           </div>
         </form>
+    <!-- Modal: Enterprise Danger Zone / Delete School Confirmation -->
+    <div class="modal" id="deleteSchoolModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+      <div class="modal-content" style="max-width:480px; width:90%; background:var(--card-bg, #1e293b); border:1px solid #ef4444; border-radius:12px; padding:24px; box-shadow:0 25px 50px -12px rgba(239,68,68,0.25);">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+          <div style="background:rgba(239,68,68,0.15); color:#ef4444; width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
+            ⚠️
+          </div>
+          <div>
+            <h3 style="margin:0; color:#ef4444; font-size:1.15rem;">Permanently Purge School</h3>
+            <p style="margin:2px 0 0 0; font-size:0.8rem; opacity:0.75;">Enterprise multi-tenant data deprovisioning</p>
+          </div>
+        </div>
+
+        <div style="background:rgba(239,68,68,0.08); border-left:4px solid #ef4444; border-radius:4px; padding:10px 14px; margin-bottom:16px; font-size:0.85rem; line-height:1.45;">
+          You are about to permanently purge <strong id="deleteSchoolModalName" style="color:#fff;">...</strong>.
+          <ul style="margin:6px 0 0 16px; padding:0; font-size:0.8rem; opacity:0.9;">
+            <li>All enrolled students, grades, and health records</li>
+            <li>All class sections, subjects, houses, and dormitories</li>
+            <li>All recorded fees, payments, and staff assignments</li>
+          </ul>
+          <div style="margin-top:8px; font-weight:600; color:#10b981; font-size:0.8rem;">
+            🛡 An automated JSON backup will be created in <code>/backups</code>.
+          </div>
+        </div>
+
+        <form id="deleteSchoolForm" onsubmit="handleConfirmDeleteSchool(event)">
+          <input type="hidden" id="deleteSchoolModalId" />
+          <input type="hidden" id="deleteSchoolModalTargetCode" />
+          <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:6px;">
+            To confirm deletion, please type the school code <code id="deleteSchoolModalCodePrompt" style="background:#0f172a; padding:2px 6px; border-radius:4px; color:#f87171; border:1px solid #334155;">...</code> below:
+          </label>
+          <input id="deleteSchoolConfirmInput" type="text" autocomplete="off" placeholder="Type school code exactly" required style="width:100%; box-sizing:border-box; padding:10px 12px; font-family:monospace; font-weight:700; letter-spacing:1px; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#fff;" oninput="onDeleteSchoolInput(this)" />
+
+          <div style="display:flex; gap:10px; margin-top:20px;">
+            <button type="submit" id="deleteSchoolConfirmBtn" class="btn danger" style="flex:1; padding:10px; background:#dc2626; border-color:#b91c1c; opacity:0.5; cursor:not-allowed;" disabled>Purge School</button>
+            <button type="button" class="btn" onclick="closeDeleteSchoolModal()" style="flex:1; padding:10px;">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
 

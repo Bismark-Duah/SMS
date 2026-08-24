@@ -14,16 +14,16 @@ function getHeaders(headers = {}) {
 const modal = document.getElementById('newSchoolModal');
 const form = document.getElementById('newSchoolForm');
 
-function openNewSchoolModal() {
-  modal.classList.add('active');
-}
+window.openNewSchoolModal = function() {
+  if (modal) modal.classList.add('active');
+};
 
-function closeNewSchoolModal() {
-  modal.classList.remove('active');
-  form.reset();
-}
+window.closeNewSchoolModal = function() {
+  if (modal) modal.classList.remove('active');
+  if (form) form.reset();
+};
 
-function toggleRegisterPasswordVisibility() {
+window.toggleRegisterPasswordVisibility = function() {
   const input = document.getElementById('adminPassword');
   const btn = document.getElementById('toggleAdminPassBtn');
   if (!input) return;
@@ -34,9 +34,9 @@ function toggleRegisterPasswordVisibility() {
     input.type = 'password';
     if (btn) btn.textContent = '👁️';
   }
-}
+};
 
-async function loadSuperAdminDashboard() {
+window.loadSuperAdminDashboard = async function() {
   try {
     const res = await fetch(`${API_BASE}/super-admin/dashboard`, { headers: getHeaders() });
     if (!res.ok) {
@@ -71,7 +71,7 @@ async function loadSuperAdminDashboard() {
     // Render Schools Table
     const tbody = document.getElementById('schoolsTableBody');
     if (!data.schools || data.schools.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="padding:16px; text-align:center; opacity:0.7;">No registered schools found. Click "+ Register New School" to add one.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; opacity:0.7;">No registered schools found. Click "+ Register New School" to add one.</td></tr>';
       return;
     }
 
@@ -106,14 +106,14 @@ async function loadSuperAdminDashboard() {
           <!-- 2. Academic & Boarding Config (Compact Stacked Selects) -->
           <td style="padding:10px 12px; width:160px;">
             <div style="display:flex; flex-direction:column; gap:5px;">
-              <select onchange="changeSchoolMode(${s.id}, this.value, this.closest('tr').querySelector('.boarding-select').value)"
+              <select onchange="window.changeSchoolMode(${s.id}, this.value, this.closest('tr').querySelector('.boarding-select').value)"
                       style="width:100%; box-sizing:border-box; padding:4px 6px; font-size:0.78rem; border-radius:5px; background:#1e293b; color:#fff; border:1px solid #6366f1; cursor:pointer;" title="Academic Mode">
                 <option value="SHS_ONLY"   ${s.school_mode === 'SHS_ONLY'   ? 'selected' : ''}>SHS Only</option>
                 <option value="BASIC_ONLY" ${s.school_mode === 'BASIC_ONLY' ? 'selected' : ''}>Basic Only</option>
                 <option value="COMBINED"   ${s.school_mode === 'COMBINED'   ? 'selected' : ''}>Combined</option>
               </select>
               <select class="boarding-select"
-                      onchange="changeSchoolBoarding(${s.id}, this.value)"
+                      onchange="window.changeSchoolBoarding(${s.id}, this.value)"
                       style="width:100%; box-sizing:border-box; padding:4px 6px; font-size:0.78rem; border-radius:5px; background:#1e293b; color:#fff; border:1px solid #0891b2; cursor:pointer;" title="Boarding Setup">
                 <option value="BOARDING_AND_DAY" ${boardingVal === 'BOARDING_AND_DAY' ? 'selected' : ''}>Boarding &amp; Day</option>
                 <option value="DAY_ONLY"         ${boardingVal === 'DAY_ONLY'         ? 'selected' : ''}>Day Only</option>
@@ -141,10 +141,10 @@ async function loadSuperAdminDashboard() {
           <!-- 6. Command Actions Toolbar -->
           <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
             <div style="display:inline-flex; gap:5px; align-items:center; justify-content:flex-end;">
-              <button class="btn primary" style="padding:5px 10px; font-size:0.78rem; font-weight:600;" onclick="enterSchoolView(${s.id}, '${escapeJsQuotes(s.name)}', '${s.school_mode}', '${escapeJsQuotes(s.code || '')}')" title="Enter live school view">👁 Enter</button>
-              <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:#0284c7; border-color:#0369a1; color:#fff;" onclick="downloadSchoolBackup(${s.id}, '${s.code}')" title="Download school backup snapshot">📥 Backup</button>
-              <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:${s.status === 'ACTIVE' ? '#d97706' : '#10b981'}; border-color:${s.status === 'ACTIVE' ? '#b45309' : '#059669'}; color:#fff;" onclick="toggleSchoolStatus(${s.id}, '${s.status}')" title="${s.status === 'ACTIVE' ? 'Suspend School Account' : 'Activate School'}">${s.status === 'ACTIVE' ? '⏸ Suspend' : '▶ Activate'}</button>
-              <button class="btn danger" style="padding:5px 8px; font-size:0.78rem; background:#dc2626; border-color:#b91c1c;" onclick="openDeleteSchoolModal(${s.id}, '${escapeJsQuotes(s.name)}', '${escapeJsQuotes(s.code || '')}')" title="Permanently Purge School">🗑 Delete</button>
+              <button class="btn primary" style="padding:5px 10px; font-size:0.78rem; font-weight:600;" onclick="window.enterSchoolView(${s.id}, '${window.escapeJsQuotes(s.name)}', '${s.school_mode}', '${window.escapeJsQuotes(s.code || '')}')" title="Enter live school view">👁 Enter</button>
+              <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:#0284c7; border-color:#0369a1; color:#fff;" onclick="window.downloadSchoolBackup(${s.id}, '${s.code}')" title="Download school backup snapshot">📥 Backup</button>
+              <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:${s.status === 'ACTIVE' ? '#d97706' : '#10b981'}; border-color:${s.status === 'ACTIVE' ? '#b45309' : '#059669'}; color:#fff;" onclick="window.toggleSchoolStatus(${s.id}, '${s.status}')" title="${s.status === 'ACTIVE' ? 'Suspend School Account' : 'Activate School'}">${s.status === 'ACTIVE' ? '⏸ Suspend' : '▶ Activate'}</button>
+              <button class="btn danger" style="padding:5px 8px; font-size:0.78rem; background:#dc2626; border-color:#b91c1c;" onclick="window.openDeleteSchoolModal(${s.id}, '${window.escapeJsQuotes(s.name)}', '${window.escapeJsQuotes(s.code || '')}')" title="Permanently Purge School">🗑 Delete</button>
             </div>
           </td>
         </tr>
@@ -155,13 +155,13 @@ async function loadSuperAdminDashboard() {
   } catch (error) {
     console.error('Super-Admin dashboard error:', error);
   }
-}
+};
 
-function escapeJsQuotes(str) {
-  return str.replace(/'/g, "\\'");
-}
+window.escapeJsQuotes = function(str) {
+  return String(str || '').replace(/'/g, "\\'");
+};
 
-function openDeleteSchoolModal(schoolId, schoolName, schoolCode) {
+window.openDeleteSchoolModal = function(schoolId, schoolName, schoolCode) {
   const modal = document.getElementById('deleteSchoolModal');
   if (!modal) return;
   const targetCode = (schoolCode || String(schoolId)).trim();
@@ -180,14 +180,14 @@ function openDeleteSchoolModal(schoolId, schoolName, schoolCode) {
   
   modal.style.display = 'flex';
   setTimeout(() => inputEl.focus(), 50);
-}
+};
 
-function closeDeleteSchoolModal() {
+window.closeDeleteSchoolModal = function() {
   const modal = document.getElementById('deleteSchoolModal');
   if (modal) modal.style.display = 'none';
-}
+};
 
-function onDeleteSchoolInput(inputEl) {
+window.onDeleteSchoolInput = function(inputEl) {
   const targetCode = (document.getElementById('deleteSchoolModalTargetCode').value || '').trim();
   const typed = (inputEl.value || '').trim();
   const btn = document.getElementById('deleteSchoolConfirmBtn');
@@ -200,9 +200,9 @@ function onDeleteSchoolInput(inputEl) {
     btn.style.opacity = '0.5';
     btn.style.cursor = 'not-allowed';
   }
-}
+};
 
-async function handleConfirmDeleteSchool(event) {
+window.handleConfirmDeleteSchool = async function(event) {
   event.preventDefault();
   const schoolId = document.getElementById('deleteSchoolModalId').value;
   const targetCode = document.getElementById('deleteSchoolModalTargetCode').value;
@@ -224,9 +224,9 @@ async function handleConfirmDeleteSchool(event) {
     });
     const data = await res.json();
     if (res.ok) {
-      closeDeleteSchoolModal();
+      window.closeDeleteSchoolModal();
       alert(`✔ ${data.message}\n\nPre-deletion backup saved to:\n${data.backup_saved_to}`);
-      loadSuperAdminDashboard();
+      window.loadSuperAdminDashboard();
     } else {
       alert(data.detail || 'Could not delete school.');
     }
@@ -236,9 +236,9 @@ async function handleConfirmDeleteSchool(event) {
     btn.disabled = false;
     btn.textContent = 'Purge School';
   }
-}
+};
 
-function enterSchoolView(schoolId, schoolName, schoolMode, schoolCode) {
+window.enterSchoolView = function(schoolId, schoolName, schoolMode, schoolCode) {
   localStorage.setItem('school_id', String(schoolId));
   localStorage.setItem('school_name', schoolName);
   localStorage.setItem('school_mode', schoolMode);
@@ -247,9 +247,9 @@ function enterSchoolView(schoolId, schoolName, schoolMode, schoolCode) {
   }
   localStorage.setItem('is_super_admin_viewing', 'true');
   window.location.href = 'dashboard.html';
-}
+};
 
-async function toggleSchoolStatus(schoolId, currentStatus) {
+window.toggleSchoolStatus = async function(schoolId, currentStatus) {
   const newStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
   if (!confirm(`Are you sure you want to change school status to ${newStatus}?`)) return;
 
@@ -260,16 +260,16 @@ async function toggleSchoolStatus(schoolId, currentStatus) {
       body: JSON.stringify({ status: newStatus })
     });
     if (res.ok) {
-      loadSuperAdminDashboard();
+      window.loadSuperAdminDashboard();
     } else {
       alert('Could not update school status.');
     }
   } catch (err) {
     alert('Failed to update status.');
   }
-}
+};
 
-async function changeSchoolMode(schoolId, newMode, currentBoarding) {
+window.changeSchoolMode = async function(schoolId, newMode, currentBoarding) {
   const profileName = window.FeatureGate
     ? window.FeatureGate.getProfileName(newMode, currentBoarding || 'BOARDING_AND_DAY')
     : newMode;
@@ -283,23 +283,23 @@ async function changeSchoolMode(schoolId, newMode, currentBoarding) {
     });
 
     if (res.ok) {
-      loadSuperAdminDashboard();
+      window.loadSuperAdminDashboard();
     } else {
       alert('Could not update school mode.');
-      loadSuperAdminDashboard(); // Reset dropdown to actual value
+      window.loadSuperAdminDashboard(); // Reset dropdown to actual value
     }
   } catch (err) {
     alert('Failed to update mode.');
-    loadSuperAdminDashboard();
+    window.loadSuperAdminDashboard();
   }
-}
+};
 
-async function changeSchoolBoarding(schoolId, newBoarding) {
+window.changeSchoolBoarding = async function(schoolId, newBoarding) {
   const profileName = window.FeatureGate
     ? window.FeatureGate.getProfileName('COMBINED', newBoarding)
     : newBoarding;
   if (!confirm(`Change boarding status to: ${newBoarding === 'DAY_ONLY' ? 'Day Only' : 'Boarding & Day'}?\n\nThis affects Exeat Management, Houses & Dormitories, boarding staff roles, and boarding fee categories.`)) {
-    loadSuperAdminDashboard(); // Reset dropdown
+    window.loadSuperAdminDashboard(); // Reset dropdown
     return;
   }
 
@@ -311,20 +311,20 @@ async function changeSchoolBoarding(schoolId, newBoarding) {
     });
 
     if (res.ok) {
-      loadSuperAdminDashboard();
+      window.loadSuperAdminDashboard();
     } else {
       const err = await res.json().catch(() => ({}));
       alert(err.detail || 'Could not update boarding status.');
-      loadSuperAdminDashboard();
+      window.loadSuperAdminDashboard();
     }
   } catch (err) {
     alert('Failed to update boarding status.');
-    loadSuperAdminDashboard();
+    window.loadSuperAdminDashboard();
   }
-}
+};
 
 
-async function downloadSchoolBackup(schoolId, schoolCode) {
+window.downloadSchoolBackup = async function(schoolId, schoolCode) {
   try {
     const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}/backup`, {
       headers: getHeaders()
@@ -349,7 +349,7 @@ async function downloadSchoolBackup(schoolId, schoolCode) {
   } catch (err) {
     alert('Failed to download backup data.');
   }
-}
+};
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();

@@ -26,7 +26,7 @@
     </style>
   </head>
   <body>
-    <main class="page">
+    <main class="page" style="max-width:1440px; width:100%; margin:0 auto; padding:24px 32px; box-sizing:border-box;">
       <header class="topbar">
         <div>
           <h1 style="margin:0;font-size:1.3rem;">🌐 eduManage360 Master Portal</h1>
@@ -50,7 +50,7 @@
           <div style="font-size:0.75rem; opacity:0.6;">Across All Schools</div>
         </div>
         <div class="kpi-card">
-          <div style="font-size:0.85rem; opacity:0.8;">System Users & Staff</div>
+          <div style="font-size:0.85rem; opacity:0.8;">System Users &amp; Staff</div>
           <div class="kpi-value" id="kpiTotalUsers">...</div>
           <div style="font-size:0.75rem; opacity:0.6;">Admins, Teachers, Staff</div>
         </div>
@@ -60,36 +60,32 @@
           <div style="font-size:0.75rem; opacity:0.6;">Recorded Payments</div>
         </div>
         <div class="kpi-card">
-          <div style="font-size:0.85rem; opacity:0.8;">Database Health & Storage</div>
+          <div style="font-size:0.85rem; opacity:0.8;">Database Health &amp; Storage</div>
           <div class="kpi-value" id="kpiDbSize" style="color:#10b981;">...</div>
           <div style="font-size:0.75rem; opacity:0.6;" id="kpiBackupStatus">Last Backup: ...</div>
         </div>
       </div>
 
       <!-- Schools Directory Table -->
-      <section class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <h3 style="margin:0;">Registered Schools Directory</h3>
+      <section class="card" style="padding:16px 20px; border-radius:12px; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <h3 style="margin:0; font-size:1.1rem;">Registered Schools Directory</h3>
           <span style="font-size:0.85rem; opacity:0.7;" id="modeDistributionLabel">Loading modes...</span>
         </div>
         <div style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
             <thead>
-              <tr style="text-align:left; border-bottom:2px solid var(--border-color, #334155); padding-bottom:8px; white-space:nowrap;">
-                <th style="padding:10px 12px; width:50px;">ID</th>
-                <th style="padding:10px 12px; min-width:180px;">School Name</th>
-                <th style="padding:10px 12px; width:90px;">Code</th>
-                <th style="padding:10px 12px; min-width:125px;">School Mode</th>
-                <th style="padding:10px 12px; min-width:130px;">Boarding</th>
-                <th style="padding:10px 12px; min-width:160px;">Profile</th>
-                <th style="padding:10px 12px; width:80px; text-align:center;">Students</th>
-                <th style="padding:10px 12px; width:70px; text-align:center;">Users</th>
-                <th style="padding:10px 12px; width:90px; text-align:center;">Status</th>
-                <th style="padding:10px 14px; text-align:right; min-width:320px;">Actions</th>
+              <tr style="text-align:left; border-bottom:2px solid var(--border-color, #334155); padding-bottom:8px;">
+                <th style="padding:10px 12px;">School Identity</th>
+                <th style="padding:10px 12px; width:170px;">Configuration</th>
+                <th style="padding:10px 12px; text-align:center; width:130px;">Profile</th>
+                <th style="padding:10px 12px; text-align:center; width:120px;">Enrollment</th>
+                <th style="padding:10px 12px; text-align:center; width:85px;">Status</th>
+                <th style="padding:10px 12px; text-align:right; width:260px;">Actions</th>
               </tr>
             </thead>
             <tbody id="schoolsTableBody">
-              <tr><td colspan="10" style="padding:16px; text-align:center; opacity:0.7;">Loading registered schools...</td></tr>
+              <tr><td colspan="6" style="padding:20px; text-align:center; opacity:0.7;">Loading registered schools...</td></tr>
             </tbody>
           </table>
         </div>
@@ -206,7 +202,7 @@
       </div>
     </div>
 
-    <script src="js/guard.js"></script>
-    <script src="js/super-admin.js"></script>
+    <script src="js/guard.js?v=4.62"></script>
+    <script src="js/super-admin.js?v=4.62"></script>
   </body>
 </html>

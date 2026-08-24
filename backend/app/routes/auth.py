@@ -117,12 +117,13 @@ def _seed_db(db: Session) -> None:
                         existing.roles.append(role_obj)
                 existing.is_active = True
 
-        # Clean up legacy unassigned placeholder demo users (admin, teacher with no school)
-        orphan_demo_users = db.query(User).filter(
-            User.username.in_(["admin", "teacher"]),
-            User.school_id.is_(None)
+        # Clean up any unassigned orphan non-superadmin users without a valid school
+        valid_school_ids = [s.id for s in db.query(School.id).all()]
+        orphan_users = db.query(User).filter(
+            User.username != "superadmin",
+            (User.school_id.is_(None) | ~User.school_id.in_(valid_school_ids))
         ).all()
-        for u in orphan_demo_users:
+        for u in orphan_users:
             db.delete(u)
 
         db.commit()

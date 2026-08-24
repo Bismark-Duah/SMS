@@ -123,10 +123,7 @@ async function loadSuperAdminDashboard() {
             <button class="btn" style="padding:4px 10px; font-size:0.8rem; background:#0284c7; border-color:#0369a1; color:#fff; margin-right:4px;" onclick="downloadSchoolBackup(${s.id}, '${s.code}')">📥 Backup</button>
             <button class="btn primary" style="padding:4px 10px; font-size:0.8rem;" onclick="enterSchoolView(${s.id}, '${escapeJsQuotes(s.name)}', '${s.school_mode}', '${escapeJsQuotes(s.code || '')}')">👁 Enter View</button>
             <button class="btn ${s.status === 'ACTIVE' ? 'danger' : ''}" style="padding:4px 10px; font-size:0.8rem; margin-left:4px;" onclick="toggleSchoolStatus(${s.id}, '${s.status}')">${s.status === 'ACTIVE' ? 'Suspend' : 'Activate'}</button>
-            ${schools.length > 1
-              ? `<button class="btn danger" style="padding:4px 10px; font-size:0.8rem; margin-left:4px; background:#dc2626; border-color:#b91c1c;" onclick="openDeleteSchoolModal(${s.id}, '${escapeJsQuotes(s.name)}', '${escapeJsQuotes(s.code || '')}')">🗑 Delete</button>`
-              : `<button class="btn" disabled title="Cannot delete the only registered school" style="padding:4px 10px; font-size:0.8rem; margin-left:4px; background:#374151; border-color:#4b5563; color:#6b7280; cursor:not-allowed; opacity:0.55;">🗑 Delete</button>`
-            }
+            <button class="btn danger" style="padding:4px 10px; font-size:0.8rem; margin-left:4px; background:#dc2626; border-color:#b91c1c;" onclick="openDeleteSchoolModal(${s.id}, '${escapeJsQuotes(s.name)}', '${escapeJsQuotes(s.code || '')}')">🗑 Delete</button>
           </td>
         </tr>
       `;

@@ -52,7 +52,7 @@ def get_super_admin_dashboard(
     total_schools = db.query(School).count()
     active_schools = db.query(School).filter(School.status == "ACTIVE").count()
     total_students = db.query(Student).count()
-    total_users = db.query(User).count()
+    total_users = db.query(User).filter(User.username != "superadmin", User.school_id.isnot(None)).count()
     total_fees_collected = db.query(func.sum(Fee.amount_paid)).scalar() or 0.0
 
     # System diagnostics & storage health
@@ -388,13 +388,6 @@ def delete_school(
     Permanently deletes a registered school account and its associated data, 
     after automatically saving a timestamped pre-delete JSON backup.
     """
-    total_schools = db.query(School).count()
-    if total_schools <= 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete the only registered school in the system. At least one school must exist."
-        )
-
     school = db.query(School).filter(School.id == school_id).first()
     if not school:
         raise HTTPException(status_code=404, detail="School not found")

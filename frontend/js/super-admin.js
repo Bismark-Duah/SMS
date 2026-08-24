@@ -79,51 +79,57 @@ async function loadSuperAdminDashboard() {
     tbody.innerHTML = sortedSchools.map(s => {
       const statusClass = s.status === 'ACTIVE' ? 'status-active' : 'status-suspended';
       const boardingVal = s.boarding_type || 'BOARDING_AND_DAY';
-      const boardingLabel = boardingVal === 'DAY_ONLY' ? 'Day Only' : 'Boarding & Day';
-      const boardingClass = boardingVal === 'DAY_ONLY' ? 'badge-day' : 'badge-boarding';
+      const boardingLabel = boardingVal === 'DAY_ONLY' ? 'Day Only' : (boardingVal === 'BOARDING_ONLY' ? 'Boarding Only' : 'Boarding & Day');
 
-      // Profile Preview — shows what features the current config enables
-      const profileSummary = window.FeatureGate
-        ? window.FeatureGate.getProfileSummary(s.school_mode, boardingVal)
-        : [];
-      const previewHtml = profileSummary.map(f =>
-        `<span class="feat-${f.enabled ? 'on' : 'off'}">${f.enabled ? '+' : '-'}${f.label}</span>`
-      ).join(' &nbsp; ');
+      // Profile Badge
+      let profileBadge = '';
+      if (s.school_mode === 'BASIC_ONLY') {
+        profileBadge = `<span class="badge-mode badge-basic" style="display:inline-flex; align-items:center; gap:4px; padding:4px 8px;" title="Basic School Profile (KG - JHS)">🎯 Basic School</span>`;
+      } else if (s.school_mode === 'SHS_ONLY') {
+        profileBadge = `<span class="badge-mode badge-shs" style="display:inline-flex; align-items:center; gap:4px; padding:4px 8px;" title="Senior High School Profile (SHS 1 - 3, CSSPS, WAEC)">🏛️ SHS Profile</span>`;
+      } else {
+        profileBadge = `<span class="badge-mode badge-combined" style="display:inline-flex; align-items:center; gap:4px; padding:4px 8px;" title="Combined Multi-Tier Profile (Basic + SHS)">🌐 Combined</span>`;
+      }
 
       return `
-        <tr style="border-bottom: 1px solid var(--border-color, #334155);">
-          <td style="padding:10px; font-weight:600;">#${s.id}</td>
-          <td style="padding:10px;">
-            <strong>${s.name}</strong>
+        <tr style="border-bottom: 1px solid var(--border-color, #334155); transition: background 0.15s;">
+          <td style="padding:12px; font-weight:700; color:var(--text-secondary);">#${s.id}</td>
+          <td style="padding:12px;">
+            <strong style="font-size:0.95rem;">${s.name}</strong>
           </td>
-          <td style="padding:10px;"><code style="background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px;">${s.code}</code></td>
-          <td style="padding:10px;">
+          <td style="padding:12px; white-space:nowrap;">
+            <code style="background:rgba(255,255,255,0.08); padding:3px 7px; border-radius:4px; font-weight:600;">${s.code}</code>
+          </td>
+          <td style="padding:12px; white-space:nowrap;">
             <select onchange="changeSchoolMode(${s.id}, this.value, this.closest('tr').querySelector('.boarding-select').value)"
-                    style="padding:2px 6px; font-size:0.8rem; border-radius:4px; background:#1e293b; color:#fff; border:1px solid #6366f1;">
+                    style="min-width:115px; padding:5px 8px; font-size:0.82rem; border-radius:6px; background:#1e293b; color:#fff; border:1px solid #6366f1; cursor:pointer;">
               <option value="SHS_ONLY"   ${s.school_mode === 'SHS_ONLY'   ? 'selected' : ''}>SHS Only</option>
               <option value="BASIC_ONLY" ${s.school_mode === 'BASIC_ONLY' ? 'selected' : ''}>Basic Only</option>
               <option value="COMBINED"   ${s.school_mode === 'COMBINED'   ? 'selected' : ''}>Combined</option>
             </select>
           </td>
-          <td style="padding:10px;">
+          <td style="padding:12px; white-space:nowrap;">
             <select class="boarding-select"
                     onchange="changeSchoolBoarding(${s.id}, this.value)"
-                    style="padding:2px 6px; font-size:0.8rem; border-radius:4px; background:#1e293b; color:#fff; border:1px solid #0891b2;">
+                    style="min-width:125px; padding:5px 8px; font-size:0.82rem; border-radius:6px; background:#1e293b; color:#fff; border:1px solid #0891b2; cursor:pointer;">
               <option value="BOARDING_AND_DAY" ${boardingVal === 'BOARDING_AND_DAY' ? 'selected' : ''}>Boarding & Day</option>
               <option value="DAY_ONLY"         ${boardingVal === 'DAY_ONLY'         ? 'selected' : ''}>Day Only</option>
+              <option value="BOARDING_ONLY"     ${boardingVal === 'BOARDING_ONLY'     ? 'selected' : ''}>Boarding Only</option>
             </select>
           </td>
-          <td style="padding:10px;">
-            <div class="profile-preview">${previewHtml || '<span style="opacity:0.5;">—</span>'}</div>
+          <td style="padding:12px; white-space:nowrap;">
+            ${profileBadge}
           </td>
-          <td style="padding:10px;">${s.student_count}</td>
-          <td style="padding:10px;">${s.user_count}</td>
-          <td style="padding:10px;"><span class="${statusClass}">${s.status}</span></td>
-          <td style="padding:10px; text-align:right;">
-            <button class="btn" style="padding:4px 10px; font-size:0.8rem; background:#0284c7; border-color:#0369a1; color:#fff; margin-right:4px;" onclick="downloadSchoolBackup(${s.id}, '${s.code}')">📥 Backup</button>
-            <button class="btn primary" style="padding:4px 10px; font-size:0.8rem;" onclick="enterSchoolView(${s.id}, '${escapeJsQuotes(s.name)}', '${s.school_mode}', '${escapeJsQuotes(s.code || '')}')">👁 Enter View</button>
-            <button class="btn ${s.status === 'ACTIVE' ? 'danger' : ''}" style="padding:4px 10px; font-size:0.8rem; margin-left:4px;" onclick="toggleSchoolStatus(${s.id}, '${s.status}')">${s.status === 'ACTIVE' ? 'Suspend' : 'Activate'}</button>
-            <button class="btn danger" style="padding:4px 10px; font-size:0.8rem; margin-left:4px; background:#dc2626; border-color:#b91c1c;" onclick="openDeleteSchoolModal(${s.id}, '${escapeJsQuotes(s.name)}', '${escapeJsQuotes(s.code || '')}')">🗑 Delete</button>
+          <td style="padding:12px; text-align:center; font-weight:600;">${s.student_count}</td>
+          <td style="padding:12px; text-align:center; font-weight:600;">${s.user_count}</td>
+          <td style="padding:12px; text-align:center; white-space:nowrap;"><span class="${statusClass}">${s.status}</span></td>
+          <td style="padding:12px 14px; text-align:right; white-space:nowrap;">
+            <div style="display:inline-flex; gap:6px; align-items:center; justify-content:flex-end;">
+              <button class="btn" style="padding:5px 10px; font-size:0.8rem; background:#0284c7; border-color:#0369a1; color:#fff;" onclick="downloadSchoolBackup(${s.id}, '${s.code}')" title="Download School JSON Snapshot">📥 Backup</button>
+              <button class="btn primary" style="padding:5px 10px; font-size:0.8rem;" onclick="enterSchoolView(${s.id}, '${escapeJsQuotes(s.name)}', '${s.school_mode}', '${escapeJsQuotes(s.code || '')}')" title="Enter School Dashboard">👁 Enter View</button>
+              <button class="btn ${s.status === 'ACTIVE' ? 'danger' : ''}" style="padding:5px 10px; font-size:0.8rem;" onclick="toggleSchoolStatus(${s.id}, '${s.status}')" title="${s.status === 'ACTIVE' ? 'Suspend School Account' : 'Activate School'}">${s.status === 'ACTIVE' ? 'Suspend' : 'Activate'}</button>
+              <button class="btn danger" style="padding:5px 10px; font-size:0.8rem; background:#dc2626; border-color:#b91c1c;" onclick="openDeleteSchoolModal(${s.id}, '${escapeJsQuotes(s.name)}', '${escapeJsQuotes(s.code || '')}')" title="Purge School Tenant">🗑 Delete</button>
+            </div>
           </td>
         </tr>
       `;

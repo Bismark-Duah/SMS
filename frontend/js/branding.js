@@ -193,62 +193,52 @@
 })();
 
 window.applySchoolModeVisibility = function(mode, bStatus) {
-  const currentMode = (mode || localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
-  const boardingStatus = (bStatus || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase();
-  
-  // Hide or show SHS specific links (Programs, Houses/Dormitories, Departments, CSSPS Enrollment)
-  const shsLinks = document.querySelectorAll('a[href*="programs.html"], a[href*="houses.html"], a[href*="departments.html"], a[href*="enrollment.html"]');
+  const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+    ? window.SchoolFeatures
+    : (window.FeatureGate ? window.FeatureGate.getFeatures(mode, bStatus) : null);
+
+  if (window.FeatureGate && window.FeatureGate.applyToDOM && F) {
+    window.FeatureGate.applyToDOM(F);
+  }
+
+  const currentMode = F ? F.schoolMode : (mode || localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
+  const isBoarding = F ? F.isBoarding : ((bStatus || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
+
+  // Hide or show SHS specific links (Programs, Departments, CSSPS Enrollment, Transcripts)
+  const shsLinks = document.querySelectorAll('a[href*="programs.html"], a[href*="departments.html"], a[href*="enrollment.html"], a[href*="report-card.html?mode=transcript"], a[href*="clearance.html"]');
   shsLinks.forEach(link => {
-    const isHouseLink = link.getAttribute('href').includes('houses.html');
-    if (currentMode === 'BASIC_ONLY') {
-      link.style.display = 'none';
-      if (link.parentElement && (link.parentElement.tagName === 'LI' || link.parentElement.classList.contains('nav-item'))) {
-        link.parentElement.style.display = 'none';
-      }
-    } else {
-      if (isHouseLink && boardingStatus === 'DAY_ONLY') {
-        link.style.display = 'none';
-        if (link.parentElement && (link.parentElement.tagName === 'LI' || link.parentElement.classList.contains('nav-item'))) {
-          link.parentElement.style.display = 'none';
-        }
-      } else {
-        link.style.display = '';
-        if (link.parentElement && (link.parentElement.tagName === 'LI' || link.parentElement.classList.contains('nav-item'))) {
-          link.parentElement.style.display = '';
-        }
-      }
+    const shouldShow = (currentMode !== 'BASIC_ONLY');
+    link.style.display = shouldShow ? '' : 'none';
+    if (link.parentElement && (link.parentElement.tagName === 'LI' || link.parentElement.classList.contains('nav-item'))) {
+      link.parentElement.style.display = shouldShow ? '' : 'none';
+    }
+  });
+
+  // Hide or show Houses/Dormitories link based on Boarding status
+  const houseLinks = document.querySelectorAll('a[href*="houses.html"]');
+  houseLinks.forEach(link => {
+    link.style.display = isBoarding ? '' : 'none';
+    if (link.parentElement && (link.parentElement.tagName === 'LI' || link.parentElement.classList.contains('nav-item'))) {
+      link.parentElement.style.display = isBoarding ? '' : 'none';
     }
   });
 
   // Hide or show Basic specific links (Cumulative Record Folder)
   const basicLinks = document.querySelectorAll('a[href*="cumulative-record.html"]');
   basicLinks.forEach(link => {
-    if (currentMode === 'SHS_ONLY') {
-      link.style.display = 'none';
-      if (link.parentElement && (link.parentElement.tagName === 'LI' || link.parentElement.classList.contains('nav-item'))) {
-        link.parentElement.style.display = 'none';
-      }
-    } else {
-      link.style.display = '';
-      if (link.parentElement && (link.parentElement.tagName === 'LI' || link.parentElement.classList.contains('nav-item'))) {
-        link.parentElement.style.display = '';
-      }
+    const shouldShow = (currentMode !== 'SHS_ONLY');
+    link.style.display = shouldShow ? '' : 'none';
+    if (link.parentElement && (link.parentElement.tagName === 'LI' || link.parentElement.classList.contains('nav-item'))) {
+      link.parentElement.style.display = shouldShow ? '' : 'none';
     }
   });
 
   // Exeat Management link visibility based on boarding status
   const exeatLinks = document.querySelectorAll('a[href*="exeat.html"]');
   exeatLinks.forEach(link => {
-    if (boardingStatus === 'DAY_ONLY' || currentMode === 'BASIC_ONLY') {
-      link.style.display = 'none';
-      if (link.parentElement && (link.parentElement.tagName === 'LI' || link.parentElement.classList.contains('nav-item'))) {
-        link.parentElement.style.display = 'none';
-      }
-    } else {
-      link.style.display = '';
-      if (link.parentElement && (link.parentElement.tagName === 'LI' || link.parentElement.classList.contains('nav-item'))) {
-        link.parentElement.style.display = '';
-      }
+    link.style.display = isBoarding ? '' : 'none';
+    if (link.parentElement && (link.parentElement.tagName === 'LI' || link.parentElement.classList.contains('nav-item'))) {
+      link.parentElement.style.display = isBoarding ? '' : 'none';
     }
   });
 
@@ -261,7 +251,13 @@ window.applySchoolModeVisibility = function(mode, bStatus) {
   basicElements.forEach(el => {
     el.style.display = (currentMode === 'SHS_ONLY') ? 'none' : '';
   });
+
+  const boardingElements = document.querySelectorAll('.boarding-only-feature');
+  boardingElements.forEach(el => {
+    el.style.display = isBoarding ? '' : 'none';
+  });
 };
+
 
 window.handleThemeSelectChange = async function(val) {
   if (window.applyTheme) window.applyTheme(val);

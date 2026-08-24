@@ -106,6 +106,40 @@ window.updateGradingStandardDropdown = function(mode) {
     toggleGradingSection(stdSel.value);
 };
 
+window.updateSettingsProfilePreview = function(mode, boarding) {
+    const badgesContainer = document.getElementById('settingsProfileBadges');
+    const titleEl = document.getElementById('settingsProfileTitle');
+    if (!badgesContainer) return;
+
+    const m = (mode || document.getElementById('school_mode')?.value || 'COMBINED').toUpperCase();
+    const b = (boarding || document.getElementById('boarding_status')?.value || 'BOARDING_AND_DAY').toUpperCase();
+
+    if (titleEl && window.FeatureGate) {
+        titleEl.textContent = `🏫 ${window.FeatureGate.getProfileName(m, b)} — Active Features`;
+    }
+
+    const summary = window.FeatureGate ? window.FeatureGate.getProfileSummary(m, b) : [];
+    badgesContainer.innerHTML = summary.map(f => `
+        <span style="background:${f.enabled ? 'rgba(16,185,129,0.18)' : 'rgba(100,116,139,0.12)'}; color:${f.enabled ? '#34d399' : '#64748b'}; padding:3px 8px; border-radius:6px; font-weight:600; text-decoration:${f.enabled ? 'none' : 'line-through'};">
+            ${f.enabled ? '✔' : '✕'} ${f.label}
+        </span>
+    `).join('');
+};
+
+window.onSettingsModeChange = function() {
+    const mode = document.getElementById('school_mode')?.value || 'COMBINED';
+    const boarding = document.getElementById('boarding_status')?.value || 'BOARDING_AND_DAY';
+    
+    // Auto-derive hierarchy mode
+    const hierSelect = document.getElementById('boarding_hierarchy_mode');
+    if (hierSelect) {
+        hierSelect.value = (mode === 'BASIC_ONLY') ? 'BASIC_TWO_TIER' : 'SHS_THREE_TIER';
+    }
+
+    window.updateGradingStandardDropdown(mode);
+    window.updateSettingsProfilePreview(mode, boarding);
+};
+
 function escapeHtml(str) {
     return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : '';
 }
@@ -168,47 +202,43 @@ async function loadSettings() {
         localStorage.setItem('school_mode', mode);
         window.updateGradingStandardDropdown(mode);
 
-        const isSchoolAdmin = localStorage.getItem('userRole') === 'admin' || localStorage.getItem('userRole') === 'super_admin' || localStorage.getItem('is_super_admin') === 'true';
-        const superOnlyFields = ['school_name', 'school_abbreviation'];
+        // Strict Super Admin check — locks school registration parameters from school admin override
+        const isSuperAdmin = (localStorage.getItem('userRole') === 'super_admin' || localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin');
+        const superOnlyFields = ['school_name', 'school_abbreviation', 'school_mode', 'boarding_status', 'boarding_hierarchy_mode'];
         superOnlyFields.forEach(fieldId => {
             const el = document.getElementById(fieldId);
             if (el) {
                 if (!isSuperAdmin) {
                     el.disabled = true;
-                    el.title = "This parameter is locked and managed by the Super-Admin.";
+                    el.title = "This parameter is provisioned and managed by the Platform Super-Admin.";
                     el.style.opacity = '0.7';
                     el.style.cursor = 'not-allowed';
                 } else {
-                    el.disabled = false;
-                    el.style.opacity = '1';
-                    el.style.cursor = 'default';
+                    if (fieldId !== 'boarding_hierarchy_mode') {
+                        el.disabled = false;
+                        el.style.opacity = '1';
+                        el.style.cursor = 'default';
+                    }
                 }
             }
         });
 
-        ['school_mode', 'boarding_status'].forEach(fieldId => {
-            const el = document.getElementById(fieldId);
-            if (el) {
-                if (!isSchoolAdmin) {
-                    el.disabled = true;
-                    el.style.opacity = '0.7';
-                } else {
-                    el.disabled = false;
-                    el.style.opacity = '1';
-                }
-            }
-        });
         const lockNotice = document.getElementById('schoolModeLockNotice');
         if (lockNotice) {
             lockNotice.textContent = isSuperAdmin ? '(⭐ Super-Admin Editable)' : '(🔒 Managed by Super-Admin)';
+        }
+        const bLockNotice = document.getElementById('boardingStatusLockNotice');
+        if (bLockNotice) {
+            bLockNotice.textContent = isSuperAdmin ? '(⭐ Super-Admin Editable)' : '(🔒 Managed by Super-Admin)';
         }
 
         const bStatus = settings.boarding_status || 'BOARDING_AND_DAY';
         setVal('boarding_status', bStatus);
         localStorage.setItem('boarding_status', bStatus);
-        const bHierarchy = settings.boarding_hierarchy_mode || 'SHS_THREE_TIER';
+        const bHierarchy = settings.boarding_hierarchy_mode || (mode === 'BASIC_ONLY' ? 'BASIC_TWO_TIER' : 'SHS_THREE_TIER');
         setVal('boarding_hierarchy_mode', bHierarchy);
         localStorage.setItem('boarding_hierarchy_mode', bHierarchy);
+        window.updateSettingsProfilePreview(mode, bStatus);
         window.toggleBoardingHierarchyBox(bStatus);
 
         setVal('class_score_weight', settings.class_score_weight || 30);
@@ -397,6 +427,9 @@ if (settingsForm) {
         if (res.ok) {
             msgEl.innerHTML = '<span style="color:var(--success-color)">✔ Settings saved successfully!</span>';
             loadSettings();
+            if (window.FeatureGate && window.FeatureGate.refresh) {
+                window.FeatureGate.refresh();
+            }
             if (window.applyBranding) window.applyBranding();
             if (window.applySchoolModeVisibility) window.applySchoolModeVisibility(schoolMode, boardingStatus);
         } else {

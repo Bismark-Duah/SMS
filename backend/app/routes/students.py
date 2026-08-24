@@ -53,6 +53,16 @@ def _get_school_mode(db: Session, school_id: Optional[int] = None) -> str:
     setting = db.query(Setting).filter(Setting.key == "school_mode").first()
     return setting.value if setting and setting.value else "COMBINED"
 
+
+def _get_boarding_status(db: Session, school_id: Optional[int] = None) -> str:
+    """Returns the boarding_status for the given school. Defaults to BOARDING_AND_DAY."""
+    if school_id:
+        sch = db.query(School).filter(School.id == school_id).first()
+        if sch and sch.boarding_type:
+            return sch.boarding_type.upper()
+    setting = db.query(Setting).filter(Setting.key == "boarding_status").first()
+    return setting.value.upper() if setting and setting.value else "BOARDING_AND_DAY"
+
 def _student_dict(s: Student) -> dict:
     hp = s.health_profile
     return {
@@ -218,8 +228,19 @@ def create_student(
         residential_status=student.residential_status or "B",
         school_id=school_id,
     )
+
+    # ── DAY_ONLY Enforcement ──────────────────────────────────────────────────
+    # Backend-level policy: override client-submitted values for DAY_ONLY schools.
+    # This cannot be circumvented by direct API calls.
+    boarding_status = _get_boarding_status(db, school_id)
+    if boarding_status == "DAY_ONLY":
+        db_student.residential_status = "D"   # Force to Day
+        db_student.house_id = None            # No boarding house
+        db_student.dormitory_id = None        # No dormitory
+
     db.add(db_student)
     db.flush()
+
 
     # Auto-allocate House & Dormitory if missing
     allocate_student_house_and_dorm(db, db_student)
@@ -288,7 +309,15 @@ def update_student(
     db_student.bece_raw_score = student.bece_raw_score
     db_student.bece_aggregate = student.bece_aggregate
     db_student.jhs_attended = student.jhs_attended
-    db_student.residential_status = student.residential_status
+    # ── DAY_ONLY Enforcement ─────────────────────────────────────────────────
+    # Backend enforces residential status regardless of frontend submission
+    boarding_status = _get_boarding_status(db, school_id)
+    if boarding_status == "DAY_ONLY":
+        db_student.residential_status = "D"
+        db_student.house_id = None
+        db_student.dormitory_id = None
+    else:
+        db_student.residential_status = student.residential_status
 
     auto_link_guardian_for_student(db, db_student, auto_create=True)
 

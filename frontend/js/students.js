@@ -183,34 +183,69 @@ window.checkAndToggleCSSPSFields = function() {
   const formModeToggle = document.getElementById('formModeToggle');
 
   const kpiCSSPSCard = document.getElementById('kpiCSSPSCard');
+  const kpiBoardingCard = document.getElementById('kpiBoardingCard');
+  const kpiDayCard = document.getElementById('kpiDayCard');
+  const chipBoarders = document.getElementById('chipBoarders');
+  const chipDay = document.getElementById('chipDay');
   const csspsTemplateBtn = document.getElementById('csspsTemplateBtn');
   const csspsImportBtn = document.getElementById('csspsImportBtn');
 
-  const mode = (systemSchoolMode || localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
-  const isBasicOnly = (mode === 'BASIC_ONLY');
+  // Form field wrappers
+  const lblProgramId = document.getElementById('lblProgramId');
+  const lblHouseId = document.getElementById('lblHouseId');
+  const lblDormitoryId = document.getElementById('lblDormitoryId');
+  const lblCsspsResidentialStatus = document.getElementById('lblCsspsResidentialStatus');
+  const lblCsspsHouseId = document.getElementById('lblCsspsHouseId');
 
-  if (kpiCSSPSCard) {
-    kpiCSSPSCard.style.display = isBasicOnly ? 'none' : 'flex';
-  }
-  if (csspsTemplateBtn) {
-    csspsTemplateBtn.style.display = isBasicOnly ? 'none' : 'inline-block';
-  }
-  if (csspsImportBtn) {
-    csspsImportBtn.style.display = isBasicOnly ? 'none' : 'inline-block';
+  const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+    ? window.SchoolFeatures
+    : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+  const mode = F ? F.schoolMode : (systemSchoolMode || localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
+  const isBasicOnly = F ? F.isBasicOnly : (mode === 'BASIC_ONLY');
+  const isShsOnly = F ? F.isShsOnly : (mode === 'SHS_ONLY');
+  const isBoarding = F ? F.isBoarding : ((localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
+
+  // KPI cards visibility
+  if (kpiCSSPSCard) kpiCSSPSCard.style.display = (F ? F.showCsspsKpi : !isBasicOnly) ? 'flex' : 'none';
+  if (kpiBoardingCard) kpiBoardingCard.style.display = isBoarding ? 'flex' : 'none';
+  if (kpiDayCard) kpiDayCard.style.display = isBoarding ? 'flex' : 'none';
+
+  // Filter chips visibility
+  if (chipBoarders) chipBoarders.style.display = isBoarding ? '' : 'none';
+  if (chipDay) chipDay.style.display = isBoarding ? '' : 'none';
+
+  // Action buttons
+  if (csspsTemplateBtn) csspsTemplateBtn.style.display = (F ? F.showCsspsEnrollment : !isBasicOnly) ? 'inline-block' : 'none';
+  if (csspsImportBtn) csspsImportBtn.style.display = (F ? F.showCsspsEnrollment : !isBasicOnly) ? 'inline-block' : 'none';
+
+  // Basic form field visibility
+  if (lblProgramId) lblProgramId.style.display = (F ? F.showProgramField : !isBasicOnly) ? '' : 'none';
+  if (lblHouseId) lblHouseId.style.display = isBoarding ? '' : 'none';
+  if (lblDormitoryId) lblDormitoryId.style.display = isBoarding ? '' : 'none';
+
+  // CSSPS form field visibility
+  if (lblCsspsResidentialStatus) lblCsspsResidentialStatus.style.display = isBoarding ? '' : 'none';
+  if (lblCsspsHouseId) lblCsspsHouseId.style.display = isBoarding ? '' : 'none';
+  if (!isBoarding) {
+    const resStatusSelect = document.getElementById('residential_status');
+    if (resStatusSelect) resStatusSelect.value = 'D';
   }
 
   if (!csspsContainer || !basicContainer) return;
 
   let showSHSCSSPS = false;
 
-  if (mode === 'SHS_ONLY' || mode.includes('SHS')) {
+  if (isShsOnly) {
     showSHSCSSPS = true;
+    manualFormModeOverride = 'SHS';
     if (formModeToggle) formModeToggle.style.display = 'none';
-  } else if (isBasicOnly || mode.includes('BASIC')) {
+  } else if (isBasicOnly) {
     showSHSCSSPS = false;
     manualFormModeOverride = 'BASIC';
     if (formModeToggle) formModeToggle.style.display = 'none';
   } else {
+    // COMBINED school mode: show toggle
     if (formModeToggle) formModeToggle.style.display = 'flex';
     if (manualFormModeOverride) {
       showSHSCSSPS = (manualFormModeOverride === 'SHS');
@@ -254,17 +289,8 @@ window.checkAndToggleCSSPSFields = function() {
     csspsContainer.style.display = 'none';
     basicContainer.style.display = 'grid';
     if (formSubtitle) {
-      formSubtitle.textContent = '🏫 Basic School Student Registration';
+      formSubtitle.textContent = isBasicOnly ? '🏫 Basic School (KG-JHS) Student Registration' : 'Standard Student Registration Form';
       formSubtitle.style.color = '#38bdf8';
-    }
-  }
-
-  const progSelect = document.getElementById('program_id');
-  if (progSelect && progSelect.parentElement) {
-    if (isBasicOnly) {
-      progSelect.parentElement.style.display = 'none';
-    } else {
-      progSelect.parentElement.style.display = '';
     }
   }
 };
@@ -397,7 +423,19 @@ function renderTable(students) {
   }
 
   const currentSchoolMode = (systemSchoolMode || localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
-  const isBasicMode = (currentSchoolMode === 'BASIC_ONLY');
+  const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+    ? window.SchoolFeatures
+    : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+  const isBasicMode = F ? F.isBasicOnly : (currentSchoolMode === 'BASIC_ONLY');
+  const showPrograms = F ? F.showProgramField : !isBasicMode;
+  const showBoarding = F ? F.showBoardingHouseField : ((localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
+  const showTranscripts = F ? F.showTranscripts : !isBasicMode;
+
+  const thProgramCol = document.getElementById('thProgramCol');
+  const thBoardingCol = document.getElementById('thBoardingCol');
+  if (thProgramCol) thProgramCol.style.display = showPrograms ? 'table-cell' : 'none';
+  if (thBoardingCol) thBoardingCol.style.display = showBoarding ? 'table-cell' : 'none';
 
   tbody.innerHTML = students.map(s => {
     const isInactive = s.is_active === false || s.status === 'INACTIVE';
@@ -428,15 +466,15 @@ function renderTable(students) {
         ${schoolCell}
         <td style="font-family:monospace; font-weight:600;">${escapeHtml(s.student_code || '')}</td>
         <td>${escapeHtml(s.class_name || 'Unassigned')}</td>
-        <td>${escapeHtml(s.program_name || 'N/A')}</td>
+        ${showPrograms ? `<td>${escapeHtml(s.program_name || 'N/A')}</td>` : ''}
         <td>
           <div>${escapeHtml(s.guardian_name || 'None')}</div>
           <div style="font-size:0.78rem; opacity:0.65;">${escapeHtml(s.phone || '')}</div>
         </td>
-        <td>${boardingBadge}</td>
+        ${showBoarding ? `<td>${boardingBadge}</td>` : ''}
         <td>${statusChip(!isInactive)}</td>
         <td>
-          <a class="btn" style="padding:4px 8px; font-size:0.8rem; background:#4338ca; border-color:#3730a3; color:#ffffff; text-decoration:none; margin-right:4px; display:inline-block;" href="report-card.html?mode=transcript&student_id=${s.id}" target="_blank">📜 Transcript</a>
+          ${showTranscripts ? `<a class="btn" style="padding:4px 8px; font-size:0.8rem; background:#4338ca; border-color:#3730a3; color:#ffffff; text-decoration:none; margin-right:4px; display:inline-block;" href="report-card.html?mode=transcript&student_id=${s.id}" target="_blank">📜 Transcript</a>` : ''}
           <button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#059669; border-color:#047857; color:#ffffff; margin-right:4px;" onclick="openIdCardModal(${s.id})">🪪 ID Card</button>
           ${canEdit ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem;" onclick="openEditForm(${s.id})">✏ Edit</button>` : ''}
           ${canDeactivate && !isInactive ? `<button class="btn danger" style="padding:4px 8px; font-size:0.8rem; margin-left:4px;" onclick="deactivateStudent(${s.id}, '${escapeHtml(s.full_name)}')">🗑 Deactivate</button>` : ''}

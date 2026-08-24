@@ -53,8 +53,30 @@ async function loadRoles() {
       return;
     }
 
+    const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+      ? window.SchoolFeatures
+      : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+    const isBoarding = F ? F.showBoardingRoles : ((localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
+    const isBasicOnly = F ? F.isBasicOnly : (localStorage.getItem('school_mode') === 'BASIC_ONLY');
+
+    const BOARDING_ROLES = [
+      'senior_house_master', 'senior_house_mistress',
+      'house_master', 'assistant_house_master',
+      'house_mistress', 'assistant_house_mistress',
+      'assistant_headmaster_domestic', 'assistant_head_domestic',
+      'security_officer'
+    ];
+
+    const filteredRoles = roles.filter(r => {
+      const rName = r.name.toLowerCase();
+      if (!isBoarding && BOARDING_ROLES.includes(rName)) return false;
+      if (isBasicOnly && rName === 'hod') return false;
+      return true;
+    });
+
     container.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px;">
-      ${roles.map(r => {
+      ${filteredRoles.map(r => {
         const title = formatRoleTitle(r.name);
         const isDefaultChecked = r.name === 'teacher' ? 'checked' : '';
         return `

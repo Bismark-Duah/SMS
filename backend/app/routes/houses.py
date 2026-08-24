@@ -96,6 +96,7 @@ def list_houses(db: Session = Depends(get_db), current_user: User = Depends(get_
                 id=h.id,
                 name=h.name,
                 gender=h.gender,
+                house_type=getattr(h, "house_type", "BOARDING") or "BOARDING",
                 senior_in_charge_id=h.senior_in_charge_id,
                 senior_in_charge_name=senior_name,
                 house_master_id=h.house_master_id,
@@ -171,6 +172,7 @@ def create_house(
     db_house = House(
         name=payload.name,
         gender=payload.gender,
+        house_type=payload.house_type or "BOARDING",
         school_id=school_id,
         senior_in_charge_id=payload.senior_in_charge_id,
         house_master_id=payload.house_master_id,
@@ -194,6 +196,7 @@ def create_house(
         id=db_house.id,
         name=db_house.name,
         gender=db_house.gender,
+        house_type=db_house.house_type or "BOARDING",
         senior_in_charge_id=db_house.senior_in_charge_id,
         senior_in_charge_name=senior_name,
         house_master_id=db_house.house_master_id,
@@ -269,6 +272,7 @@ def update_house(
 
     db_house.name = payload.name
     db_house.gender = payload.gender
+    db_house.house_type = payload.house_type or "BOARDING"
     db_house.senior_in_charge_id = payload.senior_in_charge_id
     db_house.house_master_id = payload.house_master_id
     db_house.assistant_house_master_id = payload.assistant_house_master_id

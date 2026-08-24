@@ -186,6 +186,7 @@ class DormitoryResponse(DormitoryBase):
 class HouseBase(BaseModel):
     name: str
     gender: str # "Boys", "Girls", or "Both"
+    house_type: Optional[str] = "BOARDING" # "BOARDING" or "ACADEMIC_SPORTS"
     senior_in_charge_id: Optional[int] = None
     house_master_id: Optional[int] = None
     assistant_house_master_id: Optional[int] = None

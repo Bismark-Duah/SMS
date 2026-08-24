@@ -60,6 +60,17 @@ function updateSupervisorFieldsVisibility() {
     boysContainer.style.display = 'block';
     girlsContainer.style.display = 'block';
   }
+
+  // Check 2-tier vs 3-tier hierarchy from FeatureGate
+  const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+    ? window.SchoolFeatures
+    : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+  const isTwoTier = F ? (F.boardingHierarchy === 'BASIC_TWO_TIER') : (localStorage.getItem('school_mode') === 'BASIC_ONLY');
+  const lblBoysSenior = document.getElementById('lblBoysSenior');
+  const lblGirlsSenior = document.getElementById('lblGirlsSenior');
+  if (lblBoysSenior) lblBoysSenior.style.display = isTwoTier ? 'none' : '';
+  if (lblGirlsSenior) lblGirlsSenior.style.display = isTwoTier ? 'none' : '';
 }
 
 houseGenderSelect.addEventListener('change', updateSupervisorFieldsVisibility);
@@ -196,6 +207,14 @@ function renderHousesList() {
 
     const totalHouseCap = house.dormitories.reduce((acc, d) => acc + (d.capacity || 30), 0);
 
+    const isAcademic = (house.house_type === 'ACADEMIC_SPORTS');
+    const dormsButton = !isAcademic 
+      ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem; border-color:var(--secondary); color:#22d3ee;" onclick="openDormsModal(${house.id}, '${house.name.replace(/'/g, "\\'")}', '${house.gender}')">🏫 Dorms</button>` 
+      : '';
+    const dormsFooter = !isAcademic 
+      ? `<div style="font-size:0.82rem; opacity:.8; margin-top: 4px;"><strong style="color:var(--text-secondary);">Dormitories:</strong> ${dormsLabel}</div>` 
+      : `<div style="font-size:0.82rem; opacity:.7; margin-top: 4px; color:#a5b4fc;">🏆 Academic & Sports House (Non-residential)</div>`;
+
     return `
       <div style="border-bottom: 1px solid var(--border-color); padding: 16px 0; display:flex; flex-direction:column; gap:8px;">
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -206,6 +225,7 @@ function renderHousesList() {
                 background:${badgeBg}; color:${badgeColor};">
                 ${house.gender}
               </span>
+              ${isAcademic ? '<span style="font-size:0.72rem; padding:2px 8px; border-radius:10px; margin-left:4px; font-weight:600; background:rgba(99,102,241,0.2); color:#a5b4fc;">Academic/Sports</span>' : ''}
             </h4>
             ${supervisorInfo}
             <div style="margin-top: 6px; font-size:0.85rem; opacity:.85;">
@@ -213,14 +233,12 @@ function renderHousesList() {
             </div>
           </div>
           <div style="display:flex; gap:6px;">
-            <button class="btn" style="padding:4px 8px; font-size:0.8rem; border-color:var(--secondary); color:#22d3ee;" onclick="openDormsModal(${house.id}, '${house.name.replace(/'/g, "\\'")}', '${house.gender}')">🏫 Dorms</button>
-            <button class="btn" style="padding:4px 8px; font-size:0.8rem;" onclick="editHouse(${house.id}, '${house.name.replace(/'/g, "\\'")}', '${house.gender}', ${house.senior_in_charge_id || 'null'}, ${house.house_master_id || 'null'}, ${house.assistant_house_master_id || 'null'}, ${house.senior_in_charge_girls_id || 'null'}, ${house.house_master_girls_id || 'null'}, ${house.assistant_house_master_girls_id || 'null'})">Edit</button>
+            ${dormsButton}
+            <button class="btn" style="padding:4px 8px; font-size:0.8rem;" onclick="editHouse(${house.id}, '${house.name.replace(/'/g, "\\'")}', '${house.gender}', ${house.senior_in_charge_id || 'null'}, ${house.house_master_id || 'null'}, ${house.assistant_house_master_id || 'null'}, ${house.senior_in_charge_girls_id || 'null'}, ${house.house_master_girls_id || 'null'}, ${house.assistant_house_master_girls_id || 'null'}, '${house.house_type || 'BOARDING'}')">Edit</button>
             <button class="btn danger" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteHouse(${house.id})">Delete</button>
           </div>
         </div>
-        <div style="font-size:0.82rem; opacity:.8; margin-top: 4px;">
-          <strong style="color:var(--text-secondary);">Dormitories:</strong> ${dormsLabel}
-        </div>
+        ${dormsFooter}
       </div>
     `;
   }).join('');
@@ -290,10 +308,13 @@ function renderReportingStructure() {
 }
 
 // Edit House handler
-function editHouse(id, name, gender, seniorId, masterId, assistantId, seniorGirlsId, masterGirlsId, assistantGirlsId) {
+function editHouse(id, name, gender, seniorId, masterId, assistantId, seniorGirlsId, masterGirlsId, assistantGirlsId, houseType) {
   document.getElementById('houseId').value = id;
   document.getElementById('houseName').value = name;
   houseGenderSelect.value = gender;
+  if (document.getElementById('houseType')) {
+    document.getElementById('houseType').value = houseType || 'BOARDING';
+  }
   updateSupervisorFieldsVisibility();
   
   // Set Boys/Default values
@@ -340,6 +361,7 @@ houseForm.addEventListener('submit', async (e) => {
   const payload = {
     name: document.getElementById('houseName').value.trim(),
     gender: gender,
+    house_type: document.getElementById('houseType')?.value || 'BOARDING',
     senior_in_charge_id: (gender === 'Boys' || gender === 'Both') && seniorSelect.value ? parseInt(seniorSelect.value) : null,
     house_master_id: (gender === 'Boys' || gender === 'Both') && houseMasterSelect.value ? parseInt(houseMasterSelect.value) : null,
     assistant_house_master_id: (gender === 'Boys' || gender === 'Both') && houseAssistantSelect.value ? parseInt(houseAssistantSelect.value) : null,

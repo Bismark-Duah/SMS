@@ -85,6 +85,34 @@ if (form) {
         msgEl.style.color = '#4ade80';
       }
 
+      // ── Fetch tenant configuration immediately after login ──────────────
+      // Populates boarding_status, boarding_hierarchy_mode etc. into
+      // localStorage BEFORE redirect, preventing flash of wrong features.
+      if (!data.is_super_admin) {
+        try {
+          const settingsHeaders = { 'Authorization': `Bearer ${data.access_token}` };
+          if (data.school_id) settingsHeaders['X-School-Id'] = String(data.school_id);
+          const settingsRes = await fetch(`${API_BASE}/settings/`, { headers: settingsHeaders });
+          if (settingsRes.ok) {
+            const s = await settingsRes.json();
+            if (s.boarding_status)        localStorage.setItem('boarding_status', s.boarding_status);
+            if (s.boarding_hierarchy_mode) localStorage.setItem('boarding_hierarchy_mode', s.boarding_hierarchy_mode);
+            if (s.school_mode)            localStorage.setItem('school_mode', s.school_mode);
+            if (s.school_name)            localStorage.setItem('school_name', s.school_name);
+            if (s.school_logo)            localStorage.setItem('school_logo', s.school_logo);
+            if (s.class_score_weight)     localStorage.setItem('class_score_weight', String(s.class_score_weight));
+            if (s.exam_score_weight)      localStorage.setItem('exam_score_weight', String(s.exam_score_weight));
+            if (s.system_theme)           localStorage.setItem('system_theme', s.system_theme);
+            // Refresh feature gate with accurate tenant config
+            if (window.FeatureGate && window.FeatureGate.refresh) {
+              window.FeatureGate.refresh();
+            }
+          }
+        } catch (_) {
+          // Non-critical — guard.js will sync settings on next page load
+        }
+      }
+
       // Super-Admin ALWAYS routes directly to super-admin.html (Master Portal)
       let dest = 'dashboard.html';
       if (data.is_super_admin) {

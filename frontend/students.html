@@ -6,6 +6,7 @@
     <title>Students – School Management System</title>
     <meta name="description" content="Manage student records, enrolments, and profiles." />
     <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/featureGate.js?v=1.0"></script>
     <script src="js/theme.js"></script>
     <style>
       .student-avatar {
@@ -44,21 +45,21 @@
 
       <!-- KPI Summary Cards -->
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
-        <div style="background:var(--card-bg); border:var(--glass-border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
+        <div id="kpiTotalStudentsCard" style="background:var(--card-bg); border:var(--glass-border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
           <div>
             <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; opacity:0.75;">Active Students</div>
             <div style="font-size:1.4rem; font-weight:700; color:#818cf8; margin-top:2px;" id="kpiTotalStudents">—</div>
           </div>
           <div style="font-size:1.6rem; opacity:0.8;">🎓</div>
         </div>
-        <div style="background:var(--card-bg); border:var(--glass-border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
+        <div id="kpiBoardingCard" style="background:var(--card-bg); border:var(--glass-border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
           <div>
             <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; opacity:0.75;">Boarding Students</div>
             <div style="font-size:1.4rem; font-weight:700; color:#34d399; margin-top:2px;" id="kpiBoardingStudents">—</div>
           </div>
           <div style="font-size:1.6rem; opacity:0.8;">🏠</div>
         </div>
-        <div style="background:var(--card-bg); border:var(--glass-border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
+        <div id="kpiDayCard" style="background:var(--card-bg); border:var(--glass-border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
           <div>
             <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; opacity:0.75;">Day Students</div>
             <div style="font-size:1.4rem; font-weight:700; color:#38bdf8; margin-top:2px;" id="kpiDayStudents">—</div>
@@ -88,8 +89,8 @@
             <div class="filter-chip active" data-filter="all" onclick="setStudentQuickFilter('all')">All Students</div>
             <div class="filter-chip" data-filter="boys" onclick="setStudentQuickFilter('boys')">👦 Boys</div>
             <div class="filter-chip" data-filter="girls" onclick="setStudentQuickFilter('girls')">👧 Girls</div>
-            <div class="filter-chip" data-filter="boarders" onclick="setStudentQuickFilter('boarders')">🏠 Boarders</div>
-            <div class="filter-chip" data-filter="day" onclick="setStudentQuickFilter('day')">🎒 Day Students</div>
+            <div class="filter-chip" id="chipBoarders" data-filter="boarders" onclick="setStudentQuickFilter('boarders')">🏠 Boarders</div>
+            <div class="filter-chip" id="chipDay" data-filter="day" onclick="setStudentQuickFilter('day')">🎒 Day Students</div>
           </div>
 
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
@@ -118,9 +119,9 @@
                   <th id="thSchoolCol" style="display:none; position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">School</th>
                   <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Code</th>
                   <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Class</th>
-                  <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Program</th>
+                  <th id="thProgramCol" style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Program</th>
                   <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Guardian</th>
-                  <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Boarding</th>
+                  <th id="thBoardingCol" style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Boarding</th>
                   <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Status</th>
                   <th style="position: sticky; top: 0; background: var(--surface-card, #1e293b); z-index: 20; padding: 12px 16px;">Actions</th>
                 </tr>
@@ -178,7 +179,7 @@
                   <option value="">Select Class...</option>
                 </select>
               </label>
-              <label>Program
+              <label id="lblProgramId">Program
                 <select id="program_id">
                   <option value="">None / Not Applicable</option>
                 </select>
@@ -197,12 +198,12 @@
               <label>Guardian Phone
                 <input type="tel" id="phone" placeholder="E.g. +233 20 000 0000" />
               </label>
-              <label>Boarding House
+              <label id="lblHouseId">Boarding House
                 <select id="studentHouseId">
                   <option value="">None (Day Student)</option>
                 </select>
               </label>
-              <label>Dormitory
+              <label id="lblDormitoryId">Dormitory
                 <select id="studentDormitoryId">
                   <option value="">None</option>
                 </select>
@@ -297,13 +298,13 @@
                       <option value="">Select Program...</option>
                     </select>
                   </label>
-                  <label>Residential Status *
+                  <label id="lblCsspsResidentialStatus">Residential Status *
                     <select id="residential_status">
                       <option value="B">Boarding (B)</option>
                       <option value="D">Day Student (D)</option>
                     </select>
                   </label>
-                  <label>House Assignment
+                  <label id="lblCsspsHouseId">House Assignment
                     <select id="shs_house_id">
                       <option value="">-- Select House --</option>
                     </select>

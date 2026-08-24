@@ -6,6 +6,7 @@
     <title>Settings – School Management System</title>
     <meta name="description" content="Configure school profile, grading standards, and system preferences." />
     <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/featureGate.js?v=1.0"></script>
     <script src="js/theme.js"></script>
   </head>
   <body>
@@ -72,25 +73,34 @@
               <img id="sig_preview" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
             </div>
           </div>
-          <label>School Mode <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;" id="schoolModeLockNotice">(🔒 Managed by Overall Super-Admin)</span>
-            <select id="school_mode" onchange="if(window.updateGradingStandardDropdown) window.updateGradingStandardDropdown(this.value)">
+          <label>School Mode <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;" id="schoolModeLockNotice">(🔒 Managed by Super-Admin)</span>
+            <select id="school_mode" onchange="if(window.onSettingsModeChange) window.onSettingsModeChange()">
               <option value="COMBINED">Combined School (Basic + SHS)</option>
               <option value="BASIC_ONLY">Basic School Only (Creche to JHS)</option>
               <option value="SHS_ONLY">Senior High School (SHS) Only</option>
             </select>
           </label>
-          <label>Boarding Status
-            <select id="boarding_status" onchange="if(window.toggleBoardingHierarchyBox) window.toggleBoardingHierarchyBox(this.value)">
+          <label>Boarding Status <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;" id="boardingStatusLockNotice">(🔒 Managed by Super-Admin)</span>
+            <select id="boarding_status" onchange="if(window.onSettingsModeChange) window.onSettingsModeChange()">
               <option value="BOARDING_AND_DAY">Boarding & Day (Mixed)</option>
               <option value="DAY_ONLY">Day Only (No Boarding Facilities)</option>
             </select>
           </label>
-          <label id="hierarchyModeLabel">Boarding Approval Hierarchy
-            <select id="boarding_hierarchy_mode">
-              <option value="SHS_THREE_TIER">SHS Standard (Housemaster → Senior Housemaster → Asst Head Domestic)</option>
-              <option value="BASIC_TWO_TIER">Basic School / Simple (Housemaster/Matron → Headteacher/Asst Head directly)</option>
+          <label id="hierarchyModeLabel">Boarding Approval Hierarchy <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;">(⚡ Auto-Derived)</span>
+            <select id="boarding_hierarchy_mode" disabled>
+              <option value="SHS_THREE_TIER">SHS Standard (3-Tier: Housemaster → Senior In-Charge → Asst Head)</option>
+              <option value="BASIC_TWO_TIER">Basic School (2-Tier: Housemaster/Matron → Headteacher directly)</option>
             </select>
           </label>
+
+          <!-- Real-Time Profile Feature Preview Panel -->
+          <div id="settingsProfilePreview" style="grid-column: 1 / -1; background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.25); border-radius: 8px; padding: 12px 16px; margin-top: 4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:0.82rem; font-weight:700; color:#818cf8;" id="settingsProfileTitle">🏫 Profile Features Overview</span>
+              <span style="font-size:0.72rem; opacity:0.7;" id="settingsProfileSubtitle">Automated multi-axis feature gating</span>
+            </div>
+            <div id="settingsProfileBadges" style="display:flex; flex-wrap:wrap; gap:6px; font-size:0.75rem;"></div>
+          </div>
           <label>SBA Class Score Weight (%)
             <input type="number" id="class_score_weight" min="0" max="100" placeholder="E.g. 30" required />
           </label>

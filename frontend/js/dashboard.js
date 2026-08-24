@@ -78,24 +78,9 @@ function renderCards(role) {
   if (!container) return;
 
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || role || '').toLowerCase();
+  const isAdmin = ['admin', 'super_admin'].includes(activeRole);
 
   let items = [...(cardsByRole[activeRole] || cardsByRole.admin)];
-  const schoolMode = (localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
-  if (schoolMode === 'BASIC_ONLY') {
-    const shsHrefs = ['programs.html', 'houses.html', 'departments.html', 'enrollment.html', 'transcript'];
-    items = items.filter(i => !shsHrefs.some(h => (i.href || '').includes(h)));
-  } else if (schoolMode === 'SHS_ONLY') {
-    const basicHrefs = ['cumulative-record.html'];
-    items = items.filter(i => !basicHrefs.includes(i.href));
-  }
-
-  const boardingStatus = (localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase();
-  if (boardingStatus === 'DAY_ONLY' || schoolMode === 'BASIC_ONLY') {
-    const boardingHrefs = ['houses.html', 'exeat.html'];
-    items = items.filter(i => !boardingHrefs.includes(i.href));
-  }
-
-  const isAdmin = ['admin', 'super_admin'].includes(activeRole);
 
   // 1. HOD / Academic Leadership cards
   if (activeRole === 'hod' || isAdmin) {
@@ -133,6 +118,33 @@ function renderCards(role) {
       if (!items.some(i => i.href === c.href)) items.push(c);
     });
   }
+
+  // ── Centralized Feature Gating Filter ────────────────────────────────────
+  const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+    ? window.SchoolFeatures
+    : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+  const isBasicOnly = F ? F.isBasicOnly : (localStorage.getItem('school_mode') === 'BASIC_ONLY');
+  const isShsOnly   = F ? F.isShsOnly   : (localStorage.getItem('school_mode') === 'SHS_ONLY');
+  const isBoarding  = F ? F.isBoarding  : (localStorage.getItem('boarding_status') !== 'DAY_ONLY');
+
+  items = items.filter(item => {
+    const href = (item.href || '').toLowerCase();
+    
+    // SHS-only features (hide in Basic Only)
+    if (isBasicOnly && (href.includes('programs.html') || href.includes('departments.html') || href.includes('enrollment.html') || href.includes('transcript') || href.includes('clearance.html'))) {
+      return false;
+    }
+    // Basic-only features (hide in SHS Only)
+    if (isShsOnly && href.includes('cumulative-record.html')) {
+      return false;
+    }
+    // Boarding-only features (hide in Day Only)
+    if (!isBoarding && (href.includes('houses.html') || href.includes('exeat.html'))) {
+      return false;
+    }
+    return true;
+  });
 
   container.innerHTML = items.map(item => `
     <a class="nav-card" href="${item.href}">
@@ -326,11 +338,14 @@ async function loadFeesStat() {
 async function loadHousesStat() {
   const token = localStorage.getItem('accessToken');
   const cardEl = document.getElementById('statHousesCard');
-  const boardingStatus = (localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase();
-  const schoolMode = (localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
+  const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+    ? window.SchoolFeatures
+    : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+  const isBoarding = F ? F.showBoardingKpi : ((localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || '').toLowerCase();
 
-  if (boardingStatus === 'DAY_ONLY' || schoolMode === 'BASIC_ONLY' || ['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole)) {
+  if (!isBoarding || ['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole)) {
     if (cardEl) cardEl.style.display = 'none';
     return;
   }

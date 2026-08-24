@@ -160,6 +160,10 @@ class House(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True, nullable=False)
     gender = Column(String, nullable=False)
+    # house_type distinguishes boarding houses from academic/sports houses.
+    # BOARDING      — has dormitories, requires boarding_status = BOARDING_AND_DAY
+    # ACADEMIC_SPORTS — available to ALL SHS schools regardless of boarding status
+    house_type = Column(String, default="BOARDING", server_default="BOARDING")
     school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True)
     senior_in_charge_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     house_master_id = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -688,5 +692,25 @@ class AdmissionVoucher(Base):
     school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=1)
 
     school = relationship("School")
+
+
+class ConfigAuditLog(Base):
+    """
+    Enterprise SaaS Configuration Audit Trail.
+    Logs every configuration change made by Super Admins (mode, boarding status, tenant policy).
+    """
+    __tablename__ = "config_audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False)
+    changed_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    change_type = Column(String(50), nullable=False)  # "SCHOOL_MODE_CHANGE", "BOARDING_STATUS_CHANGE"
+    old_value = Column(String(100), nullable=True)
+    new_value = Column(String(100), nullable=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    notes = Column(String(255), nullable=True)
+
+    school = relationship("School")
+    changed_by = relationship("User")
 
 

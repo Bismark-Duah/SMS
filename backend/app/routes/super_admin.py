@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from ..database import get_db
-from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage
+from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog
 from ..routes.auth import get_current_user, get_password_hash
 from ..ncca_seed import seed_ncca_curriculum
 
@@ -253,6 +253,7 @@ def update_school_mode(
     if not school:
         raise HTTPException(status_code=404, detail="School not found")
 
+    old_mode = school.school_mode
     school.school_mode = payload.school_mode
     setting = db.query(Setting).filter(Setting.school_id == school_id, Setting.key == "school_mode").first()
     if setting:
@@ -260,8 +261,80 @@ def update_school_mode(
     else:
         db.add(Setting(key="school_mode", value=payload.school_mode, school_id=school_id))
 
+    # Auto-derive boarding_hierarchy_mode when school_mode changes
+    auto_hierarchy = "BASIC_TWO_TIER" if payload.school_mode == "BASIC_ONLY" else "SHS_THREE_TIER"
+    hier_setting = db.query(Setting).filter(Setting.school_id == school_id, Setting.key == "boarding_hierarchy_mode").first()
+    if hier_setting:
+        hier_setting.value = auto_hierarchy
+    else:
+        db.add(Setting(key="boarding_hierarchy_mode", value=auto_hierarchy, school_id=school_id))
+
+    # Audit Trail Entry
+    audit = ConfigAuditLog(
+        school_id=school_id,
+        changed_by_user_id=current_user.id,
+        change_type="SCHOOL_MODE_CHANGE",
+        old_value=old_mode,
+        new_value=payload.school_mode,
+        notes=f"Changed school operating mode from {old_mode} to {payload.school_mode}."
+    )
+    db.add(audit)
+
     db.commit()
-    return {"message": f"School mode updated to '{payload.school_mode}' successfully!", "school_id": school.id, "school_mode": payload.school_mode}
+    return {"message": f"School mode updated to '{payload.school_mode}' successfully!", "school_id": school.id, "school_mode": payload.school_mode, "boarding_hierarchy_mode": auto_hierarchy}
+
+
+class SchoolBoardingUpdateSchema(BaseModel):
+    boarding_status: str
+
+@router.put("/schools/{school_id}/boarding")
+def update_school_boarding(
+    school_id: int,
+    payload: SchoolBoardingUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Super-Admin exclusive endpoint to modify a school's boarding configuration.
+    Validates the value, updates the School model, and syncs the Setting record.
+    """
+    valid_values = {"DAY_ONLY", "BOARDING_AND_DAY"}
+    boarding_val = payload.boarding_status.upper()
+    if boarding_val not in valid_values:
+        raise HTTPException(status_code=400, detail=f"Invalid boarding_status. Must be one of: {', '.join(valid_values)}")
+
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+
+    old_boarding = school.boarding_type or "BOARDING_AND_DAY"
+    school.boarding_type = boarding_val
+
+    # Sync to Setting table for consistency
+    bs_setting = db.query(Setting).filter(Setting.school_id == school_id, Setting.key == "boarding_status").first()
+    if bs_setting:
+        bs_setting.value = boarding_val
+    else:
+        db.add(Setting(key="boarding_status", value=boarding_val, school_id=school_id))
+
+    # Audit Trail Entry
+    audit = ConfigAuditLog(
+        school_id=school_id,
+        changed_by_user_id=current_user.id,
+        change_type="BOARDING_STATUS_CHANGE",
+        old_value=old_boarding,
+        new_value=boarding_val,
+        notes=f"Changed boarding status from {old_boarding} to {boarding_val}."
+    )
+    db.add(audit)
+
+    db.commit()
+    return {
+        "message": f"Boarding status updated to '{boarding_val}' successfully!",
+        "school_id": school.id,
+        "boarding_status": boarding_val
+    }
+
 
 
 @router.get("/schools/{school_id}/backup")

@@ -6,6 +6,7 @@
     <title>eduManage360 Master Portal — Unified Multi-School Administration</title>
     <meta name="description" content="Central Master Management Portal for all registered schools in eduManage360." />
     <link rel="stylesheet" href="css/styles.css?v=4.1" />
+    <script src="js/featureGate.js?v=1.0"></script>
     <script src="js/theme.js?v=4.1"></script>
     <style>
       .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
@@ -15,8 +16,13 @@
       .badge-shs { background-color: #198754; }
       .badge-basic { background-color: #0d6efd; }
       .badge-combined { background-color: #6f42c1; }
+      .badge-boarding { background-color: #0891b2; }
+      .badge-day { background-color: #b45309; }
       .status-active { color: #10b981; font-weight: 600; }
       .status-suspended { color: #ef4444; font-weight: 600; }
+      .profile-preview { font-size: 0.72rem; opacity: 0.75; margin-top: 2px; }
+      .profile-preview .feat-on  { color: #4ade80; }
+      .profile-preview .feat-off { color: #64748b; text-decoration: line-through; }
     </style>
   </head>
   <body>
@@ -73,7 +79,9 @@
                 <th style="padding:10px;">ID</th>
                 <th style="padding:10px;">School Name</th>
                 <th style="padding:10px;">Code</th>
-                <th style="padding:10px;">Track Mode</th>
+                <th style="padding:10px;">School Mode</th>
+                <th style="padding:10px;">Boarding</th>
+                <th style="padding:10px;">Profile</th>
                 <th style="padding:10px;">Students</th>
                 <th style="padding:10px;">Users</th>
                 <th style="padding:10px;">Status</th>
@@ -81,7 +89,7 @@
               </tr>
             </thead>
             <tbody id="schoolsTableBody">
-              <tr><td colspan="8" style="padding:16px; text-align:center; opacity:0.7;">Loading registered schools...</td></tr>
+              <tr><td colspan="10" style="padding:16px; text-align:center; opacity:0.7;">Loading registered schools...</td></tr>
             </tbody>
           </table>
         </div>

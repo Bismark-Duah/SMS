@@ -62,7 +62,13 @@ def get_settings(db: Session = Depends(get_db), current_user: Optional[User] = D
     else:
         res["grading_standard"] = res.get("grading_standard", "WAEC")
     res["boarding_status"] = res.get("boarding_status", "BOARDING_AND_DAY")
-    res["boarding_hierarchy_mode"] = res.get("boarding_hierarchy_mode", "SHS_THREE_TIER")
+    # Auto-derive boarding_hierarchy_mode from school_mode — never stored manually.
+    # BASIC_ONLY schools use a 2-tier structure (no Senior In-Charge tier).
+    # SHS_ONLY and COMBINED use the full 3-tier SHS hierarchy.
+    _mode_for_hierarchy = res.get("school_mode", "COMBINED").upper()
+    res["boarding_hierarchy_mode"] = (
+        "BASIC_TWO_TIER" if _mode_for_hierarchy == "BASIC_ONLY" else "SHS_THREE_TIER"
+    )
     try:
         res["class_score_weight"] = int(res.get("class_score_weight", 30))
     except Exception:
@@ -105,7 +111,7 @@ def update_settings(payload: dict, db: Session = Depends(get_db), current_user: 
     is_super_admin = "super_admin" in role_names
     is_admin = "admin" in role_names or is_super_admin
     if not is_admin:
-        for locked_key in ["school_name", "school_code", "school_abbreviation", "school_mode", "boarding_status"]:
+        for locked_key in ["school_name", "school_code", "school_abbreviation", "school_mode", "boarding_status", "boarding_hierarchy_mode"]:
             if locked_key in payload:
                 del payload[locked_key]
 
@@ -114,7 +120,17 @@ def update_settings(payload: dict, db: Session = Depends(get_db), current_user: 
         sch = db.query(School).filter(School.id == target_sch_id).first()
         if sch:
             if "school_mode" in payload and payload["school_mode"]:
-                sch.school_mode = str(payload["school_mode"]).upper()
+                new_mode = str(payload["school_mode"]).upper()
+                sch.school_mode = new_mode
+                # Auto-derive and persist boarding_hierarchy_mode whenever school_mode changes
+                auto_hierarchy = "BASIC_TWO_TIER" if new_mode == "BASIC_ONLY" else "SHS_THREE_TIER"
+                hierarchy_setting = db.query(Setting).filter(
+                    Setting.key == "boarding_hierarchy_mode"
+                ).first()
+                if hierarchy_setting:
+                    hierarchy_setting.value = auto_hierarchy
+                else:
+                    db.add(Setting(key="boarding_hierarchy_mode", value=auto_hierarchy))
             if "boarding_status" in payload and payload["boarding_status"]:
                 sch.boarding_type = str(payload["boarding_status"]).upper()
 

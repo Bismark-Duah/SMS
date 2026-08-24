@@ -53,6 +53,48 @@ def run_migrations():
     from sqlalchemy import text
     Base.metadata.create_all(bind=engine)
     with engine.connect() as conn:
+        # ── Houses columns ──────────────────────────────────────────────────
+        house_columns = [
+            ("house_type", "VARCHAR DEFAULT 'BOARDING'"),
+            ("school_id", "INTEGER REFERENCES schools(id)"),
+            ("senior_in_charge_id", "INTEGER REFERENCES users(id)"),
+            ("house_master_id", "INTEGER REFERENCES users(id)"),
+            ("assistant_house_master_id", "INTEGER REFERENCES users(id)"),
+            ("senior_in_charge_girls_id", "INTEGER REFERENCES users(id)"),
+            ("house_master_girls_id", "INTEGER REFERENCES users(id)"),
+            ("assistant_house_master_girls_id", "INTEGER REFERENCES users(id)")
+        ]
+        for col_name, col_type in house_columns:
+            try:
+                conn.execute(text(f"SELECT {col_name} FROM houses LIMIT 1"))
+            except Exception:
+                try:
+                    conn.execute(text(f"ALTER TABLE houses ADD COLUMN {col_name} {col_type}"))
+                    conn.commit()
+                except Exception:
+                    pass
+
+        # ── Schools columns ─────────────────────────────────────────────────
+        school_columns = [
+            ("school_mode", "VARCHAR DEFAULT 'COMBINED'"),
+            ("boarding_type", "VARCHAR DEFAULT 'BOARDING_AND_DAY'"),
+            ("status", "VARCHAR DEFAULT 'ACTIVE'"),
+            ("address", "VARCHAR"),
+            ("phone", "VARCHAR"),
+            ("email", "VARCHAR"),
+            ("logo_url", "VARCHAR")
+        ]
+        for col_name, col_type in school_columns:
+            try:
+                conn.execute(text(f"SELECT {col_name} FROM schools LIMIT 1"))
+            except Exception:
+                try:
+                    conn.execute(text(f"ALTER TABLE schools ADD COLUMN {col_name} {col_type}"))
+                    conn.commit()
+                except Exception:
+                    pass
+
+        # ── Subject columns ─────────────────────────────────────────────────
         subject_columns = [
             ("category", "VARCHAR DEFAULT 'Core'"),
             ("group_code", "VARCHAR"),
@@ -69,6 +111,7 @@ def run_migrations():
                 except Exception:
                     pass
 
+        # ── Student columns ─────────────────────────────────────────────────
         student_columns = [
             ("first_name", "VARCHAR"),
             ("middle_name", "VARCHAR"),
@@ -80,6 +123,9 @@ def run_migrations():
             ("jhs_attended", "VARCHAR"),
             ("residential_status", "VARCHAR DEFAULT 'B'"),
             ("enrollment_status", "VARCHAR DEFAULT 'Fully Registered'"),
+            ("house_id", "INTEGER REFERENCES houses(id)"),
+            ("dormitory_id", "INTEGER REFERENCES dormitories(id)"),
+            ("school_id", "INTEGER REFERENCES schools(id)"),
             ("family_background_notes", "TEXT"),
             ("socio_economic_notes", "TEXT"),
             ("personality_traits", "TEXT"),
@@ -95,6 +141,24 @@ def run_migrations():
         except Exception:
             try:
                 conn.execute(text("ALTER TABLE programs ADD COLUMN code VARCHAR"))
+                conn.commit()
+            except Exception:
+                pass
+
+        try:
+            conn.execute(text("SELECT school_id FROM programs LIMIT 1"))
+        except Exception:
+            try:
+                conn.execute(text("ALTER TABLE programs ADD COLUMN school_id INTEGER REFERENCES schools(id)"))
+                conn.commit()
+            except Exception:
+                pass
+
+        try:
+            conn.execute(text("SELECT school_id FROM departments LIMIT 1"))
+        except Exception:
+            try:
+                conn.execute(text("ALTER TABLE departments ADD COLUMN school_id INTEGER REFERENCES schools(id)"))
                 conn.commit()
             except Exception:
                 pass

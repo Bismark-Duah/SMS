@@ -268,10 +268,18 @@
 
     const accordionStates = JSON.parse(localStorage.getItem('sidebar_accordion_states') || '{}');
 
-    const schoolMode = (localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
-    const boardingStatus = (localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase();
-    const isBasicOnly = schoolMode === 'BASIC_ONLY';
-    const isShsOnly = schoolMode === 'SHS_ONLY';
+    // ── Use centralized feature gate (from featureGate.js) ────────────────────
+    // Falls back gracefully if featureGate.js is not yet loaded.
+    const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+      ? window.SchoolFeatures
+      : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+    const schoolMode     = F ? F.schoolMode     : (localStorage.getItem('school_mode')     || 'COMBINED').toUpperCase();
+    const boardingStatus = F ? F.boardingStatus : (localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase();
+    const isBasicOnly    = F ? F.isBasicOnly    : (schoolMode === 'BASIC_ONLY');
+    const isShsOnly      = F ? F.isShsOnly      : (schoolMode === 'SHS_ONLY');
+    const isCombined     = F ? F.isCombined     : (schoolMode === 'COMBINED');
+    const isBoarding     = F ? F.isBoarding     : (boardingStatus === 'BOARDING_AND_DAY');
 
     // Enterprise Taxonomy Definition
     let academicItems = [
@@ -288,6 +296,7 @@
       { href: 'attendance.html', icon: '📋', label: 'Attendance' },
       { href: 'houses.html', icon: '🏠', label: 'Houses & Dorms', shsOnly: true, boardingOnly: true },
       { href: 'exeat.html', icon: '🎟️', label: 'Exeat Management', boardingOnly: true },
+      { href: 'enrollment.html', icon: '📝', label: 'CSSPS Enrollment', shsOnly: true, csspsOnly: true },
       { href: 'discipline.html', icon: '⚖️', label: 'Discipline Records' },
       { href: 'cumulative-record.html', icon: '📁', label: 'Cumulative Record Folder', basicOnly: true },
       { href: 'clearance.html', icon: '🎓', label: 'Final Year Clearance', shsOnly: true },
@@ -344,18 +353,20 @@
     };
 
     const filterItems = (items) => items.filter(i => {
-      const href = (i.href || '').toLowerCase();
-      if (isBasicOnly) {
-        if (i.shsOnly || href.includes('programs.html') || href.includes('departments.html') || href.includes('transcript') || href.includes('houses.html')) {
-          return false;
-        }
-      }
-      if (i.shsOnly && isBasicOnly) return false;
-      if (i.basicOnly && isShsOnly) return false;
-      if (i.boardingOnly && boardingStatus === 'DAY_ONLY') return false;
+      const href = (i.href || '').toLowerCase().split('?')[0];
 
+      // ── Boarding gate: hide boarding-only items for DAY_ONLY schools ──────
+      if (i.boardingOnly && !isBoarding) return false;
+
+      // ── School Mode gates ─────────────────────────────────────────────────
+      // shsOnly: only show for SHS_ONLY or COMBINED (i.e., hide for BASIC_ONLY)
+      if (i.shsOnly && isBasicOnly) return false;
+      // basicOnly: only show for BASIC_ONLY or COMBINED (i.e., hide for SHS_ONLY)
+      if (i.basicOnly && isShsOnly) return false;
+
+      // ── Role gate ─────────────────────────────────────────────────────────
       if (!isActiveAdmin) {
-        const cleanHref = href.split('?')[0].split('/').pop();
+        const cleanHref = href.split('/').pop();
         const allowedRoles = NAV_PAGE_ROLES[cleanHref];
         if (allowedRoles && !allowedRoles.includes(activeRole)) {
           return false;

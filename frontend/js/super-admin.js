@@ -78,6 +78,18 @@ async function loadSuperAdminDashboard() {
     const sortedSchools = [...data.schools].sort((a, b) => a.id - b.id);
     tbody.innerHTML = sortedSchools.map(s => {
       const statusClass = s.status === 'ACTIVE' ? 'status-active' : 'status-suspended';
+      const boardingVal = s.boarding_type || 'BOARDING_AND_DAY';
+      const boardingLabel = boardingVal === 'DAY_ONLY' ? 'Day Only' : 'Boarding & Day';
+      const boardingClass = boardingVal === 'DAY_ONLY' ? 'badge-day' : 'badge-boarding';
+
+      // Profile Preview — shows what features the current config enables
+      const profileSummary = window.FeatureGate
+        ? window.FeatureGate.getProfileSummary(s.school_mode, boardingVal)
+        : [];
+      const previewHtml = profileSummary.map(f =>
+        `<span class="feat-${f.enabled ? 'on' : 'off'}">${f.enabled ? '+' : '-'}${f.label}</span>`
+      ).join(' &nbsp; ');
+
       return `
         <tr style="border-bottom: 1px solid var(--border-color, #334155);">
           <td style="padding:10px; font-weight:600;">#${s.id}</td>
@@ -86,11 +98,23 @@ async function loadSuperAdminDashboard() {
           </td>
           <td style="padding:10px;"><code style="background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px;">${s.code}</code></td>
           <td style="padding:10px;">
-            <select onchange="changeSchoolMode(${s.id}, this.value)" style="padding:2px 6px; font-size:0.8rem; border-radius:4px; background:#1e293b; color:#fff; border:1px solid #6366f1;">
-              <option value="SHS_ONLY" ${s.school_mode === 'SHS_ONLY' ? 'selected' : ''}>SHS Only</option>
+            <select onchange="changeSchoolMode(${s.id}, this.value, this.closest('tr').querySelector('.boarding-select').value)"
+                    style="padding:2px 6px; font-size:0.8rem; border-radius:4px; background:#1e293b; color:#fff; border:1px solid #6366f1;">
+              <option value="SHS_ONLY"   ${s.school_mode === 'SHS_ONLY'   ? 'selected' : ''}>SHS Only</option>
               <option value="BASIC_ONLY" ${s.school_mode === 'BASIC_ONLY' ? 'selected' : ''}>Basic Only</option>
-              <option value="COMBINED" ${s.school_mode === 'COMBINED' ? 'selected' : ''}>Combined</option>
+              <option value="COMBINED"   ${s.school_mode === 'COMBINED'   ? 'selected' : ''}>Combined</option>
             </select>
+          </td>
+          <td style="padding:10px;">
+            <select class="boarding-select"
+                    onchange="changeSchoolBoarding(${s.id}, this.value)"
+                    style="padding:2px 6px; font-size:0.8rem; border-radius:4px; background:#1e293b; color:#fff; border:1px solid #0891b2;">
+              <option value="BOARDING_AND_DAY" ${boardingVal === 'BOARDING_AND_DAY' ? 'selected' : ''}>Boarding & Day</option>
+              <option value="DAY_ONLY"         ${boardingVal === 'DAY_ONLY'         ? 'selected' : ''}>Day Only</option>
+            </select>
+          </td>
+          <td style="padding:10px;">
+            <div class="profile-preview">${previewHtml || '<span style="opacity:0.5;">—</span>'}</div>
           </td>
           <td style="padding:10px;">${s.student_count}</td>
           <td style="padding:10px;">${s.user_count}</td>
@@ -107,6 +131,7 @@ async function loadSuperAdminDashboard() {
         </tr>
       `;
     }).join('');
+
 
   } catch (error) {
     console.error('Super-Admin dashboard error:', error);
@@ -172,8 +197,11 @@ async function toggleSchoolStatus(schoolId, currentStatus) {
   }
 }
 
-async function changeSchoolMode(schoolId, newMode) {
-  if (!confirm(`Are you sure you want to change school mode to ${newMode}?`)) return;
+async function changeSchoolMode(schoolId, newMode, currentBoarding) {
+  const profileName = window.FeatureGate
+    ? window.FeatureGate.getProfileName(newMode, currentBoarding || 'BOARDING_AND_DAY')
+    : newMode;
+  if (!confirm(`Change school mode to: ${profileName}?\n\nThis will immediately affect what features are available to this school's administrators and staff.`)) return;
 
   try {
     const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}/mode`, {
@@ -183,15 +211,46 @@ async function changeSchoolMode(schoolId, newMode) {
     });
 
     if (res.ok) {
-      alert(`✔ School mode updated to ${newMode} successfully!`);
       loadSuperAdminDashboard();
     } else {
       alert('Could not update school mode.');
+      loadSuperAdminDashboard(); // Reset dropdown to actual value
     }
   } catch (err) {
     alert('Failed to update mode.');
+    loadSuperAdminDashboard();
   }
 }
+
+async function changeSchoolBoarding(schoolId, newBoarding) {
+  const profileName = window.FeatureGate
+    ? window.FeatureGate.getProfileName('COMBINED', newBoarding)
+    : newBoarding;
+  if (!confirm(`Change boarding status to: ${newBoarding === 'DAY_ONLY' ? 'Day Only' : 'Boarding & Day'}?\n\nThis affects Exeat Management, Houses & Dormitories, boarding staff roles, and boarding fee categories.`)) {
+    loadSuperAdminDashboard(); // Reset dropdown
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}/boarding`, {
+      method: 'PUT',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ boarding_status: newBoarding })
+    });
+
+    if (res.ok) {
+      loadSuperAdminDashboard();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.detail || 'Could not update boarding status.');
+      loadSuperAdminDashboard();
+    }
+  } catch (err) {
+    alert('Failed to update boarding status.');
+    loadSuperAdminDashboard();
+  }
+}
+
 
 async function downloadSchoolBackup(schoolId, schoolCode) {
   try {

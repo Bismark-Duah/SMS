@@ -85,13 +85,13 @@ with engine.connect() as conn:
             except Exception as e:
                 print(f"Failed to add column {col_name} to subjects:", e)
 
-    # Check/add student columns dynamically for SQLite compatibility
+    # Check/add student columns dynamically for SQLite / PostgreSQL compatibility
     student_columns = [
         ("first_name", "VARCHAR"),
         ("middle_name", "VARCHAR"),
         ("last_name", "VARCHAR"),
-        ("bece_index_number", "VARCHAR(12)"),
-        ("enrolment_code", "VARCHAR(15)"),
+        ("bece_index_number", "VARCHAR(64)"),
+        ("enrolment_code", "VARCHAR(64)"),
         ("bece_raw_score", "INTEGER"),
         ("bece_aggregate", "INTEGER"),
         ("jhs_attended", "VARCHAR"),
@@ -115,6 +115,14 @@ with engine.connect() as conn:
                 conn.commit()
             except Exception as e:
                 print(f"Failed to add column {col_name} to students:", e)
+
+    # For PostgreSQL deployments (e.g. Render): Ensure column lengths are expanded to VARCHAR(64)
+    for col_name in ["bece_index_number", "enrolment_code", "student_code"]:
+        try:
+            conn.execute(text(f"ALTER TABLE students ALTER COLUMN {col_name} TYPE VARCHAR(64)"))
+            conn.commit()
+        except Exception:
+            pass
     try:
         conn.execute(text("SELECT form_master_id FROM class_sections LIMIT 1"))
     except Exception:

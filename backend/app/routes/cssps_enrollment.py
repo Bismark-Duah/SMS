@@ -1,5 +1,7 @@
 import csv
 import io
+import re
+import uuid
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
@@ -153,10 +155,22 @@ async def import_cssps_csv(file: UploadFile = File(...), db: Session = Depends(g
     try:
         decoded = content.decode("utf-8-sig")
     except UnicodeDecodeError:
-        decoded = content.decode("latin-1")
+        decoded = content.decode("latin-1", errors="replace")
+
+    lines = [l for l in decoded.splitlines() if l.strip()]
+    if not lines:
+        return {"status": "error", "imported": 0, "skipped": 0, "total": 0, "errors": ["Uploaded file is empty."]}
+
+    # Auto-detect delimiter (comma, semicolon, or tab)
+    first_line = lines[0]
+    delimiter = ","
+    if ";" in first_line and first_line.count(";") > first_line.count(","):
+        delimiter = ";"
+    elif "\t" in first_line and first_line.count("\t") > first_line.count(","):
+        delimiter = "\t"
 
     stream = io.StringIO(decoded)
-    raw_reader = csv.DictReader(stream)
+    raw_reader = csv.DictReader(stream, delimiter=delimiter)
 
     imported_count = 0
     skipped_count = 0
@@ -165,205 +179,256 @@ async def import_cssps_csv(file: UploadFile = File(...), db: Session = Depends(g
     programs_by_name = {p.name.lower(): p.id for p in db.query(Program).all()}
     programs_by_code = {p.code.lower(): p.id for p in db.query(Program).all() if p.code}
 
+    # Enterprise Column Aliases
+    BECE_INDEX_ALIASES = [
+        "bece_index_number", "index_number", "bece_index", "index_no", "indexno",
+        "index_num", "index", "candidate_index", "candidate_index_number",
+        "bece_reg_no", "candidate_no", "jhs_index", "student_index",
+        "bece_index_no", "index_number_10_digits", "index_number_12_digits",
+        "bece_id", "candidate_id"
+    ]
+    ENROL_CODE_ALIASES = [
+        "enrolment_code", "enrollment_code", "code", "admission_code",
+        "placement_code", "enrol_code", "quick_code"
+    ]
+    FIRST_NAME_ALIASES = ["first_name", "firstname", "first", "given_name"]
+    MIDDLE_NAME_ALIASES = ["middle_name", "middlename", "middle", "other_names", "other_name"]
+    LAST_NAME_ALIASES = ["last_name", "lastname", "surname", "family_name"]
+    FULL_NAME_ALIASES = ["full_name", "fullname", "name", "student_name", "candidate_name", "student"]
+    GENDER_ALIASES = ["gender", "sex"]
+    DOB_ALIASES = ["date_of_birth", "dob", "birth_date", "birthdate"]
+    RAW_SCORE_ALIASES = ["bece_raw_score", "raw_score", "score", "total_score"]
+    AGGREGATE_ALIASES = ["bece_aggregate", "aggregate", "agg", "best_6", "best_six", "bece_agg"]
+    JHS_ALIASES = ["jhs_attended", "jhs", "junior_high", "school_attended", "previous_school", "jhs_name"]
+    PROGRAM_ALIASES = ["program_name", "program", "course", "programme", "programme_name", "stream"]
+    RESIDENTIAL_ALIASES = ["residential_status", "res_status", "residential", "status_res", "boarding_status", "residence", "res_type"]
+    GUARDIAN_ALIASES = ["guardian_name", "parent_name", "guardian", "parent", "father_name", "mother_name", "next_of_kin"]
+    PHONE_ALIASES = ["primary_phone", "phone", "phone_number", "contact", "mobile", "telephone", "guardian_phone", "cell_phone"]
+    ALT_PHONE_ALIASES = ["alternative_phone", "alt_phone", "emergency_phone", "other_phone", "phone2", "alt_contact"]
+    ADDRESS_ALIASES = ["address", "residential_address", "home_address", "location", "residence_address", "postal_address"]
+    CLASS_ALIASES = ["class_name", "class", "section", "class_section", "assigned_class"]
+
+    def get_val(row_dict, aliases, default=""):
+        for alias in aliases:
+            if alias in row_dict and row_dict[alias] is not None:
+                val_str = str(row_dict[alias]).strip()
+                if val_str:
+                    return val_str
+        return default
+
     line_num = 1
     for raw_row in raw_reader:
         line_num += 1
+        if not raw_row or not any(v for v in raw_row.values() if v and str(v).strip()):
+            continue
+
+        # Clean and normalize dictionary keys (strip BOM, quotes, non-alphanumeric to underscores)
+        row = {}
+        for k, v in raw_row.items():
+            if k is not None:
+                clean_k = re.sub(r'[^a-z0-9_]', '_', k.strip().lstrip('\ufeff').replace('"', '').replace("'", "").strip().lower())
+                clean_k = re.sub(r'_+', '_', clean_k).strip('_')
+                row[clean_k] = v.strip() if isinstance(v, str) else v
+
+        bece_idx = get_val(row, BECE_INDEX_ALIASES)
+        if isinstance(bece_idx, str):
+            bece_idx = bece_idx.strip()
+
+        # Handle scientific notation conversion from Excel (e.g. 1.00E+11)
+        if "e+" in str(bece_idx).lower():
+            try:
+                bece_idx = str(int(float(bece_idx)))
+            except ValueError:
+                pass
+
+        # Clean digits - BECE index numbers must be numeric
+        clean_digits = "".join(filter(str.isdigit, str(bece_idx)))
+        bece_idx = clean_digits
+
+        if not bece_idx or len(bece_idx) < 8 or len(bece_idx) > 20:
+            errors.append(f"Row {line_num}: Invalid or missing BECE Index Number '{bece_idx}'")
+            skipped_count += 1
+            continue
+
+        student_code = f"SHS-{bece_idx}"
+
+        # Check existing student in database
+        existing = db.query(Student).filter(
+            (Student.bece_index_number == bece_idx) | (Student.student_code == student_code)
+        ).first()
+        if existing:
+            errors.append(f"Row {line_num}: Candidate '{existing.full_name}' (Index: {bece_idx}) is already enrolled.")
+            skipped_count += 1
+            continue
+
+        # Isolate every row in a database savepoint so an error never breaks subsequent rows
         try:
-            # Clean and normalize dictionary keys (strip BOM, quotes, whitespace, convert to lower)
-            row = {}
-            for k, v in raw_row.items():
-                if k is not None:
-                    clean_k = k.strip().lstrip('\ufeff').replace('"', '').replace("'", "").strip().lower()
-                    row[clean_k] = v.strip() if isinstance(v, str) else v
+            with db.begin_nested():
+                enrol_code = get_val(row, ENROL_CODE_ALIASES, f"CSSPS-{bece_idx}")
+                # Ensure enrolment code uniqueness
+                if db.query(Student).filter(Student.enrolment_code == enrol_code).first():
+                    enrol_code = f"CSSPS-{bece_idx}-{uuid.uuid4().hex[:4].upper()}"
 
-            bece_idx = (
-                row.get("bece_index_number") or 
-                row.get("index_number") or 
-                row.get("bece_index") or 
-                row.get("index_no") or 
-                row.get("index no") or 
-                row.get("bece index") or 
-                row.get("candidate_index") or 
-                ""
-            )
-            if isinstance(bece_idx, str):
-                bece_idx = bece_idx.strip()
+                first_name = get_val(row, FIRST_NAME_ALIASES)
+                middle_name = get_val(row, MIDDLE_NAME_ALIASES)
+                last_name = get_val(row, LAST_NAME_ALIASES)
+                full_name_raw = get_val(row, FULL_NAME_ALIASES)
 
-            # Handle potential scientific notation conversion from Excel (e.g. 1.00E+11)
-            if "e+" in str(bece_idx).lower():
-                try:
-                    bece_idx = str(int(float(bece_idx)))
-                except ValueError:
-                    pass
+                if not first_name and not last_name and full_name_raw:
+                    parts = full_name_raw.split()
+                    if len(parts) >= 2:
+                        first_name = parts[0]
+                        last_name = parts[-1]
+                        middle_name = " ".join(parts[1:-1])
+                    else:
+                        first_name = parts[0] if parts else "Candidate"
+                        last_name = ""
 
-            # Extract clean digits if embedded
-            clean_digits = "".join(filter(str.isdigit, str(bece_idx)))
-            if clean_digits:
-                bece_idx = clean_digits
+                full_name = f"{first_name} {middle_name} {last_name}".replace("  ", " ").strip()
+                if not full_name:
+                    full_name = f"CSSPS Candidate {bece_idx}"
 
-            if not bece_idx or len(bece_idx) < 8 or len(bece_idx) > 15:
-                errors.append(f"Row {line_num}: Invalid or missing BECE Index Number '{bece_idx}'")
-                skipped_count += 1
-                continue
-
-            # Check existing
-            if db.query(Student).filter(Student.bece_index_number == bece_idx).first():
-                skipped_count += 1
-                continue
-
-            enrol_code = (row.get("enrolment_code") or row.get("code") or f"CSSPS-{bece_idx}").strip()
-            first_name = (row.get("first_name") or "").strip()
-            middle_name = (row.get("middle_name") or "").strip()
-            last_name = (row.get("last_name") or row.get("surname") or "").strip()
-            
-            if not first_name and not last_name and row.get("full_name"):
-                parts = row.get("full_name").strip().split()
-                if len(parts) >= 2:
-                    first_name = parts[0]
-                    last_name = parts[-1]
-                    middle_name = " ".join(parts[1:-1])
+                gender_raw = get_val(row, GENDER_ALIASES, "Male").upper()
+                if gender_raw.startswith("F"):
+                    gender = "Female"
                 else:
-                    first_name = parts[0] if parts else "Candidate"
-                    last_name = ""
+                    gender = "Male"
 
-            full_name = f"{first_name} {middle_name} {last_name}".replace("  ", " ").strip()
-            if not full_name:
-                full_name = f"CSSPS Candidate {bece_idx}"
+                dob = None
+                dob_str = get_val(row, DOB_ALIASES)
+                if dob_str:
+                    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+                        try:
+                            dob = datetime.strptime(dob_str, fmt)
+                            break
+                        except ValueError:
+                            pass
 
-            gender = (row.get("gender") or "M").strip().upper()
-            if gender.startswith("F"):
-                gender = "Female"
-            elif gender.startswith("M"):
-                gender = "Male"
+                raw_score_str = get_val(row, RAW_SCORE_ALIASES)
+                raw_score = int(raw_score_str) if raw_score_str.isdigit() else None
 
-            dob = None
-            if row.get("date_of_birth") or row.get("dob"):
-                dob_str = (row.get("date_of_birth") or row.get("dob")).strip()
-                for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
-                    try:
-                        dob = datetime.strptime(dob_str, fmt)
-                        break
-                    except ValueError:
-                        pass
+                agg_str = get_val(row, AGGREGATE_ALIASES)
+                aggregate = int(agg_str) if agg_str.isdigit() else None
 
-            raw_score = int(row.get("bece_raw_score")) if row.get("bece_raw_score") and str(row.get("bece_raw_score")).isdigit() else None
-            aggregate = int(row.get("bece_aggregate")) if row.get("bece_aggregate") and str(row.get("bece_aggregate")).isdigit() else None
-            jhs = (row.get("jhs_attended") or row.get("jhs") or "").strip()
+                jhs = get_val(row, JHS_ALIASES)
 
-            prog_str = (row.get("program_name") or row.get("program") or "").strip().lower()
-            prog_id = programs_by_name.get(prog_str) or programs_by_code.get(prog_str)
-            if not prog_id and row.get("program_id") and str(row.get("program_id")).isdigit():
-                prog_id = int(row.get("program_id"))
+                prog_str = get_val(row, PROGRAM_ALIASES).lower()
+                prog_id = programs_by_name.get(prog_str) or programs_by_code.get(prog_str)
+                if not prog_id:
+                    prog_id_raw = row.get("program_id")
+                    if prog_id_raw and str(prog_id_raw).isdigit():
+                        prog_id = int(prog_id_raw)
 
-            if not prog_id and prog_str:
-                if "tech" in prog_str:
-                    prog_id = programs_by_name.get("technical") or programs_by_name.get("applied technology")
-                elif "sci" in prog_str:
-                    prog_id = programs_by_name.get("general science")
-                elif "art" in prog_str:
-                    prog_id = programs_by_name.get("general arts")
-                elif "bus" in prog_str:
-                    prog_id = programs_by_name.get("business")
-                elif "home" in prog_str or "econ" in prog_str:
-                    prog_id = programs_by_name.get("home economics")
-                elif "agric" in prog_str:
-                    prog_id = programs_by_name.get("agriculture")
-                elif "stem" in prog_str:
-                    prog_id = programs_by_name.get("stem engineering") or programs_by_name.get("stem computer science")
+                if not prog_id and prog_str:
+                    if "tech" in prog_str:
+                        prog_id = programs_by_name.get("technical") or programs_by_name.get("applied technology")
+                    elif "sci" in prog_str:
+                        prog_id = programs_by_name.get("general science")
+                    elif "art" in prog_str:
+                        prog_id = programs_by_name.get("general arts")
+                    elif "bus" in prog_str:
+                        prog_id = programs_by_name.get("business")
+                    elif "home" in prog_str or "econ" in prog_str:
+                        prog_id = programs_by_name.get("home economics")
+                    elif "agric" in prog_str:
+                        prog_id = programs_by_name.get("agriculture")
+                    elif "stem" in prog_str:
+                        prog_id = programs_by_name.get("stem engineering") or programs_by_name.get("stem computer science")
+                    else:
+                        for p_name, p_id in programs_by_name.items():
+                            if prog_str in p_name or p_name in prog_str:
+                                prog_id = p_id
+                                break
+
+                res_raw = get_val(row, RESIDENTIAL_ALIASES, "B").upper()
+                if res_raw.startswith("D") or "DAY" in res_raw:
+                    res_status = "D"
                 else:
-                    for p_name, p_id in programs_by_name.items():
-                        if prog_str in p_name or p_name in prog_str:
-                            prog_id = p_id
-                            break
+                    res_status = "B"
 
-            res_status = (row.get("residential_status") or row.get("res_status") or "B").strip().upper()
-            if res_status.startswith("D") or "DAY" in res_status:
-                res_status = "D"
-            else:
-                res_status = "B"
+                guardian = get_val(row, GUARDIAN_ALIASES)
+                phone = get_val(row, PHONE_ALIASES)
+                alt_phone = get_val(row, ALT_PHONE_ALIASES)
+                address = get_val(row, ADDRESS_ALIASES)
 
-            guardian = (row.get("guardian_name") or row.get("parent_name") or "").strip()
-            phone = (row.get("primary_phone") or row.get("phone") or "").strip()
-            alt_phone = (row.get("alternative_phone") or row.get("alt_phone") or "").strip()
-            address = (row.get("address") or row.get("residential_address") or "").strip()
+                class_sec_id = None
+                class_name_input = get_val(row, CLASS_ALIASES)
 
-            student_code = f"SHS-{bece_idx}"
+                if class_name_input:
+                    from sqlalchemy import func
+                    matched_sec = db.query(ClassSection).filter(
+                        func.lower(ClassSection.name) == class_name_input.lower()
+                    ).first()
+                    if not matched_sec:
+                        all_secs = db.query(ClassSection).all()
+                        for sec in all_secs:
+                            if class_name_input.lower() in sec.name.lower() or sec.name.lower() in class_name_input.lower():
+                                matched_sec = sec
+                                break
+                    if matched_sec:
+                        class_sec_id = matched_sec.id
+                        if not prog_id:
+                            prog_id = matched_sec.program_id
 
-            class_sec_id = None
-            class_name_input = (row.get("class_name") or row.get("class") or row.get("section") or "").strip()
+                if not class_sec_id and prog_id:
+                    form1_sec = db.query(ClassSection).filter(ClassSection.program_id == prog_id).first()
+                    if form1_sec:
+                        class_sec_id = form1_sec.id
 
-            if class_name_input:
-                from sqlalchemy import func
-                matched_sec = db.query(ClassSection).filter(
-                    func.lower(ClassSection.name) == class_name_input.lower()
-                ).first()
-                if not matched_sec:
-                    all_secs = db.query(ClassSection).all()
-                    for sec in all_secs:
-                        if class_name_input.lower() in sec.name.lower() or sec.name.lower() in class_name_input.lower():
-                            matched_sec = sec
-                            break
-                if matched_sec:
-                    class_sec_id = matched_sec.id
-                    if not prog_id:
-                        prog_id = matched_sec.program_id
-
-            if not class_sec_id and prog_id:
-                form1_sec = db.query(ClassSection).filter(ClassSection.program_id == prog_id).first()
-                if form1_sec:
-                    class_sec_id = form1_sec.id
-
-            student = Student(
-                student_code=student_code,
-                full_name=full_name,
-                first_name=first_name,
-                middle_name=middle_name if middle_name else None,
-                last_name=last_name if last_name else None,
-                bece_index_number=bece_idx,
-                enrolment_code=enrol_code,
-                bece_raw_score=raw_score,
-                bece_aggregate=aggregate,
-                jhs_attended=jhs,
-                residential_status=res_status,
-                enrollment_status="Fully Registered",
-                school_type="SHS",
-                form=1,
-                gender=gender,
-                date_of_birth=dob,
-                program_id=prog_id,
-                class_section_id=class_sec_id,
-                guardian_name=guardian,
-                phone=phone,
-                address=address,
-                school_id=school_id
-            )
-            db.add(student)
-            db.flush()
-
-            # Auto-allocate House & Dormitory
-            allocate_student_house_and_dorm(db, student)
-
-            if guardian or phone:
-                g_rec = StudentGuardian(
-                    student_id=student.id,
-                    guardian_name=guardian or "Parent/Guardian",
-                    relationship_type="Parent/Guardian",
-                    primary_phone=phone,
-                    alternative_phone=alt_phone,
-                    residential_address=address
+                student = Student(
+                    student_code=student_code,
+                    full_name=full_name,
+                    first_name=first_name,
+                    middle_name=middle_name if middle_name else None,
+                    last_name=last_name if last_name else None,
+                    bece_index_number=bece_idx,
+                    enrolment_code=enrol_code,
+                    bece_raw_score=raw_score,
+                    bece_aggregate=aggregate,
+                    jhs_attended=jhs,
+                    residential_status=res_status,
+                    enrollment_status="Fully Registered",
+                    school_type="SHS",
+                    form=1,
+                    gender=gender,
+                    date_of_birth=dob,
+                    program_id=prog_id,
+                    class_section_id=class_sec_id,
+                    guardian_name=guardian,
+                    phone=phone,
+                    address=address,
+                    school_id=school_id
                 )
-                db.add(g_rec)
+                db.add(student)
+                db.flush()
 
-            h_rec = StudentHealth(
-                student_id=student.id,
-                emergency_contact=phone,
-                doctor_clearance_status=True
-            )
-            db.add(h_rec)
+                # Auto-allocate House & Dormitory
+                try:
+                    allocate_student_house_and_dorm(db, student)
+                except Exception as alloc_err:
+                    print(f"House allocation warning on row {line_num}: {alloc_err}")
 
-            imported_count += 1
-        except Exception as e:
-            errors.append(f"Row {line_num}: {str(e)}")
+                if guardian or phone:
+                    g_rec = StudentGuardian(
+                        student_id=student.id,
+                        guardian_name=guardian or "Parent/Guardian",
+                        relationship_type="Parent/Guardian",
+                        primary_phone=phone or "N/A",
+                        alternative_phone=alt_phone,
+                        residential_address=address
+                    )
+                    db.add(g_rec)
+
+                h_rec = StudentHealth(
+                    student_id=student.id,
+                    emergency_contact=phone or "N/A",
+                    doctor_clearance_status=True
+                )
+                db.add(h_rec)
+
+                imported_count += 1
+        except Exception as row_exc:
+            errors.append(f"Row {line_num} (Index {bece_idx}): {str(row_exc)}")
             skipped_count += 1
 
     db.commit()
@@ -371,6 +436,7 @@ async def import_cssps_csv(file: UploadFile = File(...), db: Session = Depends(g
         "status": "success",
         "imported": imported_count,
         "skipped": skipped_count,
+        "total": line_num - 1,
         "errors": errors
     }
 

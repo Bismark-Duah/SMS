@@ -66,6 +66,71 @@ window.triggerCSSPSCSVUpload = function() {
   if (input) input.click();
 };
 
+window.showCSSPSImportResultsModal = function(data) {
+  const existing = document.getElementById('cssps-import-result-modal');
+  if (existing) existing.remove();
+
+  const isSuccess = data.imported > 0 && (!data.skipped || data.skipped === 0);
+  const isPartial = data.imported > 0 && data.skipped > 0;
+  const isFailed = data.imported === 0;
+
+  const headerColor = isSuccess ? '#10b981' : (isPartial ? '#f59e0b' : '#ef4444');
+  const headerIcon = isSuccess ? '🎉' : (isPartial ? '⚠️' : '❌');
+  const title = isSuccess 
+    ? 'CSSPS Placement Import Successful' 
+    : (isPartial ? 'Partial Placement Import Completed' : 'CSSPS Placement Import Report');
+
+  const modal = document.createElement('div');
+  modal.id = 'cssps-import-result-modal';
+  modal.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.75); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:16px;';
+
+  let errorListHtml = '';
+  if (data.errors && data.errors.length > 0) {
+    const errorItems = data.errors.slice(0, 50).map(e => `<li style="margin-bottom:4px; font-family:monospace; font-size:0.82rem; color:#fca5a5;">${e}</li>`).join('');
+    const moreText = data.errors.length > 50 ? `<p style="font-size:0.8rem; color:#94a3b8; margin-top:6px;">...and ${data.errors.length - 50} more issues.</p>` : '';
+    errorListHtml = `
+      <div style="margin-top:14px; text-align:left;">
+        <label style="font-size:0.82rem; font-weight:700; color:#e2e8f0; text-transform:uppercase; letter-spacing:0.5px;">Detailed Row Log (${data.errors.length})</label>
+        <div style="max-height:160px; overflow-y:auto; background:rgba(0,0,0,0.35); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:10px 14px; margin-top:6px;">
+          <ul style="margin:0; padding-left:18px;">${errorItems}</ul>
+          ${moreText}
+        </div>
+      </div>
+    `;
+  }
+
+  modal.innerHTML = `
+    <div style="background:var(--surface-card, #1e293b); color:var(--text-main, #f8fafc); border-radius:14px; max-width:540px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); overflow:hidden;">
+      <div style="background:${headerColor}; padding:14px 20px; color:#ffffff; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.3rem;">${headerIcon}</span>
+          <h3 style="margin:0; font-size:1.05rem; font-weight:700;">${title}</h3>
+        </div>
+        <button onclick="document.getElementById('cssps-import-result-modal').remove()" style="background:none; border:none; color:#ffffff; font-size:1.4rem; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+      <div style="padding:20px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); border-radius:10px; padding:12px; text-align:center;">
+            <div style="font-size:0.75rem; font-weight:600; color:#34d399; text-transform:uppercase;">Successfully Imported</div>
+            <div style="font-size:1.8rem; font-weight:800; color:#10b981;">${data.imported || 0}</div>
+          </div>
+          <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); border-radius:10px; padding:12px; text-align:center;">
+            <div style="font-size:0.75rem; font-weight:600; color:#f87171; text-transform:uppercase;">Skipped / Existing</div>
+            <div style="font-size:1.8rem; font-weight:800; color:#ef4444;">${data.skipped || 0}</div>
+          </div>
+        </div>
+        ${errorListHtml}
+        <div style="margin-top:18px; display:flex; justify-content:flex-end; gap:10px;">
+          ${isFailed ? `<button onclick="downloadCSSPSCSVTemplate(); document.getElementById('cssps-import-result-modal').remove();" class="btn" style="background:#6366f1; color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:0.85rem; cursor:pointer;">📥 Download Template</button>` : ''}
+          <button onclick="document.getElementById('cssps-import-result-modal').remove()" class="btn" style="background:var(--primary, #3b82f6); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-weight:600; font-size:0.85rem; cursor:pointer;">Got It</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+};
+
 window.handleCSSPSCSVFileSelected = async function(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
@@ -84,10 +149,13 @@ window.handleCSSPSCSVFileSelected = async function(event) {
 
     const data = await res.json();
     if (res.ok) {
-      let msg = `✔ Successfully imported ${data.imported} CSSPS candidates!`;
-      if (data.skipped > 0) msg += ` (${data.skipped} skipped/already enrolled)`;
-      if (window.showToast) window.showToast(msg, 'success');
-      else alert(msg);
+      if (window.showCSSPSImportResultsModal) {
+        window.showCSSPSImportResultsModal(data);
+      } else {
+        let msg = `✔ Successfully imported ${data.imported} CSSPS candidates!`;
+        if (data.skipped > 0) msg += ` (${data.skipped} skipped/already enrolled)`;
+        if (window.showToast) window.showToast(msg, data.imported > 0 ? 'success' : 'warning');
+      }
 
       if (window.loadStudents) window.loadStudents();
     } else {
@@ -96,7 +164,8 @@ window.handleCSSPSCSVFileSelected = async function(event) {
       else alert(`Error: ${err}`);
     }
   } catch (error) {
-    alert("Network error importing CSSPS CSV: " + error.message);
+    if (window.showToast) window.showToast("Network error importing CSSPS CSV: " + error.message, 'error');
+    else alert("Network error importing CSSPS CSV: " + error.message);
   } finally {
     event.target.value = '';
   }

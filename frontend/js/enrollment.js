@@ -22,11 +22,22 @@ async function loadPublicSchoolBranding() {
   const schoolNameEl = document.getElementById('portalSchoolName');
   const logoContainer = document.getElementById('portalLogoContainer');
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlSchoolId = urlParams.get('school_id') || urlParams.get('school');
+  const localSchoolId = localStorage.getItem('school_id');
+  const activeSchoolId = urlSchoolId || localSchoolId;
+
   let name = localStorage.getItem('school_name') || 'GHANA SENIOR HIGH SCHOOL';
   let logo = localStorage.getItem('school_logo');
 
   try {
-    const res = await fetch(`${API_BASE}/settings/public-branding`);
+    const headers = {};
+    if (activeSchoolId) headers['X-School-Id'] = String(activeSchoolId);
+
+    const queryParams = new URLSearchParams({ mode: 'SHS_ONLY' });
+    if (activeSchoolId) queryParams.set('school_id', activeSchoolId);
+
+    const res = await fetch(`${API_BASE}/settings/public-branding?${queryParams.toString()}`, { headers });
     if (res.ok) {
       const data = await res.json();
       if (data.school_name) name = data.school_name;
@@ -85,6 +96,16 @@ async function handleVoucherLogin(event) {
     if (!res.ok) throw new Error(data.detail || 'Verification failed');
 
     currentVerifiedStudent = data;
+
+    // Dynamically update branding if candidate belongs to a specific institution
+    if (data.school_name) {
+      const nameEl = document.getElementById('portalSchoolName');
+      if (nameEl) nameEl.textContent = data.school_name;
+    }
+    if (data.school_logo) {
+      const logoEl = document.getElementById('portalLogoContainer');
+      if (logoEl) logoEl.innerHTML = `<img src="${data.school_logo}" alt="${data.school_name || 'School'} Logo" style="width:100%; height:100%; object-fit:contain;" />`;
+    }
 
     statusEl.style.color = '#4ade80';
     statusEl.textContent = '✔ Verified! Unlocking Admission Form...';

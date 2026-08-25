@@ -60,7 +60,9 @@ def _process_image_to_base64(file_bytes: bytes, filename: str, max_size=(360, 36
 @router.get("/public-branding")
 def get_public_branding(
     db: Session = Depends(get_db),
-    x_school_id: Optional[str] = Header(None, alias="X-School-Id")
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
+    school_id: Optional[int] = None,
+    mode: Optional[str] = None
 ):
     """
     Public lightweight endpoint returning school name, logo, and mode
@@ -69,8 +71,8 @@ def get_public_branding(
     settings_list = db.query(Setting).all()
     res = {s.key: s.value for s in settings_list}
 
-    target_school_id = None
-    if isinstance(x_school_id, str) and x_school_id.strip():
+    target_school_id = school_id
+    if not target_school_id and isinstance(x_school_id, str) and x_school_id.strip():
         try:
             target_school_id = int(x_school_id.strip())
         except ValueError:
@@ -79,17 +81,23 @@ def get_public_branding(
     school = None
     if target_school_id:
         school = db.query(School).filter(School.id == target_school_id).first()
+
+    if not school and mode and mode.upper() in ["SHS", "SHS_ONLY", "CSSPS"]:
+        # Prioritize Senior High / STEM / Technical School for CSSPS admission portal
+        school = db.query(School).filter(School.school_mode.in_(["SHS_ONLY", "COMBINED"])).first()
+
     if not school:
         school = db.query(School).first()
 
     name = school.name if school else (res.get("school_name") or "GHANA SENIOR HIGH SCHOOL")
     logo = school.logo_url if school and school.logo_url else res.get("school_logo")
-    mode = school.school_mode if school and school.school_mode else (res.get("school_mode") or "COMBINED")
+    smode = school.school_mode if school and school.school_mode else (res.get("school_mode") or "COMBINED")
 
     return {
+        "school_id": school.id if school else None,
         "school_name": name,
         "school_logo": logo,
-        "school_mode": mode,
+        "school_mode": smode,
         "school_code": school.code if school else res.get("school_code", "")
     }
 

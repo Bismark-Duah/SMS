@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 from ..database import get_db
-from ..models import AdmissionVoucher, Student, Program, User
+from ..models import AdmissionVoucher, Student, Program, User, School
 from ..dependencies import get_current_user, get_school_id
 
 router = APIRouter(prefix="/api/vouchers", tags=["Admission Vouchers"])
@@ -129,6 +129,17 @@ def verify_voucher(
 
     program_name = student.program.name if hasattr(student, 'program') and student.program else "General Studies"
 
+    school_name = "GHANA SENIOR HIGH SCHOOL"
+    school_logo = None
+    if student.school_id:
+        sc = db.query(School).filter(School.id == student.school_id).first()
+        if sc:
+            school_name = sc.name
+            school_logo = sc.logo_url
+    elif hasattr(student, 'school') and student.school:
+        school_name = student.school.name
+        school_logo = student.school.logo_url
+
     return {
         "success": True,
         "message": "Admission Voucher verified successfully.",
@@ -139,7 +150,10 @@ def verify_voucher(
         "program_name": program_name,
         "residential_status": student.residential_status or "B",
         "enrollment_status": student.enrollment_status or "PLACED",
-        "serial_code": voucher.serial_code
+        "serial_code": voucher.serial_code,
+        "school_id": student.school_id,
+        "school_name": school_name,
+        "school_logo": school_logo
     }
 
 
@@ -179,9 +193,23 @@ def retrieve_admission(
                 detail="Verification failed. The voucher credentials do not match this candidate record."
             )
 
+    school_name = "GHANA SENIOR HIGH SCHOOL"
+    school_logo = None
+    if student.school_id:
+        sc = db.query(School).filter(School.id == student.school_id).first()
+        if sc:
+            school_name = sc.name
+            school_logo = sc.logo_url
+    elif hasattr(student, 'school') and student.school:
+        school_name = student.school.name
+        school_logo = student.school.logo_url
+
     return {
         "success": True,
         "student_id": student.id,
         "full_name": student.full_name,
-        "enrollment_status": student.enrollment_status or "PLACED"
+        "enrollment_status": student.enrollment_status or "PLACED",
+        "school_id": student.school_id,
+        "school_name": school_name,
+        "school_logo": school_logo
     }

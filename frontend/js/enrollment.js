@@ -5,16 +5,14 @@
 const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
 
 let currentVerifiedStudent = null;
-let availableSchoolsList = [];
-let selectedSchoolId = null;
+let currentActiveSchoolId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initPortal();
 });
 
 async function initPortal() {
-  await loadAvailableSchools();
-  loadPublicSchoolBranding();
+  await loadPublicSchoolBranding();
 
   // Check if student_id parameter passed in URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -24,88 +22,32 @@ async function initPortal() {
   }
 }
 
-// ── 0. Multi-School Loader & Branding Resolver ────────────────────────────────
-async function loadAvailableSchools() {
-  const portalSelect = document.getElementById('portalSchoolSelect');
-  const buySelect = document.getElementById('buy_school_select');
-
-  try {
-    const res = await fetch(`${API_BASE}/vouchers/schools`);
-    if (res.ok) {
-      availableSchoolsList = await res.json();
-    }
-  } catch (err) {
-    console.warn('Could not load schools list:', err);
-  }
-
-  if (!availableSchoolsList || availableSchoolsList.length === 0) {
-    availableSchoolsList = [
-      { id: 1, name: 'J.A. KUFFOUR STEM TECHNICAL SCHOOL', code: 'JAK', school_mode: 'SHS_ONLY' }
-    ];
-  }
-
-  // Populate Header Selector
-  if (portalSelect) {
-    portalSelect.innerHTML = availableSchoolsList.map(s => `
-      <option value="${s.id}">${s.name}</option>
-    `).join('');
-  }
-
-  // Populate Modal Selector
-  if (buySelect) {
-    buySelect.innerHTML = availableSchoolsList.map(s => `
-      <option value="${s.id}">${s.name} (${s.code || 'SHS'})</option>
-    `).join('');
-  }
-
-  // Resolve active school from URL (?school=jakstem or ?school_id=2)
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlSlug = (urlParams.get('school') || '').toLowerCase();
-  const urlId = urlParams.get('school_id');
-
-  if (urlId) {
-    selectedSchoolId = parseInt(urlId);
-  } else if (urlSlug) {
-    const match = availableSchoolsList.find(s => 
-      (s.slug && s.slug.includes(urlSlug)) || 
-      (s.code && s.code.toLowerCase().includes(urlSlug)) ||
-      (s.name && s.name.toLowerCase().includes(urlSlug))
-    );
-    if (match) selectedSchoolId = match.id;
-  }
-
-  if (!selectedSchoolId && availableSchoolsList.length > 0) {
-    // Default to first SHS/STEM school
-    const shsMatch = availableSchoolsList.find(s => s.is_shs) || availableSchoolsList[0];
-    selectedSchoolId = shsMatch.id;
-  }
-
-  if (portalSelect && selectedSchoolId) {
-    portalSelect.value = String(selectedSchoolId);
-  }
-  if (buySelect && selectedSchoolId) {
-    buySelect.value = String(selectedSchoolId);
-  }
-}
-
+// ── 0. Public School Branding Loader ──────────────────────────────────────────
 async function loadPublicSchoolBranding() {
   const schoolNameEl = document.getElementById('portalSchoolName');
   const logoContainer = document.getElementById('portalLogoContainer');
 
-  let activeSchool = availableSchoolsList.find(s => s.id === selectedSchoolId);
-  let name = activeSchool ? activeSchool.name : (localStorage.getItem('school_name') || 'J.A. KUFFOUR STEM TECHNICAL SCHOOL');
-  let logo = activeSchool ? activeSchool.logo_url : localStorage.getItem('school_logo');
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlSchoolSlug = (urlParams.get('school') || '').toLowerCase();
+  const urlSchoolId = urlParams.get('school_id');
+  const localSchoolId = localStorage.getItem('school_id');
+
+  currentActiveSchoolId = urlSchoolId || localSchoolId;
+
+  let name = localStorage.getItem('school_name') || 'J.A. KUFFOUR STEM TECHNICAL SCHOOL';
+  let logo = localStorage.getItem('school_logo');
 
   try {
     const headers = {};
-    if (selectedSchoolId) headers['X-School-Id'] = String(selectedSchoolId);
+    if (currentActiveSchoolId) headers['X-School-Id'] = String(currentActiveSchoolId);
 
     const queryParams = new URLSearchParams({ mode: 'SHS_ONLY' });
-    if (selectedSchoolId) queryParams.set('school_id', selectedSchoolId);
+    if (currentActiveSchoolId) queryParams.set('school_id', currentActiveSchoolId);
 
     const res = await fetch(`${API_BASE}/settings/public-branding?${queryParams.toString()}`, { headers });
     if (res.ok) {
       const data = await res.json();
+      if (data.school_id) currentActiveSchoolId = data.school_id;
       if (data.school_name) name = data.school_name;
       if (data.school_logo) logo = data.school_logo;
     }
@@ -116,22 +58,6 @@ async function loadPublicSchoolBranding() {
     logoContainer.innerHTML = `<img src="${logo}" alt="${name} Logo" style="width:100%; height:100%; object-fit:contain;" />`;
   }
 }
-
-function handleSchoolSelectChange(schoolId) {
-  if (!schoolId) return;
-  selectedSchoolId = parseInt(schoolId);
-
-  // Update URL query parameter smoothly
-  const url = new URL(window.location);
-  url.searchParams.set('school_id', selectedSchoolId);
-  window.history.replaceState({}, '', url);
-
-  const buySelect = document.getElementById('buy_school_select');
-  if (buySelect) buySelect.value = String(selectedSchoolId);
-
-  loadPublicSchoolBranding();
-}
-window.handleSchoolSelectChange = handleSchoolSelectChange;
 
 
 // ── Tab Switching ─────────────────────────────────────────────────────────────
@@ -415,10 +341,8 @@ function openBuyVoucherModal() {
   const modal = document.getElementById('modalBuyVoucher');
   if (modal) {
     modal.style.display = 'flex';
-    const buySelect = document.getElementById('buy_school_select');
-    if (buySelect && selectedSchoolId) {
-      buySelect.value = String(selectedSchoolId);
-    }
+    const beceInput = document.getElementById('buy_bece_index');
+    if (beceInput) beceInput.focus();
   }
 }
 window.openBuyVoucherModal = openBuyVoucherModal;
@@ -439,7 +363,7 @@ async function handleBuyVoucher(event) {
   btn.disabled = true;
 
   const payload = {
-    school_id: parseInt(document.getElementById('buy_school_select').value),
+    school_id: currentActiveSchoolId ? parseInt(currentActiveSchoolId) : null,
     bece_index_number: document.getElementById('buy_bece_index').value.trim(),
     parent_phone: document.getElementById('buy_parent_phone').value.trim(),
     momo_network: document.getElementById('buy_momo_network').value,
@@ -459,23 +383,23 @@ async function handleBuyVoucher(event) {
     statusEl.style.color = '#4ade80';
     statusEl.innerHTML = `✔ <strong>Voucher Purchased!</strong> Serial: <code>${data.serial_code}</code> | PIN: <code>${data.pin_code}</code> (SMS dispatched to ${payload.parent_phone})`;
 
-    // Auto-fill the credentials in the main form
+    // Auto-fill the credentials into Step 2 Form
     document.getElementById('gate_bece_index').value = data.bece_index_number;
     document.getElementById('gate_serial').value = data.serial_code;
     document.getElementById('gate_pin').value = data.pin_code;
 
-    // Highlight login button
+    // Highlight Step 2 login button
     const loginStatus = document.getElementById('voucher-login-status');
     if (loginStatus) {
       loginStatus.style.color = '#4ade80';
-      loginStatus.textContent = '✔ Credentials auto-filled! Click Verify & Access.';
+      loginStatus.textContent = '✔ Credentials auto-filled! Click Verify & Access Form.';
     }
 
     setTimeout(() => {
       closeBuyVoucherModal();
       btn.disabled = false;
       statusEl.textContent = '';
-    }, 2200);
+    }, 2000);
 
   } catch (err) {
     statusEl.style.color = '#f87171';

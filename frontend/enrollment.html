@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/styles.css" />
     <style>
       :root {
-        --portal-max-width: 880px;
+        --portal-max-width: 960px;
       }
       html, body {
         display: block !important;
@@ -25,7 +25,7 @@
         box-sizing: border-box !important;
         background: var(--card-bg, #1e293b);
         border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1));
-        padding: 14px 24px;
+        padding: 16px 28px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -39,9 +39,9 @@
         gap: 14px;
       }
       .portal-logo-container {
-        width: 48px;
-        height: 48px;
-        border-radius: 10px;
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
         background: rgba(99,102,241,0.12);
         border: 1.5px solid var(--primary-color, #6366f1);
         display: flex;
@@ -93,9 +93,23 @@
         background: var(--primary-color, #6366f1);
         color: #ffffff;
       }
+      .gateway-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+      }
+      .gateway-card {
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid var(--border-color, #334155);
+        border-radius: 12px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
       .form-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 16px;
       }
       .form-group {
@@ -173,28 +187,21 @@
     </style>
   </head>
   <body class="public-portal" id="public-portal">
-    <!-- ── Public Top Branding Header ──────────────────────────────────────── -->
+    <!-- ── Public Top Branding Header (100% White-Labeled) ────────────────── -->
     <header class="portal-header">
       <div class="portal-brand">
         <div id="portalLogoContainer" class="portal-logo-container">
           <span style="font-size:1.6rem;">🏫</span>
         </div>
         <div>
-          <h1 id="portalSchoolName" style="margin:0; font-size:1.15rem; font-weight:800; color:var(--text-primary, #fff);">J.A. KUFFOUR STEM TECHNICAL SCHOOL</h1>
-          <p style="margin:2px 0 0; font-size:0.8rem; color:var(--text-secondary, #94a3b8);">Official Candidate Online Admission & Prospectus Portal • GES CSSPS Gateway</p>
+          <h1 id="portalSchoolName" style="margin:0; font-size:1.2rem; font-weight:800; color:var(--text-primary, #fff); letter-spacing:0.5px;">J.A. KUFFOUR STEM TECHNICAL SCHOOL</h1>
+          <p style="margin:2px 0 0; font-size:0.82rem; color:var(--text-secondary, #94a3b8);">Official Candidate Online Admission & Prospectus Portal • GES CSSPS Gateway</p>
         </div>
       </div>
 
-      <!-- School Switcher & Status Controls -->
-      <div class="btn-no-print" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-        <div style="display:flex; align-items:center; gap:6px;">
-          <label for="portalSchoolSelect" style="font-size:0.75rem; color:#94a3b8; font-weight:700;">INSTITUTION:</label>
-          <select id="portalSchoolSelect" onchange="handleSchoolSelectChange(this.value)" style="background:rgba(15,23,42,0.85); color:#fff; border:1px solid #475569; padding:5px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer;">
-            <option value="">Loading schools...</option>
-          </select>
-        </div>
+      <div class="btn-no-print" style="display:flex; align-items:center; gap:10px;">
         <span style="background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3); padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:700;">🟢 INTAKE ACTIVE</span>
-        <a href="auth.html" class="btn" style="font-size:0.8rem; padding:6px 12px; opacity:0.8;">Staff Login →</a>
+        <a href="auth.html" class="btn" style="font-size:0.8rem; padding:6px 12px; opacity:0.85;">Staff Login →</a>
       </div>
     </header>
 
@@ -203,51 +210,90 @@
       
       <!-- Tab Bar for Switching Between Fresh Admission & Re-Printing Documents -->
       <div class="tab-bar btn-no-print">
-        <button type="button" id="tabNewAdmBtn" class="tab-btn active" onclick="switchPortalTab('new')">🔑 1. New Candidate Admission Gateway</button>
+        <button type="button" id="tabNewAdmBtn" class="tab-btn active" onclick="switchPortalTab('new')">🔑 1. Candidate Online Admission Gateway</button>
         <button type="button" id="tabRetrieveBtn" class="tab-btn" onclick="switchPortalTab('retrieve')">🖨️ 2. Re-Print / Retrieve Existing Packet</button>
       </div>
 
       <!-- ── TAB 1: FRESH CANDIDATE ADMISSION ──────────────────────────────── -->
       <div id="tabContentNew">
         
-        <!-- STEP 1: Candidate Voucher Login Gateway -->
+        <!-- STEP 1: Two-Option Intuitive Gateway (Buy Voucher vs Enter Credentials) -->
         <div id="step-gateway" class="portal-card">
-          <div style="border-bottom:1px solid var(--border-color, rgba(255,255,255,0.1)); padding-bottom:14px; margin-bottom:20px;">
-            <h2 style="margin:0; color:#38bdf8; font-size:1.25rem;">🔑 Candidate Admission Voucher Authentication</h2>
+          <div style="border-bottom:1px solid var(--border-color, rgba(255,255,255,0.1)); padding-bottom:14px; margin-bottom:24px;">
+            <h2 style="margin:0; color:#38bdf8; font-size:1.3rem;">🎓 Candidate Admission Verification & Authentication Gateway</h2>
             <p style="font-size:0.88rem; color:var(--text-secondary, #94a3b8); margin:4px 0 0;">
-              Enter your BECE Index Number, Voucher Serial Code, and Secret PIN to access your official Admission Form.
+              Welcome to the official Senior High School admission portal. Please select an option below to proceed.
             </p>
           </div>
 
-          <form id="voucher-login-form" onsubmit="handleVoucherLogin(event)" autocomplete="off">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="gate_bece_index">BECE Index Number (12 digits) *</label>
-                <input type="text" id="gate_bece_index" required maxlength="12" placeholder="e.g. 101000100124" autocomplete="off" autocorrect="off" spellcheck="false" />
+          <div class="gateway-grid">
+            
+            <!-- OPTION A: Need a Voucher? -->
+            <div class="gateway-card" style="border-left:4px solid #10b981; background:linear-gradient(180deg, rgba(16,185,129,0.06), rgba(15,23,42,0.85));">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                  <span style="font-size:1.4rem;">💳</span>
+                  <h3 style="margin:0; color:#4ade80; font-size:1.05rem;">1. Need an Admission Voucher?</h3>
+                </div>
+                <p style="font-size:0.85rem; color:var(--text-secondary, #cbd5e1); line-height:1.5; margin-bottom:14px;">
+                  To access your official school admission form, prospectus, and dormitory reservation, candidates must first acquire an official admission voucher (<strong>GHS 50.00</strong>).
+                </p>
+                <ul style="margin:0 0 18px; padding-left:18px; font-size:0.82rem; color:#94a3b8; line-height:1.6;">
+                  <li>⚡ Instant SMS Token Delivery to your phone</li>
+                  <li>🔒 Secure Mobile Money (MTN / Telecel / AT)</li>
+                  <li>📄 Unlocks complete GES Admission Letter & Prospectus</li>
+                </ul>
               </div>
-              <div class="form-group">
-                <label for="gate_serial">Voucher Serial Code *</label>
-                <input type="text" id="gate_serial" required placeholder="e.g. JAK-2026-8891" autocomplete="new-password" autocorrect="off" spellcheck="false" />
-              </div>
-              <div class="form-group">
-                <label for="gate_pin">Secret 6-Digit PIN *</label>
-                <input type="text" id="gate_pin" required maxlength="6" placeholder="e.g. 948215" style="-webkit-text-security:disc;" autocomplete="new-password" autocorrect="off" spellcheck="false" />
+
+              <div>
+                <button type="button" onclick="openBuyVoucherModal()" class="btn primary" style="width:100%; padding:12px; font-weight:700; font-size:0.95rem; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35); cursor:pointer;">
+                  📱 Buy Admission Voucher Online (GHS 50)
+                </button>
+                <div style="font-size:0.75rem; color:#64748b; text-align:center; margin-top:8px;">
+                  * Also available via physical scratch card at the School Admissions Office.
+                </div>
               </div>
             </div>
 
-            <div style="margin-top:20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-              <button type="submit" class="btn primary" style="padding:11px 24px; font-weight:700; font-size:0.92rem; background:linear-gradient(135deg, #6366f1, #06b6d4); border:none; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
-                🔓 Verify & Access Admission Form
-              </button>
-              <button type="button" onclick="openBuyVoucherModal()" class="btn" style="padding:11px 22px; font-weight:700; font-size:0.92rem; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35); cursor:pointer;">
-                💳 Buy Admission Voucher (MoMo)
-              </button>
-              <span id="voucher-login-status" style="font-size:0.88rem; font-weight:600;"></span>
+            <!-- OPTION B: Already Have a Voucher? -->
+            <div class="gateway-card" style="border-left:4px solid #6366f1;">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                  <span style="font-size:1.4rem;">🔑</span>
+                  <h3 style="margin:0; color:#818cf8; font-size:1.05rem;">2. Already Have Your Voucher?</h3>
+                </div>
+                <p style="font-size:0.85rem; color:var(--text-secondary, #cbd5e1); line-height:1.5; margin-bottom:16px;">
+                  Enter your BECE Index Number, Voucher Serial Code, and Secret PIN to log in and fill your admission docket.
+                </p>
+
+                <form id="voucher-login-form" onsubmit="handleVoucherLogin(event)" autocomplete="off">
+                  <div class="form-group">
+                    <label for="gate_bece_index">BECE Index Number (12 digits) *</label>
+                    <input type="text" id="gate_bece_index" required maxlength="12" placeholder="e.g. 101000100124" autocomplete="off" />
+                  </div>
+                  <div class="form-group">
+                    <label for="gate_serial">Voucher Serial Code *</label>
+                    <input type="text" id="gate_serial" required placeholder="e.g. JAK-2026-8891" autocomplete="new-password" />
+                  </div>
+                  <div class="form-group">
+                    <label for="gate_pin">Secret 6-Digit PIN *</label>
+                    <input type="text" id="gate_pin" required maxlength="6" placeholder="e.g. 948215" style="-webkit-text-security:disc;" autocomplete="new-password" />
+                  </div>
+
+                  <div style="margin-top:16px;">
+                    <button type="submit" class="btn primary" style="width:100%; padding:12px; font-weight:700; font-size:0.95rem; background:linear-gradient(135deg, #6366f1, #06b6d4); border:none; box-shadow:0 4px 14px rgba(99,102,241,0.35); cursor:pointer;">
+                      🔓 Verify & Access Admission Form
+                    </button>
+                    <div id="voucher-login-status" style="margin-top:10px; font-size:0.85rem; font-weight:600; text-align:center;"></div>
+                  </div>
+                </form>
+              </div>
             </div>
-          </form>
+
+          </div>
 
           <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-color, #334155); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <span style="font-size:0.82rem; color:var(--text-secondary, #94a3b8);">Need help or missing voucher? Contact the School Admissions Secretariat.</span>
+            <span style="font-size:0.82rem; color:var(--text-secondary, #94a3b8);">Need assistance with your placement or token? Contact the School Admissions Secretariat.</span>
             <button onclick="handleGenerateBatchVouchers()" class="btn" style="font-size:0.78rem; opacity:0.8;">⚡ Secretariat Voucher Tool</button>
           </div>
         </div>
@@ -327,7 +373,7 @@
             </div>
 
             <div style="margin-top:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-              <button type="submit" class="btn primary" style="padding:12px 30px; font-weight:700; font-size:0.95rem; background:linear-gradient(135deg, #22c55e, #10b981); border:none; box-shadow:0 4px 14px rgba(34,197,94,0.35);">
+              <button type="submit" class="btn primary" style="padding:12px 30px; font-weight:700; font-size:0.95rem; background:linear-gradient(135deg, #22c55e, #10b981); border:none; box-shadow:0 4px 14px rgba(34,197,94,0.35); cursor:pointer;">
                 🚀 Submit Form & Generate Admission Docket
               </button>
               <span id="form-submit-status" style="font-size:0.88rem; font-weight:600;"></span>
@@ -360,7 +406,7 @@
             </div>
 
             <div style="margin-top:20px; display:flex; gap:12px; align-items:center;">
-              <button type="submit" class="btn primary" style="padding:11px 26px; font-weight:700; font-size:0.92rem; background:linear-gradient(135deg, #f59e0b, #d97706); border:none;">
+              <button type="submit" class="btn primary" style="padding:11px 26px; font-weight:700; font-size:0.92rem; background:linear-gradient(135deg, #f59e0b, #d97706); border:none; cursor:pointer;">
                 🔍 Retrieve Admission Docket
               </button>
               <span id="retrieve-status" style="font-size:0.88rem; font-weight:600;"></span>
@@ -378,7 +424,7 @@
             <p style="font-size:0.85rem; color:var(--text-secondary, #94a3b8); margin:2px 0 0;">Auto-tailored by Gender, Boarding Status, and Academic Program.</p>
           </div>
           <div style="display:flex; gap:10px;">
-            <button onclick="window.print()" class="btn primary" style="font-weight:700; background:linear-gradient(135deg, #6366f1, #06b6d4); border:none; padding:10px 20px;">
+            <button onclick="window.print()" class="btn primary" style="font-weight:700; background:linear-gradient(135deg, #6366f1, #06b6d4); border:none; padding:10px 20px; cursor:pointer;">
               🖨️ Print Complete Admission Package (PDF)
             </button>
           </div>
@@ -504,25 +550,26 @@
     </main>
 
     <!-- ── MODAL: BUY VOUCHER ONLINE VIA MOBILE MONEY (MoMo) ─────────────────── -->
-    <div id="modalBuyVoucher" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
-      <div class="portal-card" style="max-width:520px; width:100%; margin:0; position:relative; box-shadow:0 20px 50px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.15);">
+    <div id="modalBuyVoucher" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
+      <div class="portal-card" style="max-width:460px; width:100%; max-height:90vh; overflow-y:auto; margin:0; position:relative; box-shadow:0 25px 60px rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.15); padding:24px; box-sizing:border-box;">
+        
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:12px; margin-bottom:16px;">
-          <h3 style="margin:0; font-size:1.15rem; color:#4ade80;">📱 Buy Admission Voucher Online (MoMo)</h3>
+          <h3 style="margin:0; font-size:1.15rem; color:#4ade80; display:flex; align-items:center; gap:8px;">
+            <span>📱</span> Buy Admission Voucher (MoMo)
+          </h3>
           <button type="button" onclick="closeBuyVoucherModal()" style="background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; padding:0 6px;">✕</button>
         </div>
-        <p style="font-size:0.85rem; color:#94a3b8; margin:0 0 16px;">
-          Instant automated generation. Your voucher credentials will be delivered to your phone via SMS and auto-filled on screen.
+
+        <p style="font-size:0.84rem; color:#94a3b8; margin:0 0 16px; line-height:1.4;">
+          Your Admission Voucher credentials (Serial & Secret PIN) will be dispatched instantly via SMS to your phone and auto-filled on screen.
         </p>
 
-        <form id="buy-voucher-form" onsubmit="handleBuyVoucher(event)">
-          <div class="form-group">
-            <label for="buy_school_select">Target Senior High / Technical School *</label>
-            <select id="buy_school_select" required style="width:100%;"></select>
-          </div>
+        <form id="buy-voucher-form" onsubmit="handleBuyVoucher(event)" autocomplete="off">
           <div class="form-group">
             <label for="buy_bece_index">Candidate BECE Index Number (12 Digits) *</label>
             <input type="text" id="buy_bece_index" required maxlength="12" placeholder="e.g. 101000100124" autocomplete="off" />
           </div>
+
           <div class="form-grid">
             <div class="form-group">
               <label for="buy_parent_phone">Parent MoMo Phone Number *</label>
@@ -538,22 +585,22 @@
             </div>
           </div>
 
-          <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); padding:12px 16px; border-radius:8px; margin:14px 0; display:flex; justify-content:space-between; align-items:center;">
+          <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); padding:10px 14px; border-radius:8px; margin:14px 0; display:flex; justify-content:space-between; align-items:center;">
             <div>
-              <div style="font-size:0.8rem; color:#94a3b8;">Voucher Price</div>
+              <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Voucher Fee</div>
               <div style="font-size:1.25rem; font-weight:800; color:#4ade80;">GHS 50.00</div>
             </div>
-            <div style="font-size:0.75rem; color:#cbd5e1; text-align:right;">
+            <div style="font-size:0.72rem; color:#cbd5e1; text-align:right;">
               ✔ Instant SMS Token<br/>✔ Official GES Dossier
             </div>
           </div>
 
           <div id="buy-voucher-status" style="margin-bottom:12px; font-size:0.85rem; font-weight:600;"></div>
 
-          <div style="display:flex; justify-content:flex-end; gap:10px;">
-            <button type="button" onclick="closeBuyVoucherModal()" class="btn" style="padding:10px 18px;">Cancel</button>
-            <button type="submit" id="btnPayVoucher" class="btn primary" style="padding:10px 24px; font-weight:700; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35);">
-              ⚡ Pay & Generate Instant Voucher
+          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+            <button type="button" onclick="closeBuyVoucherModal()" class="btn" style="padding:9px 18px; font-size:0.88rem; cursor:pointer;">Cancel</button>
+            <button type="submit" id="btnPayVoucher" class="btn primary" style="padding:9px 22px; font-weight:700; font-size:0.88rem; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35); cursor:pointer;">
+              ⚡ Pay GHS 50 & Get Voucher
             </button>
           </div>
         </form>

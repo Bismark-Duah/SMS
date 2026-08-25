@@ -61,6 +61,8 @@ async function loadPrograms() {
 }
 
 let allClassesData = [];
+let allStagesData = [];
+let allProgramsData = [];
 
 function resetClassForm() {
   form.reset();
@@ -108,37 +110,366 @@ function editClass(id) {
   }
 }
 
+function filterClasses(query) {
+  const q = (query || '').trim().toLowerCase();
+  if (!q) {
+    renderClassList(allClassesData);
+    return;
+  }
+  const filtered = allClassesData.filter(c => 
+    (c.name && c.name.toLowerCase().includes(q)) ||
+    (c.stage_name && c.stage_name.toLowerCase().includes(q)) ||
+    (c.program_name && c.program_name.toLowerCase().includes(q)) ||
+    (c.form_master_name && c.form_master_name.toLowerCase().includes(q))
+  );
+  renderClassList(filtered);
+}
+
+function renderClassList(data) {
+  const isAdmin = _userIsAdmin();
+
+  if (!Array.isArray(data) || data.length === 0) {
+    if (allClassesData.length === 0) {
+      // ── Smart Onboarding Empty State (When 0 classes exist) ────────────────
+      container.innerHTML = `
+        <div style="text-align:center; padding:36px 16px; background:rgba(255,255,255,0.02); border:2px dashed var(--border-color); border-radius:12px;">
+          <span style="font-size:2.8rem; display:block; margin-bottom:10px;">🏫</span>
+          <h4 style="margin:0 0 6px; font-size:1.15rem; color:var(--text-primary);">No Classes Configured Yet</h4>
+          <p style="margin:0 0 20px; font-size:0.88rem; color:var(--text-secondary); max-width:480px; margin-inline:auto;">
+            Get your school structure running instantly using standard national presets or capacity-driven auto-generation.
+          </p>
+          <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+            ${isAdmin ? `
+            <button type="button" onclick="loadDefaultPresets()" class="btn" style="font-size:0.85rem; padding:9px 16px;">⚡ Load Standard GES Stages & Classes</button>
+            <button type="button" onclick="openSmartGenModal()" class="btn primary" style="font-size:0.85rem; padding:9px 18px; background:linear-gradient(135deg, #6366f1, #06b6d4); border:none; box-shadow:0 4px 12px rgba(99,102,241,0.35);">⚡ Auto-Generate from Enrolled Students</button>
+            ` : '<p style="opacity:0.7;">No classes are currently assigned.</p>'}
+          </div>
+        </div>`;
+    } else {
+      container.innerHTML = '<p style="opacity:0.7; padding:12px 0;">No classes match your search query.</p>';
+    }
+    return;
+  }
+
+  container.innerHTML = `<ul style="list-style:none; padding:0; margin:0;">${data.map((item) => `
+    <li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom: 1px solid var(--border-color); padding: 8px 4px;">
+      <span>
+        <strong>${item.name}</strong> 
+        <small style="opacity:.65; margin-left:8px; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px;">${item.stage_name || 'N/A'}</small>
+        ${item.program_name ? `<small style="opacity:.8; margin-left:6px; color:#818cf8; font-weight:600;">• ${item.program_name}</small>` : ''}
+        <small style="opacity:.7; margin-left:8px; color:#22d3ee;">👤 Form Master: ${item.form_master_name || 'Unassigned'}</small>
+      </span>
+      <div style="display:flex; gap:6px; align-items:center;">
+        ${isAdmin ? `<button type="button" class="btn primary sm" style="padding:4px 10px; font-size:0.82rem;" onclick="editClass(${item.id})">✏️ Edit</button>` : ''}
+        <button type="button" class="btn sm" style="padding:4px 10px; font-size:0.82rem;" onclick="openSubjectsModal(${item.id}, '${item.name.replace(/'/g, "\\'")}', ${item.program_id || 'null'})">📚 Subjects</button>
+        ${isAdmin ? `<button type="button" data-delete="${item.id}" data-name="${item.name}" class="btn danger sm" style="padding:4px 10px; font-size:0.82rem;">🗑️ Delete</button>` : ''}
+      </div>
+    </li>
+  `).join('')}</ul>`;
+}
+
 async function loadClasses() {
   try {
     const response = await fetch(`${API_BASE}/classes/`, { headers: getHeaders() });
     const data = await response.json();
 
-    if (!Array.isArray(data) || data.length === 0) {
-      container.innerHTML = 'No classes assigned to you yet.';
+    if (!Array.isArray(data)) {
+      container.innerHTML = '<p style="opacity:0.7;">Unable to load classes.</p>';
       allClassesData = [];
       return;
     }
 
     allClassesData = data;
-    const isAdmin = _userIsAdmin();
-
-    container.innerHTML = `<ul>${data.map((item) => `
-      <li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-        <span>
-          <strong>${item.name}</strong> 
-          <small style="opacity:.6; margin-left:8px;">Stage: ${item.stage_name || 'N/A'}</small>
-          ${item.program_name ? `<small style="opacity:.6; margin-left:8px;">Program: ${item.program_name}</small>` : ''}
-          <small style="opacity:.6; margin-left:8px; color:#22d3ee;">Form Master: ${item.form_master_name || 'None'}</small>
-        </span>
-        <div>
-          ${isAdmin ? `<button type="button" class="btn primary sm" style="padding:4px 10px; font-size:0.85rem; margin-right:4px;" onclick="editClass(${item.id})">✏️ Edit</button>` : ''}
-          <button type="button" class="btn sm" style="padding:4px 10px; font-size:0.85rem; margin-right:4px;" onclick="openSubjectsModal(${item.id}, '${item.name.replace(/'/g, "\\'")}', ${item.program_id || 'null'})">📚 Subjects</button>
-          ${isAdmin ? `<button type="button" data-delete="${item.id}" class="btn danger sm" style="padding:4px 10px; font-size:0.85rem;">Delete</button>` : ''}
-        </div>
-      </li>
-    `).join('')}</ul>`;
+    const searchInput = document.getElementById('classSearchInput');
+    filterClasses(searchInput ? searchInput.value : '');
   } catch (error) {
     container.textContent = 'Unable to load classes.';
+  }
+}
+
+async function loadStages() {
+  const select = document.getElementById('classLevel');
+  const batchSelect = document.getElementById('batchStageSelect');
+  try {
+    const response = await fetch(`${API_BASE}/classes/stages`, { headers: getHeaders() });
+    const stages = await response.json();
+    allStagesData = Array.isArray(stages) ? stages : [];
+    
+    const opts = '<option value="">Select Stage...</option>' + 
+      allStagesData.map(s => `<option value="${s.id}" data-type="${s.school_type}">${s.name} (${s.school_type})</option>`).join('');
+    
+    if (select) select.innerHTML = opts;
+    if (batchSelect) {
+      batchSelect.innerHTML = opts;
+      batchSelect.addEventListener('change', updateBatchPreview);
+    }
+  } catch (error) {
+    console.error('Error loading stages:', error);
+  }
+}
+
+async function loadPrograms() {
+  const select = document.getElementById('classProgram');
+  const batchSelect = document.getElementById('batchProgramSelect');
+  const progLabel = document.getElementById('classProgramLabel');
+  const batchProgGroup = document.getElementById('batchProgramGroup');
+  const schoolMode = (localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
+
+  if (schoolMode === 'BASIC_ONLY') {
+    if (progLabel) progLabel.style.display = 'none';
+    if (batchProgGroup) batchProgGroup.style.display = 'none';
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/programs/`, { headers: getHeaders() });
+    const programs = await response.json();
+    allProgramsData = Array.isArray(programs) ? programs : [];
+    
+    const opts = '<option value="">Select Program (None)...</option>' + 
+      allProgramsData.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    
+    if (select) select.innerHTML = opts;
+    if (batchSelect) {
+      batchSelect.innerHTML = opts;
+      batchSelect.addEventListener('change', updateBatchPreview);
+    }
+  } catch (error) {
+    console.error('Error loading programs:', error);
+  }
+}
+
+async function loadDefaultPresets() {
+  if (!confirm("Load standard national stages and core classes (KG 1-2, Primary 1-6, JHS 1-3, SHS Form 1-3) based on your school mode?")) return;
+  try {
+    const res = await fetch(`${API_BASE}/classes/presets`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    const data = await res.json();
+    alert(data.message || "Presets loaded successfully!");
+    await loadStages();
+    await loadPrograms();
+    await loadClasses();
+  } catch (err) {
+    alert("Error loading presets: " + err.message);
+  }
+}
+window.loadDefaultPresets = loadDefaultPresets;
+
+// ── Smart Generator Modal Handlers ───────────────────────────────────────────
+function openSmartGenModal() {
+  const modal = document.getElementById('smartGenModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    switchGenTab('auto');
+    updateBatchPreview();
+  }
+}
+function closeSmartGenModal() {
+  const modal = document.getElementById('smartGenModal');
+  if (modal) modal.style.display = 'none';
+}
+function switchGenTab(tab) {
+  const autoTab = document.getElementById('tabContentAuto');
+  const batchTab = document.getElementById('tabContentBatch');
+  const autoBtn = document.getElementById('tabAutoGenBtn');
+  const batchBtn = document.getElementById('tabBatchArmsBtn');
+
+  if (tab === 'auto') {
+    if (autoTab) autoTab.style.display = 'block';
+    if (batchTab) batchTab.style.display = 'none';
+    if (autoBtn) { autoBtn.className = 'btn primary'; }
+    if (batchBtn) { batchBtn.className = 'btn'; }
+  } else {
+    if (autoTab) autoTab.style.display = 'none';
+    if (batchTab) batchTab.style.display = 'block';
+    if (autoBtn) { autoBtn.className = 'btn'; }
+    if (batchBtn) { batchBtn.className = 'btn primary'; }
+    updateBatchPreview();
+  }
+}
+
+let currentSmartPreviewData = null;
+
+async function previewSmartAllocation() {
+  const cap = parseInt(document.getElementById('genTargetCapacity').value) || 45;
+  const style = document.getElementById('genNamingStyle').value;
+  const previewArea = document.getElementById('smartPreviewArea');
+  const tableContainer = document.getElementById('smartPreviewTableContainer');
+  const execBtn = document.getElementById('executeSmartGenBtn');
+
+  try {
+    const res = await fetch(`${API_BASE}/classes/smart-preview?target_capacity=${cap}&naming_style=${style}`, {
+      headers: getHeaders()
+    });
+    const data = await res.json();
+    currentSmartPreviewData = data;
+
+    if (!data.proposals || data.proposals.length === 0) {
+      tableContainer.innerHTML = '<p style="padding:12px; margin:0; opacity:0.7;">No enrolled students found to allocate.</p>';
+      previewArea.style.display = 'block';
+      if (execBtn) execBtn.disabled = true;
+      return;
+    }
+
+    let rowsHtml = data.proposals.map(p => `
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px 10px; font-weight:600;">${p.stage_name}</td>
+        <td style="padding:8px 10px; color:#818cf8;">${p.program_name || 'Core Curriculum'}</td>
+        <td style="padding:8px 10px; font-size:0.8rem; opacity:0.8;">${p.elective_combination || 'Standard'}</td>
+        <td style="padding:8px 10px; text-align:center;"><span style="background:rgba(99,102,241,0.15); padding:2px 8px; border-radius:10px; font-weight:700;">${p.student_count}</span></td>
+        <td style="padding:8px 10px; text-align:center;"><span style="color:#22c55e; font-weight:700;">${p.needed_arms}</span></td>
+        <td style="padding:8px 10px; font-size:0.82rem; color:#06b6d4;">${p.proposed_classes.join(', ')}</td>
+      </tr>
+    `).join('');
+
+    tableContainer.innerHTML = `
+      <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead>
+          <tr style="background:rgba(255,255,255,0.04); text-align:left; border-bottom:1px solid var(--border-color);">
+            <th style="padding:8px 10px;">Stage</th>
+            <th style="padding:8px 10px;">Program</th>
+            <th style="padding:8px 10px;">Track / Combo</th>
+            <th style="padding:8px 10px; text-align:center;">Students</th>
+            <th style="padding:8px 10px; text-align:center;">Arms</th>
+            <th style="padding:8px 10px;">Proposed Classes</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>`;
+
+    previewArea.style.display = 'block';
+    if (execBtn) execBtn.disabled = false;
+  } catch (err) {
+    alert('Error previewing allocation: ' + err.message);
+  }
+}
+
+async function executeSmartGeneration() {
+  const cap = parseInt(document.getElementById('genTargetCapacity').value) || 45;
+  const style = document.getElementById('genNamingStyle').value;
+  const assign = document.getElementById('genAssignStudentsCb').checked;
+  const execBtn = document.getElementById('executeSmartGenBtn');
+
+  if (execBtn) { execBtn.disabled = true; execBtn.textContent = 'Generating...'; }
+
+  try {
+    const res = await fetch(`${API_BASE}/classes/smart-generate`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        target_capacity: cap,
+        naming_style: style,
+        assign_students: assign
+      })
+    });
+    const data = await res.json();
+    alert(data.message || 'Classes generated successfully!');
+    closeSmartGenModal();
+    loadClasses();
+  } catch (err) {
+    alert('Error generating classes: ' + err.message);
+  } finally {
+    if (execBtn) { execBtn.disabled = false; execBtn.textContent = '⚡ Generate Classes'; }
+  }
+}
+
+function updateBatchPreview() {
+  const stageSelect = document.getElementById('batchStageSelect');
+  const progSelect = document.getElementById('batchProgramSelect');
+  const countInput = document.getElementById('batchArmsCount');
+  const styleSelect = document.getElementById('batchNamingStyle');
+  const baseInput = document.getElementById('batchBaseName');
+  const previewDiv = document.getElementById('batchLivePreview');
+
+  if (!stageSelect || !previewDiv) return;
+
+  const stageId = stageSelect.value;
+  if (!stageId) {
+    previewDiv.textContent = 'Select a stage to see preview...';
+    return;
+  }
+
+  const stageOpt = stageSelect.options[stageSelect.selectedIndex];
+  const stageName = stageOpt ? stageOpt.textContent.split(' (')[0].trim() : 'Form 1';
+  const stageType = stageOpt ? stageOpt.getAttribute('data-type') : 'SHS';
+
+  const progOpt = progSelect && progSelect.selectedIndex >= 0 ? progSelect.options[progSelect.selectedIndex] : null;
+  const progName = (progOpt && progOpt.value) ? progOpt.textContent.replace('General ', '').replace('Technical', 'Tech').trim() : '';
+
+  const count = Math.min(20, Math.max(1, parseInt(countInput ? countInput.value : 1) || 1));
+  const style = styleSelect ? styleSelect.value : 'NUMBERS';
+  const customBase = baseInput ? baseInput.value.trim() : '';
+
+  const names = [];
+  for (let i = 1; i <= count; i++) {
+    const suffix = style === 'LETTERS' ? chrAlpha(i) : String(i);
+    let name = '';
+    if (stageType === 'SHS' && (progName || customBase)) {
+      const base = customBase || progName;
+      name = `${stageName} ${base} ${suffix}`;
+    } else if (stageType === 'Basic') {
+      const base = customBase || stageName;
+      name = style === 'LETTERS' ? `${base}${suffix}` : `${base} ${suffix}`;
+    } else {
+      const base = customBase || (progName || stageName);
+      name = `${stageName} ${base} ${suffix}`;
+    }
+    names.push(name);
+  }
+
+  previewDiv.textContent = names.join('  •  ');
+}
+
+function chrAlpha(num) {
+  return String.fromCharCode(64 + num);
+}
+
+async function submitBatchArms(e) {
+  e.preventDefault();
+  const stageId = parseInt(document.getElementById('batchStageSelect').value);
+  const progVal = document.getElementById('batchProgramSelect').value;
+  const count = parseInt(document.getElementById('batchArmsCount').value) || 1;
+  const style = document.getElementById('batchNamingStyle').value;
+  const base = document.getElementById('batchBaseName').value.trim() || null;
+
+  try {
+    const res = await fetch(`${API_BASE}/classes/batch-create-arms`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        stage_id: stageId,
+        program_id: progVal ? parseInt(progVal) : null,
+        number_of_arms: count,
+        naming_style: style,
+        base_name: base
+      })
+    });
+    const data = await res.json();
+    alert(data.message || 'Batch arms provisioned successfully!');
+    closeSmartGenModal();
+    loadClasses();
+  } catch (err) {
+    alert('Error provisioning batch arms: ' + err.message);
+  }
+}
+
+window.openSmartGenModal = openSmartGenModal;
+window.closeSmartGenModal = closeSmartGenModal;
+window.switchGenTab = switchGenTab;
+window.previewSmartAllocation = previewSmartAllocation;
+window.executeSmartGeneration = executeSmartGeneration;
+window.updateBatchPreview = updateBatchPreview;
+window.submitBatchArms = submitBatchArms;
+window.filterClasses = filterClasses;
+
+const openSmartGenBtn = document.getElementById('openSmartGenBtn');
+if (openSmartGenBtn) {
+  if (!_userIsAdmin()) {
+    openSmartGenBtn.style.display = 'none';
+  } else {
+    openSmartGenBtn.addEventListener('click', openSmartGenModal);
   }
 }
 
@@ -170,12 +501,24 @@ form.addEventListener('submit', async (event) => {
 });
 
 container.addEventListener('click', async (event) => {
-  const deleteId = event.target.getAttribute('data-delete');
+  const deleteBtn = event.target.closest('[data-delete]');
+  if (deleteBtn) {
+    const deleteId = deleteBtn.getAttribute('data-delete');
+    const className = deleteBtn.getAttribute('data-name') || 'this class section';
 
-  if (deleteId) {
-    if (!confirm('Delete this class?')) return;
-    await fetch(`${API_BASE}/classes/${deleteId}`, { method: 'DELETE', headers: getHeaders() });
-    loadClasses();
+    if (!confirm(`Are you sure you want to delete "${className}"?\n\nNote: If students are currently enrolled in this class, deletion will be prevented to protect student records.`)) return;
+
+    try {
+      const resp = await fetch(`${API_BASE}/classes/${deleteId}`, { method: 'DELETE', headers: getHeaders() });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        alert(err.detail || 'Could not delete class section.');
+        return;
+      }
+      loadClasses();
+    } catch (e) {
+      alert('Network error while deleting class.');
+    }
   }
 });
 

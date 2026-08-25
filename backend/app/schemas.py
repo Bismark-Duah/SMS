@@ -51,6 +51,19 @@ class ClassSectionCreate(BaseModel):
     program_id: Optional[int] = None
     form_master_id: Optional[int] = None
 
+class BatchArmCreate(BaseModel):
+    stage_id: int
+    program_id: Optional[int] = None
+    number_of_arms: int = 1
+    naming_style: str = "NUMBERS"  # "NUMBERS" (1,2,3), "LETTERS" (A,B,C)
+    base_name: Optional[str] = None  # e.g. "Science", "Arts"
+
+class SmartGenerateRequest(BaseModel):
+    target_capacity: int = 45
+    naming_style: str = "AUTO"  # "LETTERS" (A, B, C), "NUMBERS" (1, 2, 3)
+    assign_students: bool = True
+    stage_id: Optional[int] = None
+
 class ProgramCreate(BaseModel):
     name: str
 

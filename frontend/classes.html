@@ -21,22 +21,30 @@
         </div>
       </header>
       <section class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <h3 style="margin:0;">All Classes</h3>
-          <button type="button" id="loadPresetsBtn" class="btn secondary" style="font-size:0.85rem;">⚡ Load Standard Classes</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+          <div>
+            <h3 style="margin:0; font-size:1.1rem;">All Class Sections</h3>
+            <p style="margin:2px 0 0; opacity:0.75; font-size:0.83rem;">Manage classroom streams, form masters, and subject allocations.</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <input type="search" id="classSearchInput" placeholder="🔍 Search class, stage, program..." style="padding:7px 12px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary); width:230px;" oninput="filterClasses(this.value)" />
+            <button type="button" id="openSmartGenBtn" class="btn primary" style="font-size:0.85rem; background:linear-gradient(135deg, #6366f1, #06b6d4); border:none; box-shadow:0 2px 8px rgba(99,102,241,0.35);">⚡ Smart Class Generator</button>
+            <a href="#classFormCard" class="btn" style="font-size:0.85rem;">+ Add Single Class</a>
+          </div>
         </div>
-        <div id="classList">Loading...</div>
+        <div id="classList">Loading classes...</div>
       </section>
+
       <section class="card" id="classFormCard">
         <h3 id="formTitle">Add Class</h3>
         <form id="classForm">
           <input type="hidden" id="classId" />
-          <label>Class Name <input id="className" placeholder="e.g. Form 1 Science A" required /></label>
+          <label>Class Name <input id="className" placeholder="e.g. Form 1 Science A or KG 1A" required /></label>
           <label>Stage
             <select id="classLevel"><option value="">Loading...</option></select>
           </label>
-          <label>Program (Optional)
-            <select id="classProgram"><option value="">Loading...</option></select>
+          <label id="classProgramLabel">Program (Optional for SHS)
+            <select id="classProgram"><option value="">Select Program...</option></select>
           </label>
           <label>Form Master / Mistress
             <select id="classFormMaster">
@@ -49,10 +57,114 @@
           </div>
         </form>
       </section>
+
+      <!-- ── Enterprise Smart Class Generator Modal ───────────────────────── -->
+      <div id="smartGenModal" style="display:none; position:fixed; z-index:10000; inset:0; background-color:rgba(0,0,0,0.7); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
+        <div style="width:94%; max-width:740px; max-height:90vh; overflow-y:auto; background:var(--card-bg, #1e293b); padding:24px; border-radius:14px; border:1px solid var(--border-color); box-shadow:0 16px 40px rgba(0,0,0,0.5); position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.5rem;">⚡</span>
+              <div>
+                <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary);">Enterprise Smart Class Generator</h3>
+                <p style="margin:2px 0 0; font-size:0.8rem; color:var(--text-secondary);">Capacity-driven and elective-combination-aware classroom allocator.</p>
+              </div>
+            </div>
+            <button type="button" onclick="closeSmartGenModal()" style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer; padding:0 6px;">&times;</button>
+          </div>
+
+          <!-- Tab Navigation -->
+          <div style="display:flex; gap:8px; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+            <button type="button" id="tabAutoGenBtn" onclick="switchGenTab('auto')" class="btn primary" style="font-size:0.85rem; padding:6px 14px;">⚡ Enrollment Auto-Allocator</button>
+            <button type="button" id="tabBatchArmsBtn" onclick="switchGenTab('batch')" class="btn" style="font-size:0.85rem; padding:6px 14px;">➕ Batch Arm Provisioner</button>
+          </div>
+
+          <!-- TAB 1: Auto-Generator from Enrolled Students -->
+          <div id="tabContentAuto">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:14px;">
+              <div>
+                <label style="font-size:0.82rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">Target Classroom Capacity</label>
+                <input type="number" id="genTargetCapacity" value="45" min="10" max="100" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);" />
+                <span style="font-size:0.75rem; opacity:0.7;">e.g., 45 students per room</span>
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">Stream Suffix Style</label>
+                <select id="genNamingStyle" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);">
+                  <option value="AUTO" selected>Auto (Numbers for SHS, Letters for Basic)</option>
+                  <option value="NUMBERS">Numbers (1, 2, 3...)</option>
+                  <option value="LETTERS">Letters (A, B, C...)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-bottom:14px; background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.2); padding:10px 14px; border-radius:8px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; font-size:0.85rem;">
+                <input type="checkbox" id="genAssignStudentsCb" checked style="width:16px; height:16px;" />
+                <span><strong>Auto-Balance Student Rosters:</strong> Automatically distribute enrolled students evenly into generated class sections.</span>
+              </label>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-bottom:14px;">
+              <button type="button" onclick="previewSmartAllocation()" class="btn" style="flex:1; padding:8px 12px; font-size:0.85rem;">🔍 Calculate & Preview Allocation</button>
+            </div>
+
+            <div id="smartPreviewArea" style="display:none; margin-bottom:16px;">
+              <h4 style="margin:0 0 8px; font-size:0.9rem; color:var(--text-primary);">Simulation Preview:</h4>
+              <div id="smartPreviewTableContainer" style="max-height:220px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px;"></div>
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+              <button type="button" onclick="closeSmartGenModal()" class="btn" style="min-width:100px;">Cancel</button>
+              <button type="button" id="executeSmartGenBtn" onclick="executeSmartGeneration()" class="btn primary" style="min-width:150px; background:linear-gradient(135deg, #6366f1, #06b6d4); border:none;" disabled>⚡ Generate Classes</button>
+            </div>
+          </div>
+
+          <!-- TAB 2: Batch Arm Provisioner -->
+          <div id="tabContentBatch" style="display:none;">
+            <form id="batchArmForm" onsubmit="submitBatchArms(event)">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:12px;">
+                <div>
+                  <label style="font-size:0.82rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">Stage *</label>
+                  <select id="batchStageSelect" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);"></select>
+                </div>
+                <div id="batchProgramGroup">
+                  <label style="font-size:0.82rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">Program (Optional)</label>
+                  <select id="batchProgramSelect" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);"></select>
+                </div>
+                <div>
+                  <label style="font-size:0.82rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">Number of Arms *</label>
+                  <input type="number" id="batchArmsCount" value="3" min="1" max="20" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);" oninput="updateBatchPreview()" />
+                </div>
+                <div>
+                  <label style="font-size:0.82rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">Naming Suffix</label>
+                  <select id="batchNamingStyle" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);" onchange="updateBatchPreview()">
+                    <option value="NUMBERS" selected>Numbers (1, 2, 3...)</option>
+                    <option value="LETTERS">Letters (A, B, C...)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="margin-bottom:12px;">
+                <label style="font-size:0.82rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">Custom Base Name Override (Optional)</label>
+                <input type="text" id="batchBaseName" placeholder="e.g. Science, Robotics, Gold" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);" oninput="updateBatchPreview()" />
+              </div>
+
+              <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); padding:10px 14px; border-radius:8px; margin-bottom:16px;">
+                <span style="font-size:0.8rem; color:var(--text-secondary);">Live Name Preview:</span>
+                <div id="batchLivePreview" style="font-weight:700; font-size:0.95rem; color:#06b6d4; margin-top:4px;">Select a stage to see preview...</div>
+              </div>
+
+              <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" onclick="closeSmartGenModal()" class="btn" style="min-width:100px;">Cancel</button>
+                <button type="submit" class="btn primary" style="min-width:140px;">➕ Provision Arms</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
       
       <!-- Manage Subjects Modal -->
-      <div id="subjectsModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.65); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
-        <div style="width:92%; max-width:620px; margin:auto; background:var(--bg-card, #1e293b); padding:24px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); box-shadow:0 10px 30px rgba(0,0,0,0.4); position:relative;">
+      <div id="subjectsModal" style="display:none; position:fixed; z-index:1000; inset:0; width:100%; height:100%; background-color:rgba(0,0,0,0.65); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+        <div style="width:92%; max-width:620px; margin:auto; background:var(--card-bg, #1e293b); padding:24px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); box-shadow:0 10px 30px rgba(0,0,0,0.4); position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
             <h3 style="margin:0; font-size:1.2rem; display:flex; align-items:center; gap:8px;">📚 Manage Class Subjects</h3>
             <button type="button" onclick="document.getElementById('subjectsModal').style.display='none'" style="background:none; border:none; color:rgba(255,255,255,0.6); font-size:1.4rem; cursor:pointer; padding:0 4px;">&times;</button>

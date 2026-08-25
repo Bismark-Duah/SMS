@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
 from ..database import get_db
-from ..models import ClassSection, SchoolStage, Setting, Subject, User, School
-from ..schemas import ClassSectionCreate, SchoolStageCreate
+from ..models import ClassSection, SchoolStage, Setting, Subject, User, School, Program, Student, Score, Attendance
+from ..schemas import ClassSectionCreate, SchoolStageCreate, BatchArmCreate, SmartGenerateRequest
 from ..dependencies import get_current_user, get_school_id
 
 router = APIRouter()
@@ -315,12 +315,349 @@ def delete_section(
     item = query.first()
     if not item:
         raise HTTPException(status_code=404, detail="Section not found")
+    
+    # ── Enterprise Dependency Guard: Check if students are enrolled ───────────
+    from ..models import Student, Score, Attendance
+    student_count = db.query(Student).filter(Student.class_section_id == section_id).count()
+    if student_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Cannot delete class section '{item.name}' because {student_count} student(s) "
+                f"are currently enrolled in it. Please reassign or transfer students before deleting this class."
+            )
+        )
+    
+    # Clean up associations safely
+    item.subjects.clear()
     db.delete(item)
     db.commit()
-    return {"message": "Section deleted"}
+    return {"status": "success", "message": f"Class section '{item.name}' deleted successfully."}
+
+
+# ── Enterprise Smart Class & Arm Generators ───────────────────────────────────
+
+from ..schemas import BatchArmCreate, SmartGenerateRequest
+import math
+
+
+@router.post("/batch-create-arms")
+def batch_create_arms(
+    payload: BatchArmCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Enterprise Batch Class & Arm Provisioner.
+    Generates multiple arms for a stage/program in 1 click (e.g. Form 1 Science 1, 2, 3 or KG 1A, 1B).
+    """
+    school_id = get_school_id(current_user)
+    stage = db.query(SchoolStage).filter(SchoolStage.id == payload.stage_id).first()
+    if not stage:
+        raise HTTPException(status_code=404, detail="Selected stage not found")
+
+    program = None
+    if payload.program_id:
+        program = db.query(Program).filter(Program.id == payload.program_id).first()
+
+    created_classes = []
+    skipped_existing = []
+
+    for i in range(1, payload.number_of_arms + 1):
+        if payload.naming_style == "LETTERS":
+            suffix = chr(64 + i)  # A, B, C...
+        else:
+            suffix = str(i)  # 1, 2, 3...
+
+        # Build clean enterprise naming convention
+        if stage.school_type == "SHS" and program:
+            base = payload.base_name.strip() if payload.base_name else program.name.replace("General ", "").replace("Technical", "Tech").strip()
+            class_name = f"{stage.name} {base} {suffix}"
+        elif stage.school_type == "Basic":
+            base = payload.base_name.strip() if payload.base_name else stage.name
+            class_name = f"{base}{suffix}" if payload.naming_style == "LETTERS" else f"{base} {suffix}"
+        else:
+            base = payload.base_name.strip() if payload.base_name else (program.name if program else stage.name)
+            class_name = f"{stage.name} {base} {suffix}"
+
+        # Check existing
+        existing_query = db.query(ClassSection).filter(
+            ClassSection.name == class_name,
+            ClassSection.stage_id == stage.id
+        )
+        if school_id is not None and hasattr(ClassSection, "school_id"):
+            existing_query = existing_query.filter(ClassSection.school_id == school_id)
+        
+        existing = existing_query.first()
+        if existing:
+            skipped_existing.append(class_name)
+            continue
+
+        section_kwargs = {
+            "name": class_name,
+            "stage_id": stage.id,
+            "program_id": program.id if program else None,
+        }
+        if school_id is not None and hasattr(ClassSection, "school_id"):
+            section_kwargs["school_id"] = school_id
+
+        new_section = ClassSection(**section_kwargs)
+        db.add(new_section)
+        db.flush()
+
+        # Automatically link program subjects if available
+        if program and program.subjects:
+            new_section.subjects = list(program.subjects)
+
+        created_classes.append({
+            "id": new_section.id,
+            "name": new_section.name,
+            "stage_name": stage.name,
+            "program_name": program.name if program else None
+        })
+
+    db.commit()
+    return {
+        "status": "success",
+        "created_count": len(created_classes),
+        "created_classes": created_classes,
+        "skipped_existing": skipped_existing,
+        "message": f"Successfully provisioned {len(created_classes)} class section(s)."
+    }
+
+
+@router.get("/smart-preview")
+def smart_class_preview(
+    target_capacity: int = 45,
+    naming_style: str = "AUTO",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Simulates and previews capacity-driven class allocations based on real student enrollment counts,
+    active school mode, programs, and elective combinations.
+    """
+    from ..models import Student, Program
+    school_id = get_school_id(current_user)
+    mode = _get_school_mode(db, school_id)
+
+    students_query = db.query(Student)
+    if school_id is not None and hasattr(Student, "school_id"):
+        students_query = students_query.filter((Student.school_id == school_id) | (Student.school_id.is_(None)))
+
+    all_students = students_query.all()
+    target_capacity = max(10, min(100, target_capacity))
+
+    proposals = []
+    total_unassigned_students = 0
+
+    if mode == "BASIC_ONLY":
+        # Group by standard Basic stages (KG 1, KG 2, Primary 1..6, JHS 1..3)
+        stages = db.query(SchoolStage).filter(SchoolStage.school_type == "Basic").all()
+        stage_map = {s.name.lower(): s for s in stages}
+
+        # Cluster students by class_name or stage
+        basic_clusters = {}
+        for st in all_students:
+            c_name = (st.class_name or "").strip()
+            # Determine stage name
+            assigned_stage_name = "Primary 1"
+            for s_name in stage_map.keys():
+                if s_name in c_name.lower():
+                    assigned_stage_name = stage_map[s_name].name
+                    break
+            if assigned_stage_name not in basic_clusters:
+                basic_clusters[assigned_stage_name] = []
+            basic_clusters[assigned_stage_name].append(st)
+
+        for stage_name, s_list in basic_clusters.items():
+            count = len(s_list)
+            needed_arms = max(1, math.ceil(count / target_capacity))
+            st_obj = stage_map.get(stage_name.lower())
+            
+            arm_names = []
+            for a_idx in range(1, needed_arms + 1):
+                suffix = chr(64 + a_idx) if naming_style in ["AUTO", "LETTERS"] else str(a_idx)
+                arm_names.append(f"{stage_name}{suffix}" if naming_style in ["AUTO", "LETTERS"] else f"{stage_name} {suffix}")
+
+            proposals.append({
+                "stage_name": stage_name,
+                "stage_id": st_obj.id if st_obj else None,
+                "program_name": None,
+                "program_id": None,
+                "elective_combination": None,
+                "student_count": count,
+                "needed_arms": needed_arms,
+                "proposed_classes": arm_names,
+                "students_per_arm": math.ceil(count / needed_arms) if count else 0,
+                "student_ids": [s.id for s in s_list]
+            })
+
+    elif mode == "SHS_ONLY":
+        # Group by (Form 1..3) x Program x Elective Combination
+        shs_stages = db.query(SchoolStage).filter(SchoolStage.school_type == "SHS").all()
+        default_stage = shs_stages[0] if shs_stages else None
+
+        programs = db.query(Program).all()
+        prog_map = {p.id: p for p in programs}
+
+        shs_clusters = {}
+        for st in all_students:
+            form_num = st.form or 1
+            form_label = f"Form {form_num}"
+            prog_id = st.program_id
+            prog_name = prog_map[prog_id].name if prog_id and prog_id in prog_map else "General"
+            combo = (st.elective_combination or "Standard").strip()
+
+            key = (form_label, prog_id, prog_name, combo)
+            if key not in shs_clusters:
+                shs_clusters[key] = []
+            shs_clusters[key].append(st)
+
+        for (form_label, prog_id, prog_name, combo), s_list in shs_clusters.items():
+            count = len(s_list)
+            needed_arms = max(1, math.ceil(count / target_capacity))
+            base_prog_clean = prog_name.replace("General ", "").replace("Technical", "Tech").strip()
+
+            arm_names = []
+            for a_idx in range(1, needed_arms + 1):
+                suffix = str(a_idx)
+                combo_tag = f" ({combo})" if combo and combo not in ["Standard", "Default", "None"] else ""
+                arm_names.append(f"{form_label} {base_prog_clean} {suffix}{combo_tag}")
+
+            proposals.append({
+                "stage_name": form_label,
+                "stage_id": default_stage.id if default_stage else None,
+                "program_name": prog_name,
+                "program_id": prog_id,
+                "elective_combination": combo,
+                "student_count": count,
+                "needed_arms": needed_arms,
+                "proposed_classes": arm_names,
+                "students_per_arm": math.ceil(count / needed_arms) if count else 0,
+                "student_ids": [s.id for s in s_list]
+            })
+
+    else:
+        # COMBINED mode - returns both
+        proposals.append({
+            "stage_name": "Combined Mode",
+            "stage_id": None,
+            "program_name": "All Programs",
+            "program_id": None,
+            "elective_combination": None,
+            "student_count": len(all_students),
+            "needed_arms": max(1, math.ceil(len(all_students) / target_capacity)),
+            "proposed_classes": ["Stream A", "Stream B"],
+            "students_per_arm": math.ceil(len(all_students) / max(1, math.ceil(len(all_students) / target_capacity))),
+            "student_ids": [s.id for s in all_students]
+        })
+
+    return {
+        "school_mode": mode,
+        "total_enrolled_students": len(all_students),
+        "target_capacity_per_class": target_capacity,
+        "proposals": proposals
+    }
+
+
+@router.post("/smart-generate")
+def smart_class_generate(
+    payload: SmartGenerateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Executes the capacity-driven and elective-combination-aware class generator.
+    Creates class sections and automatically balances student rosters evenly across the arms.
+    """
+    preview_data = smart_class_preview(
+        target_capacity=payload.target_capacity,
+        naming_style=payload.naming_style,
+        db=db,
+        current_user=current_user
+    )
+
+    school_id = get_school_id(current_user)
+    proposals = preview_data["proposals"]
+
+    created_classes_total = 0
+    assigned_students_total = 0
+
+    from ..models import Student, Subject
+
+    for prop in proposals:
+        stage_id = prop.get("stage_id")
+        if not stage_id:
+            # Fallback find or create stage
+            st = db.query(SchoolStage).filter(SchoolStage.name == prop["stage_name"]).first()
+            if not st:
+                st = SchoolStage(name=prop["stage_name"], school_type="Basic" if preview_data["school_mode"] == "BASIC_ONLY" else "SHS")
+                db.add(st)
+                db.flush()
+            stage_id = st.id
+
+        created_section_objs = []
+        for class_name in prop["proposed_classes"]:
+            existing = db.query(ClassSection).filter(
+                ClassSection.name == class_name,
+                ClassSection.stage_id == stage_id
+            ).first()
+
+            if not existing:
+                sec_kwargs = {
+                    "name": class_name,
+                    "stage_id": stage_id,
+                    "program_id": prop.get("program_id"),
+                }
+                if school_id is not None and hasattr(ClassSection, "school_id"):
+                    sec_kwargs["school_id"] = school_id
+                sec = ClassSection(**sec_kwargs)
+                db.add(sec)
+                db.flush()
+
+                # Link program subjects if applicable
+                if prop.get("program_id"):
+                    prog = db.query(Program).filter(Program.id == prop["program_id"]).first()
+                    if prog and prog.subjects:
+                        sec.subjects = list(prog.subjects)
+
+                created_section_objs.append(sec)
+                created_classes_total += 1
+            else:
+                created_section_objs.append(existing)
+
+        # Distribute and balance students evenly across the provisioned arms
+        if payload.assign_students and prop.get("student_ids") and created_section_objs:
+            s_ids = prop["student_ids"]
+            num_arms = len(created_section_objs)
+            
+            for idx, sid in enumerate(s_ids):
+                assigned_section = created_section_objs[idx % num_arms]
+                st_obj = db.query(Student).filter(Student.id == sid).first()
+                if st_obj:
+                    st_obj.class_section_id = assigned_section.id
+                    st_obj.class_name = assigned_section.name
+                    assigned_students_total += 1
+
+    db.commit()
+    return {
+        "status": "success",
+        "created_classes": created_classes_total,
+        "assigned_students": assigned_students_total,
+        "message": f"Successfully created {created_classes_total} balanced class section(s) and assigned {assigned_students_total} student(s)."
+    }
+
 
 @router.post("/presets")
 def seed_presets(db: Session = Depends(get_db)):
+    """
+    Seed standard national GES stages and core class progression.
+    Respects active school mode:
+      • BASIC_ONLY: KG 1-2, Primary 1-6, JHS 1-3
+      • SHS_ONLY: Form 1, Form 2, Form 3
+      • COMBINED: All stages
+    """
     mode = _get_school_mode(db)
     stages_data = [
         {"name": "Creche", "school_type": "Basic"},
@@ -379,6 +716,7 @@ def seed_presets(db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"Successfully loaded preset stages and created {added_count} standard classes"}
 
+
 def seed_default_stages(db: Session):
     defaults = [
         {"name": "Creche", "school_type": "Basic"},
@@ -392,3 +730,4 @@ def seed_default_stages(db: Session):
         if not db.query(SchoolStage).filter(SchoolStage.name == stage["name"]).first():
             db.add(SchoolStage(name=stage["name"], school_type=stage["school_type"]))
     db.commit()
+

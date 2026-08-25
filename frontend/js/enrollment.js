@@ -261,6 +261,8 @@ async function loadProspectusPackage(studentId) {
     document.getElementById('letter-residential').textContent = s.residential_status;
     document.getElementById('letter-year').textContent = s.academic_year;
     document.getElementById('letter-year-body').textContent = s.academic_year;
+    const qrEl = document.getElementById('letter-qr-code');
+    if (qrEl) qrEl.textContent = s.qr_verification_code || `VERIFIED-${s.student_code || s.bece_index_number}`;
 
     // Populate Prospectus Checklists
     renderList('prospectus-academic', p.academic_supplies);

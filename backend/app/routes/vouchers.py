@@ -302,7 +302,53 @@ def purchase_voucher_online(
 
     paid_amt = data.amount if data.amount is not None else default_price
 
-    # 2. Check if a voucher was already purchased/assigned for this BECE index
+    # 2. Live Paystack Gateway Integration (Checks Render Env Vars & Settings)
+    import os
+    import requests
+
+    paystack_sk = os.environ.get("PAYSTACK_SECRET_KEY", "").strip()
+    if not paystack_sk:
+        sk_setting = db.query(Setting).filter(Setting.key == "paystack_secret_key").first()
+        if sk_setting and sk_setting.value:
+            paystack_sk = sk_setting.value.strip()
+
+    paystack_enabled = os.environ.get("PAYSTACK_ENABLED", "").lower() in ["true", "1"]
+    if not paystack_enabled:
+        en_setting = db.query(Setting).filter(Setting.key == "paystack_enabled").first()
+        if en_setting and en_setting.value and en_setting.value.lower() == "true":
+            paystack_enabled = True
+
+    paystack_ref = None
+    if paystack_sk and (paystack_enabled or paystack_sk.startswith("sk_")):
+        momo_net = (data.momo_network or "MTN").upper()
+        provider = "vod" if ("TELECEL" in momo_net or "VOD" in momo_net) else ("mtn" if "MTN" in momo_net else "tgo")
+        paystack_url = "https://api.paystack.co/charge"
+        headers = {
+            "Authorization": f"Bearer {paystack_sk}",
+            "Content-Type": "application/json"
+        }
+        charge_body = {
+            "amount": int(round(paid_amt * 100)),
+            "email": f"candidate_{clean_bece}@school.edu.gh",
+            "currency": "GHS",
+            "mobile_money": {
+                "phone": clean_phone,
+                "provider": provider
+            }
+        }
+        try:
+            resp = requests.post(paystack_url, json=charge_body, headers=headers, timeout=14)
+            res_json = resp.json()
+            if resp.status_code in [200, 201] and res_json.get("status"):
+                charge_data = res_json.get("data", {})
+                paystack_ref = charge_data.get("reference")
+            else:
+                err_msg = res_json.get("message", "Paystack MoMo charge could not be initiated")
+                raise HTTPException(status_code=400, detail=f"MoMo Gateway: {err_msg}")
+        except requests.RequestException as e:
+            print(f"Paystack network call warning: {e}")
+
+    # 3. Check if a voucher was already purchased/assigned for this BECE index
     existing_voucher = db.query(AdmissionVoucher).filter(
         AdmissionVoucher.bece_index_number == clean_bece,
         AdmissionVoucher.status.in_(["AVAILABLE", "PURCHASED"])

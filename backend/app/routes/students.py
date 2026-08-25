@@ -81,8 +81,8 @@ def _student_dict(s: Student) -> dict:
         "address": s.address,
         "phone": s.phone,
         "guardian_name": s.guardian_name,
-        "is_active": s.is_active,
-        "status": s.status,
+        "is_active": s.is_active if s.is_active is not None else True,
+        "status": getattr(s, "status", "ACTIVE") or "ACTIVE",
         "created_at": str(s.created_at) if s.created_at else None,
         "house_id": s.house_id,
         "house_name": s.house.name if s.house else None,
@@ -129,7 +129,7 @@ def list_students(
     elif mode == "SHS_ONLY":
         query = query.outerjoin(ClassSection, Student.class_section_id == ClassSection.id)\
                      .outerjoin(SchoolStage, ClassSection.stage_id == SchoolStage.id)\
-                     .filter((SchoolStage.school_type == "SHS") | (Student.school_type == "SHS"))
+                     .filter((SchoolStage.school_type == "SHS") | (Student.school_type == "SHS") | (Student.school_type == None) | (Student.class_section_id == None))
 
     if not include_inactive:
         query = query.filter(Student.is_active == True)
@@ -160,6 +160,7 @@ def list_students(
         students = query.order_by(Student.full_name).all()
         return [_student_dict(s) for s in students]
     except Exception as e:
+        print("Error in list_students query:", e)
         return []
 
 

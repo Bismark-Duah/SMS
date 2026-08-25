@@ -386,6 +386,7 @@ os.makedirs(js_dir, exist_ok=True)
 os.makedirs(css_dir, exist_ok=True)
 os.makedirs(uploads_dir, exist_ok=True)
 
+app.mount("/assets/uploads", StaticFiles(directory=uploads_dir), name="assets_uploads")
 app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 app.mount("/js", StaticFiles(directory=js_dir), name="js")
 app.mount("/css", StaticFiles(directory=css_dir), name="css")

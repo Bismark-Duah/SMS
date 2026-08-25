@@ -49,28 +49,30 @@
           <label>School Email
             <input type="email" id="school_email" placeholder="admin@school.edu.gh" />
           </label>
-          <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 14px; margin-top: 6px;">
-            <label style="flex: 1; margin: 0;">School Logo
-              <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
-                <input type="file" id="school_logo_file" accept="image/*" style="display: none;" />
-                <button type="button" class="btn" style="white-space: nowrap; margin: 0;" onclick="document.getElementById('school_logo_file').click()">📁 Select Logo</button>
-                <input type="text" id="school_logo" placeholder="Optional: Logo path or URL" style="flex: 1; margin: 0;" readonly />
+          <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 14px; margin-top: 6px; flex-wrap: wrap;">
+            <label style="flex: 1; min-width: 280px; margin: 0;">School Logo / Crest
+              <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
+                <input type="file" id="school_logo_file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display: none;" />
+                <button type="button" class="btn" style="white-space: nowrap; margin: 0; background: var(--primary);" onclick="document.getElementById('school_logo_file').click()">📁 Select Logo</button>
+                <button type="button" class="btn btn-secondary" style="white-space: nowrap; margin: 0; font-size: 0.8rem; padding: 6px 10px;" id="reset_logo_btn" onclick="window.resetSchoolLogo()" title="Reset to default monogram crest">🗑️ Clear</button>
+                <input type="text" id="school_logo" placeholder="Auto-generated Data URI / Path" style="flex: 1; margin: 0; font-size: 0.8rem;" readonly />
               </div>
             </label>
-            <div id="logo_preview_container" style="display: none; align-items: center; justify-content: center; width: 60px; height: 60px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; background: #fff; margin-top: 14px;">
-              <img id="logo_preview" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+            <div id="logo_preview_container" style="display: none; align-items: center; justify-content: center; width: 64px; height: 64px; border: 1px solid var(--border-color, rgba(255,255,255,0.2)); border-radius: 8px; overflow: hidden; background: rgba(15,23,42,0.6); margin-top: 14px; flex-shrink: 0;">
+              <img id="logo_preview" src="" alt="Logo Preview" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display='none';" onload="this.style.display='block';" />
             </div>
           </div>
-          <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 14px; margin-top: 6px;">
-            <label style="flex: 1; margin: 0;">Headmaster Signature
-              <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
-                <input type="file" id="headmaster_signature_file" accept="image/*" style="display: none;" />
-                <button type="button" class="btn" style="white-space: nowrap; margin: 0;" onclick="document.getElementById('headmaster_signature_file').click()">📁 Select Signature</button>
-                <input type="text" id="headmaster_signature" placeholder="Optional: Signature path or URL" style="flex: 1; margin: 0;" readonly />
+          <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 14px; margin-top: 6px; flex-wrap: wrap;">
+            <label style="flex: 1; min-width: 280px; margin: 0;">Headmaster Signature
+              <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
+                <input type="file" id="headmaster_signature_file" accept="image/png,image/jpeg,image/webp" style="display: none;" />
+                <button type="button" class="btn" style="white-space: nowrap; margin: 0; background: var(--primary);" onclick="document.getElementById('headmaster_signature_file').click()">📁 Select Signature</button>
+                <button type="button" class="btn btn-secondary" style="white-space: nowrap; margin: 0; font-size: 0.8rem; padding: 6px 10px;" id="reset_sig_btn" onclick="window.resetSignature()" title="Clear signature">🗑️ Clear</button>
+                <input type="text" id="headmaster_signature" placeholder="Auto-generated Data URI / Path" style="flex: 1; margin: 0; font-size: 0.8rem;" readonly />
               </div>
             </label>
-            <div id="sig_preview_container" style="display: none; align-items: center; justify-content: center; width: 120px; height: 60px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; background: #fff; margin-top: 14px;">
-              <img id="sig_preview" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+            <div id="sig_preview_container" style="display: none; align-items: center; justify-content: center; width: 120px; height: 64px; border: 1px solid var(--border-color, rgba(255,255,255,0.2)); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.95); margin-top: 14px; flex-shrink: 0;">
+              <img id="sig_preview" src="" alt="Signature Preview" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display='none';" onload="this.style.display='block';" />
             </div>
           </div>
           <label>School Mode <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;" id="schoolModeLockNotice">(🔒 Managed by Super-Admin)</span>

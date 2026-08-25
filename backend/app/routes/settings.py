@@ -4,12 +4,58 @@ import json
 import os
 import time
 import shutil
+import base64
+import io
+import mimetypes
 from ..database import get_db
 from typing import Optional
 from ..models import Setting, User, AcademicYear, Semester, School
 from ..dependencies import get_current_user, get_current_user_optional
 
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
 router = APIRouter()
+
+def _process_image_to_base64(file_bytes: bytes, filename: str, max_size=(360, 360), quality=85) -> str:
+    """
+    Compress and convert an image to a self-contained Base64 Data URI.
+    Ensures images survive cloud restarts, works 100% offline, and prevents 404s.
+    """
+    ext = os.path.splitext(filename)[1].lower()
+    mime_type, _ = mimetypes.guess_type(filename)
+    if not mime_type:
+        mime_type = "image/png" if ext == ".png" else "image/jpeg"
+
+    if Image and ext in [".png", ".jpg", ".jpeg", ".webp"]:
+        try:
+            img = Image.open(io.BytesIO(file_bytes))
+            # Preserve transparency if available
+            if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+                resample = getattr(Image, "Resampling", None)
+                filter_mode = resample.LANCZOS if resample else Image.ANTIALIAS
+                img.thumbnail(max_size, filter_mode)
+                out_io = io.BytesIO()
+                img.save(out_io, format="PNG", optimize=True)
+                b64_str = base64.b64encode(out_io.getvalue()).decode("utf-8")
+                return f"data:image/png;base64,{b64_str}"
+            else:
+                img = img.convert("RGB")
+                resample = getattr(Image, "Resampling", None)
+                filter_mode = resample.LANCZOS if resample else Image.ANTIALIAS
+                img.thumbnail(max_size, filter_mode)
+                out_io = io.BytesIO()
+                img.save(out_io, format="JPEG", quality=quality, optimize=True)
+                b64_str = base64.b64encode(out_io.getvalue()).decode("utf-8")
+                return f"data:image/jpeg;base64,{b64_str}"
+        except Exception as e:
+            print(f"PIL processing warning: {e}")
+
+    # Fallback direct base64 encoding
+    b64_str = base64.b64encode(file_bytes).decode("utf-8")
+    return f"data:{mime_type};base64,{b64_str}"
 
 @router.get("/")
 def get_settings(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user_optional), x_school_id: Optional[str] = Header(None, alias="X-School-Id")):
@@ -151,7 +197,7 @@ def update_settings(payload: dict, db: Session = Depends(get_db), current_user: 
     return {"status": "success"}
 
 @router.post("/upload-logo")
-def upload_logo(
+async def upload_logo(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -167,11 +213,17 @@ def upload_logo(
     if ext not in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]:
         raise HTTPException(status_code=400, detail="Invalid file type. Only images are allowed.")
 
-    # Determine paths
+    file_bytes = await file.read()
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    # Convert to Base64 data URI (persistent & works offline / on cloud)
+    data_uri = _process_image_to_base64(file_bytes, file.filename, max_size=(360, 360))
+
+    # Determine paths for local caching
     current_dir = os.path.dirname(os.path.abspath(__file__))
     frontend_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "frontend"))
     upload_dir = os.path.join(frontend_dir, "uploads")
-    
     os.makedirs(upload_dir, exist_ok=True)
 
     # Delete existing school logo files in uploads to save space
@@ -187,25 +239,59 @@ def upload_logo(
     new_filename = f"school_logo_{timestamp}{ext}"
     file_path = os.path.join(upload_dir, new_filename)
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    try:
+        with open(file_path, "wb") as buffer:
+            buffer.write(file_bytes)
+    except Exception as e:
+        print(f"Warning saving local logo cache: {e}")
 
-    # Return web path
-    web_path = f"/assets/uploads/{new_filename}"
-    
-    # Save/update setting
+    web_path = f"/uploads/{new_filename}"
+
+    # Save/update setting with persistent Data URI
     setting = db.query(Setting).filter(Setting.key == "school_logo").first()
     if setting:
-        setting.value = web_path
+        setting.value = data_uri
     else:
-        new_setting = Setting(key="school_logo", value=web_path)
+        new_setting = Setting(key="school_logo", value=data_uri)
         db.add(new_setting)
+
+    # Sync with associated School model if available
+    target_sch_id = getattr(current_user, 'school_id', None)
+    if target_sch_id:
+        sch = db.query(School).filter(School.id == target_sch_id).first()
+        if sch:
+            sch.logo_url = data_uri
+
     db.commit()
 
-    return {"logo_url": web_path}
+    return {"logo_url": data_uri, "web_path": web_path}
+
+@router.delete("/logo")
+def delete_logo(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    role_names = [r.name for r in current_user.roles]
+    if "admin" not in role_names and "super_admin" not in role_names:
+        raise HTTPException(status_code=403, detail="Only administrators can remove school logos")
+
+    setting = db.query(Setting).filter(Setting.key == "school_logo").first()
+    if setting:
+        setting.value = ""
+
+    target_sch_id = getattr(current_user, 'school_id', None)
+    if target_sch_id:
+        sch = db.query(School).filter(School.id == target_sch_id).first()
+        if sch:
+            sch.logo_url = None
+
+    db.commit()
+    return {"status": "success", "message": "School logo reset to default"}
 
 @router.post("/upload-signature")
-def upload_signature(
+async def upload_signature(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -221,11 +307,16 @@ def upload_signature(
     if ext not in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]:
         raise HTTPException(status_code=400, detail="Invalid file type. Only images are allowed.")
 
+    file_bytes = await file.read()
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    data_uri = _process_image_to_base64(file_bytes, file.filename, max_size=(400, 160))
+
     # Determine paths
     current_dir = os.path.dirname(os.path.abspath(__file__))
     frontend_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "frontend"))
     upload_dir = os.path.join(frontend_dir, "uploads")
-    
     os.makedirs(upload_dir, exist_ok=True)
 
     # Delete existing signature files in uploads to save space
@@ -241,25 +332,24 @@ def upload_signature(
     new_filename = f"headmaster_signature_{timestamp}{ext}"
     file_path = os.path.join(upload_dir, new_filename)
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    try:
+        with open(file_path, "wb") as buffer:
+            buffer.write(file_bytes)
+    except Exception as e:
+        print(f"Warning saving local signature cache: {e}")
 
-    # Return web path
-    web_path = f"/assets/uploads/{new_filename}"
-    
-    # Return web path
-    web_path = f"/assets/uploads/{new_filename}"
-    
+    web_path = f"/uploads/{new_filename}"
+
     # Save/update setting
     setting = db.query(Setting).filter(Setting.key == "headmaster_signature").first()
     if setting:
-        setting.value = web_path
+        setting.value = data_uri
     else:
-        new_setting = Setting(key="headmaster_signature", value=web_path)
+        new_setting = Setting(key="headmaster_signature", value=data_uri)
         db.add(new_setting)
     db.commit()
 
-    return {"signature_url": web_path}
+    return {"signature_url": data_uri, "web_path": web_path}
 
 
 @router.post("/upload-code-of-conduct")

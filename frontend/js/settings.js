@@ -444,6 +444,21 @@ if (schoolLogoFile) {
         const file = e.target.files[0];
         if (!file) return;
 
+        if (file.size > 2 * 1024 * 1024) {
+            alert('Please select an image smaller than 2MB.');
+            return;
+        }
+
+        // Instant local preview
+        const previewContainer = document.getElementById('logo_preview_container');
+        const previewImg = document.getElementById('logo_preview');
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            if (previewImg) previewImg.src = ev.target.result;
+            if (previewContainer) previewContainer.style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+
         const formData = new FormData();
         formData.append('file', file);
 
@@ -462,12 +477,31 @@ if (schoolLogoFile) {
 
             const data = await res.json();
             const schoolLogoInput = document.getElementById('school_logo');
-            const previewContainer = document.getElementById('logo_preview_container');
-            const previewImg = document.getElementById('logo_preview');
 
             if (schoolLogoInput) schoolLogoInput.value = data.logo_url;
             if (previewImg) previewImg.src = data.logo_url;
             if (previewContainer) previewContainer.style.display = 'flex';
+
+            localStorage.setItem('school_logo', data.logo_url);
+
+            // Update Topbar and Sidebar live in DOM
+            const schAbbr = localStorage.getItem('school_abbreviation') || 'SMS';
+            const topbarLogoContainer = document.getElementById('topbarLogoContainer');
+            if (topbarLogoContainer) {
+                topbarLogoContainer.innerHTML = `<img src="${data.logo_url}" alt="${schAbbr}" class="topbar-logo-img" style="height:34px; width:34px; object-fit:cover; border-radius:8px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15);" onerror="this.outerHTML = window.createDefaultCrestSvg ? window.createDefaultCrestSvg('${schAbbr}', 34) : '';" />`;
+            }
+            const sidebarHeader = document.querySelector('.sidebar-header');
+            if (sidebarHeader) {
+                const existingSidebarLogo = sidebarHeader.querySelector('.sidebar-logo-img, .school-crest-svg, .sidebar-header > span:first-child');
+                const newImg = document.createElement('img');
+                newImg.src = data.logo_url;
+                newImg.className = 'sidebar-logo-img';
+                newImg.style.cssText = 'height:30px; width:30px; object-fit:cover; border-radius:8px; flex-shrink:0;';
+                newImg.onerror = function() {
+                    this.outerHTML = window.createDefaultCrestSvg ? window.createDefaultCrestSvg(schAbbr, 30) : '';
+                };
+                if (existingSidebarLogo) existingSidebarLogo.replaceWith(newImg);
+            }
 
             if (window.extractLogoColors) {
                 window.extractLogoColors(data.logo_url, function(colors) {
@@ -484,43 +518,100 @@ if (schoolLogoFile) {
     });
 }
 
+window.resetSchoolLogo = async function() {
+    if (!confirm('Are you sure you want to reset the school logo to the default vector crest?')) return;
+    try {
+        const res = await fetch(`${API_BASE}/settings/logo`, {
+            method: 'DELETE',
+            headers: getHeaders()
+        });
+        if (res.ok) {
+            localStorage.removeItem('school_logo');
+            const schoolLogoInput = document.getElementById('school_logo');
+            const previewContainer = document.getElementById('logo_preview_container');
+            const previewImg = document.getElementById('logo_preview');
+            const fileInput = document.getElementById('school_logo_file');
+            if (schoolLogoInput) schoolLogoInput.value = '';
+            if (previewImg) previewImg.src = '';
+            if (previewContainer) previewContainer.style.display = 'none';
+            if (fileInput) fileInput.value = '';
+
+            const schAbbr = localStorage.getItem('school_abbreviation') || 'SMS';
+            const topbarLogoContainer = document.getElementById('topbarLogoContainer');
+            if (topbarLogoContainer && window.createDefaultCrestSvg) {
+                topbarLogoContainer.innerHTML = window.createDefaultCrestSvg(schAbbr, 34);
+            }
+            const sidebarHeader = document.querySelector('.sidebar-header');
+            if (sidebarHeader && window.createDefaultCrestSvg) {
+                const existing = sidebarHeader.querySelector('.sidebar-logo-img, .school-crest-svg');
+                if (existing) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = window.createDefaultCrestSvg(schAbbr, 30);
+                    existing.replaceWith(temp.firstElementChild);
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Error resetting logo:', err);
+    }
+};
+
 const headmasterSigFile = document.getElementById('headmaster_signature_file');
 if (headmasterSigFile) {
     headmasterSigFile.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
- 
+
+        // Instant local preview
+        const previewContainer = document.getElementById('sig_preview_container');
+        const previewImg = document.getElementById('sig_preview');
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            if (previewImg) previewImg.src = ev.target.result;
+            if (previewContainer) previewContainer.style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+
         const formData = new FormData();
         formData.append('file', file);
- 
+
         try {
             const res = await fetch(`${API_BASE}/settings/upload-signature`, {
                 method: 'POST',
                 headers: getHeaders(),
                 body: formData
             });
- 
+
             if (!res.ok) {
                 const err = await res.json();
                 alert(`Upload failed: ${err.detail || 'Unknown error'}`);
                 return;
             }
- 
+
             const data = await res.json();
             const headmasterSigInput = document.getElementById('headmaster_signature');
-            const previewContainer = document.getElementById('sig_preview_container');
-            const previewImg = document.getElementById('sig_preview');
- 
+
             if (headmasterSigInput) headmasterSigInput.value = data.signature_url;
             if (previewImg) previewImg.src = data.signature_url;
             if (previewContainer) previewContainer.style.display = 'flex';
- 
+
         } catch (error) {
             console.error('Error uploading signature:', error);
             alert('An error occurred while uploading the signature.');
         }
     });
 }
+
+window.resetSignature = function() {
+    const headmasterSigInput = document.getElementById('headmaster_signature');
+    const previewContainer = document.getElementById('sig_preview_container');
+    const previewImg = document.getElementById('sig_preview');
+    const fileInput = document.getElementById('headmaster_signature_file');
+    if (headmasterSigInput) headmasterSigInput.value = '';
+    if (previewImg) previewImg.src = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (fileInput) fileInput.value = '';
+};
 
 window.saveConductSettings = async function(event) {
   event.preventDefault();

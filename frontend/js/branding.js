@@ -35,6 +35,23 @@
       }
     }
 
+    // ── Unified Vector School Crest Generator ───────────────────────
+    window.createDefaultCrestSvg = function(abbr, size = 34) {
+      const cleanAbbr = (abbr || 'SMS').trim().substring(0, 4).toUpperCase();
+      const fontSize = cleanAbbr.length >= 4 ? 9 : (cleanAbbr.length === 3 ? 11 : 13);
+      return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="school-crest-svg" style="flex-shrink:0; border-radius:8px; display:inline-block; vertical-align:middle; box-shadow:0 2px 8px rgba(0,0,0,0.18);">
+        <defs>
+          <linearGradient id="crestGrad_${size}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#4f46e5" />
+            <stop offset="100%" stop-color="#06b6d4" />
+          </linearGradient>
+        </defs>
+        <rect width="40" height="40" rx="8" fill="url(#crestGrad_${size})" />
+        <path d="M20 6 L32 11 V20 C32 27.5 26.8 33 20 35 C13.2 33 8 27.5 8 20 V11 L20 6 Z" fill="rgba(255,255,255,0.18)" stroke="#ffffff" stroke-width="1.2" />
+        <text x="20" y="24.5" text-anchor="middle" font-family="'Outfit', 'Inter', -apple-system, sans-serif" font-size="${fontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.5">${cleanAbbr}</text>
+      </svg>`;
+    };
+
     const topbar = document.querySelector('.topbar');
     if (topbar) {
       let nameEl = document.getElementById('schoolNameHeader');
@@ -42,21 +59,24 @@
 
       if (nameEl) nameEl.textContent = currentSchoolName;
 
+      // Clean up any legacy or duplicate .topbar-logo elements
+      topbar.querySelectorAll('.topbar-logo').forEach(el => el.remove());
+
       if (!logoContainer && nameEl && nameEl.parentElement) {
         const lDiv = document.createElement('div');
         lDiv.id = 'topbarLogoContainer';
-        lDiv.style.cssText = 'display:flex; align-items:center; flex-shrink:0;';
+        lDiv.style.cssText = 'display:flex; align-items:center; flex-shrink:0; margin-right:8px;';
         nameEl.parentElement.prepend(lDiv);
         logoContainer = lDiv;
       }
 
       if (logoContainer) {
-        if (s.school_logo && (!isSuperAdmin || isViewing)) {
-          logoContainer.innerHTML = `<img src="${s.school_logo}" alt="School Logo" style="height:34px; width:34px; object-fit:cover; border-radius:8px; flex-shrink:0;" />`;
-        } else if (!isSuperAdmin || isViewing) {
-          logoContainer.innerHTML = `<span style="font-size:1.4rem; flex-shrink:0;">🏫</span>`;
+        if (isSuperAdmin && !isViewing) {
+          logoContainer.innerHTML = `<span style="font-size:1.4rem; flex-shrink:0;" title="Master System Portal">🌐</span>`;
+        } else if (s.school_logo) {
+          logoContainer.innerHTML = `<img src="${s.school_logo}" alt="${currentSchoolAbbr || 'School Logo'}" class="topbar-logo-img" style="height:34px; width:34px; object-fit:cover; border-radius:8px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15);" onerror="this.outerHTML = window.createDefaultCrestSvg('${currentSchoolAbbr}', 34);" />`;
         } else {
-          logoContainer.innerHTML = `<span style="font-size:1.4rem; flex-shrink:0;">🌐</span>`;
+          logoContainer.innerHTML = window.createDefaultCrestSvg(currentSchoolAbbr, 34);
         }
       }
     }
@@ -65,6 +85,28 @@
     if (sidebarNameEl) {
       sidebarNameEl.textContent = currentSchoolAbbr;
       sidebarNameEl.title = currentSchoolName;
+    }
+
+    const sidebarHeader = document.querySelector('.sidebar-header');
+    if (sidebarHeader) {
+      const existingSidebarLogo = sidebarHeader.querySelector('.sidebar-logo-img, .school-crest-svg, .sidebar-header > span:first-child');
+      if (isSuperAdmin && !isViewing) {
+        if (existingSidebarLogo && existingSidebarLogo.tagName !== 'SPAN') {
+          const globalIcon = document.createElement('span');
+          globalIcon.style.cssText = 'font-size:1.3rem; flex-shrink:0;';
+          globalIcon.textContent = '🌐';
+          existingSidebarLogo.replaceWith(globalIcon);
+        }
+      } else if (s.school_logo) {
+        const newImg = document.createElement('img');
+        newImg.src = s.school_logo;
+        newImg.className = 'sidebar-logo-img';
+        newImg.style.cssText = 'height:30px; width:30px; object-fit:cover; border-radius:8px; flex-shrink:0;';
+        newImg.onerror = function() {
+          this.outerHTML = window.createDefaultCrestSvg(currentSchoolAbbr, 30);
+        };
+        if (existingSidebarLogo) existingSidebarLogo.replaceWith(newImg);
+      }
     }
 
     if (s.school_logo && (!isSuperAdmin || isViewing)) {
@@ -124,6 +166,7 @@
       }
     }
 
+    // Color extraction for dynamic theme branding
     if (s.school_logo && (!isSuperAdmin || isViewing)) {
       if (window.extractLogoColors) {
         window.extractLogoColors(s.school_logo, function (colors) {
@@ -132,36 +175,6 @@
             window.applyTheme('auto', colors);
           }
         });
-      }
-
-      const topbar = document.querySelector('.topbar');
-      if (topbar && !topbar.querySelector('.topbar-logo')) {
-        const logoImg = document.createElement('img');
-        logoImg.src = s.school_logo;
-        logoImg.alt = s.school_name || 'School Logo';
-        logoImg.className = 'topbar-logo';
-        logoImg.style.cssText = 'height:36px;width:36px;object-fit:cover;border-radius:8px;margin-right:10px;flex-shrink:0;';
-        const firstChild = topbar.firstElementChild;
-        if (firstChild) {
-          firstChild.style.display = 'flex';
-          firstChild.style.alignItems = 'center';
-          firstChild.prepend(logoImg);
-        }
-      }
-    } else {
-      const topbar = document.querySelector('.topbar');
-      if (topbar) {
-        const existingLogo = topbar.querySelector('.topbar-logo');
-        if (existingLogo && isSuperAdmin && !isViewing) existingLogo.remove();
-      }
-      if (isSuperAdmin && !isViewing) {
-        const sidebarLogoImg = document.querySelector('.sidebar-logo-img');
-        if (sidebarLogoImg) {
-          const globalIcon = document.createElement('span');
-          globalIcon.style.cssText = 'font-size:1.3rem; flex-shrink:0;';
-          globalIcon.textContent = '🌐';
-          sidebarLogoImg.replaceWith(globalIcon);
-        }
       }
     }
 

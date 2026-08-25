@@ -480,9 +480,27 @@
     const schoolLogo = (isSuperAdmin && !isViewing) ? '' : rawSchoolLogo;
     const schoolAbbr = getSchoolAbbreviation(schoolName);
 
+    window.createDefaultCrestSvg = window.createDefaultCrestSvg || function(abbr, size = 30) {
+      const cleanAbbr = (abbr || 'SMS').trim().substring(0, 4).toUpperCase();
+      const fontSize = cleanAbbr.length >= 4 ? 9 : (cleanAbbr.length === 3 ? 10 : 12);
+      return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="school-crest-svg" style="flex-shrink:0; border-radius:8px; display:inline-block; vertical-align:middle; box-shadow:0 2px 8px rgba(0,0,0,0.18);">
+        <defs>
+          <linearGradient id="crestGrad_${size}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#4f46e5" />
+            <stop offset="100%" stop-color="#06b6d4" />
+          </linearGradient>
+        </defs>
+        <rect width="40" height="40" rx="8" fill="url(#crestGrad_${size})" />
+        <path d="M20 6 L32 11 V20 C32 27.5 26.8 33 20 35 C13.2 33 8 27.5 8 20 V11 L20 6 Z" fill="rgba(255,255,255,0.18)" stroke="#ffffff" stroke-width="1.2" />
+        <text x="20" y="24.5" text-anchor="middle" font-family="'Outfit', 'Inter', -apple-system, sans-serif" font-size="${fontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.5">${cleanAbbr}</text>
+      </svg>`;
+    };
+
     const logoHtml = (isSuperAdmin && !isViewing)
-      ? '<img src="assets/logo_compact.png" class="sidebar-logo-img" style="height:28px; width:28px; object-fit:cover; border-radius:6px; flex-shrink:0;" />'
-      : (schoolLogo ? `<img src="${schoolLogo}" class="sidebar-logo-img" style="height:30px; width:30px; object-fit:cover; border-radius:8px; flex-shrink:0;" />` : '<span style="font-size:1.3rem; flex-shrink:0;">🏫</span>');
+      ? '<img src="assets/logo_compact.png" class="sidebar-logo-img" style="height:28px; width:28px; object-fit:cover; border-radius:6px; flex-shrink:0;" onerror="this.outerHTML=\'<span style=\\\'font-size:1.3rem; flex-shrink:0;\\\'>🌐</span>\';" />'
+      : (schoolLogo 
+          ? `<img src="${schoolLogo}" class="sidebar-logo-img" style="height:30px; width:30px; object-fit:cover; border-radius:8px; flex-shrink:0;" onerror="this.outerHTML = window.createDefaultCrestSvg('${schoolAbbr}', 30);" />` 
+          : window.createDefaultCrestSvg(schoolAbbr, 30));
 
     sidebar.innerHTML = `
       <div class="sidebar-header" style="display:flex; align-items:center; gap:10px; padding:14px 16px;">

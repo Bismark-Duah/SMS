@@ -346,27 +346,31 @@ class ReportService:
 
         logo_html = ""
         watermark_path = ""
-        if data["school_logo"]:
+        if data.get("school_logo"):
             logo_path = data["school_logo"]
-            if logo_path.startswith("/assets/"):
+            if logo_path.startswith("data:"):
+                watermark_path = logo_path
+            else:
                 import os
                 current_dir = os.path.dirname(os.path.abspath(__file__))
                 frontend_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "frontend"))
-                local_logo_path = os.path.join(frontend_dir, logo_path[len("/assets/"):].replace("/", os.sep))
+                
+                rel_path = logo_path
+                if "localhost" in rel_path or "127.0.0.1" in rel_path:
+                    from urllib.parse import urlparse
+                    rel_path = urlparse(rel_path).path
+
+                if rel_path.startswith("/assets/uploads/"):
+                    rel_path = "uploads/" + rel_path[len("/assets/uploads/"):]
+                elif rel_path.startswith("/uploads/"):
+                    rel_path = "uploads/" + rel_path[len("/uploads/"):]
+                elif rel_path.startswith("/assets/"):
+                    rel_path = "assets/" + rel_path[len("/assets/"):]
+                
+                local_logo_path = os.path.join(frontend_dir, rel_path.replace("/", os.sep))
                 if os.path.exists(local_logo_path):
                     logo_path = local_logo_path
                     watermark_path = local_logo_path
-            elif "localhost" in logo_path or "127.0.0.1" in logo_path:
-                from urllib.parse import urlparse
-                parsed = urlparse(logo_path)
-                if parsed.path.startswith("/assets/"):
-                    import os
-                    current_dir = os.path.dirname(os.path.abspath(__file__))
-                    frontend_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "frontend"))
-                    local_logo_path = os.path.join(frontend_dir, parsed.path[len("/assets/"):].replace("/", os.sep))
-                    if os.path.exists(local_logo_path):
-                        logo_path = local_logo_path
-                        watermark_path = local_logo_path
             logo_html = f'<img src="{logo_path}" height="65" />'
 
         contact_parts = []

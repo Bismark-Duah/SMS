@@ -80,6 +80,9 @@ function renderReportCard(data) {
     if (data.school_logo) {
       logoEl.src = data.school_logo;
       logoEl.style.display = "inline-block";
+      logoEl.onerror = function() {
+        this.style.display = "none";
+      };
     } else {
       logoEl.style.display = "none";
     }
@@ -104,7 +107,15 @@ function renderReportCard(data) {
     if (isPub) {
       statusBadge.className = "rc-badge published";
       statusBadge.innerHTML = "🟢 OFFICIAL TERMINAL REPORT - PUBLISHED";
-      if (watermarkEl) watermarkEl.style.display = data.school_logo ? "block" : "none";
+      if (watermarkEl) {
+        if (data.school_logo) {
+          watermarkEl.src = data.school_logo;
+          watermarkEl.style.display = "block";
+          watermarkEl.onerror = function() { this.style.display = "none"; };
+        } else {
+          watermarkEl.style.display = "none";
+        }
+      }
     } else {
       statusBadge.className = "rc-badge draft";
       statusBadge.innerHTML = "⚠️ UNPUBLISHED DRAFT - FOR INTERNAL REVIEW ONLY";

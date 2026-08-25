@@ -615,6 +615,34 @@ body {
   justify-content: center !important;
 }
 
+/* ── Responsive Single-Anchor Branding (Enterprise UX) ──────────────── */
+/* When sidebar is visible & expanded on desktop, sidebar is primary brand anchor. */
+#topbarLogoContainer,
+.topbar-brand-logo {
+  display: none !important;
+}
+
+/* Reveal topbar logo when sidebar is collapsed or on mobile */
+.app-sidebar.collapsed ~ .page #topbarLogoContainer,
+.app-sidebar.collapsed ~ main #topbarLogoContainer,
+.app-sidebar.collapsed ~ .page .topbar-brand-logo,
+.app-sidebar.collapsed ~ main .topbar-brand-logo,
+body.sidebar-collapsed #topbarLogoContainer,
+body.sidebar-collapsed .topbar-brand-logo {
+  display: inline-flex !important;
+  align-items: center;
+  margin-right: 10px;
+}
+
+@media (max-width: 768px) {
+  #topbarLogoContainer,
+  .topbar-brand-logo {
+    display: inline-flex !important;
+    align-items: center;
+    margin-right: 8px;
+  }
+}
+
 .sidebar-header {
   padding: 16px;
   display: flex;

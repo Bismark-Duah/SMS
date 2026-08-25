@@ -65,7 +65,7 @@
       if (!logoContainer && nameEl && nameEl.parentElement) {
         const lDiv = document.createElement('div');
         lDiv.id = 'topbarLogoContainer';
-        lDiv.style.cssText = 'display:flex; align-items:center; flex-shrink:0; margin-right:8px;';
+        lDiv.className = 'topbar-brand-logo';
         nameEl.parentElement.prepend(lDiv);
         logoContainer = lDiv;
       }

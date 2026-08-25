@@ -182,6 +182,7 @@
     const sidebar = document.querySelector(".app-sidebar");
     if (!sidebar) return;
     const isCollapsed = sidebar.classList.toggle("collapsed");
+    document.body.classList.toggle("sidebar-collapsed", isCollapsed);
     localStorage.setItem("sidebar_collapsed", isCollapsed);
     const icon = sidebar.querySelector(".sidebar-collapse-icon");
     if (icon) icon.textContent = isCollapsed ? '▶' : '◀';
@@ -265,6 +266,7 @@
 
     const isCollapsed = localStorage.getItem("sidebar_collapsed") === "true";
     if (isCollapsed) sidebar.classList.add("collapsed");
+    document.body.classList.toggle("sidebar-collapsed", isCollapsed);
 
     const accordionStates = JSON.parse(localStorage.getItem('sidebar_accordion_states') || '{}');
 

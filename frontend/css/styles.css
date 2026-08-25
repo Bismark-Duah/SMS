@@ -126,6 +126,22 @@ body#public-landing-page .app-sidebar, body.public-landing-page .app-sidebar {
   width: 0 !important;
 }
 
+/* Public Candidate & Parent Portal Full-Width Reset */
+body#public-portal, body.public-portal {
+  display: block !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+body#public-portal .app-sidebar, body.public-portal .app-sidebar,
+body#public-portal #edubot-global-launcher, body.public-portal #edubot-global-launcher {
+  display: none !important;
+  width: 0 !important;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;

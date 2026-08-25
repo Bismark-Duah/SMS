@@ -4,9 +4,9 @@
  */
 
 (function () {
-  // Immediately enforce sidebar layout mode for application pages (excluding public landing & auth pages)
+  // Immediately enforce sidebar layout mode for application pages (excluding public landing, auth, and student portals)
   const _initialPage = (window.location.pathname.split("/").pop() || "").toLowerCase();
-  const _publicPages = ["index.html", "auth.html", "login.html", ""];
+  const _publicPages = ["index.html", "auth.html", "login.html", "enrollment.html", "parent-view.html", ""];
   if (!_publicPages.includes(_initialPage)) {
     document.documentElement.setAttribute("data-layout", "sidebar");
   }
@@ -249,9 +249,9 @@
   };
 
   window.mountSidebarNav = function () {
-    if (document.body && (document.body.id === "public-landing-page" || document.body.classList.contains("public-landing-page"))) return;
+    if (document.body && (document.body.id === "public-landing-page" || document.body.classList.contains("public-landing-page") || document.body.classList.contains("public-portal"))) return;
     const currentPath = (window.location.pathname.split("/").pop() || "").toLowerCase().split("?")[0];
-    const publicPages = ["index.html", "auth.html", "login.html", ""];
+    const publicPages = ["index.html", "auth.html", "login.html", "enrollment.html", "parent-view.html", ""];
     if (publicPages.includes(currentPath)) return;
     if (document.querySelector(".app-sidebar")) return;
     if (!document.body) {
@@ -875,7 +875,7 @@
     if (!token) return;
 
     const currentPage = (window.location.pathname.split('/').pop() || '').toLowerCase();
-    const publicPages = ['index.html', 'auth.html', 'login.html', ''];
+    const publicPages = ['index.html', 'auth.html', 'login.html', 'enrollment.html', 'parent-view.html', ''];
     if (publicPages.includes(currentPage)) return;
 
     const topbar = document.querySelector('.topbar');
@@ -1129,7 +1129,7 @@
 
   function mountBreadcrumb() {
     const currentPage = (window.location.pathname.split('/').pop() || '').toLowerCase().split('?')[0];
-    const publicPages = ['index.html', 'auth.html', 'login.html', ''];
+    const publicPages = ['index.html', 'auth.html', 'login.html', 'enrollment.html', 'parent-view.html', ''];
     if (publicPages.includes(currentPage)) return;
 
     const topbar = document.querySelector('.topbar');
@@ -1292,7 +1292,7 @@
 
   function mountEduBotGlobal() {
     const curPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase().split('?')[0];
-    const publicPages = ['index.html', 'auth.html', 'login.html', ''];
+    const publicPages = ['index.html', 'auth.html', 'login.html', 'enrollment.html', 'parent-view.html', ''];
     if (publicPages.includes(curPage)) return;
 
     // Avoid double injection if global launcher or local edubot toggle is present

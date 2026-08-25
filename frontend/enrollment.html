@@ -152,6 +152,32 @@
       .prospectus-list li {
         margin-bottom: 4px;
       }
+      html, body {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: var(--bg-main, #0f172a);
+      }
+      .portal-header {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        background: var(--card-bg, #1e293b);
+        border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1));
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      }
+      .portal-container {
+        width: 100% !important;
+        max-width: var(--portal-max-width) !important;
+        margin: 32px auto !important;
+        padding: 0 16px 48px !important;
+        box-sizing: border-box !important;
+      }
       @media print {
         .portal-header, .tab-bar, .btn-no-print, .btn { display: none !important; }
         .portal-container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
@@ -163,7 +189,7 @@
       }
     </style>
   </head>
-  <body>
+  <body class="public-portal" id="public-portal">
     <!-- ── Public Top Branding Header ──────────────────────────────────────── -->
     <header class="portal-header">
       <div class="portal-brand">

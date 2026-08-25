@@ -93,11 +93,24 @@ def get_public_branding(
     logo = school.logo_url if school and school.logo_url else res.get("school_logo")
     smode = school.school_mode if school and school.school_mode else (res.get("school_mode") or "COMBINED")
 
+    try:
+        voucher_price = float(res.get("admission_voucher_price", "0.10"))
+    except (ValueError, TypeError):
+        voucher_price = 0.10
+
+    momo_recipient_number = res.get("admission_momo_recipient_number", "0508929456")
+    momo_recipient_name = res.get("admission_momo_recipient_name", "Duah Bismark")
+    momo_recipient_network = res.get("admission_momo_recipient_network", "Telecel")
+
     return {
         "school_id": school.id if school else None,
         "school_name": name,
         "school_logo": logo,
         "school_mode": smode,
+        "voucher_price": voucher_price,
+        "momo_recipient_number": momo_recipient_number,
+        "momo_recipient_name": momo_recipient_name,
+        "momo_recipient_network": momo_recipient_network,
         "school_code": school.code if school else res.get("school_code", "")
     }
 
@@ -460,6 +473,10 @@ def seed_default_settings(db: Session):
         "paystack_public_key": "",
         "paystack_secret_key": "",
         "paystack_enabled": "false",
+        "admission_voucher_price": "0.10",
+        "admission_momo_recipient_number": "0508929456",
+        "admission_momo_recipient_name": "Duah Bismark",
+        "admission_momo_recipient_network": "Telecel",
         "grading_standard": "WAEC",
         "grading_rules": json.dumps([
             {"grade": "A1", "min_score": 80, "remark": "Excellent", "point": 1},

@@ -6,6 +6,9 @@ const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (
 
 let currentVerifiedStudent = null;
 let currentActiveSchoolId = null;
+let currentVoucherPrice = 0.10;
+let currentRecipientNumber = "0508929456";
+let currentRecipientName = "Duah Bismark";
 
 document.addEventListener('DOMContentLoaded', () => {
   initPortal();
@@ -22,13 +25,12 @@ async function initPortal() {
   }
 }
 
-// ── 0. Public School Branding Loader ──────────────────────────────────────────
+// ── 0. Public School Branding & Pricing Loader ─────────────────────────────────
 async function loadPublicSchoolBranding() {
   const schoolNameEl = document.getElementById('portalSchoolName');
   const logoContainer = document.getElementById('portalLogoContainer');
 
   const urlParams = new URLSearchParams(window.location.search);
-  const urlSchoolSlug = (urlParams.get('school') || '').toLowerCase();
   const urlSchoolId = urlParams.get('school_id');
   const localSchoolId = localStorage.getItem('school_id');
 
@@ -50,6 +52,9 @@ async function loadPublicSchoolBranding() {
       if (data.school_id) currentActiveSchoolId = data.school_id;
       if (data.school_name) name = data.school_name;
       if (data.school_logo) logo = data.school_logo;
+      if (typeof data.voucher_price === 'number') currentVoucherPrice = data.voucher_price;
+      if (data.momo_recipient_number) currentRecipientNumber = data.momo_recipient_number;
+      if (data.momo_recipient_name) currentRecipientName = data.momo_recipient_name;
     }
   } catch (_) {}
 
@@ -57,6 +62,21 @@ async function loadPublicSchoolBranding() {
   if (logoContainer && logo) {
     logoContainer.innerHTML = `<img src="${logo}" alt="${name} Logo" style="width:100%; height:100%; object-fit:contain;" />`;
   }
+
+  // Format voucher price text
+  const priceFormatted = currentVoucherPrice < 1.0 
+    ? `GHS ${currentVoucherPrice.toFixed(2)} (${Math.round(currentVoucherPrice * 100)} Pesewas)`
+    : `GHS ${currentVoucherPrice.toFixed(2)}`;
+
+  document.querySelectorAll('.voucher-price-display').forEach(el => {
+    el.textContent = priceFormatted;
+  });
+
+  const modalPrice = document.getElementById('modalVoucherFeeDisplay');
+  if (modalPrice) modalPrice.textContent = `GHS ${currentVoucherPrice.toFixed(2)}`;
+
+  const modalRec = document.getElementById('modalRecipientDisplay');
+  if (modalRec) modalRec.textContent = `Recipient: ${currentRecipientName} (${currentRecipientNumber})`;
 }
 
 
@@ -359,7 +379,7 @@ async function handleBuyVoucher(event) {
   const btn = document.getElementById('btnPayVoucher');
 
   statusEl.style.color = '#38bdf8';
-  statusEl.textContent = 'Processing Mobile Money Payment & Generating Voucher...';
+  statusEl.textContent = `Processing Telecel/MTN Payment of GHS ${currentVoucherPrice.toFixed(2)} to ${currentRecipientName}...`;
   btn.disabled = true;
 
   const payload = {
@@ -367,7 +387,7 @@ async function handleBuyVoucher(event) {
     bece_index_number: document.getElementById('buy_bece_index').value.trim(),
     parent_phone: document.getElementById('buy_parent_phone').value.trim(),
     momo_network: document.getElementById('buy_momo_network').value,
-    amount: 50.0
+    amount: currentVoucherPrice
   };
 
   try {
@@ -381,7 +401,7 @@ async function handleBuyVoucher(event) {
     if (!res.ok) throw new Error(data.detail || 'Payment processing failed');
 
     statusEl.style.color = '#4ade80';
-    statusEl.innerHTML = `✔ <strong>Voucher Purchased!</strong> Serial: <code>${data.serial_code}</code> | PIN: <code>${data.pin_code}</code> (SMS dispatched to ${payload.parent_phone})`;
+    statusEl.innerHTML = `✔ <strong>Voucher Purchased!</strong> Serial: <code>${data.serial_code}</code> | PIN: <code>${data.pin_code}</code> (Receipt sent to ${payload.parent_phone})`;
 
     // Auto-fill the credentials into Step 2 Form
     document.getElementById('gate_bece_index').value = data.bece_index_number;
@@ -399,7 +419,7 @@ async function handleBuyVoucher(event) {
       closeBuyVoucherModal();
       btn.disabled = false;
       statusEl.textContent = '';
-    }, 2000);
+    }, 2200);
 
   } catch (err) {
     statusEl.style.color = '#f87171';

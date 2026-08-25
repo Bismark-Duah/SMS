@@ -236,18 +236,18 @@
                   <h3 style="margin:0; color:#4ade80; font-size:1.05rem;">1. Need an Admission Voucher?</h3>
                 </div>
                 <p style="font-size:0.85rem; color:var(--text-secondary, #cbd5e1); line-height:1.5; margin-bottom:14px;">
-                  To access your official school admission form, prospectus, and dormitory reservation, candidates must first acquire an official admission voucher (<strong>GHS 50.00</strong>).
+                  To access your official school admission form, prospectus, and dormitory reservation, candidates must first acquire an official admission voucher (<strong class="voucher-price-display">GHS 0.10</strong>).
                 </p>
                 <ul style="margin:0 0 18px; padding-left:18px; font-size:0.82rem; color:#94a3b8; line-height:1.6;">
                   <li>⚡ Instant SMS Token Delivery to your phone</li>
-                  <li>🔒 Secure Mobile Money (MTN / Telecel / AT)</li>
+                  <li>🔒 Secure Mobile Money (Telecel / MTN / AT)</li>
                   <li>📄 Unlocks complete GES Admission Letter & Prospectus</li>
                 </ul>
               </div>
 
               <div>
                 <button type="button" onclick="openBuyVoucherModal()" class="btn primary" style="width:100%; padding:12px; font-weight:700; font-size:0.95rem; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35); cursor:pointer;">
-                  📱 Buy Admission Voucher Online (GHS 50)
+                  📱 Buy Voucher Online (<span class="voucher-price-display">GHS 0.10</span>)
                 </button>
                 <div style="font-size:0.75rem; color:#64748b; text-align:center; margin-top:8px;">
                   * Also available via physical scratch card at the School Admissions Office.
@@ -578,8 +578,8 @@
             <div class="form-group">
               <label for="buy_momo_network">MoMo Network *</label>
               <select id="buy_momo_network">
-                <option value="MTN">MTN Mobile Money</option>
                 <option value="TELECEL">Telecel Cash</option>
+                <option value="MTN">MTN Mobile Money</option>
                 <option value="AT">AT Money</option>
               </select>
             </div>
@@ -588,7 +588,8 @@
           <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); padding:10px 14px; border-radius:8px; margin:14px 0; display:flex; justify-content:space-between; align-items:center;">
             <div>
               <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Voucher Fee</div>
-              <div style="font-size:1.25rem; font-weight:800; color:#4ade80;">GHS 50.00</div>
+              <div style="font-size:1.25rem; font-weight:800; color:#4ade80;" id="modalVoucherFeeDisplay">GHS 0.10</div>
+              <div style="font-size:0.72rem; color:#94a3b8; margin-top:2px;" id="modalRecipientDisplay">Recipient: Duah Bismark (0508929456)</div>
             </div>
             <div style="font-size:0.72rem; color:#cbd5e1; text-align:right;">
               ✔ Instant SMS Token<br/>✔ Official GES Dossier
@@ -600,7 +601,7 @@
           <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
             <button type="button" onclick="closeBuyVoucherModal()" class="btn" style="padding:9px 18px; font-size:0.88rem; cursor:pointer;">Cancel</button>
             <button type="submit" id="btnPayVoucher" class="btn primary" style="padding:9px 22px; font-weight:700; font-size:0.88rem; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35); cursor:pointer;">
-              ⚡ Pay GHS 50 & Get Voucher
+              ⚡ Pay & Get Voucher
             </button>
           </div>
         </form>

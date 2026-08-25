@@ -296,6 +296,12 @@ async function loadSettings() {
             gradingRules = [];
         }
         renderGradingTiers();
+
+        setVal('admission_voucher_price', settings.admission_voucher_price || '0.10');
+        setVal('admission_momo_recipient_number', settings.admission_momo_recipient_number || '0508929456');
+        setVal('admission_momo_recipient_name', settings.admission_momo_recipient_name || 'Duah Bismark');
+        setVal('admission_momo_recipient_network', settings.admission_momo_recipient_network || 'Telecel');
+
         if (window.applySchoolModeVisibility) window.applySchoolModeVisibility();
     } catch (error) {
         console.error('Error loading settings:', error);
@@ -694,6 +700,35 @@ window.savePaystackSettings = async function(event) {
     }
   } catch (e) {
     if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ Network error saving Paystack settings: ${e.message}`; }
+  }
+};
+
+window.saveVoucherSettings = async function(event) {
+  event.preventDefault();
+  const msgEl = document.getElementById('voucherSettingsMsg');
+  if (msgEl) { msgEl.style.color = '#38bdf8'; msgEl.textContent = 'Saving Voucher & Settlement Settings...'; }
+
+  const payload = {
+    admission_voucher_price: document.getElementById('admission_voucher_price').value.trim(),
+    admission_momo_recipient_number: document.getElementById('admission_momo_recipient_number').value.trim(),
+    admission_momo_recipient_name: document.getElementById('admission_momo_recipient_name').value.trim(),
+    admission_momo_recipient_network: document.getElementById('admission_momo_recipient_network').value
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/`, {
+      method: 'PUT',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      if (msgEl) { msgEl.style.color = '#34d399'; msgEl.textContent = '✔ Voucher & Settlement settings saved successfully!'; }
+    } else {
+      const err = await res.json().catch(() => ({ detail: 'Failed to save' }));
+      if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ ${err.detail || 'Save failed'}`; }
+    }
+  } catch (e) {
+    if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ Network error: ${e.message}`; }
   }
 };
  

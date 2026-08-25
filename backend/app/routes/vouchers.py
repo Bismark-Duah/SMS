@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 from ..database import get_db
-from ..models import AdmissionVoucher, Student, Program, User, School
+from ..models import AdmissionVoucher, Student, Program, User, School, Setting
 from ..dependencies import get_current_user, get_school_id
 
 router = APIRouter(prefix="/api/vouchers", tags=["Admission Vouchers"])
@@ -314,27 +314,47 @@ def purchase_voucher_online(
             serial_suffix = "".join(random.choices(string.digits, k=6))
             serial = f"{prefix}-{serial_suffix}"
 
+        setting_price = db.query(Setting).filter(Setting.key == "admission_voucher_price").first()
+        try:
+            default_price = float(setting_price.value) if setting_price and setting_price.value else 0.10
+        except (ValueError, TypeError):
+            default_price = 0.10
+
+        paid_amt = data.amount if data.amount is not None else default_price
+
         new_voucher = AdmissionVoucher(
             serial_code=serial,
             pin_code=pin,
             bece_index_number=clean_bece,
             purchased_by_phone=clean_phone,
-            amount_paid=data.amount or 50.0,
+            amount_paid=paid_amt,
             status="PURCHASED",
             school_id=school_id
         )
         db.add(new_voucher)
         db.commit()
 
+    recipient_no_s = db.query(Setting).filter(Setting.key == "admission_momo_recipient_number").first()
+    recipient_name_s = db.query(Setting).filter(Setting.key == "admission_momo_recipient_name").first()
+    recipient_net_s = db.query(Setting).filter(Setting.key == "admission_momo_recipient_network").first()
+
+    rec_num = recipient_no_s.value if recipient_no_s and recipient_no_s.value else "0508929456"
+    rec_name = recipient_name_s.value if recipient_name_s and recipient_name_s.value else "Duah Bismark"
+    rec_net = recipient_net_s.value if recipient_net_s and recipient_net_s.value else "Telecel"
+
     return {
         "success": True,
-        "message": f"Admission Voucher payment of GHS {data.amount or 50.0:.2f} confirmed! Credentials generated.",
+        "message": f"Admission Voucher payment of GHS {paid_amt:.2f} confirmed to {rec_name} ({rec_num})! Credentials generated.",
         "serial_code": serial,
         "pin_code": pin,
         "bece_index_number": clean_bece,
         "school_id": school_id,
         "school_name": school_name,
         "school_logo": school.logo_url if school else None,
+        "amount_paid": paid_amt,
+        "momo_recipient_number": rec_num,
+        "momo_recipient_name": rec_name,
+        "momo_recipient_network": rec_net,
         "sms_dispatched_to": clean_phone
     }
 

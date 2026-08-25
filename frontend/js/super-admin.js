@@ -496,4 +496,95 @@ window.handleStartCloudSync = async function(event) {
   }
 };
 
+
+// ── Enterprise Delete / Purge School Modal Handlers ─────────────────────────
+
+window.openDeleteSchoolModal = function(schoolId, schoolName, schoolCode) {
+  const modal = document.getElementById('deleteSchoolModal');
+  const modalIdInput = document.getElementById('deleteSchoolModalId');
+  const modalTargetCodeInput = document.getElementById('deleteSchoolModalTargetCode');
+  const modalNameEl = document.getElementById('deleteSchoolModalName');
+  const modalCodePromptEl = document.getElementById('deleteSchoolModalCodePrompt');
+  const confirmInput = document.getElementById('deleteSchoolConfirmInput');
+  const confirmBtn = document.getElementById('deleteSchoolConfirmBtn');
+
+  if (modalIdInput) modalIdInput.value = String(schoolId);
+  if (modalTargetCodeInput) modalTargetCodeInput.value = (schoolCode || '').toUpperCase();
+  if (modalNameEl) modalNameEl.textContent = schoolName;
+  if (modalCodePromptEl) modalCodePromptEl.textContent = (schoolCode || '').toUpperCase();
+  
+  if (confirmInput) {
+    confirmInput.value = '';
+    confirmInput.placeholder = `Type "${(schoolCode || '').toUpperCase()}" to confirm`;
+  }
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = '0.5';
+    confirmBtn.style.cursor = 'not-allowed';
+  }
+
+  if (modal) modal.style.display = 'flex';
+  if (confirmInput) setTimeout(() => confirmInput.focus(), 100);
+};
+
+window.closeDeleteSchoolModal = function() {
+  const modal = document.getElementById('deleteSchoolModal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.onDeleteSchoolInput = function(inputEl) {
+  const targetCode = (document.getElementById('deleteSchoolModalTargetCode')?.value || '').trim().toUpperCase();
+  const typed = (inputEl.value || '').trim().toUpperCase();
+  const confirmBtn = document.getElementById('deleteSchoolConfirmBtn');
+
+  if (confirmBtn) {
+    if (typed === targetCode && targetCode.length > 0) {
+      confirmBtn.disabled = false;
+      confirmBtn.style.opacity = '1';
+      confirmBtn.style.cursor = 'pointer';
+    } else {
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = '0.5';
+      confirmBtn.style.cursor = 'not-allowed';
+    }
+  }
+};
+
+window.handleConfirmDeleteSchool = async function(event) {
+  event.preventDefault();
+  const schoolId = document.getElementById('deleteSchoolModalId')?.value;
+  const confirmBtn = document.getElementById('deleteSchoolConfirmBtn');
+
+  if (!schoolId) return;
+
+  confirmBtn.disabled = true;
+  confirmBtn.innerHTML = '⏳ Purging School...';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(`❌ Purge Failed: ${data.detail || 'Could not delete school.'}`);
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = 'Purge School';
+      return;
+    }
+
+    alert(`✔ ${data.message || 'School permanently deleted.'}`);
+    closeDeleteSchoolModal();
+    loadSuperAdminDashboard();
+
+  } catch (err) {
+    alert(`❌ Network error: ${err.message}`);
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = 'Purge School';
+  }
+};
+
 loadSuperAdminDashboard();
+

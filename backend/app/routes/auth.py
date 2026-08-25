@@ -26,7 +26,27 @@ try:
 except ImportError:
     bcrypt = None
 
-from passlib.context import CryptContext
+try:
+    from passlib.context import CryptContext
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+except ImportError:
+    class _FallbackPwdContext:
+        def hash(self, password: str) -> str:
+            if bcrypt:
+                salt = bcrypt.gensalt()
+                return bcrypt.hashpw(password.encode("utf-8")[:72], salt).decode("utf-8")
+            return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+        def verify(self, secret: str, hash_str: str) -> bool:
+            if bcrypt and hash_str.startswith("$2"):
+                try:
+                    return bcrypt.checkpw(secret.encode("utf-8")[:72], hash_str.encode("utf-8"))
+                except Exception:
+                    pass
+            return hashlib.sha256(secret.encode("utf-8")).hexdigest() == hash_str
+
+    pwd_context = _FallbackPwdContext()
+
 from ..database import get_db
 from ..models import User, Role, School, ClassSection, House, Department
 from ..services.auth import create_jwt
@@ -35,8 +55,6 @@ from ..services.guardian_service import link_students_for_parent_user
 from ..dependencies import rate_limit_auth, get_current_user
 
 router = APIRouter()
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 DEFAULT_ROLES = ["super_admin", "admin", "teacher", "student", "parent", "headmaster", "headmistress", "form_master", "form_mistress", "house_master", "house_mistress", "senior_housemaster", "senior_housemistress", "hod", "assistant_house_master", "assistant_house_mistress", "assistant_headmaster_academic", "assistant_headmaster_domestic", "assistant_headmaster_admin", "bursar", "storekeeper", "security_officer"]
 

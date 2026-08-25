@@ -141,3 +141,47 @@ def verify_voucher(
         "enrollment_status": student.enrollment_status or "PLACED",
         "serial_code": voucher.serial_code
     }
+
+
+class VoucherRetrieveRequest(BaseModel):
+    bece_index_number: str
+    pin_code: Optional[str] = None
+    serial_code: Optional[str] = None
+
+
+@router.post("/retrieve")
+def retrieve_admission(
+    data: VoucherRetrieveRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Public lookup for candidates who have already completed their admission form
+    and wish to re-print their official Admission Letter and Prospectus package.
+    """
+    clean_bece = data.bece_index_number.strip()
+    student = db.query(Student).filter(Student.bece_index_number == clean_bece).first()
+    if not student:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Candidate with BECE Index Number '{clean_bece}' not found on the register."
+        )
+
+    if data.pin_code or data.serial_code:
+        v_query = db.query(AdmissionVoucher).filter(AdmissionVoucher.bece_index_number == clean_bece)
+        if data.pin_code:
+            v_query = v_query.filter(AdmissionVoucher.pin_code == data.pin_code.strip())
+        if data.serial_code:
+            v_query = v_query.filter(AdmissionVoucher.serial_code == data.serial_code.strip().upper())
+        voucher = v_query.first()
+        if not voucher:
+            raise HTTPException(
+                status_code=401,
+                detail="Verification failed. The voucher credentials do not match this candidate record."
+            )
+
+    return {
+        "success": True,
+        "student_id": student.id,
+        "full_name": student.full_name,
+        "enrollment_status": student.enrollment_status or "PLACED"
+    }

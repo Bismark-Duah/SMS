@@ -57,6 +57,42 @@ def _process_image_to_base64(file_bytes: bytes, filename: str, max_size=(360, 36
     b64_str = base64.b64encode(file_bytes).decode("utf-8")
     return f"data:{mime_type};base64,{b64_str}"
 
+@router.get("/public-branding")
+def get_public_branding(
+    db: Session = Depends(get_db),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id")
+):
+    """
+    Public lightweight endpoint returning school name, logo, and mode
+    for public-facing portals (Candidate Admission, Result Checking, Parent Portal).
+    """
+    settings_list = db.query(Setting).all()
+    res = {s.key: s.value for s in settings_list}
+
+    target_school_id = None
+    if isinstance(x_school_id, str) and x_school_id.strip():
+        try:
+            target_school_id = int(x_school_id.strip())
+        except ValueError:
+            pass
+
+    school = None
+    if target_school_id:
+        school = db.query(School).filter(School.id == target_school_id).first()
+    if not school:
+        school = db.query(School).first()
+
+    name = school.name if school else (res.get("school_name") or "GHANA SENIOR HIGH SCHOOL")
+    logo = school.logo_url if school and school.logo_url else res.get("school_logo")
+    mode = school.school_mode if school and school.school_mode else (res.get("school_mode") or "COMBINED")
+
+    return {
+        "school_name": name,
+        "school_logo": logo,
+        "school_mode": mode,
+        "school_code": school.code if school else res.get("school_code", "")
+    }
+
 @router.get("/")
 def get_settings(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user_optional), x_school_id: Optional[str] = Header(None, alias="X-School-Id")):
     settings_list = db.query(Setting).all()

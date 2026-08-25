@@ -1,5 +1,5 @@
 /* ================================================================
-   enrollment.js — Candidate Voucher Authentication & Admissions Engine
+   enrollment.js — Candidate Public Voucher Authentication & Admissions Engine
    ================================================================ */
 
 const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
@@ -7,6 +7,8 @@ const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (
 let currentVerifiedStudent = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  loadPublicSchoolBranding();
+
   // Check if student_id parameter passed in URL
   const urlParams = new URLSearchParams(window.location.search);
   const studentId = urlParams.get('student_id');
@@ -14,6 +16,50 @@ document.addEventListener('DOMContentLoaded', () => {
     loadProspectusPackage(studentId);
   }
 });
+
+// ── 0. Public School Branding Loader ──────────────────────────────────────────
+async function loadPublicSchoolBranding() {
+  const schoolNameEl = document.getElementById('portalSchoolName');
+  const logoContainer = document.getElementById('portalLogoContainer');
+
+  let name = localStorage.getItem('school_name') || 'GHANA SENIOR HIGH SCHOOL';
+  let logo = localStorage.getItem('school_logo');
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/public-branding`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.school_name) name = data.school_name;
+      if (data.school_logo) logo = data.school_logo;
+    }
+  } catch (_) {}
+
+  if (schoolNameEl) schoolNameEl.textContent = name;
+  if (logoContainer && logo) {
+    logoContainer.innerHTML = `<img src="${logo}" alt="${name} Logo" style="width:100%; height:100%; object-fit:contain;" />`;
+  }
+}
+
+// ── Tab Switching ─────────────────────────────────────────────────────────────
+function switchPortalTab(tab) {
+  const tabNew = document.getElementById('tabContentNew');
+  const tabRet = document.getElementById('tabContentRetrieve');
+  const btnNew = document.getElementById('tabNewAdmBtn');
+  const btnRet = document.getElementById('tabRetrieveBtn');
+
+  if (tab === 'new') {
+    if (tabNew) tabNew.style.display = 'block';
+    if (tabRet) tabRet.style.display = 'none';
+    if (btnNew) btnNew.className = 'tab-btn active';
+    if (btnRet) btnRet.className = 'tab-btn';
+  } else {
+    if (tabNew) tabNew.style.display = 'none';
+    if (tabRet) tabRet.style.display = 'block';
+    if (btnNew) btnNew.className = 'tab-btn';
+    if (btnRet) btnRet.className = 'tab-btn active';
+  }
+}
+window.switchPortalTab = switchPortalTab;
 
 
 // ── 1. Handle Candidate Voucher Login ─────────────────────────────────────────
@@ -95,6 +141,12 @@ function updateElectiveComboOptions(programName) {
       <option value="Option A (Financial Accounting + Cost Accounting + Business Mgmt + Elective Maths)">Option A: Financial Accounting + Cost Accounting + Business Mgmt + Elective Maths → (Form 1 Business 1)</option>
       <option value="Option B (Financial Accounting + Business Mgmt + Economics + Typewriting)">Option B: Financial Accounting + Business Mgmt + Economics + Typewriting → (Form 1 Business 2)</option>
     `;
+  } else {
+    comboSelect.innerHTML = `
+      <option value="">-- Standard Curriculum Track --</option>
+      <option value="Option A (Standard General Curriculum)">Option A: Standard Core & Elective Package → (Form 1 Stream 1)</option>
+      <option value="Option B (Alternative Stream)">Option B: Alternative Stream → (Form 1 Stream 2)</option>
+    `;
   }
 }
 
@@ -145,7 +197,41 @@ async function handleFormSubmission(event) {
 }
 
 
-// ── 3. Load Dynamic GES Prospectus & Admission Letter Package ────────────────
+// ── 3. Handle Re-Printing / Document Retrieval ────────────────────────────────
+
+async function handleRetrieveAdmission(event) {
+  event.preventDefault();
+  const statusEl = document.getElementById('retrieve-status');
+  statusEl.style.color = '#38bdf8';
+  statusEl.textContent = 'Looking up admission records...';
+
+  const bece_index_number = document.getElementById('ret_bece_index').value.trim();
+  const pin_code = document.getElementById('ret_pin').value.trim();
+
+  try {
+    const res = await fetch(`${API_BASE}/vouchers/retrieve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bece_index_number, pin_code })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Lookup failed');
+
+    statusEl.style.color = '#4ade80';
+    statusEl.textContent = '✔ Record found! Loading documents...';
+
+    loadProspectusPackage(data.student_id);
+
+  } catch (err) {
+    statusEl.style.color = '#f87171';
+    statusEl.textContent = `❌ ${err.message}`;
+  }
+}
+window.handleRetrieveAdmission = handleRetrieveAdmission;
+
+
+// ── 4. Load Dynamic GES Prospectus & Admission Letter Package ────────────────
 
 async function loadProspectusPackage(studentId) {
   try {
@@ -157,7 +243,10 @@ async function loadProspectusPackage(studentId) {
     const p = data.prospectus;
 
     document.getElementById('step-gateway').style.display = 'none';
-    document.getElementById('step-form').style.display = 'none';
+    const formEl = document.getElementById('step-form');
+    if (formEl) formEl.style.display = 'none';
+    const retEl = document.getElementById('tabContentRetrieve');
+    if (retEl) retEl.style.display = 'none';
     document.getElementById('step-package').style.display = 'block';
 
     // Populate Printable Letterhead
@@ -172,7 +261,6 @@ async function loadProspectusPackage(studentId) {
     document.getElementById('letter-residential').textContent = s.residential_status;
     document.getElementById('letter-year').textContent = s.academic_year;
     document.getElementById('letter-year-body').textContent = s.academic_year;
-    document.getElementById('letter-qr-code').textContent = s.qr_verification_code;
 
     // Populate Prospectus Checklists
     renderList('prospectus-academic', p.academic_supplies);
@@ -188,7 +276,7 @@ async function loadProspectusPackage(studentId) {
     if (pledgeEl) pledgeEl.textContent = c.honor_pledge || 'I solemnly pledge to abide by the School Code of Conduct.';
 
     // Hide boarding section if Day Student
-    if (s.residential_status.toLowerCase() === 'day') {
+    if ((s.residential_status || '').toLowerCase() === 'day') {
       const bSec = document.getElementById('section-boarding');
       if (bSec) bSec.style.display = 'none';
     }
@@ -209,12 +297,13 @@ function renderList(elementId, items) {
 }
 
 
-// ── 4. Batch Generate Vouchers Helper (Admin Tool) ───────────────────────────
+// ── 5. Batch Generate Vouchers Helper (Admin Tool) ───────────────────────────
 
 async function handleGenerateBatchVouchers() {
   const token = localStorage.getItem('accessToken');
   if (!token) {
     alert('Admin authentication required to generate vouchers. Please login as Admin or Academic Head.');
+    window.location.href = 'auth.html';
     return;
   }
 
@@ -235,3 +324,7 @@ async function handleGenerateBatchVouchers() {
     alert(`Batch Generation Error: ${err.message}`);
   }
 }
+
+window.handleVoucherLogin = handleVoucherLogin;
+window.handleFormSubmission = handleFormSubmission;
+window.handleGenerateBatchVouchers = handleGenerateBatchVouchers;

@@ -168,7 +168,7 @@
   // ── 4. Sidebar View Layout Controller & Navigation ────────────────────
   window.applyLayout = function (layoutMode) {
     const currentPath = (window.location.pathname.split("/").pop() || "").toLowerCase();
-    if (currentPath === "auth.html" || currentPath === "login.html") {
+    if (_publicPages.includes(currentPath)) {
       document.documentElement.removeAttribute("data-layout");
       return;
     }

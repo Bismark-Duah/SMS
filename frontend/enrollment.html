@@ -9,22 +9,29 @@
       :root {
         --portal-max-width: 880px;
       }
-      body {
+      html, body {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
         background: var(--bg-main, #0f172a);
+      }
+      body {
         color: var(--text-primary, #f8fafc);
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        margin: 0;
-        padding: 0;
       }
       .portal-header {
+        width: 100% !important;
+        box-sizing: border-box !important;
         background: var(--card-bg, #1e293b);
         border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1));
-        padding: 16px 24px;
+        padding: 14px 24px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 16px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        flex-wrap: wrap;
       }
       .portal-brand {
         display: flex;
@@ -49,9 +56,11 @@
         object-fit: contain;
       }
       .portal-container {
-        max-width: var(--portal-max-width);
-        margin: 32px auto;
-        padding: 0 16px 48px;
+        width: 100% !important;
+        max-width: var(--portal-max-width) !important;
+        margin: 28px auto !important;
+        padding: 0 16px 48px !important;
+        box-sizing: border-box !important;
       }
       .portal-card {
         background: var(--card-bg, #1e293b);
@@ -67,6 +76,7 @@
         margin-bottom: 24px;
         border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1));
         padding-bottom: 10px;
+        flex-wrap: wrap;
       }
       .tab-btn {
         background: none;
@@ -151,32 +161,6 @@
       .prospectus-list li {
         margin-bottom: 4px;
       }
-      html, body {
-        display: block !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: var(--bg-main, #0f172a);
-      }
-      .portal-header {
-        width: 100% !important;
-        box-sizing: border-box !important;
-        background: var(--card-bg, #1e293b);
-        border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1));
-        padding: 16px 24px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-      }
-      .portal-container {
-        width: 100% !important;
-        max-width: var(--portal-max-width) !important;
-        margin: 32px auto !important;
-        padding: 0 16px 48px !important;
-        box-sizing: border-box !important;
-      }
       @media print {
         .portal-header, .tab-bar, .btn-no-print, .btn { display: none !important; }
         .portal-container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
@@ -196,11 +180,19 @@
           <span style="font-size:1.6rem;">🏫</span>
         </div>
         <div>
-          <h1 id="portalSchoolName" style="margin:0; font-size:1.15rem; font-weight:800; color:var(--text-primary, #fff);">GHANA SENIOR HIGH SCHOOL</h1>
+          <h1 id="portalSchoolName" style="margin:0; font-size:1.15rem; font-weight:800; color:var(--text-primary, #fff);">J.A. KUFFOUR STEM TECHNICAL SCHOOL</h1>
           <p style="margin:2px 0 0; font-size:0.8rem; color:var(--text-secondary, #94a3b8);">Official Candidate Online Admission & Prospectus Portal • GES CSSPS Gateway</p>
         </div>
       </div>
-      <div class="btn-no-print" style="display:flex; align-items:center; gap:10px;">
+
+      <!-- School Switcher & Status Controls -->
+      <div class="btn-no-print" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <label for="portalSchoolSelect" style="font-size:0.75rem; color:#94a3b8; font-weight:700;">INSTITUTION:</label>
+          <select id="portalSchoolSelect" onchange="handleSchoolSelectChange(this.value)" style="background:rgba(15,23,42,0.85); color:#fff; border:1px solid #475569; padding:5px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer;">
+            <option value="">Loading schools...</option>
+          </select>
+        </div>
         <span style="background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3); padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:700;">🟢 INTAKE ACTIVE</span>
         <a href="auth.html" class="btn" style="font-size:0.8rem; padding:6px 12px; opacity:0.8;">Staff Login →</a>
       </div>
@@ -244,8 +236,11 @@
             </div>
 
             <div style="margin-top:20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-              <button type="submit" class="btn primary" style="padding:11px 26px; font-weight:700; font-size:0.92rem; background:linear-gradient(135deg, #6366f1, #06b6d4); border:none; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
+              <button type="submit" class="btn primary" style="padding:11px 24px; font-weight:700; font-size:0.92rem; background:linear-gradient(135deg, #6366f1, #06b6d4); border:none; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
                 🔓 Verify & Access Admission Form
+              </button>
+              <button type="button" onclick="openBuyVoucherModal()" class="btn" style="padding:11px 22px; font-weight:700; font-size:0.92rem; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35); cursor:pointer;">
+                💳 Buy Admission Voucher (MoMo)
               </button>
               <span id="voucher-login-status" style="font-size:0.88rem; font-weight:600;"></span>
             </div>
@@ -392,7 +387,7 @@
         <!-- Printable Official Letterhead -->
         <div id="printable-letter" style="background:#fff; color:#000; padding:32px; border-radius:8px; font-family:serif;">
           <div style="text-align:center; border-bottom:2px solid #000; padding-bottom:14px; margin-bottom:20px;">
-            <div style="font-size:1.7rem; font-weight:800; text-transform:uppercase; letter-spacing:1px;" id="letter-school-name">GHANA SENIOR HIGH SCHOOL</div>
+            <div style="font-size:1.7rem; font-weight:800; text-transform:uppercase; letter-spacing:1px;" id="letter-school-name">J.A. KUFFOUR STEM TECHNICAL SCHOOL</div>
             <div style="font-size:0.9rem; font-weight:600;">MINISTRY OF EDUCATION / GHANA EDUCATION SERVICE</div>
             <div style="font-size:0.82rem; font-style:italic; margin-top:4px;">OFFICIAL ADMISSION LETTER & STUDENT PLACEMENT DOCKET • ACADEMIC YEAR <span id="letter-year">2025/2026</span></div>
           </div>
@@ -440,6 +435,7 @@
               <ul class="prospectus-list" id="prospectus-program"></ul>
             </div>
 
+            <!-- Code of Conduct & Honor Declaration -->
             <div class="prospectus-section" style="margin-top:14px;">
               <h4 style="color:#0369a1;">📜 5. School Code of Conduct & Honor Declaration</h4>
               <div id="prospectus-conduct-rules" style="font-size:0.8rem; line-height:1.5; color:#334155; white-space:pre-line; background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #cbd5e1; margin-bottom:10px;"></div>
@@ -457,24 +453,112 @@
                   <div style="font-weight:700;">Parent / Guardian Signature & Date</div>
                 </div>
               </div>
+            </div>
 
-              <!-- Document Verification QR Code Block -->
-              <div style="margin-top:18px; padding-top:10px; border-top:1px solid #000; display:flex; justify-content:space-between; align-items:center; font-family:sans-serif; font-size:0.78rem;">
-                <div>
-                  <div><strong>Official Token:</strong> <span id="letter-qr-code" style="font-family:monospace; color:#0369a1; font-weight:700;">VERIFIED</span></div>
-                  <div style="font-size:0.72rem; color:#64748b;">Present this official docket in person on School Reporting Day.</div>
+            <!-- 6. Official GES Medical Examination & Fitness Certificate -->
+            <div class="prospectus-section" style="margin-top:16px;">
+              <h4 style="color:#0369a1; text-transform:uppercase;">🩺 6. Official GES Medical Fitness & Health Examination Certificate</h4>
+              <p style="font-size:0.8rem; color:#334155; margin-bottom:10px; font-style:italic;">
+                (To be completed, signed, and stamped by a Certified Medical Officer prior to reporting on campus).
+              </p>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.8rem; margin-bottom:12px;">
+                <div style="border:1px solid #cbd5e1; padding:8px; border-radius:4px; background:#fff;">
+                  <div><strong>Candidate Name:</strong> <span class="med-cand-name">—</span></div>
+                  <div><strong>BECE Index No:</strong> <span class="med-cand-bece">—</span></div>
+                  <div><strong>Blood Group / Genotype:</strong> <span class="med-cand-blood">O+</span></div>
                 </div>
-                <div style="text-align:right;">
-                  <div style="font-weight:bold; text-transform:uppercase;">Director of Admissions</div>
-                  <div style="font-size:0.72rem; color:#64748b;">Ghana Education Service</div>
+                <div style="border:1px solid #cbd5e1; padding:8px; border-radius:4px; background:#fff;">
+                  <div><strong>Visual Acuity (R/L):</strong> _______________</div>
+                  <div><strong>Cardiovascular / Chest:</strong> _______________</div>
+                  <div><strong>Medical Status:</strong> [ ] Fit  [ ] Special Care</div>
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; gap:20px; font-size:0.78rem; padding-top:10px; border-top:1px solid #cbd5e1;">
+                <div style="flex:1;">
+                  <div>Medical Officer: __________________________</div>
+                  <div style="margin-top:4px;">Signature & Reg No: ______________________</div>
+                </div>
+                <div style="flex:1; text-align:right;">
+                  <div>Hospital / Health Facility: ________________</div>
+                  <div style="margin-top:4px; font-weight:700; color:#475569;">[ OFFICIAL HOSPITAL / CLINIC STAMP ]</div>
                 </div>
               </div>
             </div>
+
+            <!-- Document Verification Token Block -->
+            <div style="margin-top:18px; padding-top:10px; border-top:1px solid #000; display:flex; justify-content:space-between; align-items:center; font-family:sans-serif; font-size:0.78rem;">
+              <div>
+                <div><strong>Official Token:</strong> <span id="letter-qr-code" style="font-family:monospace; color:#0369a1; font-weight:700;">VERIFIED</span></div>
+                <div style="font-size:0.72rem; color:#64748b;">Present this official docket in person on School Reporting Day.</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-weight:bold; text-transform:uppercase;">Director of Admissions</div>
+                <div style="font-size:0.72rem; color:#64748b;">Ghana Education Service</div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
 
     </main>
+
+    <!-- ── MODAL: BUY VOUCHER ONLINE VIA MOBILE MONEY (MoMo) ─────────────────── -->
+    <div id="modalBuyVoucher" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
+      <div class="portal-card" style="max-width:520px; width:100%; margin:0; position:relative; box-shadow:0 20px 50px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.15);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:12px; margin-bottom:16px;">
+          <h3 style="margin:0; font-size:1.15rem; color:#4ade80;">📱 Buy Admission Voucher Online (MoMo)</h3>
+          <button type="button" onclick="closeBuyVoucherModal()" style="background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; padding:0 6px;">✕</button>
+        </div>
+        <p style="font-size:0.85rem; color:#94a3b8; margin:0 0 16px;">
+          Instant automated generation. Your voucher credentials will be delivered to your phone via SMS and auto-filled on screen.
+        </p>
+
+        <form id="buy-voucher-form" onsubmit="handleBuyVoucher(event)">
+          <div class="form-group">
+            <label for="buy_school_select">Target Senior High / Technical School *</label>
+            <select id="buy_school_select" required style="width:100%;"></select>
+          </div>
+          <div class="form-group">
+            <label for="buy_bece_index">Candidate BECE Index Number (12 Digits) *</label>
+            <input type="text" id="buy_bece_index" required maxlength="12" placeholder="e.g. 101000100124" autocomplete="off" />
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="buy_parent_phone">Parent MoMo Phone Number *</label>
+              <input type="tel" id="buy_parent_phone" required placeholder="e.g. 0244123456" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label for="buy_momo_network">MoMo Network *</label>
+              <select id="buy_momo_network">
+                <option value="MTN">MTN Mobile Money</option>
+                <option value="TELECEL">Telecel Cash</option>
+                <option value="AT">AT Money</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); padding:12px 16px; border-radius:8px; margin:14px 0; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:0.8rem; color:#94a3b8;">Voucher Price</div>
+              <div style="font-size:1.25rem; font-weight:800; color:#4ade80;">GHS 50.00</div>
+            </div>
+            <div style="font-size:0.75rem; color:#cbd5e1; text-align:right;">
+              ✔ Instant SMS Token<br/>✔ Official GES Dossier
+            </div>
+          </div>
+
+          <div id="buy-voucher-status" style="margin-bottom:12px; font-size:0.85rem; font-weight:600;"></div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" onclick="closeBuyVoucherModal()" class="btn" style="padding:10px 18px;">Cancel</button>
+            <button type="submit" id="btnPayVoucher" class="btn primary" style="padding:10px 24px; font-weight:700; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35);">
+              ⚡ Pay & Generate Instant Voucher
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script src="js/enrollment.js"></script>
   </body>

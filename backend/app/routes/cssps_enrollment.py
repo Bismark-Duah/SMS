@@ -578,7 +578,7 @@ def get_prospectus_package(student_id: int, db: Session = Depends(get_db)):
 
     school_name = student.school.name if hasattr(student, 'school') and student.school else "Senior High School"
 
-    from ..models import Setting
+    from ..models import Setting, StudentHealth
     def _setting_val(key, default=""):
         s = db.query(Setting).filter(Setting.key == key).first()
         return s.value if s else default
@@ -586,6 +586,11 @@ def get_prospectus_package(student_id: int, db: Session = Depends(get_db)):
     conduct_text = _setting_val("code_of_conduct_text", "1. ATTENDANCE & PUNCTUALITY: All students must attend morning assemblies and classes on time.")
     pledge_text = _setting_val("student_pledge_text", "I solemnly pledge to uphold the highest standards of academic integrity, personal discipline, and respect for school rules.")
     conduct_pdf_url = _setting_val("code_of_conduct_pdf_url", "")
+
+    health = db.query(StudentHealth).filter(StudentHealth.student_id == student.id).first()
+    blood_group = health.blood_group if health and health.blood_group else "O+"
+    allergies = health.allergies if health and health.allergies else "None Reported"
+    med_conditions = health.chronic_conditions if health and health.chronic_conditions else "None Reported"
 
     return {
         "student_info": {
@@ -599,6 +604,9 @@ def get_prospectus_package(student_id: int, db: Session = Depends(get_db)):
             "dormitory_name": student.dormitory.name if student.dormitory else "N/A",
             "residential_status": "Boarding" if is_boarder else "Day",
             "gender": gender,
+            "blood_group": blood_group,
+            "allergies": allergies,
+            "medical_conditions": med_conditions,
             "enrollment_status": student.enrollment_status or "PLACED",
             "school_name": school_name,
             "academic_year": student.academic_year or "2025/2026",

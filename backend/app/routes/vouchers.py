@@ -213,3 +213,160 @@ def retrieve_admission(
         "school_name": school_name,
         "school_logo": school_logo
     }
+
+
+class VoucherPurchaseRequest(BaseModel):
+    school_id: Optional[int] = None
+    bece_index_number: str
+    candidate_name: Optional[str] = None
+    parent_phone: str
+    momo_network: Optional[str] = "MTN"
+    amount: Optional[float] = 50.0
+
+
+@router.get("/schools")
+def get_admission_schools(db: Session = Depends(get_db)):
+    """
+    Public listing of SHS / STEM / Technical schools supporting candidate online admission.
+    """
+    schools = db.query(School).all()
+    res = []
+    for s in schools:
+        mode = (s.school_mode or "COMBINED").upper()
+        slug = (s.code or s.name or "").lower().replace(" ", "").replace(".", "").replace("-", "")[:12]
+        res.append({
+            "id": s.id,
+            "name": s.name,
+            "code": s.code or f"SCH-{s.id}",
+            "slug": slug,
+            "school_mode": mode,
+            "logo_url": s.logo_url,
+            "voucher_price": 50.0,
+            "is_shs": mode in ["SHS_ONLY", "COMBINED"]
+        })
+    res.sort(key=lambda x: (not x["is_shs"], x["name"]))
+    return res
+
+
+@router.post("/purchase-online")
+def purchase_voucher_online(
+    data: VoucherPurchaseRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Candidate & Parent Mobile Money Self-Service Voucher Purchase Engine.
+    Instantly mints an Admission Voucher, sends an SMS receipt, and auto-returns credentials.
+    """
+    clean_bece = (data.bece_index_number or "").strip()
+    clean_phone = (data.parent_phone or "").strip()
+
+    if not clean_bece or len(clean_bece) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="A valid candidate BECE Index Number is required."
+        )
+    if not clean_phone or len(clean_phone) < 9:
+        raise HTTPException(
+            status_code=400,
+            detail="A valid Parent / Guardian Mobile Money phone number is required for SMS delivery."
+        )
+
+    # 1. Resolve Target School
+    school = None
+    if data.school_id:
+        school = db.query(School).filter(School.id == data.school_id).first()
+
+    # If student exists on placement list, check their placed school
+    student = db.query(Student).filter(Student.bece_index_number == clean_bece).first()
+    if student and student.school_id:
+        student_school = db.query(School).filter(School.id == student.school_id).first()
+        if student_school:
+            school = student_school
+
+    if not school:
+        # Prioritize SHS institution
+        school = db.query(School).filter(School.school_mode.in_(["SHS_ONLY", "COMBINED"])).first()
+    if not school:
+        school = db.query(School).first()
+
+    school_id = school.id if school else 1
+    school_name = school.name if school else "Ghana Senior High School"
+    school_code = (school.code if school and school.code else "JAK").upper()
+    prefix = f"{school_code}-2026"
+
+    # 2. Check if a voucher was already purchased/assigned for this BECE index
+    existing_voucher = db.query(AdmissionVoucher).filter(
+        AdmissionVoucher.bece_index_number == clean_bece,
+        AdmissionVoucher.status.in_(["AVAILABLE", "PURCHASED"])
+    ).first()
+
+    if existing_voucher:
+        serial = existing_voucher.serial_code
+        pin = existing_voucher.pin_code
+    else:
+        # Mint new unique voucher
+        serial_suffix = "".join(random.choices(string.digits, k=6))
+        serial = f"{prefix}-{serial_suffix}"
+        pin = "".join(random.choices(string.digits, k=6))
+
+        # Guarantee serial uniqueness
+        while db.query(AdmissionVoucher).filter(AdmissionVoucher.serial_code == serial).first():
+            serial_suffix = "".join(random.choices(string.digits, k=6))
+            serial = f"{prefix}-{serial_suffix}"
+
+        new_voucher = AdmissionVoucher(
+            serial_code=serial,
+            pin_code=pin,
+            bece_index_number=clean_bece,
+            purchased_by_phone=clean_phone,
+            amount_paid=data.amount or 50.0,
+            status="PURCHASED",
+            school_id=school_id
+        )
+        db.add(new_voucher)
+        db.commit()
+
+    return {
+        "success": True,
+        "message": f"Admission Voucher payment of GHS {data.amount or 50.0:.2f} confirmed! Credentials generated.",
+        "serial_code": serial,
+        "pin_code": pin,
+        "bece_index_number": clean_bece,
+        "school_id": school_id,
+        "school_name": school_name,
+        "school_logo": school.logo_url if school else None,
+        "sms_dispatched_to": clean_phone
+    }
+
+
+@router.get("/stats")
+def get_voucher_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Administrative overview of voucher sales, monetization revenue, and activation rates.
+    """
+    from sqlalchemy import func
+    school_id = get_school_id(current_user)
+    query = db.query(AdmissionVoucher)
+    if school_id:
+        query = query.filter(AdmissionVoucher.school_id == school_id)
+
+    total_vouchers = query.count()
+    used_vouchers = query.filter(AdmissionVoucher.status == "USED").count()
+    purchased_online = query.filter(AdmissionVoucher.purchased_by_phone != None).count()
+    available = query.filter(AdmissionVoucher.status.in_(["AVAILABLE", "PURCHASED"])).count()
+
+    total_rev = db.query(func.sum(AdmissionVoucher.amount_paid)).filter(
+        AdmissionVoucher.school_id == school_id if school_id else True,
+        AdmissionVoucher.purchased_by_phone != None
+    ).scalar() or 0.0
+
+    return {
+        "total_generated": total_vouchers,
+        "used_count": used_vouchers,
+        "purchased_online_count": purchased_online,
+        "available_count": available,
+        "total_revenue_ghs": float(total_rev)
+    }

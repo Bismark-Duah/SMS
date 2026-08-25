@@ -5,8 +5,15 @@
 const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
 
 let currentVerifiedStudent = null;
+let availableSchoolsList = [];
+let selectedSchoolId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  initPortal();
+});
+
+async function initPortal() {
+  await loadAvailableSchools();
   loadPublicSchoolBranding();
 
   // Check if student_id parameter passed in URL
@@ -15,27 +22,86 @@ document.addEventListener('DOMContentLoaded', () => {
   if (studentId) {
     loadProspectusPackage(studentId);
   }
-});
+}
 
-// ── 0. Public School Branding Loader ──────────────────────────────────────────
+// ── 0. Multi-School Loader & Branding Resolver ────────────────────────────────
+async function loadAvailableSchools() {
+  const portalSelect = document.getElementById('portalSchoolSelect');
+  const buySelect = document.getElementById('buy_school_select');
+
+  try {
+    const res = await fetch(`${API_BASE}/vouchers/schools`);
+    if (res.ok) {
+      availableSchoolsList = await res.json();
+    }
+  } catch (err) {
+    console.warn('Could not load schools list:', err);
+  }
+
+  if (!availableSchoolsList || availableSchoolsList.length === 0) {
+    availableSchoolsList = [
+      { id: 1, name: 'J.A. KUFFOUR STEM TECHNICAL SCHOOL', code: 'JAK', school_mode: 'SHS_ONLY' }
+    ];
+  }
+
+  // Populate Header Selector
+  if (portalSelect) {
+    portalSelect.innerHTML = availableSchoolsList.map(s => `
+      <option value="${s.id}">${s.name}</option>
+    `).join('');
+  }
+
+  // Populate Modal Selector
+  if (buySelect) {
+    buySelect.innerHTML = availableSchoolsList.map(s => `
+      <option value="${s.id}">${s.name} (${s.code || 'SHS'})</option>
+    `).join('');
+  }
+
+  // Resolve active school from URL (?school=jakstem or ?school_id=2)
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlSlug = (urlParams.get('school') || '').toLowerCase();
+  const urlId = urlParams.get('school_id');
+
+  if (urlId) {
+    selectedSchoolId = parseInt(urlId);
+  } else if (urlSlug) {
+    const match = availableSchoolsList.find(s => 
+      (s.slug && s.slug.includes(urlSlug)) || 
+      (s.code && s.code.toLowerCase().includes(urlSlug)) ||
+      (s.name && s.name.toLowerCase().includes(urlSlug))
+    );
+    if (match) selectedSchoolId = match.id;
+  }
+
+  if (!selectedSchoolId && availableSchoolsList.length > 0) {
+    // Default to first SHS/STEM school
+    const shsMatch = availableSchoolsList.find(s => s.is_shs) || availableSchoolsList[0];
+    selectedSchoolId = shsMatch.id;
+  }
+
+  if (portalSelect && selectedSchoolId) {
+    portalSelect.value = String(selectedSchoolId);
+  }
+  if (buySelect && selectedSchoolId) {
+    buySelect.value = String(selectedSchoolId);
+  }
+}
+
 async function loadPublicSchoolBranding() {
   const schoolNameEl = document.getElementById('portalSchoolName');
   const logoContainer = document.getElementById('portalLogoContainer');
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlSchoolId = urlParams.get('school_id') || urlParams.get('school');
-  const localSchoolId = localStorage.getItem('school_id');
-  const activeSchoolId = urlSchoolId || localSchoolId;
-
-  let name = localStorage.getItem('school_name') || 'GHANA SENIOR HIGH SCHOOL';
-  let logo = localStorage.getItem('school_logo');
+  let activeSchool = availableSchoolsList.find(s => s.id === selectedSchoolId);
+  let name = activeSchool ? activeSchool.name : (localStorage.getItem('school_name') || 'J.A. KUFFOUR STEM TECHNICAL SCHOOL');
+  let logo = activeSchool ? activeSchool.logo_url : localStorage.getItem('school_logo');
 
   try {
     const headers = {};
-    if (activeSchoolId) headers['X-School-Id'] = String(activeSchoolId);
+    if (selectedSchoolId) headers['X-School-Id'] = String(selectedSchoolId);
 
     const queryParams = new URLSearchParams({ mode: 'SHS_ONLY' });
-    if (activeSchoolId) queryParams.set('school_id', activeSchoolId);
+    if (selectedSchoolId) queryParams.set('school_id', selectedSchoolId);
 
     const res = await fetch(`${API_BASE}/settings/public-branding?${queryParams.toString()}`, { headers });
     if (res.ok) {
@@ -50,6 +116,23 @@ async function loadPublicSchoolBranding() {
     logoContainer.innerHTML = `<img src="${logo}" alt="${name} Logo" style="width:100%; height:100%; object-fit:contain;" />`;
   }
 }
+
+function handleSchoolSelectChange(schoolId) {
+  if (!schoolId) return;
+  selectedSchoolId = parseInt(schoolId);
+
+  // Update URL query parameter smoothly
+  const url = new URL(window.location);
+  url.searchParams.set('school_id', selectedSchoolId);
+  window.history.replaceState({}, '', url);
+
+  const buySelect = document.getElementById('buy_school_select');
+  if (buySelect) buySelect.value = String(selectedSchoolId);
+
+  loadPublicSchoolBranding();
+}
+window.handleSchoolSelectChange = handleSchoolSelectChange;
+
 
 // ── Tab Switching ─────────────────────────────────────────────────────────────
 function switchPortalTab(tab) {
@@ -271,8 +354,9 @@ async function loadProspectusPackage(studentId) {
     document.getElementById('step-package').style.display = 'block';
 
     // Populate Printable Letterhead
-    document.getElementById('letter-school-name').textContent = s.school_name || 'GHANA SENIOR HIGH SCHOOL';
-    document.getElementById('letter-school-body').textContent = s.school_name || 'this institution';
+    const schoolName = s.school_name || 'J.A. KUFFOUR STEM TECHNICAL SCHOOL';
+    document.getElementById('letter-school-name').textContent = schoolName;
+    document.getElementById('letter-school-body').textContent = schoolName;
     document.getElementById('letter-student-name').textContent = s.full_name;
     document.getElementById('letter-bece-index').textContent = s.bece_index_number;
     document.getElementById('letter-student-code').textContent = s.student_code;
@@ -284,6 +368,11 @@ async function loadProspectusPackage(studentId) {
     document.getElementById('letter-year-body').textContent = s.academic_year;
     const qrEl = document.getElementById('letter-qr-code');
     if (qrEl) qrEl.textContent = s.qr_verification_code || `VERIFIED-${s.student_code || s.bece_index_number}`;
+
+    // Populate Medical Certificate Info
+    document.querySelectorAll('.med-cand-name').forEach(el => el.textContent = s.full_name);
+    document.querySelectorAll('.med-cand-bece').forEach(el => el.textContent = s.bece_index_number);
+    document.querySelectorAll('.med-cand-blood').forEach(el => el.textContent = s.blood_group || 'Pending Clinical Test');
 
     // Populate Prospectus Checklists
     renderList('prospectus-academic', p.academic_supplies);
@@ -320,7 +409,84 @@ function renderList(elementId, items) {
 }
 
 
-// ── 5. Batch Generate Vouchers Helper (Admin Tool) ───────────────────────────
+// ── 5. Instant MoMo Voucher Purchase Modal Controls ─────────────────────────
+
+function openBuyVoucherModal() {
+  const modal = document.getElementById('modalBuyVoucher');
+  if (modal) {
+    modal.style.display = 'flex';
+    const buySelect = document.getElementById('buy_school_select');
+    if (buySelect && selectedSchoolId) {
+      buySelect.value = String(selectedSchoolId);
+    }
+  }
+}
+window.openBuyVoucherModal = openBuyVoucherModal;
+
+function closeBuyVoucherModal() {
+  const modal = document.getElementById('modalBuyVoucher');
+  if (modal) modal.style.display = 'none';
+}
+window.closeBuyVoucherModal = closeBuyVoucherModal;
+
+async function handleBuyVoucher(event) {
+  event.preventDefault();
+  const statusEl = document.getElementById('buy-voucher-status');
+  const btn = document.getElementById('btnPayVoucher');
+
+  statusEl.style.color = '#38bdf8';
+  statusEl.textContent = 'Processing Mobile Money Payment & Generating Voucher...';
+  btn.disabled = true;
+
+  const payload = {
+    school_id: parseInt(document.getElementById('buy_school_select').value),
+    bece_index_number: document.getElementById('buy_bece_index').value.trim(),
+    parent_phone: document.getElementById('buy_parent_phone').value.trim(),
+    momo_network: document.getElementById('buy_momo_network').value,
+    amount: 50.0
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/vouchers/purchase-online`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Payment processing failed');
+
+    statusEl.style.color = '#4ade80';
+    statusEl.innerHTML = `✔ <strong>Voucher Purchased!</strong> Serial: <code>${data.serial_code}</code> | PIN: <code>${data.pin_code}</code> (SMS dispatched to ${payload.parent_phone})`;
+
+    // Auto-fill the credentials in the main form
+    document.getElementById('gate_bece_index').value = data.bece_index_number;
+    document.getElementById('gate_serial').value = data.serial_code;
+    document.getElementById('gate_pin').value = data.pin_code;
+
+    // Highlight login button
+    const loginStatus = document.getElementById('voucher-login-status');
+    if (loginStatus) {
+      loginStatus.style.color = '#4ade80';
+      loginStatus.textContent = '✔ Credentials auto-filled! Click Verify & Access.';
+    }
+
+    setTimeout(() => {
+      closeBuyVoucherModal();
+      btn.disabled = false;
+      statusEl.textContent = '';
+    }, 2200);
+
+  } catch (err) {
+    statusEl.style.color = '#f87171';
+    statusEl.textContent = `❌ ${err.message}`;
+    btn.disabled = false;
+  }
+}
+window.handleBuyVoucher = handleBuyVoucher;
+
+
+// ── 6. Batch Generate Vouchers Helper (Admin Tool) ───────────────────────────
 
 async function handleGenerateBatchVouchers() {
   const token = localStorage.getItem('accessToken');

@@ -689,7 +689,9 @@ class AdmissionVoucher(Base):
     serial_code = Column(String(30), unique=True, index=True, nullable=False)
     pin_code = Column(String(10), nullable=False)
     bece_index_number = Column(String(12), index=True, nullable=True)
-    status = Column(String, default="AVAILABLE", server_default="AVAILABLE") # AVAILABLE, SENT_VIA_SMS, USED
+    status = Column(String, default="AVAILABLE", server_default="AVAILABLE") # AVAILABLE, PURCHASED, USED
+    purchased_by_phone = Column(String(20), nullable=True)
+    amount_paid = Column(Float, default=50.0, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     used_at = Column(DateTime(timezone=True), nullable=True)
     school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=1)

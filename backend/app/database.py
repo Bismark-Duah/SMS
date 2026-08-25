@@ -133,6 +133,10 @@ def run_migrations():
         "semesters": [
             ("start_date", "TIMESTAMP" if not is_sqlite else "DATETIME"),
             ("end_date", "TIMESTAMP" if not is_sqlite else "DATETIME")
+        ],
+        "admission_vouchers": [
+            ("purchased_by_phone", "VARCHAR(20)"),
+            ("amount_paid", "FLOAT DEFAULT 50.0")
         ]
     }
 

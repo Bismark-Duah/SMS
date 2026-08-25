@@ -294,6 +294,14 @@ def purchase_voucher_online(
     school_code = (school.code if school and school.code else "JAK").upper()
     prefix = f"{school_code}-2026"
 
+    setting_price = db.query(Setting).filter(Setting.key == "admission_voucher_price").first()
+    try:
+        default_price = float(setting_price.value) if setting_price and setting_price.value else 0.10
+    except (ValueError, TypeError):
+        default_price = 0.10
+
+    paid_amt = data.amount if data.amount is not None else default_price
+
     # 2. Check if a voucher was already purchased/assigned for this BECE index
     existing_voucher = db.query(AdmissionVoucher).filter(
         AdmissionVoucher.bece_index_number == clean_bece,
@@ -303,6 +311,8 @@ def purchase_voucher_online(
     if existing_voucher:
         serial = existing_voucher.serial_code
         pin = existing_voucher.pin_code
+        if existing_voucher.amount_paid:
+            paid_amt = existing_voucher.amount_paid
     else:
         # Mint new unique voucher
         serial_suffix = "".join(random.choices(string.digits, k=6))
@@ -313,14 +323,6 @@ def purchase_voucher_online(
         while db.query(AdmissionVoucher).filter(AdmissionVoucher.serial_code == serial).first():
             serial_suffix = "".join(random.choices(string.digits, k=6))
             serial = f"{prefix}-{serial_suffix}"
-
-        setting_price = db.query(Setting).filter(Setting.key == "admission_voucher_price").first()
-        try:
-            default_price = float(setting_price.value) if setting_price and setting_price.value else 0.10
-        except (ValueError, TypeError):
-            default_price = 0.10
-
-        paid_amt = data.amount if data.amount is not None else default_price
 
         new_voucher = AdmissionVoucher(
             serial_code=serial,

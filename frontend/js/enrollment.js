@@ -397,7 +397,14 @@ async function handleBuyVoucher(event) {
       body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (_) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(errText || `Server returned status ${res.status}`);
+    }
+
     if (!res.ok) throw new Error(data.detail || 'Payment processing failed');
 
     statusEl.style.color = '#4ade80';

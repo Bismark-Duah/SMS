@@ -15,6 +15,7 @@ from ..schemas import (
     BroadsheetResponse, BroadsheetStudentRow, AcademicOverviewResponse
 )
 from ..dependencies import get_current_user, get_school_id
+from ..services.grading import GradingService
 
 router = APIRouter()
 
@@ -211,7 +212,7 @@ def get_class_broadsheet(
 ):
     school_id = get_school_id(current_user)
     cs_query = db.query(ClassSection).filter(ClassSection.id == class_section_id)
-    if school_id is not None:
+    if school_id is not None and hasattr(ClassSection, "school_id"):
         cs_query = cs_query.filter(ClassSection.school_id == school_id)
     cs = cs_query.first()
     if not cs:
@@ -265,6 +266,19 @@ def get_class_broadsheet(
 
         avg_mark = round(total_marks / subj_count, 2) if subj_count > 0 else 0.0
 
+        # Determine WASSCE Best 6 aggregate
+        aggregate = None
+        try:
+            is_shs = False
+            if cs.stage and cs.stage.school_type == "SHS":
+                is_shs = True
+            elif st.school_type == "SHS" or st.program_id is not None:
+                is_shs = True
+            if is_shs:
+                aggregate = GradingService.calculate_shs_aggregate(scores, student=st)
+        except Exception:
+            pass
+
         # Form teacher remarks & summaries
         summary = db.query(StudentSemesterSummary).filter(
             StudentSemesterSummary.student_id == st.id,
@@ -278,6 +292,7 @@ def get_class_broadsheet(
             "subject_scores": subj_score_map,
             "total_marks": round(total_marks, 2),
             "average_mark": avg_mark,
+            "aggregate": aggregate,
             "attitude": summary.attitude if summary else None,
             "conduct": summary.conduct if summary else None,
             "interest": summary.interest if summary else None,

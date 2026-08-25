@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from ..database import get_db
-from ..models import Student, StudentGuardian, StudentHealth, Program, House, ClassSection, User
+from ..models import Student, StudentGuardian, StudentHealth, Program, House, ClassSection, User, ElectiveCombination, Subject
 from ..schemas import CSSPSEnrollmentCreate
 from ..services.allocation import allocate_student_house_and_dorm
 from ..dependencies import get_current_user, get_school_id
@@ -449,6 +449,7 @@ class CandidateAdmissionForm(BaseModel):
     student_id: int
     serial_code: Optional[str] = None
     elective_combination: Optional[str] = None
+    elective_combination_id: Optional[int] = None
     guardian_name: Optional[str] = None
     primary_phone: Optional[str] = None
     alternative_phone: Optional[str] = None
@@ -459,6 +460,43 @@ class CandidateAdmissionForm(BaseModel):
     emergency_contact: Optional[str] = None
 
 
+@router.get("/program-options/{program_id}")
+def get_program_enrollment_options(
+    program_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Public endpoint: Retrieve active Elective Packages configured by the school
+    for the candidate's placed Academic Program.
+    """
+    prog = db.query(Program).filter(Program.id == program_id).first()
+    if not prog:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    combos = db.query(ElectiveCombination).filter(
+        ElectiveCombination.program_id == program_id,
+        ElectiveCombination.is_active == True
+    ).all()
+
+    return {
+        "program_id": prog.id,
+        "program_name": prog.name,
+        "program_code": prog.code,
+        "combinations": [
+            {
+                "id": c.id,
+                "name": c.name,
+                "code": c.code,
+                "class_section_id": c.class_section_id,
+                "class_section_name": c.class_section.name if c.class_section else None,
+                "capacity": c.capacity,
+                "subjects": [{"id": s.id, "name": s.name, "code": s.code} for s in c.subjects]
+            }
+            for c in combos
+        ]
+    }
+
+
 @router.post("/complete-form")
 def complete_admission_form(
     data: CandidateAdmissionForm,
@@ -466,7 +504,7 @@ def complete_admission_form(
 ):
     """
     Candidate completes School Admission Form with Elective Combination Choice.
-    Auto-routes student to the matching Class Section stream and Boarding House.
+    Auto-routes student to the matching Class Section stream, enrolled subjects, and Boarding House.
     """
     student = db.query(Student).filter(Student.id == data.student_id).first()
     if not student:
@@ -478,33 +516,52 @@ def complete_admission_form(
         student.phone = data.primary_phone.strip()
     if data.residential_address:
         student.address = data.residential_address.strip()
-    if data.elective_combination:
+
+    # 1. Elective Combination -> Class Section & Subject Enrollment Engine
+    selected_combo = None
+
+    if data.elective_combination_id:
+        selected_combo = db.query(ElectiveCombination).filter(
+            ElectiveCombination.id == data.elective_combination_id
+        ).first()
+
+    if not selected_combo and data.elective_combination and student.program_id:
+        combo_str = data.elective_combination.strip()
+        selected_combo = db.query(ElectiveCombination).filter(
+            ElectiveCombination.program_id == student.program_id,
+            (ElectiveCombination.name == combo_str) | (ElectiveCombination.code == combo_str)
+        ).first()
+
+    if selected_combo:
+        student.elective_combination_id = selected_combo.id
+        student.elective_combination = selected_combo.name
+        if selected_combo.class_section_id:
+            student.class_section_id = selected_combo.class_section_id
+    elif data.elective_combination:
         student.elective_combination = data.elective_combination.strip()
+        # Fallback heuristic for standard GES packages
+        if student.program_id:
+            program_sections = db.query(ClassSection).filter(ClassSection.program_id == student.program_id).all()
+            matched_sec = None
+            combo_str = data.elective_combination.lower()
 
-    # 1. Elective Combination -> Class Section Auto Routing Engine
-    if data.elective_combination and student.program_id:
-        program_sections = db.query(ClassSection).filter(ClassSection.program_id == student.program_id).all()
-        matched_sec = None
-        combo_str = data.elective_combination.lower()
+            for sec in program_sections:
+                if combo_str in sec.name.lower() or sec.name.lower() in combo_str:
+                    matched_sec = sec
+                    break
 
-        for sec in program_sections:
-            if combo_str in sec.name.lower() or sec.name.lower() in combo_str:
-                matched_sec = sec
-                break
+            if not matched_sec and program_sections:
+                if "option b" in combo_str or "combo 2" in combo_str or "he 2" in combo_str or "sci 2" in combo_str:
+                    matched_sec = program_sections[min(1, len(program_sections) - 1)]
+                elif "option c" in combo_str or "combo 3" in combo_str or "he 3" in combo_str or "sci 3" in combo_str:
+                    matched_sec = program_sections[min(2, len(program_sections) - 1)]
+                elif "option d" in combo_str or "combo 4" in combo_str or "he 4" in combo_str or "sci 4" in combo_str:
+                    matched_sec = program_sections[min(3, len(program_sections) - 1)]
+                else:
+                    matched_sec = program_sections[0]
 
-        if not matched_sec and program_sections:
-            # Match by index if combination choice is Option A/B/C/D
-            if "option b" in combo_str or "combo 2" in combo_str or "he 2" in combo_str or "sci 2" in combo_str:
-                matched_sec = program_sections[min(1, len(program_sections) - 1)]
-            elif "option c" in combo_str or "combo 3" in combo_str or "he 3" in combo_str or "sci 3" in combo_str:
-                matched_sec = program_sections[min(2, len(program_sections) - 1)]
-            elif "option d" in combo_str or "combo 4" in combo_str or "he 4" in combo_str or "sci 4" in combo_str:
-                matched_sec = program_sections[min(3, len(program_sections) - 1)]
-            else:
-                matched_sec = program_sections[0]
-
-        if matched_sec:
-            student.class_section_id = matched_sec.id
+            if matched_sec:
+                student.class_section_id = matched_sec.id
 
     # 2. Auto-allocate Boarding House & Dormitory if Boarder
     allocate_student_house_and_dorm(db, student)
@@ -535,6 +592,13 @@ def complete_admission_form(
 
     student.enrollment_status = "FORM_COMPLETED"
     db.commit()
+
+    # 5. Auto-Enroll in Track & Elective Subject Scoresheets for current term
+    try:
+        from ..services.subject_enrollment import SubjectEnrollmentService
+        SubjectEnrollmentService.enroll_student_in_track_subjects(db, student)
+    except Exception as sub_err:
+        print("Warning: Failed to auto-enroll student in subjects:", sub_err)
 
     return {
         "success": True,

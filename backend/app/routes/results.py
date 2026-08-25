@@ -125,6 +125,25 @@ def create_score(
         existing.remark = grading["remark"]
         db.commit()
         db.refresh(existing)
+
+        from ..services.audit import AuditService
+        AuditService.log(
+            db=db,
+            action="SCORE_UPDATE",
+            entity_type="Score",
+            entity_id=existing.id,
+            details={
+                "student_id": score.student_id,
+                "subject_id": score.subject_id,
+                "semester_id": score.semester_id,
+                "class_score": score.class_score,
+                "exam_score": score.exam_score,
+                "total_score": total,
+                "grade": grading["grade"]
+            },
+            user=current_user,
+            school_id=school_id
+        )
         return existing
 
     db_score = Score(
@@ -140,6 +159,25 @@ def create_score(
     db.add(db_score)
     db.commit()
     db.refresh(db_score)
+
+    from ..services.audit import AuditService
+    AuditService.log(
+        db=db,
+        action="SCORE_CREATE",
+        entity_type="Score",
+        entity_id=db_score.id,
+        details={
+            "student_id": score.student_id,
+            "subject_id": score.subject_id,
+            "semester_id": score.semester_id,
+            "class_score": score.class_score,
+            "exam_score": score.exam_score,
+            "total_score": total,
+            "grade": grading["grade"]
+        },
+        user=current_user,
+        school_id=school_id
+    )
     return db_score
 
 

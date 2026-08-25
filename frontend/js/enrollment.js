@@ -148,7 +148,7 @@ async function handleVoucherLogin(event) {
     document.getElementById('cand-status-badge').textContent = `STATUS: ${data.enrollment_status}`;
 
     // Pre-populate program electives if available
-    updateElectiveComboOptions(data.program_name);
+    await updateElectiveComboOptions(data.program_name, data.program_id);
 
   } catch (err) {
     statusEl.style.color = '#f87171';
@@ -157,10 +157,34 @@ async function handleVoucherLogin(event) {
 }
 
 
-function updateElectiveComboOptions(programName) {
+async function updateElectiveComboOptions(programName, programId) {
   const comboSelect = document.getElementById('adm_elective_combo');
   if (!comboSelect) return;
 
+  comboSelect.innerHTML = '<option value="">-- Loading available elective packages... --</option>';
+
+  // 1. Try fetching school-configured dynamic combinations from API
+  if (programId) {
+    try {
+      const res = await fetch(`${API_BASE}/cssps/program-options/${programId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.combinations && data.combinations.length > 0) {
+          comboSelect.innerHTML = `
+            <option value="">-- Choose Approved Elective Package --</option>
+            ${data.combinations.map(c => {
+              const subjList = (c.subjects && c.subjects.length > 0) ? ` (${c.subjects.map(s => s.name).join(' + ')})` : '';
+              const streamInfo = c.class_section_name ? ` → (${c.class_section_name})` : '';
+              return `<option value="${c.name}" data-combo-id="${c.id}">${c.name}${subjList}${streamInfo}</option>`;
+            }).join('')}
+          `;
+          return;
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 2. Graceful fallback to standard GES defaults if custom packages not configured
   const prog = (programName || '').toLowerCase();
 
   if (prog.includes('home') || prog.includes('econ')) {
@@ -211,10 +235,15 @@ async function handleFormSubmission(event) {
   statusEl.style.color = '#38bdf8';
   statusEl.textContent = 'Submitting Admission Form & Routing Class/House...';
 
+  const comboSelect = document.getElementById('adm_elective_combo');
+  const selectedOption = comboSelect.options[comboSelect.selectedIndex];
+  const comboId = selectedOption ? selectedOption.getAttribute('data-combo-id') : null;
+
   const payload = {
     student_id: currentVerifiedStudent.student_id,
     serial_code: currentVerifiedStudent.serial_code,
-    elective_combination: document.getElementById('adm_elective_combo').value,
+    elective_combination: comboSelect.value,
+    elective_combination_id: comboId ? parseInt(comboId) : null,
     guardian_name: document.getElementById('adm_guardian_name').value.trim(),
     primary_phone: document.getElementById('adm_primary_phone').value.trim(),
     alternative_phone: document.getElementById('adm_alt_phone').value.trim(),

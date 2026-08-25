@@ -107,75 +107,108 @@ class GradingService:
                 db.close()
 
     @classmethod
-    def calculate_shs_aggregate(cls, scores: list) -> int:
+    def calculate_shs_aggregate_breakdown(cls, scores: list, student = None) -> dict:
         """
-        Calculates WASSCE 'Best 6' Aggregate.
+        Calculates official WAEC/GES 'Best 6' Aggregate and returns detailed breakdown.
         Criteria:
-        - 4 Core Subjects: English, Maths, Int. Science, Social Studies (Required)
-        - 2 Best Elective Subjects
-        Returns: Total aggregate (6 to 54)
+        - Top 3 Track Core Subjects (e.g. English, Core Maths, Social/Science based on program track)
+        - Top 3 Best Elective Subjects (from 3, 4, 5, 6+ electives)
+        Returns:
+        {
+            "aggregate": int (6 to 54),
+            "qualifying_cores": list,
+            "qualifying_electives": list,
+            "all_cores": list,
+            "all_electives": list
+        }
         """
-        core_english = None
-        core_maths = None
-        core_science = None
-        core_social = None
+        if not scores:
+            return {
+                "aggregate": 54,
+                "qualifying_cores": [],
+                "qualifying_electives": [],
+                "all_cores": [],
+                "all_electives": []
+            }
+
+        # 1. Determine Track Core Subjects
+        configured_core_ids = set()
+        if student and hasattr(student, 'program') and student.program and hasattr(student.program, 'core_subjects') and student.program.core_subjects:
+            configured_core_ids = {s.id for s in student.program.core_subjects}
+
+        core_scores = []
+        elective_scores = []
 
         for s in scores:
-            name_lower = (s.subject.name or "").lower()
-            code_upper = (s.subject.code or "").upper()
+            if not s.subject:
+                elective_scores.append(s)
+                continue
 
-            if "english" in name_lower or code_upper == "CORE_ENG":
-                if not core_english or s.total_score > core_english.total_score:
-                    core_english = s
-            elif ("mathematics" in name_lower or "maths" in name_lower or "math" in name_lower) and "add" not in name_lower and "elective" not in name_lower or code_upper == "CORE_MATH":
-                if not core_maths or s.total_score > core_maths.total_score:
-                    core_maths = s
-            elif ("science" in name_lower or "sci" in name_lower) and "agricultural" not in name_lower and "elective" not in name_lower and "physics" not in name_lower and "chemistry" not in name_lower and "biology" not in name_lower or code_upper == "CORE_SCI":
-                if not core_science or s.total_score > core_science.total_score:
-                    core_science = s
-            elif "social" in name_lower or code_upper == "CORE_SOC":
-                if not core_social or s.total_score > core_social.total_score:
-                    core_social = s
+            sub_id = s.subject.id
+            sub_name = (s.subject.name or "").lower()
+            sub_code = (s.subject.code or "").upper()
+            is_sub_core = getattr(s.subject, 'is_core', False)
 
+            if configured_core_ids:
+                if sub_id in configured_core_ids:
+                    core_scores.append(s)
+                else:
+                    elective_scores.append(s)
+            else:
+                # Fallback heuristic for standard core identification
+                if is_sub_core or sub_code.startswith("CORE_") or any(k in sub_name for k in ["english language", "core mathematics", "integrated science", "social studies"]):
+                    if "elective" not in sub_name and "add" not in sub_name:
+                        core_scores.append(s)
+                    else:
+                        elective_scores.append(s)
+                else:
+                    elective_scores.append(s)
+
+        # 2. Sort Core Scores (lowest point = best grade)
+        sorted_cores = sorted(core_scores, key=lambda x: cls.get_grade_point(x.grade, None))
+        top_cores = sorted_cores[:3]
+
+        # 3. Sort Elective Scores (lowest point = best grade)
+        sorted_electives = sorted(elective_scores, key=lambda x: cls.get_grade_point(x.grade, None))
+        top_electives = sorted_electives[:3]
+
+        # 4. Calculate Aggregate (Sum of Top 3 Cores + Top 3 Electives)
         total_aggregate = 0
-        
-        # Core English
-        if core_english:
-            total_aggregate += cls.get_grade_point(core_english.grade)
-        else:
-            total_aggregate += 9
-            
-        # Core Maths
-        if core_maths:
-            total_aggregate += cls.get_grade_point(core_maths.grade)
-        else:
-            total_aggregate += 9
-            
-        # Core Science
-        if core_science:
-            total_aggregate += cls.get_grade_point(core_science.grade)
-        else:
-            total_aggregate += 9
-            
-        # Core Social
-        if core_social:
-            total_aggregate += cls.get_grade_point(core_social.grade)
-        else:
-            total_aggregate += 9
 
-        # Best 2 Electives
-        all_possible_electives = []
-        for s in scores:
-            if s not in [core_english, core_maths, core_science, core_social]:
-                all_possible_electives.append(s)
-                
-        elective_points = sorted([cls.get_grade_point(e.grade) for e in all_possible_electives])
-        best_electives = elective_points[:2]
-        
-        total_aggregate += sum(best_electives)
-        
-        # Pad missing electives with 9
-        if len(best_electives) < 2:
-            total_aggregate += (2 - len(best_electives)) * 9
+        for c in top_cores:
+            total_aggregate += cls.get_grade_point(c.grade, None)
 
-        return total_aggregate
+        # If fewer than 3 cores were sat, pad missing required slots with 9
+        if len(top_cores) < 3:
+            total_aggregate += (3 - len(top_cores)) * 9
+
+        for e in top_electives:
+            total_aggregate += cls.get_grade_point(e.grade, None)
+
+        # If fewer than 3 electives were sat, pad missing required slots with 9
+        if len(top_electives) < 3:
+            total_aggregate += (3 - len(top_electives)) * 9
+
+        return {
+            "aggregate": total_aggregate,
+            "qualifying_cores": [
+                {"subject_name": c.subject.name if c.subject else "Core", "grade": c.grade, "point": cls.get_grade_point(c.grade)}
+                for c in top_cores
+            ],
+            "qualifying_electives": [
+                {"subject_name": e.subject.name if e.subject else "Elective", "grade": e.grade, "point": cls.get_grade_point(e.grade)}
+                for e in top_electives
+            ],
+            "all_cores_count": len(core_scores),
+            "all_electives_count": len(elective_scores)
+        }
+
+    @classmethod
+    def calculate_shs_aggregate(cls, scores: list, student = None) -> int:
+        """
+        Calculates WASSCE 'Best 6' Aggregate (Top 3 Track Cores + Top 3 Electives).
+        Returns integer aggregate between 6 and 54.
+        """
+        breakdown = cls.calculate_shs_aggregate_breakdown(scores, student)
+        return breakdown["aggregate"]
+

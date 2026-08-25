@@ -7,7 +7,7 @@ import os
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from .database import Base, engine, get_db
-from .routes import auth, students, attendance, results, reports, classes, subjects, programs, academic, notifications, settings, assignments, promotions, fees, timetable, discipline, departments, houses, messaging, exeat, academic_hierarchy, backup, rollover, cssps_enrollment, cumulative_records, super_admin, vouchers, assets, clearance
+from .routes import auth, students, attendance, results, reports, classes, subjects, programs, academic, notifications, settings, assignments, promotions, fees, timetable, discipline, departments, houses, messaging, exeat, academic_hierarchy, backup, rollover, cssps_enrollment, cumulative_records, super_admin, vouchers, assets, clearance, audit
 
 
 # Check/create message_logs table dynamically for SQLite
@@ -104,7 +104,8 @@ with engine.connect() as conn:
         ("teacher_observations", "TEXT"),
         ("co_curricular_activities", "TEXT"),
         ("hobbies_talents", "TEXT"),
-        ("awards", "TEXT")
+        ("awards", "TEXT"),
+        ("elective_combination_id", "INTEGER")
     ]
     for col_name, col_type in student_columns:
         try:
@@ -376,6 +377,7 @@ app.include_router(backup.router, prefix="/api/backup", tags=["backup"])
 app.include_router(rollover.router, prefix="/api/rollover", tags=["rollover"])
 app.include_router(assets.router, prefix="/api/assets", tags=["assets"])
 app.include_router(clearance.router, prefix="/api/clearance", tags=["clearance"])
+app.include_router(audit.router, prefix="/api/audit")
 app.include_router(vouchers.router)
 app.include_router(cssps_enrollment.router)
 app.include_router(cumulative_records.router)

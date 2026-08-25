@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -33,6 +33,22 @@ department_subjects = Table(
     "department_subjects",
     Base.metadata,
     Column("department_id", Integer, ForeignKey("departments.id", ondelete="CASCADE"), primary_key=True),
+    Column("subject_id", Integer, ForeignKey("subjects.id", ondelete="CASCADE"), primary_key=True),
+)
+
+# Many-to-many relationship table for Program Core Subjects (Track-specific mandatory cores)
+program_core_subjects = Table(
+    "program_core_subjects",
+    Base.metadata,
+    Column("program_id", Integer, ForeignKey("programs.id", ondelete="CASCADE"), primary_key=True),
+    Column("subject_id", Integer, ForeignKey("subjects.id", ondelete="CASCADE"), primary_key=True),
+)
+
+# Many-to-many relationship table for Elective Combinations and Subjects
+elective_combination_subjects = Table(
+    "elective_combination_subjects",
+    Base.metadata,
+    Column("elective_combination_id", Integer, ForeignKey("elective_combinations.id", ondelete="CASCADE"), primary_key=True),
     Column("subject_id", Integer, ForeignKey("subjects.id", ondelete="CASCADE"), primary_key=True),
 )
 
@@ -140,6 +156,25 @@ class Program(Base):
     class_sections = relationship("ClassSection", back_populates="program")
     students = relationship("Student", back_populates="program")
     subjects = relationship("Subject", secondary=program_subjects, back_populates="programs")
+    core_subjects = relationship("Subject", secondary=program_core_subjects)
+    elective_combinations = relationship("ElectiveCombination", back_populates="program", cascade="all, delete-orphan")
+
+class ElectiveCombination(Base):
+    __tablename__ = "elective_combinations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, index=True)
+    code = Column(String, nullable=True)
+    program_id = Column(Integer, ForeignKey("programs.id", ondelete="CASCADE"), nullable=False)
+    class_section_id = Column(Integer, ForeignKey("class_sections.id", ondelete="SET NULL"), nullable=True)
+    capacity = Column(Integer, nullable=True, default=50)
+    is_active = Column(Boolean, default=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True)
+
+    program = relationship("Program", back_populates="elective_combinations")
+    class_section = relationship("ClassSection")
+    subjects = relationship("Subject", secondary=elective_combination_subjects)
+    students = relationship("Student", back_populates="elective_combination_rel")
 
 class Department(Base):
     __tablename__ = "departments"
@@ -267,6 +302,7 @@ class Student(Base):
     academic_year = Column(String, nullable=True, default="2025/2026")
     class_section_id = Column(Integer, ForeignKey("class_sections.id"))
     program_id = Column(Integer, ForeignKey("programs.id"), nullable=True)
+    elective_combination_id = Column(Integer, ForeignKey("elective_combinations.id", ondelete="SET NULL"), nullable=True)
     parent_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     form = Column(Integer, nullable=True)
     gender = Column(String, nullable=True)
@@ -295,6 +331,7 @@ class Student(Base):
 
     class_section = relationship("ClassSection", back_populates="students")
     program = relationship("Program", back_populates="students")
+    elective_combination_rel = relationship("ElectiveCombination", back_populates="students")
     parent = relationship("User", back_populates="children")
     scores = relationship("Score", back_populates="student")
     attendance = relationship("Attendance", back_populates="student")
@@ -717,5 +754,29 @@ class ConfigAuditLog(Base):
 
     school = relationship("School")
     changed_by = relationship("User")
+
+
+class ActivityAuditLog(Base):
+    """
+    Institutional Operational Activity Audit Trail.
+    Logs critical school events: Grade entry/modification, Report Publishing, CSSPS Import, Fee Payments, Student Admissions.
+    """
+    __tablename__ = "activity_audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=1)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user_name = Column(String(100), nullable=True)
+    user_role = Column(String(50), nullable=True)
+    action = Column(String(50), nullable=False, index=True)  # e.g., "SCORE_ENTRY", "SCORE_UPDATE", "REPORT_PUBLISH", "CSSPS_IMPORT", "FEE_PAYMENT"
+    entity_type = Column(String(50), nullable=True, index=True)  # e.g., "Score", "Report", "Student", "Payment"
+    entity_id = Column(Integer, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    details = Column(Text, nullable=True)  # JSON or descriptive text
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    school = relationship("School")
+    user = relationship("User")
+
 
 

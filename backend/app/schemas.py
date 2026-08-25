@@ -67,6 +67,25 @@ class SmartGenerateRequest(BaseModel):
 class ProgramCreate(BaseModel):
     name: str
 
+class ProgramCoreSubjectsUpdate(BaseModel):
+    subject_ids: List[int]
+
+class ElectiveCombinationCreate(BaseModel):
+    name: str
+    code: Optional[str] = None
+    class_section_id: Optional[int] = None
+    capacity: Optional[int] = 50
+    is_active: Optional[bool] = True
+    subject_ids: List[int] = []
+
+class ElectiveCombinationUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    class_section_id: Optional[int] = None
+    capacity: Optional[int] = None
+    is_active: Optional[bool] = None
+    subject_ids: Optional[List[int]] = None
+
 class SubjectCreate(BaseModel):
     name: str
     code: Optional[str] = None
@@ -413,6 +432,7 @@ class BroadsheetStudentRow(BaseModel):
     total_marks: float
     average_mark: float
     class_rank: int
+    aggregate: Optional[int] = None
     attitude: Optional[str] = None
     conduct: Optional[str] = None
     interest: Optional[str] = None

@@ -3,32 +3,81 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Programs – School Management System</title>
-    <meta name="description" content="Manage school academic programs." />
+    <title>Programs & Curriculum – School Management System</title>
+    <meta name="description" content="Manage school academic programs, custom track core subjects, and elective combinations." />
     <link rel="stylesheet" href="css/styles.css" />
     <script src="js/featureGate.js?v=1.0"></script>
     <script src="js/theme.js"></script>
+    <style>
+      .curriculum-tab-btn {
+        padding: 8px 16px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #94a3b8;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.15s ease;
+      }
+      .curriculum-tab-btn.active {
+        background: var(--primary-color, #6366f1);
+        color: #ffffff;
+        border-color: var(--primary-color, #6366f1);
+        box-shadow: 0 2px 8px rgba(99,102,241,0.4);
+      }
+      .package-card {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 12px;
+        transition: border 0.15s ease;
+      }
+      .package-card:hover {
+        border-color: rgba(99,102,241,0.4);
+      }
+      .subject-pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin: 2px;
+        background: rgba(99,102,241,0.18);
+        color: #a5b4fc;
+        border: 1px solid rgba(99,102,241,0.3);
+      }
+    </style>
   </head>
   <body>
     <main class="page">
       <header class="topbar">
         <div>
-          <h1 style="margin:0;font-size:1.2rem;">Programs</h1>
-          <p style="margin:0;opacity:.7;font-size:.85rem;">Manage school academic programs.</p>
+          <h1 style="margin:0;font-size:1.2rem;">Academic Programs & Curriculum Tracks</h1>
+          <p style="margin:0;opacity:.7;font-size:.85rem;">Configure track-specific core subjects, elective combinations, and stream auto-routing.</p>
         </div>
         <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
           <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
+
       <section class="card">
-        <h3>Programs</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="margin:0;">Academic Programs</h3>
+          <span style="font-size:0.8rem; opacity:0.7;">Click <strong>⚙ Curriculum & Packages</strong> on any program to configure its subjects</span>
+        </div>
         <div id="programList">Loading...</div>
       </section>
+
       <section class="card">
-        <h3>Add / Edit Program</h3>
+        <h3>Add New Academic Program</h3>
         <form id="programForm">
           <input type="hidden" id="programId" />
-          <label>Program Name <input id="programName" placeholder="e.g. General Science" required /></label>
+          <div style="display:grid; grid-template-columns: 2fr 1fr; gap:12px;">
+            <label>Program Name <input id="programName" placeholder="e.g. STEM Pure Science or General Arts" required /></label>
+            <label>Program Code <input id="programCode" placeholder="e.g. STEM-SCI or GART" /></label>
+          </div>
           <div style="display:flex;gap:8px;margin-top:12px;">
             <button type="submit" class="btn primary" style="flex:1;">Save Program</button>
             <button type="button" id="cancelProgramBtn" class="btn" style="flex:1;">Cancel</button>
@@ -36,29 +85,114 @@
         </form>
       </section>
 
-      <!-- Manage Program Subjects Modal -->
-      <div id="subjectsModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.65); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
-        <div style="width:92%; max-width:620px; margin:auto; background:var(--bg-card, #1e293b); padding:24px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); box-shadow:0 10px 30px rgba(0,0,0,0.4); position:relative;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
-            <h3 style="margin:0; font-size:1.2rem; display:flex; align-items:center; gap:8px;">📚 Manage Program Subjects</h3>
-            <button type="button" onclick="document.getElementById('subjectsModal').style.display='none'" style="background:none; border:none; color:rgba(255,255,255,0.6); font-size:1.4rem; cursor:pointer; padding:0 4px;">&times;</button>
+      <!-- Enterprise Curriculum & Elective Packages Builder Modal -->
+      <div id="curriculumModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.75); backdrop-filter:blur(5px); align-items:center; justify-content:center;">
+        <div style="width:94%; max-width:850px; max-height:90vh; overflow-y:auto; margin:auto; background:var(--bg-card, #1e293b); padding:24px; border-radius:14px; border:1px solid rgba(255,255,255,0.15); box-shadow:0 15px 40px rgba(0,0,0,0.6); position:relative;">
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+            <div>
+              <h3 id="modalCurriculumTitle" style="margin:0; font-size:1.25rem; display:flex; align-items:center; gap:8px;">
+                🎓 Curriculum & Elective Packages
+              </h3>
+              <p id="modalCurriculumSubtitle" style="margin:2px 0 0 0; font-size:0.85rem; color:#94a3b8;"></p>
+            </div>
+            <button type="button" onclick="closeCurriculumModal()" style="background:none; border:none; color:rgba(255,255,255,0.6); font-size:1.5rem; cursor:pointer; padding:0 6px;">&times;</button>
           </div>
-          
-          <p id="modalProgramName" style="font-weight:600; font-size:0.95rem; color:var(--primary-color, #6366f1); margin-top:0; margin-bottom:16px;"></p>
-          
-          <form id="subjectsForm">
-            <input type="hidden" id="modalProgramId" />
-            <div id="subjectsCheckboxList" style="max-height:340px; overflow-y:auto; margin-bottom:20px; padding-right:6px; display:flex; flex-direction:column; gap:6px;">
-              Loading subjects...
+
+          <input type="hidden" id="curriculumProgramId" />
+
+          <!-- Modal Sub-Tabs -->
+          <div style="display:flex; gap:8px; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+            <button type="button" id="tabBtnCore" class="curriculum-tab-btn active" onclick="switchCurriculumTab('core')">
+              📘 1. Mandatory Core Subjects
+            </button>
+            <button type="button" id="tabBtnPackages" class="curriculum-tab-btn" onclick="switchCurriculumTab('packages')">
+              📦 2. Approved Elective Packages (Options)
+            </button>
+          </div>
+
+          <!-- TAB 1: Track Core Subjects -->
+          <div id="tabContentCore">
+            <div style="background:rgba(59,130,246,0.08); border-left:4px solid #3b82f6; padding:10px 14px; border-radius:4px; margin-bottom:16px; font-size:0.85rem; color:#bfdbfe;">
+              💡 <strong>School Liberty:</strong> Select the exact core subjects that apply to this specific program track. For example, a <em>Pure Science</em> track can uncheck <em>Integrated Science</em> because pure sciences replace it.
             </div>
-            <div style="display:flex; gap:12px; justify-content:flex-end;">
-              <button type="button" id="closeSubjectsModalBtn" class="btn secondary" style="min-width:100px;">Close</button>
-              <button type="submit" class="btn primary" style="min-width:130px;">Save Changes</button>
+            
+            <div id="coreSubjectsContainer" style="margin-bottom:16px;">
+              Loading track core subjects...
             </div>
-          </form>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
+              <span id="coreSubjectsCountBadge" style="font-size:0.85rem; color:#94a3b8;">0 core subjects selected</span>
+              <button type="button" class="btn primary" onclick="saveTrackCoreSubjects()" style="min-width:160px;">
+                💾 Save Core Subjects
+              </button>
+            </div>
+          </div>
+
+          <!-- TAB 2: Elective Packages & Stream Routing -->
+          <div id="tabContentPackages" style="display:none;">
+            <div style="background:rgba(234,179,8,0.08); border-left:4px solid #eab308; padding:10px 14px; border-radius:4px; margin-bottom:16px; font-size:0.85rem; color:#fef08a;">
+              💡 <strong>Stream Auto-Routing:</strong> Create the elective packages offered by your school (3, 4, 5, or 6+ electives). When an admitted student chooses a package, the system automatically routes them to that target Form 1 stream!
+            </div>
+
+            <!-- Existing Packages List -->
+            <div style="margin-bottom:20px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <h4 style="margin:0; font-size:0.95rem; color:#f1f5f9;">Configured Elective Packages</h4>
+                <button type="button" class="btn" onclick="toggleAddPackageForm(true)" style="font-size:0.8rem; padding:4px 10px; background:rgba(99,102,241,0.2); color:#a5b4fc; border:1px solid rgba(99,102,241,0.4);">
+                  + Add New Package
+                </button>
+              </div>
+              <div id="packagesListContainer">Loading elective packages...</div>
+            </div>
+
+            <!-- New Package Builder Form -->
+            <div id="addPackageFormContainer" style="display:none; background:rgba(15,23,42,0.8); border:1px solid rgba(99,102,241,0.4); border-radius:10px; padding:16px; margin-top:14px;">
+              <h4 style="margin-top:0; margin-bottom:12px; font-size:0.95rem; color:#a5b4fc;">✨ Create New Elective Package</h4>
+              
+              <form id="newPackageForm" onsubmit="handleCreatePackage(event)">
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px; margin-bottom:10px;">
+                  <label style="font-size:0.82rem;">Package / Option Title
+                    <input id="pkg_name" placeholder="e.g. Option A: Pure Bio-Science" required style="font-size:0.85rem;" />
+                  </label>
+                  <label style="font-size:0.82rem;">Option Code (Short)
+                    <input id="pkg_code" placeholder="e.g. SCI-OPT-A" style="font-size:0.85rem;" />
+                  </label>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px; margin-bottom:12px;">
+                  <label style="font-size:0.82rem;">Target Form 1 Class Stream
+                    <select id="pkg_class_section_id" style="font-size:0.85rem;">
+                      <option value="">-- Select Class Stream (e.g. Form 1 Science 1) --</option>
+                    </select>
+                  </label>
+                  <label style="font-size:0.82rem;">Seat Quota / Max Capacity
+                    <input type="number" id="pkg_capacity" value="50" min="1" max="500" style="font-size:0.85rem;" />
+                  </label>
+                </div>
+
+                <label style="font-size:0.82rem; font-weight:600; margin-bottom:6px; display:block;">Select Package Elective Subjects (Select 3, 4, 5, or 6+ subjects):</label>
+                <div id="packageElectivesCheckboxList" style="max-height:180px; overflow-y:auto; margin-bottom:14px; padding:8px; background:rgba(0,0,0,0.2); border-radius:8px; border:1px solid rgba(255,255,255,0.06);">
+                  Loading electives...
+                </div>
+
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                  <button type="button" class="btn" onclick="toggleAddPackageForm(false)" style="font-size:0.85rem;">Cancel</button>
+                  <button type="submit" class="btn primary" style="font-size:0.85rem; min-width:140px;">Save Package</button>
+                </div>
+              </form>
+            </div>
+
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; margin-top:20px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+            <button type="button" class="btn secondary" onclick="closeCurriculumModal()" style="min-width:100px;">Close Window</button>
+          </div>
+
         </div>
       </div>
     </main>
+
     <script src="js/guard.js"></script>
     <script src="js/programs.js"></script>
   </body>

@@ -123,6 +123,7 @@ function renderBroadsheet(data) {
     <th>Total</th>
     <th>Avg</th>
     <th>Rank</th>
+    <th>WASSCE Agg</th>
     <th style="width:120px;">Attitude</th>
     <th style="width:120px;">Conduct</th>
     <th style="width:120px;">Interest</th>
@@ -133,7 +134,7 @@ function renderBroadsheet(data) {
   // Render Student Rows
   const tbody = document.getElementById("broadsheetBody");
   if (data.students.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${data.subjects.length + 8}" style="text-align:center; padding:30px; opacity:0.6;">No active students found in this class section.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${data.subjects.length + 9}" style="text-align:center; padding:30px; opacity:0.6;">No active students found in this class section.</td></tr>`;
     return;
   }
 
@@ -144,6 +145,7 @@ function renderBroadsheet(data) {
     }).join('');
 
     const rankClass = st.class_rank <= 3 ? "rank-top" : "rank-normal";
+    const aggDisplay = st.aggregate !== undefined && st.aggregate !== null ? st.aggregate : '-';
 
     return `
       <tr data-student-id="${st.student_id}">
@@ -155,6 +157,7 @@ function renderBroadsheet(data) {
         <td style="color:#818cf8; font-weight:800;">${st.total_marks}</td>
         <td><b>${st.average_mark}%</b></td>
         <td><span class="rank-badge ${rankClass}">#${st.class_rank}</span></td>
+        <td><span class="rank-badge" style="background:rgba(168, 85, 247, 0.15); color:#c084fc; border:1px solid rgba(168, 85, 247, 0.4);">${aggDisplay}</span></td>
         <td><input type="text" class="remark-input input-attitude" value="${st.attitude || ''}" placeholder="e.g. Good" /></td>
         <td><input type="text" class="remark-input input-conduct" value="${st.conduct || ''}" placeholder="e.g. Satisfactory" /></td>
         <td><input type="text" class="remark-input input-interest" value="${st.interest || ''}" placeholder="e.g. Reading" /></td>
@@ -283,3 +286,79 @@ async function publishClassReports() {
     alert("Network error while publishing reports.");
   }
 }
+
+function exportBroadsheetCSV() {
+  if (!currentBroadsheetData || !currentBroadsheetData.students || currentBroadsheetData.students.length === 0) {
+    alert("Please select a class and load broadsheet data before exporting.");
+    return;
+  }
+
+  const data = currentBroadsheetData;
+  const subjects = data.subjects || [];
+  const students = data.students || [];
+
+  // 1. Build CSV Header
+  const headers = [
+    "Student ID",
+    "Student Code",
+    "Full Name",
+    ...subjects.map(s => `"${s.name} (${s.is_core ? 'Core' : 'Elective'})"`),
+    "Total Marks",
+    "Average (%)",
+    "Class Rank",
+    "WASSCE Best 6 Aggregate",
+    "Attitude",
+    "Conduct",
+    "Interest",
+    "Form Teacher Remarks"
+  ];
+
+  const rows = [];
+  rows.push(headers.join(","));
+
+  // 2. Build Student Data Rows
+  students.forEach(st => {
+    const subjValues = subjects.map(s => {
+      const v = st.subject_scores[s.name];
+      return v !== undefined && v !== null ? v : "";
+    });
+
+    const escapeCSV = (val) => {
+      if (val === null || val === undefined) return '""';
+      return `"${String(val).replace(/"/g, '""')}"`;
+    };
+
+    const row = [
+      st.student_id,
+      escapeCSV(st.student_code),
+      escapeCSV(st.student_name),
+      ...subjValues,
+      st.total_marks,
+      st.average_mark,
+      st.class_rank,
+      st.aggregate !== undefined && st.aggregate !== null ? st.aggregate : "",
+      escapeCSV(st.attitude || ""),
+      escapeCSV(st.conduct || ""),
+      escapeCSV(st.interest || ""),
+      escapeCSV(st.remarks || st.form_teacher_remarks || "")
+    ];
+
+    rows.push(row.join(","));
+  });
+
+  // 3. Trigger Download
+  const csvContent = "\uFEFF" + rows.join("\r\n"); // UTF-8 BOM for Excel compatibility
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  
+  const classNameClean = (data.class_name || "Class").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const semNameClean = (data.semester_name || "Term").replace(/[^a-zA-Z0-9_-]/g, "_");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `${classNameClean}_Broadsheet_${semNameClean}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+

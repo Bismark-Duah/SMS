@@ -143,12 +143,19 @@ class ReportService:
 
         # Determine if SHS for aggregate calculation
         aggregate = None
+        aggregate_breakdown = None
         try:
+            is_shs = False
             if student.class_section and student.class_section.stage:
-                if student.class_section.stage.school_type == "SHS":
-                    aggregate = GradingService.calculate_shs_aggregate(scores)
-        except Exception:
-            pass
+                is_shs = (student.class_section.stage.school_type == "SHS")
+            elif student.school_type == "SHS" or student.program_id is not None:
+                is_shs = True
+                
+            if is_shs:
+                aggregate_breakdown = GradingService.calculate_shs_aggregate_breakdown(scores, student=student)
+                aggregate = aggregate_breakdown["aggregate"]
+        except Exception as agg_err:
+            print("Aggregate calculation warning:", agg_err)
 
         # Position in class: rank by average score across all students in this class+semester
         class_id = student.class_section_id
@@ -324,6 +331,7 @@ class ReportService:
             "overall_grade": overall_grading.get("grade", "N/A"),
             "overall_remark": overall_grading.get("remark", ""),
             "aggregate": aggregate,
+            "aggregate_breakdown": aggregate_breakdown,
             "position": position,
             "position_ordinal": position_ordinal,
             "position_text": position_text,
@@ -423,9 +431,10 @@ class ReportService:
 
         rows_html = ""
         for row in data["scores"]:
+            sub_type_badge = "Core" if row.get("is_core") else "Elective"
             rows_html += f"""
                 <tr>
-                    <td>{row['subject']}</td>
+                    <td><strong>{row['subject']}</strong> &nbsp;<span style="font-size:7.5px; color:#666; font-style:italic;">({sub_type_badge})</span></td>
                     <td style="text-align:center">{row['class_score']:.1f}</td>
                     <td style="text-align:center">{row['exam_score']:.1f}</td>
                     <td style="text-align:center"><strong>{row['total_score']:.1f}</strong></td>
@@ -437,7 +446,13 @@ class ReportService:
 
         aggregate_html = ""
         if data["aggregate"] is not None:
-            aggregate_html = f"<p style='margin: 4px 0;'><strong>WASSCE Aggregate (Best 6):</strong> {data['aggregate']}</p>"
+            breakdown_str = ""
+            if data.get("aggregate_breakdown"):
+                q_cores = [f"{c['subject_name']} [{c['grade']}]" for c in data["aggregate_breakdown"].get("qualifying_cores", [])]
+                q_elecs = [f"{e['subject_name']} [{e['grade']}]" for e in data["aggregate_breakdown"].get("qualifying_electives", [])]
+                breakdown_str = f"<br/><span style='font-size:8px; color:#555;'>Qualifying Best 6: {', '.join(q_cores)} &nbsp;|&nbsp; {', '.join(q_elecs)}</span>"
+
+            aggregate_html = f"<p style='margin: 4px 0;'><strong>WASSCE Aggregate (Best 6):</strong> <span style='font-size:12px; font-weight:bold; color:#0369a1;'>{data['aggregate']}</span>{breakdown_str}</p>"
 
         watermark_div = ""
         if watermark_path:

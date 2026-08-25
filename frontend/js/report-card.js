@@ -171,6 +171,18 @@ function renderReportCard(data) {
     attEl.innerText = att.present_days !== undefined ? `${att.present_days} / ${att.total_days} days` : "-";
   }
 
+  const aggCard = document.getElementById("rc-aggregate-card");
+  const aggVal = document.getElementById("rc-aggregate-val");
+  const agg = data.aggregate !== undefined && data.aggregate !== null ? data.aggregate : (stats.aggregate || null);
+  if (aggCard && aggVal) {
+    if (agg !== null) {
+      aggCard.style.display = "block";
+      aggVal.innerText = String(agg);
+    } else {
+      aggCard.style.display = "none";
+    }
+  }
+
   const eval = data.evaluation || {};
   setInputValue("eval_attitude", eval.attitude || "");
   setInputValue("eval_conduct", eval.conduct || "");

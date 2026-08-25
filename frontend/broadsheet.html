@@ -70,6 +70,7 @@
           <p style="margin:4px 0 0 0;opacity:.75;font-size:.85rem;">Review class broadsheet matrix, total scores, class ranks, and manage terminal remarks.</p>
         </div>
         <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+          <button class="btn" style="background:#0284c7; color:white; font-weight:700;" onclick="exportBroadsheetCSV()">📊 Export CSV / Excel</button>
           <button class="btn-print no-print" title="Print landscape broadsheet" onclick="(function(){var s=document.createElement('style');s.id='_landscapeHint';s.textContent='@page{size:A4 landscape;}';document.head.appendChild(s);window.print();setTimeout(function(){var el=document.getElementById('_landscapeHint');if(el)el.parentNode.removeChild(el);},1000);})()">🖨️ Print Broadsheet</button>
           <a class="btn" href="results.html">📝 Results & Scores</a>
           <a class="btn" href="departments.html">🏢 Departments</a>

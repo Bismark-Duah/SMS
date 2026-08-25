@@ -58,6 +58,7 @@ class SubjectCreate(BaseModel):
     name: str
     code: Optional[str] = None
     is_core: bool = True
+    is_active: Optional[bool] = True
     category: Optional[str] = "Core"
     group_code: Optional[str] = None
     assessment_type: Optional[str] = "External_WASSCE"

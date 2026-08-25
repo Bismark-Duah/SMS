@@ -3,7 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Subject, Setting, User, School
+from ..models import (
+    Subject, Setting, User, School, Score, Attendance, 
+    TeacherAssignment, Timetable, ClassSubjectScoreStatus, TextbookAllocation
+)
 from ..schemas import SubjectCreate
 from ..dependencies import get_current_user, get_school_id
 
@@ -14,6 +17,7 @@ router = APIRouter()
 def list_subjects(
     school_level: Optional[str] = None,
     exclude_basic: Optional[bool] = False,
+    include_inactive: Optional[bool] = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
@@ -23,6 +27,9 @@ def list_subjects(
     if school_id is not None and hasattr(Subject, "school_id"):
         query = query.filter((Subject.school_id == school_id) | (Subject.school_id.is_(None)))
     
+    if not include_inactive:
+        query = query.filter((Subject.is_active == True) | (Subject.is_active.is_(None)))
+
     # Check active school_mode for the school or system default
     school_mode = None
     if school_id is not None:
@@ -79,8 +86,10 @@ def get_my_subjects(
         return list_subjects(db=db, current_user=current_user)
     if not scope["subject_ids"]:
         return []
-    return db.query(Subject).filter(Subject.id.in_(scope["subject_ids"])).all()
-
+    return db.query(Subject).filter(
+        Subject.id.in_(scope["subject_ids"]),
+        (Subject.is_active == True) | (Subject.is_active.is_(None))
+    ).all()
 
 
 @router.get("/{subject_id}")
@@ -126,11 +135,46 @@ def create_subject(
     data = payload.dict()
     if school_id is not None and hasattr(Subject, "school_id"):
         data["school_id"] = school_id
+    if "is_active" not in data or data["is_active"] is None:
+        data["is_active"] = True
     db_subject = Subject(**data)
     db.add(db_subject)
     db.commit()
     db.refresh(db_subject)
     return db_subject
+
+
+@router.post("/{subject_id}/toggle-status")
+def toggle_subject_status(
+    subject_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Enterprise Soft-Delete / Archiving Toggle.
+    Allows administrators to safely archive/discontinue a subject so it does not appear
+    in new term entry forms, while preserving all historical scores and transcripts.
+    """
+    _check_admin(current_user)
+    school_id = get_school_id(current_user)
+    query = db.query(Subject).filter(Subject.id == subject_id)
+    if school_id is not None and hasattr(Subject, "school_id"):
+        query = query.filter((Subject.school_id == school_id) | (Subject.school_id.is_(None)))
+    item = query.first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+    current_status = getattr(item, "is_active", True)
+    item.is_active = not (current_status if current_status is not None else True)
+    db.commit()
+    db.refresh(item)
+    status_label = "Active" if item.is_active else "Archived (Discontinued)"
+    return {
+        "status": "success",
+        "id": item.id,
+        "is_active": item.is_active,
+        "message": f"Subject '{item.name}' is now {status_label}."
+    }
 
 
 @router.delete("/{subject_id}")
@@ -139,17 +183,59 @@ def delete_subject(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """
+    Enterprise Protected Delete.
+    Hard deletion is ONLY allowed if 0 historical student grades and records depend on it.
+    If historical records exist, hard deletion is blocked to prevent data corruption.
+    """
     _check_admin(current_user)
     school_id = get_school_id(current_user)
     query = db.query(Subject).filter(Subject.id == subject_id)
-    if school_id is not None:
-        query = query.filter(Subject.school_id == school_id)
+    if school_id is not None and hasattr(Subject, "school_id"):
+        query = query.filter((Subject.school_id == school_id) | (Subject.school_id.is_(None)))
     item = query.first()
     if not item:
         raise HTTPException(status_code=404, detail="Subject not found")
+
+    # ── 1. Check for critical dependent records ───────────────────────────────
+    score_count = db.query(Score).filter(Score.subject_id == subject_id).count()
+    attendance_count = db.query(Attendance).filter(Attendance.subject_id == subject_id).count()
+    textbook_count = db.query(TextbookAllocation).filter(TextbookAllocation.subject_id == subject_id).count()
+    score_status_count = db.query(ClassSubjectScoreStatus).filter(ClassSubjectScoreStatus.subject_id == subject_id).count()
+
+    total_critical_dependencies = score_count + attendance_count + textbook_count + score_status_count
+
+    if total_critical_dependencies > 0:
+        details = []
+        if score_count:
+            details.append(f"{score_count} student exam/class score(s)")
+        if attendance_count:
+            details.append(f"{attendance_count} period attendance record(s)")
+        if textbook_count:
+            details.append(f"{textbook_count} textbook allocation(s)")
+        if score_status_count:
+            details.append(f"{score_status_count} term score sheet approval(s)")
+
+        dependencies_text = ", ".join(details)
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Cannot permanently delete '{item.name}' because historical records depend on it: "
+                f"{dependencies_text}. To prevent data corruption on past report cards and transcripts, "
+                f"please 'Archive / Deactivate' this subject instead."
+            )
+        )
+
+    # ── 2. Safe cleanup of empty non-critical assignments/timetables ──────────
+    db.query(Timetable).filter(Timetable.subject_id == subject_id).delete(synchronize_session=False)
+    db.query(TeacherAssignment).filter(TeacherAssignment.subject_id == subject_id).delete(synchronize_session=False)
+
+    item.class_sections.clear()
+    item.programs.clear()
+
     db.delete(item)
     db.commit()
-    return {"message": "Subject deleted"}
+    return {"status": "success", "message": f"Subject '{item.name}' was permanently deleted."}
 
 
 @router.put("/{subject_id}")
@@ -162,8 +248,8 @@ def update_subject(
     _check_admin(current_user)
     school_id = get_school_id(current_user)
     query = db.query(Subject).filter(Subject.id == subject_id)
-    if school_id is not None:
-        query = query.filter(Subject.school_id == school_id)
+    if school_id is not None and hasattr(Subject, "school_id"):
+        query = query.filter((Subject.school_id == school_id) | (Subject.school_id.is_(None)))
     item = query.first()
     if not item:
         raise HTTPException(status_code=404, detail="Subject not found")
@@ -171,6 +257,8 @@ def update_subject(
     item.name = payload.name
     item.code = payload.code
     item.is_core = payload.is_core
+    if payload.is_active is not None:
+        item.is_active = payload.is_active
     if payload.category is not None:
         item.category = payload.category
     if payload.group_code is not None:

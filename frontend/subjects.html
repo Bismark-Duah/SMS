@@ -23,8 +23,13 @@
       <section class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
           <h3 style="margin:0;">Subjects</h3>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <input id="subjectSearchInput" name="subject_search_query_no_autofill" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" value="" placeholder="🔍 Search subject name or code..." style="padding:6px 12px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); width:240px;" oninput="loadSubjects()" />
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <select id="subjectStatusFilter" onchange="loadSubjects()" style="padding:6px 10px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);">
+              <option value="all">All Subjects</option>
+              <option value="active" selected>🟢 Active Only</option>
+              <option value="archived">⚪ Archived / Discontinued</option>
+            </select>
+            <input id="subjectSearchInput" name="subject_search_query_no_autofill" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" value="" placeholder="🔍 Search subject name or code..." style="padding:6px 12px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); width:220px;" oninput="loadSubjects()" />
           </div>
         </div>
         <div id="subjectList">Loading...</div>
@@ -48,12 +53,36 @@
               <option value="false">Elective</option>
             </select>
           </label>
+          <label>Status
+            <select id="subjectIsActive">
+              <option value="true" selected>🟢 Active (Available for teaching & scores)</option>
+              <option value="false">⚪ Archived (Discontinued / Historical Only)</option>
+            </select>
+          </label>
           <div style="display:flex;gap:8px;margin-top:12px;">
             <button type="submit" class="btn primary" style="flex:1;">Save Subject</button>
             <button type="button" id="cancelSubjectBtn" class="btn" style="flex:1;">Cancel</button>
           </div>
         </form>
       </section>
+
+      <!-- Dependency Protection Modal -->
+      <div id="archivePromptModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+        <div class="card" style="max-width:480px; width:90%; padding:24px; border-radius:12px; box-shadow:0 12px 32px rgba(0,0,0,0.3); border:1px solid var(--border-color); background:var(--card-bg);">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            <span style="font-size:1.6rem;">🛡️</span>
+            <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary);">Deletion Blocked: Academic Records Attached</h3>
+          </div>
+          <p id="archivePromptMsg" style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5; margin-bottom:18px;"></p>
+          <div style="background:rgba(99,102,241,0.08); border-left:4px solid #6366f1; padding:10px 14px; border-radius:4px; font-size:0.83rem; margin-bottom:18px; color:var(--text-secondary);">
+            💡 <strong>Enterprise Safety Rule:</strong> Archiving hides this subject from new teacher entry forms while keeping past transcripts, WAEC records, and graduation results 100% intact.
+          </div>
+          <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <button type="button" id="closeArchiveModalBtn" class="btn" style="padding:8px 14px;">Cancel</button>
+            <button type="button" id="confirmArchiveBtn" class="btn primary" style="padding:8px 16px; background:#6366f1;">📦 Archive Subject Instead</button>
+          </div>
+        </div>
+      </div>
     </main>
     <script src="js/guard.js"></script>
     <script src="js/subjects.js"></script>

@@ -202,11 +202,14 @@ class Subject(Base):
     name = Column(String, unique=True, index=True, nullable=False)
     code = Column(String, unique=True, index=True)
     is_core = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, server_default="1")
     category = Column(String, default="Core")  # Core, Elective
     group_code = Column(String, nullable=True)  # Group A, Group B, Group C, Group D
     assessment_type = Column(String, default="External_WASSCE")  # External_WASSCE, Internal_Transcript, Basic_Cumulative
     school_level = Column(String, default="SHS")  # Basic, SHS, STEM
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True)
     
+    school = relationship("School")
     scores = relationship("Score", back_populates="subject")
     class_sections = relationship("ClassSection", secondary=class_section_subjects, back_populates="subjects")
     programs = relationship("Program", secondary=program_subjects, back_populates="subjects")

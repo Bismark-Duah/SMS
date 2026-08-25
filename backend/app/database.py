@@ -83,7 +83,9 @@ def run_migrations():
             ("category", "VARCHAR DEFAULT 'Core'"),
             ("group_code", "VARCHAR"),
             ("assessment_type", "VARCHAR DEFAULT 'External_WASSCE'"),
-            ("school_level", "VARCHAR DEFAULT 'SHS'")
+            ("school_level", "VARCHAR DEFAULT 'SHS'"),
+            ("is_active", "BOOLEAN DEFAULT TRUE"),
+            ("school_id", "INTEGER REFERENCES schools(id)")
         ],
         "students": [
             ("first_name", "VARCHAR"),

@@ -11,6 +11,11 @@ function getHeaders(headers = {}) {
   return h;
 }
 
+window.escapeJsQuotes = function(str) {
+  if (!str) return '';
+  return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+};
+
 const modal = document.getElementById('newSchoolModal');
 const form = document.getElementById('newSchoolForm');
 

@@ -6,11 +6,11 @@ import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "backend")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.database import SessionLocal, engine, Base
-from app.models import Setting, ClassSection, Student, Program, House
-from app.routes.settings import get_settings
+from backend.app.database import SessionLocal, engine, Base
+from backend.app.models import Setting, ClassSection, Student, Program, House
+from backend.app.routes.settings import get_settings
 
 
 class TestSchoolModesScoping(unittest.TestCase):

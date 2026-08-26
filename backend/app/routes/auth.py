@@ -423,12 +423,23 @@ def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_c
     return query.all()
 
 @router.post("/users", dependencies=[Depends(rate_limit_auth)])
-def create_user(payload: dict, db: Session = Depends(get_db)):
+def create_user(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from ..dependencies import get_school_id
+    school_id = get_school_id(current_user)
     username = payload.get("username")
     email = payload.get("email")
     password = payload.get("password")
     gender = payload.get("gender")
     role_names = payload.get("roles", ["teacher"])
+
+    # Enforce security: non-super_admin callers cannot assign super_admin or admin
+    caller_roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, "roles") and current_user.roles else []
+    if "super_admin" not in caller_roles:
+        role_names = [r for r in role_names if r not in ["super_admin", "admin"]]
 
     # Enforce mutual exclusivity: Assistant Head executive roles strip generic admin
     assist_head_keys = {
@@ -438,6 +449,9 @@ def create_user(payload: dict, db: Session = Depends(get_db)):
     if any(r in assist_head_keys for r in role_names) and "super_admin" not in role_names and "admin" in role_names:
         role_names = [r for r in role_names if r != "admin"]
 
+    if not role_names:
+        role_names = ["teacher"]
+
     if db.query(User).filter(User.username == username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
 
@@ -446,7 +460,8 @@ def create_user(payload: dict, db: Session = Depends(get_db)):
         email=email,
         password_hash=_hash_password(password),
         gender=gender,
-        is_active=True
+        is_active=True,
+        school_id=school_id
     )
     
     for r_name in role_names:
@@ -460,6 +475,75 @@ def create_user(payload: dict, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return new_user
+
+@router.put("/users/{user_id}/roles")
+def update_user_roles(
+    user_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Admin/Super-Admin only: update assigned roles for a user."""
+    role_names_caller = [r.name for r in current_user.roles]
+    if "admin" not in role_names_caller and "super_admin" not in role_names_caller:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    new_role_names = payload.get("roles", [])
+    if not new_role_names:
+        raise HTTPException(status_code=400, detail="At least one role must be assigned")
+
+    # If caller is not super_admin, prevent granting super_admin or admin
+    is_caller_super = "super_admin" in role_names_caller
+    if not is_caller_super:
+        new_role_names = [r for r in new_role_names if r not in ["super_admin", "admin"]]
+
+    # Mutual exclusion check for Assistant Heads
+    assist_head_keys = {
+        "assistant_headmaster_academic", "assistant_headmaster_domestic", "assistant_headmaster_admin",
+        "assistant_head_academic", "assistant_head_domestic", "assistant_head_admin"
+    }
+    if any(r in assist_head_keys for r in new_role_names) and "super_admin" not in new_role_names:
+        new_role_names = [r for r in new_role_names if r != "admin"]
+
+    matched_roles = []
+    for r_name in new_role_names:
+        role_obj = db.query(Role).filter(Role.name == r_name).first()
+        if role_obj:
+            matched_roles.append(role_obj)
+
+    target.roles = matched_roles
+    db.commit()
+    return {"status": "success", "message": f"Roles updated for {target.username}"}
+
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Admin/Super-Admin only: delete a user account."""
+    role_names_caller = [r.name for r in current_user.roles]
+    if "admin" not in role_names_caller and "super_admin" not in role_names_caller:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="You cannot delete your own account")
+
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    target_roles = [r.name for r in target.roles]
+    if "super_admin" in target_roles and "super_admin" not in role_names_caller:
+        raise HTTPException(status_code=403, detail="Only Super-Admin can delete super_admin accounts")
+
+    db.delete(target)
+    db.commit()
+    return {"status": "success", "message": f"User {target.username} deleted"}
 
 ROLE_ALIASES = {
     "hod": "hod",

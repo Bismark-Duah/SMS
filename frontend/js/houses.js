@@ -12,9 +12,14 @@ function getHeaders(headers = {}) {
 }
 
 async function triggerAutoAllocation() {
-  if (!confirm('Are you sure you want to auto-allocate all unassigned students into Houses and Boarding Dormitories?')) {
-    return;
-  }
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🏠 Boarding Auto-Allocation',
+    'Are you sure you want to auto-allocate all unassigned boarding students into Houses and Dormitories according to gender and bed capacity?',
+    'Auto-Allocate Now',
+    'Cancel'
+  ) : Promise.resolve(confirm('Are you sure you want to auto-allocate all unassigned students into Houses and Boarding Dormitories?')));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/houses/auto-allocate`, {
       method: 'POST',
@@ -332,7 +337,15 @@ function editHouse(id, name, gender, seniorId, masterId, assistantId, seniorGirl
 
 // Delete House handler
 async function deleteHouse(id) {
-  if (!confirm('Are you sure you want to delete this house? This will clear assignments for all dormitories and students inside it.')) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete House',
+    'Are you sure you want to delete this house? This will clear assignments for all dormitories and students inside it.',
+    'Delete House',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm('Are you sure you want to delete this house? This will clear assignments for all dormitories and students inside it.')));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/houses/${id}`, {
       method: 'DELETE',
@@ -343,6 +356,7 @@ async function deleteHouse(id) {
       houseForm.reset();
       document.getElementById('houseId').value = '';
       updateSupervisorFieldsVisibility();
+      if (window.showToast) window.showToast('House deleted successfully.', 'info');
     } else {
       const err = await res.json();
       alert(`Error: ${err.detail}`);
@@ -472,7 +486,15 @@ function editDormitory(id, name, capacity) {
 }
 
 async function deleteDormitory(dormId) {
-  if (!confirm('Are you sure you want to delete this dormitory? Students in this dormitory will be unassigned.')) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete Dormitory',
+    'Are you sure you want to delete this dormitory? Students currently assigned to this dormitory will be set to unassigned.',
+    'Delete Dormitory',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm('Are you sure you want to delete this dormitory? Students in this dormitory will be unassigned.')));
+
+  if (!ok) return;
   const houseId = parseInt(document.getElementById('dormHouseId').value);
   try {
     const res = await fetch(`${API_BASE}/houses/dormitories/${dormId}`, {

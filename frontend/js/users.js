@@ -697,9 +697,15 @@ window.saveNewPassword = async function() {
 // ── Delete User Handler ────────────────────────────────────────────────────────
 
 window.deleteUser = async function(userId, username) {
-  if (!confirm(`Are you sure you want to delete user account "${username}"? This action cannot be undone.`)) {
-    return;
-  }
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete User Account',
+    `Are you sure you want to permanently delete user account "${username}"? This action cannot be undone.`,
+    'Delete User',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Are you sure you want to delete user account "${username}"? This action cannot be undone.`)));
+
+  if (!ok) return;
 
   try {
     const res = await fetch(`${API_BASE}/auth/users/${userId}`, {
@@ -708,7 +714,8 @@ window.deleteUser = async function(userId, username) {
     });
 
     if (res.ok) {
-      alert(`User "${username}" deleted successfully!`);
+      if (window.showToast) window.showToast(`User "${username}" deleted successfully!`, 'success');
+      else alert(`User "${username}" deleted successfully!`);
       await loadData();
     } else {
       const err = await res.json();
@@ -795,7 +802,15 @@ window.handleCreateRole = async function(event) {
 // ── Impersonation ──────────────────────────────────────────────────────────────
 
 async function impersonateUser(userId, username) {
-  if (!confirm(`Are you sure you want to view the portal as "${username}" without entering their password?`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '👤 Switch Session / View As',
+    `Are you sure you want to view the portal as "${username}" without entering their password?`,
+    'Switch User Portal',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Are you sure you want to view the portal as "${username}" without entering their password?`)));
+
+  if (!ok) return;
 
   try {
     const response = await fetch(`${API_BASE}/auth/impersonate/${userId}`, {

@@ -240,14 +240,22 @@ async function loadPrograms() {
 }
 
 async function loadDefaultPresets() {
-  if (!confirm("Load standard national stages and core classes (KG 1-2, Primary 1-6, JHS 1-3, SHS Form 1-3) based on your school mode?")) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '📚 Load Standard National Presets',
+    'Load standard national stages and core classes (KG 1-2, Primary 1-6, JHS 1-3, SHS Form 1-3) based on your active school mode?',
+    'Load Presets',
+    'Cancel'
+  ) : Promise.resolve(confirm("Load standard national stages and core classes (KG 1-2, Primary 1-6, JHS 1-3, SHS Form 1-3) based on your school mode?")));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/classes/presets`, {
       method: 'POST',
       headers: getHeaders()
     });
     const data = await res.json();
-    alert(data.message || "Presets loaded successfully!");
+    if (window.showToast) window.showToast(data.message || 'Presets loaded successfully!', 'success');
+    else alert(data.message || "Presets loaded successfully!");
     await loadStages();
     await loadPrograms();
     await loadClasses();
@@ -506,7 +514,15 @@ container.addEventListener('click', async (event) => {
     const deleteId = deleteBtn.getAttribute('data-delete');
     const className = deleteBtn.getAttribute('data-name') || 'this class section';
 
-    if (!confirm(`Are you sure you want to delete "${className}"?\n\nNote: If students are currently enrolled in this class, deletion will be prevented to protect student records.`)) return;
+    const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+      '🗑️ Delete Class Section',
+      `Are you sure you want to delete "${className}"?\n\nNote: If students are currently enrolled in this class, deletion will be prevented to protect student records.`,
+      'Delete Class',
+      'Cancel',
+      'warning'
+    ) : Promise.resolve(confirm(`Are you sure you want to delete "${className}"?\n\nNote: If students are currently enrolled in this class, deletion will be prevented to protect student records.`)));
+
+    if (!ok) return;
 
     try {
       const resp = await fetch(`${API_BASE}/classes/${deleteId}`, { method: 'DELETE', headers: getHeaders() });
@@ -762,14 +778,22 @@ if (loadPresetsBtn) {
     loadPresetsBtn.style.display = 'none';
   } else {
     loadPresetsBtn.addEventListener('click', async () => {
-      if (!confirm("Load standard preset stages and classes (Creche, Nursery, KG, Primary, JHS, SHS)?")) return;
+      const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+        '📚 Load Standard Presets',
+        'Load standard preset stages and classes (Creche, Nursery, KG, Primary, JHS, SHS)?',
+        'Load Presets',
+        'Cancel'
+      ) : Promise.resolve(confirm("Load standard preset stages and classes (Creche, Nursery, KG, Primary, JHS, SHS)?")));
+
+      if (!ok) return;
       try {
         const res = await fetch(`${API_BASE}/classes/presets`, {
           method: 'POST',
           headers: getHeaders()
         });
         const data = await res.json();
-        alert(data.message || "Presets loaded successfully!");
+        if (window.showToast) window.showToast(data.message || 'Presets loaded successfully!', 'success');
+        else alert(data.message || "Presets loaded successfully!");
         await loadStages();
         await loadClasses();
       } catch (err) {

@@ -155,7 +155,15 @@ document.getElementById('assetForm')?.addEventListener('submit', async (e) => {
 });
 
 async function deleteAsset(id) {
-  if (!confirm('Are you sure you want to delete this asset record?')) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete School Asset',
+    'Are you sure you want to delete this physical asset record from inventory?',
+    'Delete Asset',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm('Are you sure you want to delete this asset record?')));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/assets/${id}`, { method: 'DELETE', headers: getHeaders() });
     if (res.ok) await loadAssets();
@@ -246,7 +254,14 @@ document.getElementById('textbookForm')?.addEventListener('submit', async (e) =>
 });
 
 async function returnTextbook(id) {
-  if (!confirm('Mark this textbook as returned to school store?')) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '📚 Return Textbook to Inventory',
+    'Mark this textbook as safely returned to the school store / bookstore?',
+    'Confirm Return',
+    'Cancel'
+  ) : Promise.resolve(confirm('Mark this textbook as returned to school store?')));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/assets/textbooks/${id}/return?status=Returned`, {
       method: 'PATCH',

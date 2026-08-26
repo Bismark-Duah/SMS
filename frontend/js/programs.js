@@ -97,7 +97,15 @@ container.addEventListener('click', async (event) => {
   const deleteId = event.target.getAttribute('data-delete');
 
   if (deleteId) {
-    if (!confirm('Delete this program? This will also remove its associated combinations.')) return;
+    const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+      '🗑️ Delete Academic Program',
+      'Delete this program? This will also remove its associated subject combinations.',
+      'Delete Program',
+      'Cancel',
+      'warning'
+    ) : Promise.resolve(confirm('Delete this program? This will also remove its associated combinations.')));
+
+    if (!ok) return;
     await fetch(`${API_BASE}/programs/${deleteId}`, { method: 'DELETE', headers: getHeaders() });
     loadPrograms();
   }
@@ -366,7 +374,15 @@ async function handleCreatePackage(event) {
 window.handleCreatePackage = handleCreatePackage;
 
 async function deleteElectivePackage(packageId) {
-  if (!confirm('Are you sure you want to delete this elective package?')) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete Elective Package',
+    'Are you sure you want to delete this elective subject package?',
+    'Delete Package',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm('Are you sure you want to delete this elective package?')));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/programs/elective-combinations/${packageId}`, {
       method: 'DELETE',

@@ -530,7 +530,15 @@ function renderRecordStats(records) {
 }
 
 async function deleteRecord(id, btn) {
-  if (!confirm('Delete this attendance record?')) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete Attendance Record',
+    'Are you sure you want to delete this student attendance log entry?',
+    'Delete Record',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm('Delete this attendance record?')));
+
+  if (!ok) return;
   btn.disabled = true;
   btn.textContent = '...';
   try {

@@ -248,7 +248,14 @@ window.createBulkFee = async function() {
   }
 
   const className = allClasses.find(c => String(c.id) === classId)?.name || '';
-  if (!confirm(`Assign ${feeType} fee of GHS ${amount.toLocaleString('en-GH', {minimumFractionDigits:2})} to all active students in ${className}?`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '💳 Bulk Fee Assignment Confirmation',
+    `Assign ${feeType} fee of GHS ${amount.toLocaleString('en-GH', {minimumFractionDigits:2})} to all active students in ${className}?`,
+    'Assign Fees',
+    'Cancel'
+  ) : Promise.resolve(confirm(`Assign ${feeType} fee of GHS ${amount.toLocaleString('en-GH', {minimumFractionDigits:2})} to all active students in ${className}?`)));
+
+  if (!ok) return;
 
   const payload = {
     class_section_id: parseInt(classId), fee_type: feeType, amount,
@@ -410,7 +417,15 @@ window.payOnlineWithPaystack = async function() {
 window.deleteFee = async function(feeId) {
   const fee = allFees.find(f => f.id === feeId);
   if (!fee) return;
-  if (!confirm(`Delete ${fee.fee_type} fee of GHS ${fmt(fee.amount)} for ${fee.student_name}? This cannot be undone.`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete Fee Record',
+    `Delete ${fee.fee_type} fee of GHS ${fmt(fee.amount)} for ${fee.student_name}? This cannot be undone.`,
+    'Delete Fee',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Delete ${fee.fee_type} fee of GHS ${fmt(fee.amount)} for ${fee.student_name}? This cannot be undone.`)));
+
+  if (!ok) return;
 
   try {
     const res = await fetch(`${API_BASE}/fees/${feeId}`, { method: 'DELETE', headers: H() });
@@ -418,6 +433,7 @@ window.deleteFee = async function(feeId) {
       allFees = allFees.filter(f => f.id !== feeId);
       applyFilter();
       await loadSummary();
+      if (window.showToast) window.showToast('Fee record deleted.', 'info');
     }
   } catch (e) { console.error(e); }
 };
@@ -452,11 +468,19 @@ document.addEventListener('DOMContentLoaded', init);
 window.broadcastFeeReminders = async function() {
   const debtors = allInvoices.filter(i => (i.balance || 0) > 0);
   if (debtors.length === 0) {
-    alert('✔ No students currently have outstanding fee balances!');
+    if (window.showAlertDialog) await window.showAlertDialog('Fee Status', '✔ No students currently have outstanding fee balances!', 'success');
+    else alert('✔ No students currently have outstanding fee balances!');
     return;
   }
 
-  if (!confirm(`Are you sure you want to send automated Fee Reminder notices to the guardians of ${debtors.length} debtor student(s)?`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '📢 Broadcast Fee Reminders',
+    `Are you sure you want to send automated Fee Reminder notices to the guardians of ${debtors.length} debtor student(s)?`,
+    'Send Reminders',
+    'Cancel'
+  ) : Promise.resolve(confirm(`Are you sure you want to send automated Fee Reminder notices to the guardians of ${debtors.length} debtor student(s)?`)));
+
+  if (!ok) return;
 
   let successCount = 0;
   for (const inv of debtors) {

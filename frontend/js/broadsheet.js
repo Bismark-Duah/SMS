@@ -265,7 +265,14 @@ async function saveBroadsheetRemarks() {
 
 async function publishClassReports() {
   if (!currentBroadsheetData) return;
-  if (!confirm(`Are you sure you want to publish terminal report cards for ${currentBroadsheetData.class_name} to guardians?`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '📢 Publish Terminal Reports',
+    `Are you sure you want to publish final terminal report cards for ${currentBroadsheetData.class_name} to student and parent portals?`,
+    'Publish Reports',
+    'Cancel'
+  ) : Promise.resolve(confirm(`Are you sure you want to publish terminal report cards for ${currentBroadsheetData.class_name} to guardians?`)));
+
+  if (!ok) return;
 
   const headers = await getAuthHeader();
   try {

@@ -299,13 +299,22 @@ window.addSlot = async function() {
 // ── Delete Slot ───────────────────────────────────────────────────────────────
 window.deleteSlot = async function(event, slotId) {
   event.stopPropagation();  // prevent prefill from firing
-  if (!confirm('Remove this timetable slot?')) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Remove Timetable Slot',
+    'Are you sure you want to remove this timetable slot?',
+    'Remove Slot',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm('Remove this timetable slot?')));
+
+  if (!ok) return;
 
   const res = await fetch(`${API_BASE}/timetable/${slotId}`, {
     method: 'DELETE', headers: H()
   });
 
   if (res.ok || res.status === 204) {
+    if (window.showToast) window.showToast('Timetable slot removed.', 'info');
     if (currentView === 'class') await loadClassView();
     else await loadTeacherView();
     await checkConflicts();
@@ -320,7 +329,15 @@ window.clearClassTimetable = async function() {
     return;
   }
   const cls = allClasses.find(c => String(c.id) === classId);
-  if (!confirm(`Clear ALL timetable slots for ${cls?.name || 'this class'}? This cannot be undone.`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Clear Class Timetable',
+    `Clear ALL timetable periods and slots for ${cls?.name || 'this class'}? This cannot be undone.`,
+    'Clear All Slots',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Clear ALL timetable slots for ${cls?.name || 'this class'}? This cannot be undone.`)));
+
+  if (!ok) return;
 
   const res = await fetch(`${API_BASE}/timetable/class/${classId}`, {
     method: 'DELETE', headers: H()

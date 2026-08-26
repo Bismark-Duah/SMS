@@ -484,7 +484,15 @@ window.enterSchoolView = function(schoolId, schoolName, schoolMode, schoolCode) 
 
 window.toggleSchoolStatus = async function(schoolId, currentStatus) {
   const newStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-  if (!confirm(`Are you sure you want to change school status to ${newStatus}?`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🏛️ Change School Status',
+    `Are you sure you want to change school status to ${newStatus}?`,
+    `Set to ${newStatus}`,
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Are you sure you want to change school status to ${newStatus}?`)));
+
+  if (!ok) return;
 
   try {
     const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}/status`, {
@@ -493,6 +501,7 @@ window.toggleSchoolStatus = async function(schoolId, currentStatus) {
       body: JSON.stringify({ status: newStatus })
     });
     if (res.ok) {
+      if (window.showToast) window.showToast(`School status updated to ${newStatus}`, 'success');
       window.loadSuperAdminDashboard();
     } else {
       alert('Could not update school status.');
@@ -506,7 +515,15 @@ window.changeSchoolMode = async function(schoolId, newMode, currentBoarding) {
   const profileName = window.FeatureGate
     ? window.FeatureGate.getProfileName(newMode, currentBoarding || 'BOARDING_AND_DAY')
     : newMode;
-  if (!confirm(`Change school mode to: ${profileName}?\n\nThis will immediately affect what features are available to this school's administrators and staff.`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '⚙️ Change School Curriculum Mode',
+    `Change school mode to: ${profileName}?\n\nThis will immediately affect what features are available to this school's administrators and staff.`,
+    'Apply Mode Change',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Change school mode to: ${profileName}?\n\nThis will immediately affect what features are available to this school's administrators and staff.`)));
+
+  if (!ok) return;
 
   try {
     const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}/mode`, {
@@ -516,10 +533,11 @@ window.changeSchoolMode = async function(schoolId, newMode, currentBoarding) {
     });
 
     if (res.ok) {
+      if (window.showToast) window.showToast(`School mode updated to ${profileName}`, 'success');
       window.loadSuperAdminDashboard();
     } else {
       alert('Could not update school mode.');
-      window.loadSuperAdminDashboard(); // Reset dropdown to actual value
+      window.loadSuperAdminDashboard();
     }
   } catch (err) {
     alert('Failed to update mode.');
@@ -528,11 +546,16 @@ window.changeSchoolMode = async function(schoolId, newMode, currentBoarding) {
 };
 
 window.changeSchoolBoarding = async function(schoolId, newBoarding) {
-  const profileName = window.FeatureGate
-    ? window.FeatureGate.getProfileName('COMBINED', newBoarding)
-    : newBoarding;
-  if (!confirm(`Change boarding status to: ${newBoarding === 'DAY_ONLY' ? 'Day Only' : 'Boarding & Day'}?\n\nThis affects Exeat Management, Houses & Dormitories, boarding staff roles, and boarding fee categories.`)) {
-    window.loadSuperAdminDashboard(); // Reset dropdown
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🏠 Change Boarding Profile',
+    `Change boarding status to: ${newBoarding === 'DAY_ONLY' ? 'Day Only' : 'Boarding & Day'}?\n\nThis affects Exeat Management, Houses & Dormitories, boarding staff roles, and boarding fee categories.`,
+    'Apply Boarding Status',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Change boarding status to: ${newBoarding === 'DAY_ONLY' ? 'Day Only' : 'Boarding & Day'}?\n\nThis affects Exeat Management, Houses & Dormitories, boarding staff roles, and boarding fee categories.`)));
+
+  if (!ok) {
+    window.loadSuperAdminDashboard();
     return;
   }
 
@@ -544,6 +567,7 @@ window.changeSchoolBoarding = async function(schoolId, newBoarding) {
     });
 
     if (res.ok) {
+      if (window.showToast) window.showToast('Boarding status updated successfully!', 'success');
       window.loadSuperAdminDashboard();
     } else {
       const err = await res.json().catch(() => ({}));

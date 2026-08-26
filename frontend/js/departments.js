@@ -294,7 +294,15 @@ function editDepartment(id, name, code, hodId, subjectIds) {
 }
 
 async function deleteDepartment(id) {
-  if (!confirm('Are you sure you want to delete this department?')) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete Department',
+    'Are you sure you want to delete this academic department? Faculty allocations will be reset.',
+    'Delete Department',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm('Are you sure you want to delete this department?')));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/departments/${id}`, {
       method: 'DELETE',
@@ -303,6 +311,7 @@ async function deleteDepartment(id) {
     if (res.ok) {
       loadDepartments();
       form.reset();
+      if (window.showToast) window.showToast('Department deleted.', 'info');
     } else {
       const err = await res.json();
       alert(`Error deleting department: ${err.detail || 'unknown error'}`);

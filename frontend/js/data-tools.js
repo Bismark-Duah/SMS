@@ -348,9 +348,15 @@ window.runBackup = async function() {
 };
 
 window.deleteBackup = async function(filename) {
-  if (!confirm(`Are you sure you want to permanently delete the backup "${filename}"?`)) {
-    return;
-  }
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete Database Backup',
+    `Are you sure you want to permanently delete the backup file "${filename}"?`,
+    'Delete Backup',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Are you sure you want to permanently delete the backup "${filename}"?`)));
+
+  if (!ok) return;
 
   try {
     const res = await fetch(`${API_BASE}/backup/${filename}`, {

@@ -258,7 +258,15 @@ window.logRecord = async function() {
 // ── Delete Record ─────────────────────────────────────────────────────────────
 window.deleteRecord = async function(id) {
   const rec = allRecords.find(r => r.id === id);
-  if (!confirm(`Delete ${rec?.incident_type || 'this'} record for ${rec?.student_name || 'student'}?`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete Discipline Record',
+    `Are you sure you want to delete ${rec?.incident_type || 'this'} incident record for ${rec?.student_name || 'student'}?`,
+    'Delete Record',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Delete ${rec?.incident_type || 'this'} record for ${rec?.student_name || 'student'}?`)));
+
+  if (!ok) return;
 
   try {
     const res = await fetch(`${API_BASE}/discipline/${id}`, { method: 'DELETE', headers: H() });

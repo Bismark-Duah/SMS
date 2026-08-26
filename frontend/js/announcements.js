@@ -199,7 +199,15 @@ window.markRead = async function(id) {
 };
 
 window.deleteNotif = async function(id) {
-  if (!confirm('Delete this notification? This cannot be undone.')) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete Announcement',
+    'Delete this announcement broadcast? This cannot be undone.',
+    'Delete Notification',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm('Delete this notification? This cannot be undone.')));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/notifications/${id}`, {
       method: 'DELETE',

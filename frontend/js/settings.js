@@ -525,7 +525,14 @@ if (schoolLogoFile) {
 }
 
 window.resetSchoolLogo = async function() {
-    if (!confirm('Are you sure you want to reset the school logo to the default vector crest?')) return;
+    const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+        '🛡️ Reset School Crest',
+        'Are you sure you want to reset the school logo to the default vector crest?',
+        'Reset to Default Crest',
+        'Cancel'
+    ) : Promise.resolve(confirm('Are you sure you want to reset the school logo to the default vector crest?')));
+
+    if (!ok) return;
     try {
         const res = await fetch(`${API_BASE}/settings/logo`, {
             method: 'DELETE',

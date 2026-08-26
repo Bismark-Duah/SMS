@@ -451,9 +451,15 @@ async function openBulkPreviewModal() {
   const missingCount = selectedList.filter(r => !r.has_phone).length;
 
   if (missingCount > 0) {
-    if (!confirm(`Warning: ${missingCount} of the ${selectedList.length} selected recipients have no phone number. They will be logged as QUEUED. Proceed?`)) {
-      return;
-    }
+    const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+      '⚠️ Missing Contact Numbers',
+      `Notice: ${missingCount} of the ${selectedList.length} selected recipients have no phone number recorded. They will be logged as QUEUED for device handling. Do you want to proceed?`,
+      'Proceed with Preview',
+      'Cancel',
+      'warning'
+    ) : Promise.resolve(confirm(`Warning: ${missingCount} of the ${selectedList.length} selected recipients have no phone number. They will be logged as QUEUED. Proceed?`)));
+
+    if (!ok) return;
   }
 
   const firstId = Array.from(selectedStudentIds)[0];

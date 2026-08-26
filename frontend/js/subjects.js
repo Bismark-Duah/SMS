@@ -207,9 +207,15 @@ container.addEventListener('click', async (event) => {
   // 1. DELETE ACTION WITH PROTECTIVE INTERCEPT
   if (deleteBtn) {
     const deleteId = deleteBtn.getAttribute('data-delete');
-    const subjectName = deleteBtn.getAttribute('data-name') || 'this subject';
+    const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+      '🗑️ Delete Subject',
+      `Are you sure you want to permanently delete "${subjectName}"?\n\nNote: If historical grades or records exist, permanent deletion will be prevented to protect student transcripts.`,
+      'Delete Subject',
+      'Cancel',
+      'warning'
+    ) : Promise.resolve(confirm(`Are you sure you want to permanently delete "${subjectName}"?\n\nNote: If historical grades or records exist, permanent deletion will be prevented to protect student transcripts.`)));
 
-    if (!confirm(`Are you sure you want to permanently delete "${subjectName}"?\n\nNote: If historical grades or records exist, permanent deletion will be prevented to protect student transcripts.`)) return;
+    if (!ok) return;
 
     try {
       const resp = await fetch(`${API_BASE}/subjects/${deleteId}`, {
@@ -255,7 +261,14 @@ container.addEventListener('click', async (event) => {
     const isCurrentlyActive = toggleBtn.getAttribute('data-isactive') === 'true';
     const actionName = isCurrentlyActive ? 'Archive / Discontinue' : 'Reactivate';
 
-    if (!confirm(`Do you want to ${actionName} "${subjectName}"?`)) return;
+    const okToggle = await (window.showConfirmDialog ? window.showConfirmDialog(
+      '🏷️ Subject Status Change',
+      `Do you want to ${actionName} "${subjectName}"?`,
+      actionName,
+      'Cancel'
+    ) : Promise.resolve(confirm(`Do you want to ${actionName} "${subjectName}"?`)));
+
+    if (!okToggle) return;
 
     try {
       const resp = await fetch(`${API_BASE}/subjects/${toggleId}/toggle-status`, {

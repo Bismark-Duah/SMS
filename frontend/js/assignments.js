@@ -1021,7 +1021,15 @@ function toggleAssignmentTab() {
 }
 
 async function removeAllTeacherAssignments(teacherId, teacherName) {
-  if (!confirm(`Are you sure you want to remove all teaching assignments for ${teacherName}?`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Remove All Teaching Assignments',
+    `Are you sure you want to remove all teaching assignments for ${teacherName}?`,
+    'Remove All Assignments',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Are you sure you want to remove all teaching assignments for ${teacherName}?`)));
+
+  if (!ok) return;
 
   const tAsgns = allAssignmentsData.filter(a => a.teacher_id == teacherId);
   let count = 0;
@@ -1031,12 +1039,21 @@ async function removeAllTeacherAssignments(teacherId, teacherName) {
       if (res.ok) count++;
     } catch (_) {}
   }
-  alert(`Removed ${count} assignment(s) for ${teacherName}.`);
+  if (window.showToast) window.showToast(`Removed ${count} assignment(s) for ${teacherName}.`, 'info');
+  else alert(`Removed ${count} assignment(s) for ${teacherName}.`);
   await loadAssignments();
 }
 
 async function deletePrivilege(privType, targetId, teacherId) {
-  if (!confirm('Are you sure you want to remove this administrative privilege?')) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Revoke Administrative Privilege',
+    'Are you sure you want to remove this administrative privilege assignment?',
+    'Revoke Privilege',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm('Are you sure you want to remove this administrative privilege?')));
+
+  if (!ok) return;
   
   try {
     let url = `${API_BASE}/assignments/privilege/${privType}`;
@@ -1301,7 +1318,15 @@ function renderModalActiveWorkload(teacherId) {
 }
 
 async function deleteAssignmentFromModal(assignmentId, teacherId) {
-  if (!confirm("Are you sure you want to remove this teaching allocation?")) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Remove Allocation',
+    'Are you sure you want to remove this teaching allocation?',
+    'Remove Allocation',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm("Are you sure you want to remove this teaching allocation?")));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/assignments/${assignmentId}`, {
       method: 'DELETE',
@@ -1484,7 +1509,15 @@ function closeEditAssignmentModal() {
 }
 
 async function deleteSingleAssignment(assignmentId, subjectName, className) {
-  if (!confirm(`Are you sure you want to remove the assignment for ${subjectName} in ${className}?`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete Assignment',
+    `Are you sure you want to remove the assignment for ${subjectName} in ${className}?`,
+    'Delete Assignment',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Are you sure you want to remove the assignment for ${subjectName} in ${className}?`)));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/assignments/${assignmentId}`, { method: 'DELETE', headers: getHeaders() });
     if (res.ok) {

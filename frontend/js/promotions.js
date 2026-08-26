@@ -92,11 +92,14 @@ function setupListeners() {
             return;
         }
 
-        const targetClassName = classesList.find(c => String(c.id) === String(targetClassId))?.name || "target class";
+        const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+            '🎓 Student Promotion Confirmation',
+            `Are you sure you want to promote ${studentIds.length} selected student(s) to ${targetClassName}?`,
+            'Promote Students',
+            'Cancel'
+        ) : Promise.resolve(confirm(`Are you sure you want to promote ${studentIds.length} selected students to ${targetClassName}?`)));
 
-        if (!confirm(`Are you sure you want to promote ${studentIds.length} selected students to ${targetClassName}?`)) {
-            return;
-        }
+        if (!ok) return;
 
         const payload = {
             student_ids: studentIds,
@@ -138,9 +141,15 @@ function setupListeners() {
             return;
         }
 
-        if (!confirm(`Are you sure you want to graduate ${studentIds.length} selected students? This will set their status as GRADUATED and deactivate their enrolment.`)) {
-            return;
-        }
+        const okGrad = await (window.showConfirmDialog ? window.showConfirmDialog(
+            '🎉 Candidate Graduation Confirmation',
+            `Are you sure you want to graduate ${studentIds.length} selected students? This will set their status as GRADUATED and finalize their academic records.`,
+            'Confirm Graduation',
+            'Cancel',
+            'warning'
+        ) : Promise.resolve(confirm(`Are you sure you want to graduate ${studentIds.length} selected students? This will set their status as GRADUATED and deactivate their enrolment.`)));
+
+        if (!okGrad) return;
 
         const payload = {
             student_ids: studentIds

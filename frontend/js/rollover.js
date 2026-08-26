@@ -97,10 +97,15 @@ window.executeRollover = async function() {
     return;
   }
 
-  const confirmMsg = "CRITICAL ACTION REQUIRED!\n\nExecuting term rollover is irreversible. It locks active grades, carries over balances, and updates the active school term.\n\nAre you absolutely sure you want to proceed?";
-  if (!confirm(confirmMsg)) {
-    return;
-  }
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '⚠️ Critical Academic Term Rollover',
+    'Executing term rollover is irreversible. It locks active grades, carries over outstanding fee balances, and transitions the active school term.\n\nAre you absolutely sure you want to proceed?',
+    'Execute Rollover Now',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm("Executing term rollover is irreversible. Are you sure you want to proceed?")));
+
+  if (!ok) return;
 
   const msgEl = document.getElementById('rolloverMsg');
   msgEl.innerHTML = '<span style="opacity:0.7">Executing rollover actions. Please do not close this page...</span>';

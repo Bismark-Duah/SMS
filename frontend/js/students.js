@@ -524,7 +524,15 @@ window.filterStudents = function() {
 };
 
 window.deactivateStudent = async function(id, name) {
-  if (!confirm(`Are you sure you want to deactivate ${name}?`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '⚠️ Deactivate Student Record',
+    `Are you sure you want to deactivate student ${name}? Their active enrollment will be paused.`,
+    'Deactivate Student',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Are you sure you want to deactivate ${name}?`)));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/students/${id}`, {
       method: 'DELETE',

@@ -160,7 +160,15 @@ async function setCurrentYear(yearId) {
 
 // ── Delete Year ─────────────────────────────────────────────────────────────
 async function deleteYear(yearId, label) {
-  if (!confirm(`Delete academic year "${label}" and all its semesters? This cannot be undone.`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete Academic Year',
+    `Delete academic year "${label}" and all its semesters? This cannot be undone.`,
+    'Delete Year',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Delete academic year "${label}" and all its semesters? This cannot be undone.`)));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/academic/years/${yearId}`, {
       method: 'DELETE',
@@ -192,7 +200,15 @@ async function setCurrentSemester(semesterId) {
 
 // ── Delete Semester ─────────────────────────────────────────────────────────
 async function deleteSemester(semesterId, name) {
-  if (!confirm(`Delete semester "${name}"?`)) return;
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '🗑️ Delete Semester / Term',
+    `Delete semester/term "${name}"? This cannot be undone.`,
+    'Delete Semester',
+    'Cancel',
+    'warning'
+  ) : Promise.resolve(confirm(`Delete semester "${name}"?`)));
+
+  if (!ok) return;
   try {
     const res = await fetch(`${API_BASE}/academic/semesters/${semesterId}`, {
       method: 'DELETE',
@@ -275,7 +291,15 @@ if (semesterForm) {
 const promoteBtn = document.getElementById('promoteBtn');
 if (promoteBtn) {
   promoteBtn.addEventListener('click', async () => {
-    if (!confirm('This will promote ALL active students to the next form. Proceed?')) return;
+    const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+      '🎓 School-Wide Promotion',
+      'This will promote ALL active enrolled students to their respective next forms/classes. Do you want to proceed?',
+      'Execute Promotion',
+      'Cancel',
+      'warning'
+    ) : Promise.resolve(confirm('This will promote ALL active students to the next form. Proceed?')));
+
+    if (!ok) return;
     try {
       const res = await fetch(`${API_BASE}/academic/promote`, {
         method: 'POST',

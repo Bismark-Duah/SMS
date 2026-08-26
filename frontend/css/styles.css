@@ -2911,4 +2911,247 @@ thead th {
   background: rgba(255, 255, 255, 0.02);
 }
 
+/* ================================================================
+   Enterprise In-App Modal & Toast Design System Tokens
+   Dynamically inherits active school theme variables & dark/light mode
+   ================================================================ */
+
+.enterprise-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  padding: 16px;
+  animation: entModalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.enterprise-modal-card {
+  background: var(--card-bg, #1e293b);
+  color: var(--text-primary, #f8fafc);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-lg, 16px);
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--primary-light, rgba(79, 70, 229, 0.2));
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  animation: entModalPopIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-theme="light"] .enterprise-modal-card {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #e2e8f0;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.enterprise-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.enterprise-modal-icon-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  background: var(--primary-light, rgba(79, 70, 229, 0.15));
+  border: 1px solid var(--primary, #4f46e5);
+}
+
+.enterprise-modal-icon-badge.type-warning {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: #f59e0b;
+}
+
+.enterprise-modal-icon-badge.type-success {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
+}
+
+.enterprise-modal-icon-badge.type-danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+}
+
+.enterprise-modal-title {
+  margin: 0;
+  font-family: var(--font-heading, sans-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.enterprise-modal-body {
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  opacity: 0.9;
+  margin-bottom: 22px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+[data-theme="light"] .enterprise-modal-body {
+  color: #334155;
+}
+
+.enterprise-modal-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  background: var(--input-bg, rgba(15, 23, 42, 0.6));
+  color: var(--text-primary, #f8fafc);
+  font-size: 0.95rem;
+  margin-top: 12px;
+  box-sizing: border-box;
+  outline: none;
+  transition: var(--transition, all 0.2s ease);
+}
+
+.enterprise-modal-input:focus {
+  border-color: var(--primary, #4f46e5);
+  box-shadow: 0 0 0 3px var(--primary-light, rgba(79, 70, 229, 0.2));
+}
+
+.enterprise-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.enterprise-modal-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: var(--transition, all 0.2s ease);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.enterprise-modal-btn.btn-primary {
+  background: var(--primary, #4f46e5);
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--primary-light, rgba(79, 70, 229, 0.3));
+}
+
+.enterprise-modal-btn.btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.enterprise-modal-btn.btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, #f8fafc);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+}
+
+[data-theme="light"] .enterprise-modal-btn.btn-secondary {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.enterprise-modal-btn.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="light"] .enterprise-modal-btn.btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+.enterprise-modal-btn.btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.enterprise-modal-btn.btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* Floating Toast Notifications */
+.enterprise-toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100005;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: 90vw;
+  width: 380px;
+}
+
+.enterprise-toast-item {
+  pointer-events: auto;
+  background: var(--card-bg, #1e293b);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border-left: 4px solid var(--primary, #4f46e5);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  padding: 12px 16px;
+  color: var(--text-primary, #f8fafc);
+  font-size: 0.88rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  animation: entToastSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: all 0.2s ease;
+}
+
+.enterprise-toast-item.type-success {
+  border-left-color: #10b981;
+}
+
+.enterprise-toast-item.type-warning {
+  border-left-color: #f59e0b;
+}
+
+.enterprise-toast-item.type-danger, .enterprise-toast-item.type-error {
+  border-left-color: #ef4444;
+}
+
+[data-theme="light"] .enterprise-toast-item {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+
+@keyframes entModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes entModalPopIn {
+  from { opacity: 0; transform: scale(0.92) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes entToastSlideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
 

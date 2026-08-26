@@ -731,7 +731,319 @@
       if (sid && !h['X-School-Id']) h['X-School-Id'] = sid;
       return h;
     },
+    showAlertDialog: (...args) => window.showAlertDialog ? window.showAlertDialog(...args) : Promise.resolve(),
+    showConfirmDialog: (...args) => window.showConfirmDialog ? window.showConfirmDialog(...args) : Promise.resolve(true),
+    showToast: (...args) => window.showToast ? window.showToast(...args) : null,
   };
+
+  // ── Navigation & Unsaved Changes Guard ─────────────────────────
+  document.addEventListener('click', async (e) => {
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+    if (link.target === '_blank') return;
+
+    if (window.__hasUnsavedChanges) {
+      e.preventDefault();
+      const confirmLeave = await (window.showConfirmDialog ? window.showConfirmDialog(
+        'Unsaved Changes Warning',
+        'You have unsaved work on this page. If you leave now, unsaved changes may be lost. Are you sure you want to proceed?',
+        'Leave Without Saving',
+        'Stay on Page',
+        'warning'
+      ) : Promise.resolve(confirm('You have unsaved changes. Leave anyway?')));
+
+      if (confirmLeave) {
+        window.__hasUnsavedChanges = false;
+        window.location.href = href;
+      }
+    }
+  });
+
+  // ── Enterprise In-App Modal & Toast Engine Fallback / Init ────
+  function ensureEnterpriseDialogs() {
+    if (window.showAlertDialog && window.showConfirmDialog && window.showToast) return;
+
+    function getToastContainer() {
+      let c = document.querySelector('.enterprise-toast-container');
+      if (!c) {
+        c = document.createElement('div');
+        c.className = 'enterprise-toast-container';
+        document.body.appendChild(c);
+      }
+      return c;
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text).replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+      });
+    }
+
+    window.showToast = function(message, type = 'info', duration = 3500) {
+      const container = getToastContainer();
+      const item = document.createElement('div');
+      item.className = `enterprise-toast-item type-${type}`;
+
+      let icon = 'ℹ️';
+      if (type === 'success') icon = '✅';
+      else if (type === 'warning') icon = '⚠️';
+      else if (type === 'danger' || type === 'error') icon = '🚫';
+
+      item.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.1rem;">${icon}</span>
+          <span>${escapeHtml(message)}</span>
+        </div>
+        <button type="button" style="background:none; border:none; color:inherit; font-size:1.1rem; cursor:pointer; opacity:0.6; padding:0 4px;" onclick="this.parentElement.remove()">✕</button>
+      `;
+
+      container.appendChild(item);
+      setTimeout(() => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(10px) scale(0.95)';
+        setTimeout(() => item.remove(), 250);
+      }, duration);
+    };
+
+    window.showAlertDialog = function(titleOrMessage, messageOrType, type = 'info', options = {}) {
+      return new Promise((resolve) => {
+        let title = 'System Notification';
+        let message = '';
+        let dialogType = type;
+
+        if (messageOrType && typeof messageOrType === 'string' && !['info', 'success', 'warning', 'danger', 'error'].includes(messageOrType)) {
+          title = titleOrMessage;
+          message = messageOrType;
+        } else if (['info', 'success', 'warning', 'danger', 'error'].includes(messageOrType)) {
+          message = titleOrMessage;
+          dialogType = messageOrType;
+        } else {
+          message = titleOrMessage;
+        }
+
+        const schoolName = localStorage.getItem('school_name') || 'School Management System';
+        let icon = 'ℹ️';
+        let badgeClass = '';
+        if (dialogType === 'success' || message.includes('✅') || message.includes('success') || message.includes('Success')) {
+          icon = '✅';
+          badgeClass = 'type-success';
+        } else if (dialogType === 'warning' || message.includes('⚠️') || message.includes('Warning') || message.includes('Curfew')) {
+          icon = '⚠️';
+          badgeClass = 'type-warning';
+        } else if (dialogType === 'danger' || dialogType === 'error' || message.includes('🔴') || message.includes('Failed') || message.includes('Denied') || message.includes('Error')) {
+          icon = '🚫';
+          badgeClass = 'type-danger';
+        }
+
+        document.querySelectorAll('.enterprise-modal-backdrop').forEach(el => el.remove());
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'enterprise-modal-backdrop';
+
+        backdrop.innerHTML = `
+          <div class="enterprise-modal-card" role="dialog" aria-modal="true">
+            <div class="enterprise-modal-header">
+              <div class="enterprise-modal-icon-badge ${badgeClass}">
+                ${icon}
+              </div>
+              <div>
+                <h3 class="enterprise-modal-title">${escapeHtml(title)}</h3>
+                <div style="font-size:0.75rem; opacity:0.65;">${escapeHtml(schoolName)}</div>
+              </div>
+            </div>
+            <div class="enterprise-modal-body">${escapeHtml(message)}</div>
+            <div class="enterprise-modal-actions">
+              <button class="enterprise-modal-btn btn-primary" id="btnEntModalConfirm">
+                <span>OK</span>
+              </button>
+            </div>
+          </div>
+        `;
+
+        function cleanup() {
+          window.removeEventListener('keydown', handleKey);
+          backdrop.style.opacity = '0';
+          setTimeout(() => backdrop.remove(), 180);
+          resolve();
+        }
+
+        function handleKey(e) {
+          if (e.key === 'Enter' || e.key === 'Escape') {
+            e.preventDefault();
+            cleanup();
+          }
+        }
+
+        backdrop.querySelector('#btnEntModalConfirm').addEventListener('click', cleanup);
+        backdrop.addEventListener('click', (e) => {
+          if (e.target === backdrop) cleanup();
+        });
+
+        document.body.appendChild(backdrop);
+        window.addEventListener('keydown', handleKey);
+        setTimeout(() => {
+          const btn = backdrop.querySelector('#btnEntModalConfirm');
+          if (btn) btn.focus();
+        }, 50);
+      });
+    };
+
+    window.showConfirmDialog = function(titleOrMessage, message, confirmText = 'Confirm', cancelText = 'Cancel', type = 'confirm') {
+      return new Promise((resolve) => {
+        let title = 'Confirmation Required';
+        let bodyText = message || titleOrMessage;
+        if (message) {
+          title = titleOrMessage;
+        }
+
+        const schoolName = localStorage.getItem('school_name') || 'School Management System';
+        let icon = '❓';
+        let badgeClass = '';
+        if (type === 'warning' || bodyText.toLowerCase().includes('delete') || bodyText.toLowerCase().includes('reject')) {
+          icon = '⚠️';
+          badgeClass = 'type-warning';
+        }
+
+        document.querySelectorAll('.enterprise-modal-backdrop').forEach(el => el.remove());
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'enterprise-modal-backdrop';
+
+        backdrop.innerHTML = `
+          <div class="enterprise-modal-card" role="dialog" aria-modal="true">
+            <div class="enterprise-modal-header">
+              <div class="enterprise-modal-icon-badge ${badgeClass}">
+                ${icon}
+              </div>
+              <div>
+                <h3 class="enterprise-modal-title">${escapeHtml(title)}</h3>
+                <div style="font-size:0.75rem; opacity:0.65;">${escapeHtml(schoolName)}</div>
+              </div>
+            </div>
+            <div class="enterprise-modal-body">${escapeHtml(bodyText)}</div>
+            <div class="enterprise-modal-actions">
+              <button class="enterprise-modal-btn btn-secondary" id="btnEntModalCancel">
+                <span>${escapeHtml(cancelText)}</span>
+              </button>
+              <button class="enterprise-modal-btn btn-primary" id="btnEntModalConfirm">
+                <span>${escapeHtml(confirmText)}</span>
+              </button>
+            </div>
+          </div>
+        `;
+
+        function closeWith(val) {
+          window.removeEventListener('keydown', handleKey);
+          backdrop.style.opacity = '0';
+          setTimeout(() => backdrop.remove(), 180);
+          resolve(val);
+        }
+
+        function handleKey(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            closeWith(true);
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeWith(false);
+          }
+        }
+
+        backdrop.querySelector('#btnEntModalConfirm').addEventListener('click', () => closeWith(true));
+        backdrop.querySelector('#btnEntModalCancel').addEventListener('click', () => closeWith(false));
+        backdrop.addEventListener('click', (e) => {
+          if (e.target === backdrop) closeWith(false);
+        });
+
+        document.body.appendChild(backdrop);
+        window.addEventListener('keydown', handleKey);
+        setTimeout(() => {
+          const btn = backdrop.querySelector('#btnEntModalConfirm');
+          if (btn) btn.focus();
+        }, 50);
+      });
+    };
+
+    window.showPromptDialog = function(title, message, defaultValue = '', placeholder = '') {
+      return new Promise((resolve) => {
+        const schoolName = localStorage.getItem('school_name') || 'School Management System';
+        document.querySelectorAll('.enterprise-modal-backdrop').forEach(el => el.remove());
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'enterprise-modal-backdrop';
+
+        backdrop.innerHTML = `
+          <div class="enterprise-modal-card" role="dialog" aria-modal="true">
+            <div class="enterprise-modal-header">
+              <div class="enterprise-modal-icon-badge">
+                ✏️
+              </div>
+              <div>
+                <h3 class="enterprise-modal-title">${escapeHtml(title)}</h3>
+                <div style="font-size:0.75rem; opacity:0.65;">${escapeHtml(schoolName)}</div>
+              </div>
+            </div>
+            <div class="enterprise-modal-body">
+              <div>${escapeHtml(message)}</div>
+              <input type="text" class="enterprise-modal-input" id="entPromptInput" value="${escapeHtml(defaultValue)}" placeholder="${escapeHtml(placeholder)}" />
+            </div>
+            <div class="enterprise-modal-actions">
+              <button class="enterprise-modal-btn btn-secondary" id="btnEntPromptCancel">Cancel</button>
+              <button class="enterprise-modal-btn btn-primary" id="btnEntPromptSubmit">Submit</button>
+            </div>
+          </div>
+        `;
+
+        function closeWith(val) {
+          window.removeEventListener('keydown', handleKey);
+          backdrop.style.opacity = '0';
+          setTimeout(() => backdrop.remove(), 180);
+          resolve(val);
+        }
+
+        const input = backdrop.querySelector('#entPromptInput');
+
+        function handleKey(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            closeWith(input.value);
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeWith(null);
+          }
+        }
+
+        backdrop.querySelector('#btnEntPromptSubmit').addEventListener('click', () => closeWith(input.value));
+        backdrop.querySelector('#btnEntPromptCancel').addEventListener('click', () => closeWith(null));
+        backdrop.addEventListener('click', (e) => {
+          if (e.target === backdrop) closeWith(null);
+        });
+
+        document.body.appendChild(backdrop);
+        window.addEventListener('keydown', handleKey);
+        setTimeout(() => {
+          input.focus();
+          input.select();
+        }, 60);
+      });
+    };
+
+    // ── Global Interceptors for legacy window.alert, confirm, prompt ──
+    window.alert = function(msg) {
+      return window.showAlertDialog(msg);
+    };
+    window.confirm = function(msg) {
+      return window.showConfirmDialog('Confirmation', msg);
+    };
+    window.prompt = function(msg, def) {
+      return window.showPromptDialog('Input Required', msg, def || '');
+    };
+  }
+
+  ensureEnterpriseDialogs();
 
   // Auto-run guard immediately when script is loaded
   guard();

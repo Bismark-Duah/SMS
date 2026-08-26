@@ -318,43 +318,52 @@ async function approveExeat(exeatId) {
   try {
     const res = await fetch(`/api/exeat/${exeatId}/approve`, { method: "PUT", headers });
     if (res.ok) {
+      if (window.showToast) window.showToast("✅ Exeat permission approved successfully!", "success");
       await loadJurisdictionAndStats();
       await loadExeatRecords();
     } else {
       const errData = await res.json();
-      alert(`Approval Failed: ${errData.detail}`);
+      await (window.showAlertDialog ? window.showAlertDialog("Approval Failed", errData.detail || "Could not approve exeat.", "error") : alert(`Approval Failed: ${errData.detail}`));
     }
   } catch (e) {
-    alert("Error approving exeat.");
+    if (window.showToast) window.showToast("Error approving exeat.", "danger");
   }
 }
 
 async function rejectExeat(exeatId) {
-  const reason = prompt("Enter reason for rejecting this exeat:");
+  const reason = await (window.showPromptDialog ? window.showPromptDialog("Reject Exeat Application", "Please enter the reason for rejecting this exeat request:", "", "Enter reason for rejection...") : Promise.resolve(prompt("Enter reason for rejecting this exeat:")));
   if (reason === null) return;
 
   const headers = await getAuthHeader();
   try {
     const res = await fetch(`/api/exeat/${exeatId}/reject?notes=${encodeURIComponent(reason)}`, { method: "PUT", headers });
     if (res.ok) {
+      if (window.showToast) window.showToast("Exeat request marked as Rejected.", "warning");
       await loadJurisdictionAndStats();
       await loadExeatRecords();
     } else {
       const errData = await res.json();
-      alert(`Rejection Failed: ${errData.detail}`);
+      await (window.showAlertDialog ? window.showAlertDialog("Rejection Failed", errData.detail || "Could not reject exeat.", "error") : alert(`Rejection Failed: ${errData.detail}`));
     }
   } catch (e) {
-    alert("Error rejecting exeat.");
+    if (window.showToast) window.showToast("Error rejecting exeat.", "danger");
   }
 }
 
 async function gateSignOut(exeatId) {
-  if (!confirm("Confirm Student Sign-Out (Departing campus at gate)?")) return;
+  const confirmed = await (window.showConfirmDialog ? window.showConfirmDialog(
+    "🚪 Gate Departure Sign-Out",
+    "Confirm student departure at security gate? This will log official departure time and trigger automated guardian notification.",
+    "Confirm Departure",
+    "Cancel"
+  ) : Promise.resolve(confirm("Confirm Student Sign-Out (Departing campus at gate)?")));
+
+  if (!confirmed) return;
   const headers = await getAuthHeader();
   try {
     const res = await fetch(`/api/exeat/${exeatId}/sign-out`, { method: "PUT", headers });
     if (res.ok) {
-      alert("Student signed out at gate!");
+      if (window.showToast) window.showToast("✅ Student departure logged & guardian notified!", "success");
       await loadJurisdictionAndStats();
       await loadExeatRecords();
       if (document.getElementById("tabContentGate").style.display !== "none") {
@@ -362,20 +371,27 @@ async function gateSignOut(exeatId) {
       }
     } else {
       const errData = await res.json();
-      alert(`Gate Sign-Out Failed: ${errData.detail}`);
+      await (window.showAlertDialog ? window.showAlertDialog("Gate Sign-Out Failed", errData.detail || "Could not process sign out.", "error") : alert(`Gate Sign-Out Failed: ${errData.detail}`));
     }
   } catch (e) {
-    alert("Error during gate sign-out.");
+    if (window.showToast) window.showToast("Error during gate sign-out.", "danger");
   }
 }
 
 async function gateSignIn(exeatId) {
-  if (!confirm("Confirm Student Sign-In (Returned to campus at gate)?")) return;
+  const confirmed = await (window.showConfirmDialog ? window.showConfirmDialog(
+    "✅ Campus Arrival Sign-In",
+    "Confirm student safe arrival back on campus? This will log official arrival time and mark the exeat pass completed.",
+    "Confirm Safe Return",
+    "Cancel"
+  ) : Promise.resolve(confirm("Confirm Student Sign-In (Returned to campus at gate)?")));
+
+  if (!confirmed) return;
   const headers = await getAuthHeader();
   try {
     const res = await fetch(`/api/exeat/${exeatId}/sign-in`, { method: "PUT", headers });
     if (res.ok) {
-      alert("Student safely signed back into campus!");
+      if (window.showToast) window.showToast("✅ Student safely signed back onto campus!", "success");
       await loadJurisdictionAndStats();
       await loadExeatRecords();
       if (document.getElementById("tabContentGate").style.display !== "none") {
@@ -483,7 +499,13 @@ function printExeatSlipDoc() {
 }
 
 async function reportSecurityIncident(studentId, studentName) {
-  const reason = prompt(`🚨 REPORT SECURITY INCIDENT to Assistant Head (Domestic):\nEnter details for ${studentName}:`, "Unauthorized gate departure attempt without valid exeat slip.");
+  const reason = await (window.showPromptDialog ? window.showPromptDialog(
+    "🚨 Report Security Incident",
+    `Enter details for security incident involving ${studentName} to be sent to Assistant Head (Domestic):`,
+    "Unauthorized gate departure attempt without valid exeat slip.",
+    "Describe gate / curfew violation..."
+  ) : Promise.resolve(prompt(`🚨 REPORT SECURITY INCIDENT to Assistant Head (Domestic):\nEnter details for ${studentName}:`, "Unauthorized gate departure attempt without valid exeat slip.")));
+
   if (!reason) return;
 
   const headers = await getAuthHeader();
@@ -498,12 +520,15 @@ async function reportSecurityIncident(studentId, studentName) {
       })
     });
     if (res.ok) {
-      alert("🚨 Security incident alert logged and sent to Assistant Head (Domestic).");
+      if (window.showToast) window.showToast("🚨 Security incident alert logged and sent to Assistant Head (Domestic).", "warning");
+      else alert("🚨 Security incident alert logged and sent to Assistant Head (Domestic).");
     } else {
-      alert("Failed to record security incident.");
+      if (window.showToast) window.showToast("Failed to record security incident.", "danger");
+      else alert("Failed to record security incident.");
     }
   } catch (err) {
-    alert("Error logging security incident.");
+    if (window.showToast) window.showToast("Error logging security incident.", "danger");
+    else alert("Error logging security incident.");
   }
 }
 

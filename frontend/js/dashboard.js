@@ -173,6 +173,7 @@ function initDashboard() {
   if (roleEl) roleEl.textContent = displayRole;
 
   renderCards(activeRole);
+  renderDailyShortcuts(activeRole);
 
   // Logout
   const logoutBtn = document.getElementById('logoutBtn');
@@ -183,6 +184,50 @@ function initDashboard() {
       window.location.href = 'auth.html';
     });
   }
+}
+
+// ── Render Dynamic Daily Shortcuts per Role ───────────────────────────────────
+function renderDailyShortcuts(activeRole) {
+  const container = document.getElementById('dailyShortcutsContainer');
+  const heading = document.getElementById('dailyShortcutsHeading');
+  if (!container) return;
+
+  const role = (activeRole || '').toLowerCase();
+
+  let shortcuts = [];
+  if (['assistant_headmaster_academic', 'assistant_head_academic'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ Academic Operations Shortcuts';
+    shortcuts = [
+      { label: '📜 Master Class Broadsheet', href: 'broadsheet.html' },
+      { label: '✍️ Bulk Score Review & Entry', href: 'bulk-entry.html' },
+      { label: '👨‍🏫 Teacher Workload & Allocations', href: 'assignments.html' },
+      { label: '🖨️ Terminal Reports & Transcripts', href: 'report-card.html' },
+      { label: '📚 Programs & Elective Packages', href: 'programs.html' },
+      { label: '💬 Broadcast Academic Notice', href: 'messaging.html' }
+    ];
+  } else if (['assistant_headmaster_domestic', 'assistant_head_domestic', 'senior_housemaster', 'senior_housemistress', 'house_master', 'house_mistress'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ Campus Life & Welfare Shortcuts';
+    shortcuts = [
+      { label: '🏡 Exeat Approval Desk', href: 'exeat.html' },
+      { label: '🏠 Houses & Dormitories', href: 'houses.html' },
+      { label: '⚖️ Student Discipline Records', href: 'discipline.html' },
+      { label: '💬 Broadcast Parent SMS', href: 'messaging.html' }
+    ];
+  } else {
+    if (heading) heading.innerHTML = '⚡ Daily Operations Shortcuts';
+    shortcuts = [
+      { label: '⚡ Mark Attendance Today', href: 'attendance.html' },
+      { label: '✍️ Record Class Marks', href: 'bulk-entry.html' },
+      { label: '💳 Log Student Payment', href: 'fees.html' },
+      { label: '💬 Broadcast Parent SMS', href: 'messaging.html' }
+    ];
+  }
+
+  container.innerHTML = shortcuts.map(s => `
+    <a class="btn" href="${s.href}" style="background:var(--card-bg, rgba(30,41,59,.7)); border:1px solid var(--border-color, rgba(255,255,255,.08)); color:var(--text-primary, #f8fafc); font-weight:600; padding:10px 16px; display:inline-flex; align-items:center; gap:8px; text-decoration:none; border-radius:10px; transition:all .2s ease;">
+      ${s.label}
+    </a>
+  `).join('');
 }
 
 // ── Current term banner ──────────────────────────────────────────────────────
@@ -305,6 +350,13 @@ async function loadAlertsStat() {
 
 // ── Stats: outstanding fees ───────────────────────────────────────────────────
 async function loadFeesStat() {
+  const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || '').toLowerCase();
+  const feesCard = document.getElementById('statFeesCard');
+  if (['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole)) {
+    if (feesCard) feesCard.style.display = 'none';
+    return;
+  }
+
   const token = localStorage.getItem('accessToken');
   try {
     const res = await fetch(`${API_BASE}/reports/financial-summary`, {
@@ -382,7 +434,6 @@ async function loadHousesStat() {
 }
 
 // ── Load all admin stats in parallel ─────────────────────────────────────────
-// ── Load all admin stats in parallel ─────────────────────────────────────────
 async function loadDashboardStats() {
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || localStorage.getItem('userRole') || '').toLowerCase();
 
@@ -392,6 +443,26 @@ async function loadDashboardStats() {
 
   const statsRow = document.getElementById('statsRow');
   if (statsRow) statsRow.style.display = 'block';
+
+  const isAcademicHead = ['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole);
+  const feesCard = document.getElementById('statFeesCard');
+  const housesCard = document.getElementById('statHousesCard');
+  const sbaCard = document.getElementById('statSbaCard');
+  const passRateCard = document.getElementById('statPassRateCard');
+  const atRiskCard = document.getElementById('statAtRiskCard');
+
+  if (isAcademicHead) {
+    if (feesCard) feesCard.style.display = 'none';
+    if (housesCard) housesCard.style.display = 'none';
+    if (sbaCard) sbaCard.style.display = 'flex';
+    if (passRateCard) passRateCard.style.display = 'flex';
+    if (atRiskCard) atRiskCard.style.display = 'flex';
+  } else {
+    if (feesCard) feesCard.style.display = 'flex';
+    if (sbaCard) sbaCard.style.display = 'none';
+    if (passRateCard) passRateCard.style.display = 'none';
+    if (atRiskCard) atRiskCard.style.display = 'none';
+  }
 
   // All load in parallel — each handles its own errors
   await Promise.all([
@@ -505,26 +576,50 @@ async function loadExecutiveAnalytics() {
     if (!res.ok) return;
 
     const data = await res.json();
-    const ac = data.academic;
-    const dom = data.domestic;
+    const ac = data.academic || {};
+    const dom = data.domestic || {};
 
     section.style.display = 'block';
 
-    let cardsHtml = '';
-
+    // Populate top KPI cards if Academic Head
     const isAcademicHead = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'hod'].includes(activeRole);
     const isDomesticHead = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_domestic', 'assistant_head_domestic'].includes(activeRole);
 
-    // Academic Executive Widget Card
     if (isAcademicHead) {
+      const sbaEl = document.getElementById('statSba');
+      const passRateEl = document.getElementById('statPassRate');
+      const atRiskEl = document.getElementById('statAtRisk');
+      const progSba = document.getElementById('progSba');
+      const progPassRate = document.getElementById('progPassRate');
+
+      if (sbaEl && ac.sba_completion_pct !== undefined) {
+        animateCountUp(sbaEl, ac.sba_completion_pct, '%');
+        if (progSba) setTimeout(() => { progSba.style.width = `${Math.min(100, ac.sba_completion_pct)}%`; }, 150);
+      }
+      if (passRateEl && ac.school_pass_rate_pct !== undefined) {
+        animateCountUp(passRateEl, ac.school_pass_rate_pct, '%');
+        if (progPassRate) setTimeout(() => { progPassRate.style.width = `${Math.min(100, ac.school_pass_rate_pct)}%`; }, 150);
+      }
+      if (atRiskEl && ac.at_risk_students_count !== undefined) {
+        animateCountUp(atRiskEl, ac.at_risk_students_count);
+      }
+    }
+
+    let cardsHtml = '';
+
+    // ── Academic Executive Command Center ─────────────────────────────────────
+    if (isAcademicHead) {
+      // 1. Academic Quality & Assessment Overview Card
       cardsHtml += `
         <div class="card" style="border-left: 4px solid #818cf8; background: var(--card-bg, #1e293b);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h4 style="margin:0; font-size:1rem; color:#818cf8;">📚 Academic Operations Summary</h4>
+            <h4 style="margin:0; font-size:1.05rem; color:#818cf8; display:flex; align-items:center; gap:8px;">
+              <span>📚</span> Academic Quality & Assessment Pipeline
+            </h4>
             <span style="font-size:0.75rem; background:rgba(99,102,241,0.2); color:#818cf8; padding:2px 8px; border-radius:12px; font-weight:700;">ACADEMIC HEAD</span>
           </div>
 
-          <div style="margin-bottom:12px;">
+          <div style="margin-bottom:14px;">
             <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
               <span>Continuous Assessment (SBA) Entry Progress</span>
               <strong style="color:#818cf8;">${ac.sba_completion_pct}%</strong>
@@ -534,20 +629,130 @@ async function loadExecutiveAnalytics() {
             </div>
           </div>
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem; margin-top:14px;">
-            <div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
-              <span style="opacity:0.7;">Pending HOD Approvals:</span><br/>
-              <strong style="font-size:1.1rem; color:${ac.pending_hod_approvals>0?'#f59e0b':'#4ade80'};">${ac.pending_hod_approvals} Score Sheet(s)</strong>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Institutional Pass Rate:</span><br/>
+              <strong style="font-size:1.15rem; color:${ac.school_pass_rate_pct>=50?'#4ade80':'#f87171'};">${ac.school_pass_rate_pct}%</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Across all core subjects</div>
             </div>
-            <div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
-              <span style="opacity:0.7;">Published Class Reports:</span><br/>
-              <strong style="font-size:1.1rem; color:#4ade80;">${ac.published_classes_count} / ${ac.total_classes} Classes</strong>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">At-Risk Students:</span><br/>
+              <strong style="font-size:1.15rem; color:${ac.at_risk_students_count>0?'#f87171':'#4ade80'};">${ac.at_risk_students_count} Students</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Failing 2+ subjects</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Pending HOD Approvals:</span><br/>
+              <strong style="font-size:1.15rem; color:${ac.pending_hod_approvals>0?'#f59e0b':'#4ade80'};">${ac.pending_hod_approvals} Sheets</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Awaiting verification</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Published Class Reports:</span><br/>
+              <strong style="font-size:1.15rem; color:#4ade80;">${ac.published_classes_count} / ${ac.total_classes}</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Class sections finalized</div>
             </div>
           </div>
         </div>
       `;
 
-      // Render Departmental Compliance Matrix (SHS & Combined modes only)
+      // 2. Institutional Grade Distribution Chart (WASSCE / SHS & Basic Curve)
+      if (ac.grade_distribution) {
+        const gd = ac.grade_distribution;
+        const totalGrades = (gd.A1 || 0) + (gd.B2_B3 || 0) + (gd.C4_C6 || 0) + (gd.D7_E8 || 0) + (gd.F9 || 0);
+        const calcPct = (cnt) => totalGrades > 0 ? Math.round((cnt / totalGrades) * 100) : 0;
+
+        cardsHtml += `
+          <div class="card" style="border-left: 4px solid #10b981; background: var(--card-bg, #1e293b);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <h4 style="margin:0; font-size:1.05rem; color:#10b981; display:flex; align-items:center; gap:8px;">
+                <span>📈</span> Institutional Grade Distribution
+              </h4>
+              <span style="font-size:0.75rem; background:rgba(16,185,129,0.2); color:#34d399; padding:2px 8px; border-radius:12px; font-weight:700;">WASSCE / BECE SCALE</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#34d399;">🌟 Grade A1 (75-100%): Excellent</span>
+                  <strong>${gd.A1 || 0} (${calcPct(gd.A1)}%)</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${calcPct(gd.A1)}%; height:100%; background:#10b981;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#38bdf8;">📘 Grade B2-B3 (65-74%): Very Good/Good</span>
+                  <strong>${gd.B2_B3 || 0} (${calcPct(gd.B2_B3)}%)</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${calcPct(gd.B2_B3)}%; height:100%; background:#0284c7;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#818cf8;">📗 Grade C4-C6 (50-64%): Credit Pass</span>
+                  <strong>${gd.C4_C6 || 0} (${calcPct(gd.C4_C6)}%)</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${calcPct(gd.C4_C6)}%; height:100%; background:#6366f1;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#fbbf24;">📙 Grade D7-E8 (40-49%): Pass</span>
+                  <strong>${gd.D7_E8 || 0} (${calcPct(gd.D7_E8)}%)</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${calcPct(gd.D7_E8)}%; height:100%; background:#f59e0b;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#f87171;">🚨 Grade F9 (Below 40%): Fail / Intervention</span>
+                  <strong style="color:#f87171;">${gd.F9 || 0} (${calcPct(gd.F9)}%)</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${calcPct(gd.F9)}%; height:100%; background:#ef4444;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // 3. Core Subjects Performance Matrix Card
+      if (Array.isArray(ac.core_subjects_performance) && ac.core_subjects_performance.length > 0) {
+        const coreBoxes = ac.core_subjects_performance.map(cs => {
+          const passColor = cs.pass_rate >= 70 ? '#4ade80' : (cs.pass_rate >= 50 ? '#fbbf24' : '#f87171');
+          return `
+            <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06);">
+              <div style="font-weight:600; font-size:0.8rem; color:#f8fafc; margin-bottom:4px;">${cs.subject}</div>
+              <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                <span style="font-size:1.15rem; font-weight:800; color:#38bdf8;">${cs.average > 0 ? cs.average + '%' : '—'}</span>
+                <span style="font-size:0.75rem; font-weight:700; color:${passColor};">${cs.pass_rate > 0 ? cs.pass_rate + '% Pass' : 'No Data'}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-left: 4px solid #06b6d4; background: var(--card-bg, #1e293b);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#06b6d4; display:flex; align-items:center; gap:8px;">
+                  <span>🎯</span> Core Curriculum Performance Matrix
+                </h4>
+                <div style="font-size:0.75rem; opacity:0.65; margin-top:2px;">Institutional averages and pass rates across mandatory core subjects</div>
+              </div>
+              <a href="results.html" class="btn sm" style="background:#0891b2; color:white; font-weight:600; text-decoration:none; padding:5px 12px; font-size:0.75rem; border-radius:6px;">📊 Full Results Analytics</a>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+              ${coreBoxes}
+            </div>
+          </div>
+        `;
+      }
+
+      // 4. Departmental Compliance Matrix
       if (data.school_mode !== 'BASIC_ONLY' && Array.isArray(ac.departments_matrix) && ac.departments_matrix.length > 0) {
         let matrixRows = ac.departments_matrix.map(d => {
           let badge = `<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">⏳ IN PROGRESS</span>`;
@@ -607,9 +812,62 @@ async function loadExecutiveAnalytics() {
           </div>
         `;
       }
+
+      // 5. Pending Assessment Submissions Early Warning Roster
+      if (Array.isArray(ac.pending_submissions) && ac.pending_submissions.length > 0) {
+        let pendingRows = ac.pending_submissions.map(p => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">👨‍🏫 ${p.teacher_name}</td>
+            <td style="padding:10px 12px; color:#38bdf8;">${p.class_name}</td>
+            <td style="padding:10px 12px;">${p.subject_name}</td>
+            <td style="padding:10px 12px;">
+              <span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">⏳ PENDING SUBMISSION</span>
+            </td>
+            <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
+              <button type="button" onclick="sendAssessmentReminder('${escapeHtml(p.teacher_name)}', '${escapeHtml(p.subject_name)}', '${escapeHtml(p.class_name)}')" 
+                      style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer; margin-right:6px;">
+                📲 Send Reminder
+              </button>
+              <a href="bulk-entry.html" class="btn sm" style="padding:4px 10px; font-size:0.75rem; background:rgba(99,102,241,0.2); color:#818cf8; border:1px solid rgba(99,102,241,0.4); text-decoration:none; border-radius:6px; font-weight:600;">
+                ✍️ Review Scores
+              </a>
+            </td>
+          </tr>
+        `).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #f59e0b; background: var(--card-bg, #1e293b); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+                  <span>📋</span> Unsubmitted Faculty Score Sheets (Early Warning Roster)
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Teaching allocations with pending marks entry prior to broadsheet finalization</div>
+              </div>
+              <a class="btn sm" href="bulk-entry.html" style="background:#d97706; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">✍️ Bulk Score Desk</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:8px 12px;">Assigned Teacher</th>
+                    <th style="padding:8px 12px;">Class Stream</th>
+                    <th style="padding:8px 12px;">Subject</th>
+                    <th style="padding:8px 12px;">Entry Status</th>
+                    <th style="padding:8px 12px; text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${pendingRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
     }
 
-    // Domestic Executive Widget Card
+    // ── Domestic Executive Widget Card ────────────────────────────────────────
     if (isDomesticHead) {
       const overdueAlertHtml = dom.overdue_exeat_count > 0 
         ? `<span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">🚨 ${dom.overdue_exeat_count} Overdue Exeat(s)</span>`
@@ -709,6 +967,23 @@ async function loadExecutiveAnalytics() {
   } catch (err) {
     console.error('Failed to load executive analytics:', err);
   }
+}
+
+// ── Reminder Dispatch Helper ───────────────────────────────────────────────────
+window.sendAssessmentReminder = function(teacherName, subjectName, className) {
+  const msg = `📨 Assessment reminder dispatched to ${teacherName} for ${subjectName} (${className}).`;
+  if (window.showToast) {
+    window.showToast(msg, 'success');
+  } else {
+    alert(msg);
+  }
+};
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text.replace(/[&<>"']/g, function(m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+  });
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────

@@ -238,12 +238,32 @@
             <span class="stat-value tabular-num" id="statAlerts">—</span>
             <span class="stat-sub"></span>
           </div>
-          <div class="stat-card orange loading">
+          <div class="stat-card orange loading" id="statFeesCard">
             <span class="stat-icon">💰</span>
             <span class="stat-label">Outstanding Fees</span>
             <span class="stat-value tabular-num" id="statFees" style="font-size:1.1rem;">—</span>
             <span class="stat-sub" id="statFeesSub"></span>
             <div class="kpi-progress-wrap"><div class="kpi-progress-bar orange" id="progFees" style="width:0%;"></div></div>
+          </div>
+          <div class="stat-card indigo loading" id="statSbaCard" style="display:none;">
+            <span class="stat-icon">📝</span>
+            <span class="stat-label">Assessment Progress</span>
+            <span class="stat-value tabular-num" id="statSba">—</span>
+            <span class="stat-sub" id="statSbaSub">SBA & Exam Entries</span>
+            <div class="kpi-progress-wrap"><div class="kpi-progress-bar indigo" id="progSba" style="width:0%;"></div></div>
+          </div>
+          <div class="stat-card green loading" id="statPassRateCard" style="display:none;">
+            <span class="stat-icon">🏆</span>
+            <span class="stat-label">School Pass Rate</span>
+            <span class="stat-value tabular-num" id="statPassRate">—</span>
+            <span class="stat-sub" id="statPassRateSub">Core Subjects</span>
+            <div class="kpi-progress-wrap"><div class="kpi-progress-bar green" id="progPassRate" style="width:0%;"></div></div>
+          </div>
+          <div class="stat-card red loading" id="statAtRiskCard" style="display:none;">
+            <span class="stat-icon">⚠️</span>
+            <span class="stat-label">At-Risk Students</span>
+            <span class="stat-value tabular-num" id="statAtRisk">—</span>
+            <span class="stat-sub" id="statAtRiskSub">Failing 2+ Core Subjects</span>
           </div>
           <div class="stat-card indigo loading" id="statHousesCard">
             <span class="stat-icon">🏠</span>
@@ -263,13 +283,8 @@
 
       <!-- Daily Action Shortcuts (Sidebar ERP Mode) -->
       <section id="dailyShortcutsSection" style="margin-bottom:20px;">
-        <div class="section-heading">⚡ Daily Operations Shortcuts</div>
-        <div style="display:flex; gap:12px; flex-wrap:wrap;">
-          <a class="btn" href="attendance.html" style="background:var(--card-bg); border:1px solid var(--border-color); color:var(--text-primary); font-weight:600; padding:10px 16px; display:inline-flex; align-items:center; gap:8px;">⚡ Mark Attendance Today</a>
-          <a class="btn" href="bulk-entry.html" style="background:var(--card-bg); border:1px solid var(--border-color); color:var(--text-primary); font-weight:600; padding:10px 16px; display:inline-flex; align-items:center; gap:8px;">✍️ Record Class Marks</a>
-          <a class="btn" href="fees.html" style="background:var(--card-bg); border:1px solid var(--border-color); color:var(--text-primary); font-weight:600; padding:10px 16px; display:inline-flex; align-items:center; gap:8px;">💳 Log Student Payment</a>
-          <a class="btn" href="messaging.html" style="background:var(--card-bg); border:1px solid var(--border-color); color:var(--text-primary); font-weight:600; padding:10px 16px; display:inline-flex; align-items:center; gap:8px;">💬 Broadcast Parent SMS</a>
-        </div>
+        <div class="section-heading" id="dailyShortcutsHeading">⚡ Daily Operations Shortcuts</div>
+        <div id="dailyShortcutsContainer" style="display:flex; gap:12px; flex-wrap:wrap;"></div>
       </section>
 
       <!-- Quick Navigation (Topbar Mode) -->
@@ -295,9 +310,9 @@
       </section>
     </main>
 
-    <script src="js/guard.js"></script>
-    <script src="js/charts.js"></script>
-    <script src="js/branding.js"></script>
-    <script src="js/dashboard.js"></script>
+    <script src="js/guard.js?v=6.3"></script>
+    <script src="js/charts.js?v=6.3"></script>
+    <script src="js/branding.js?v=6.3"></script>
+    <script src="js/dashboard.js?v=6.3"></script>
   </body>
 </html>

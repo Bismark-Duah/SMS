@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import AcademicYear, Semester
+from ..models import AcademicYear, Semester, User
 from ..schemas import AcademicYearCreate, SemesterCreate, AcademicYearUpdate, SemesterUpdate
+from ..dependencies import get_current_user
 
 router = APIRouter()
 
@@ -190,48 +191,117 @@ def promote_students(stage_id: int = None, db: Session = Depends(get_db)):
 
 @router.get("/executive-analytics")
 def get_executive_analytics(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    from ..models import Student, ClassSection, Subject, Department, User, ExeatRecord, DisciplineRecord, House, Score, ClassSubjectScoreStatus, ClassSectionReportStatus, Setting, School, TeacherAssignment
+    from ..models import (
+        Student, ClassSection, Subject, Department, User, ExeatRecord, 
+        DisciplineRecord, House, Score, ClassSubjectScoreStatus, 
+        ClassSectionReportStatus, Setting, School, TeacherAssignment
+    )
+    from ..dependencies import get_school_id
     from datetime import datetime
+    from sqlalchemy import func
+
+    school_id = get_school_id(current_user)
 
     # School Mode check
     setting = db.query(Setting).filter(Setting.key == "school_mode").first()
     school_mode = setting.value if setting and setting.value else "COMBINED"
 
-    # 1. Academic Executive Metrics
-    teachers_count = db.query(User).join(User.roles).filter(User.roles.any(name="teacher")).count()
-    depts_count = db.query(Department).count() if school_mode != "BASIC_ONLY" else 0
-    classes_count = db.query(ClassSection).count()
+    # Base queries scoped to school tenant
+    user_query = db.query(User)
+    student_query = db.query(Student).filter(Student.is_active == True)
+    class_query = db.query(ClassSection)
+    dept_query = db.query(Department)
+    house_query = db.query(House)
 
-    total_scores_recorded = db.query(Score).count()
-    active_students_count = db.query(Student).filter(Student.is_active == True).count()
-    active_subjects_count = db.query(Subject).count()
-    expected_total_scores = max(1, active_students_count * active_subjects_count)
-    sba_completion_pct = round(min(100.0, (total_scores_recorded / expected_total_scores) * 100.0), 1)
+    if school_id is not None:
+        user_query = user_query.filter(User.school_id == school_id)
+        student_query = student_query.filter(Student.school_id == school_id)
+        class_query = class_query.filter(ClassSection.school_id == school_id) if hasattr(ClassSection, 'school_id') else class_query
+        dept_query = dept_query.filter(Department.school_id == school_id)
+        house_query = house_query.filter(House.school_id == school_id)
 
-    pending_hod_approvals = db.query(ClassSubjectScoreStatus).filter(ClassSubjectScoreStatus.status != "Approved").count()
-    published_classes_count = db.query(ClassSectionReportStatus).filter(ClassSectionReportStatus.is_published == True).count()
+    teachers_count = user_query.join(User.roles).filter(User.roles.any(name="teacher")).count()
+    depts_count = dept_query.count() if school_mode != "BASIC_ONLY" else 0
+    classes_count = class_query.count()
+    active_students_count = student_query.count()
 
-    # Department compliance matrix (SHS / Combined mode only)
+    # Scores metrics
+    scores_query = db.query(Score)
+    if school_id is not None:
+        scores_query = scores_query.join(Student, Student.id == Score.student_id).filter(Student.school_id == school_id)
+    
+    all_scores = scores_query.all()
+    total_scores_recorded = len(all_scores)
+
+    # Total subject assignments across classes
+    assignments_query = db.query(TeacherAssignment)
+    if school_id is not None:
+        assignments_query = assignments_query.join(User, User.id == TeacherAssignment.teacher_id).filter(User.school_id == school_id)
+    all_assignments = assignments_query.all()
+
+    # Calculate Assessment Submission Progress
+    expected_scores_count = max(1, active_students_count * max(1, len(all_assignments)))
+    sba_completion_pct = round(min(100.0, (total_scores_recorded / expected_scores_count) * 100.0), 1) if all_scores else 0.0
+
+    # Grade Distribution Curve & School Pass Rate
+    grade_dist = {"A1": 0, "B2_B3": 0, "C4_C6": 0, "D7_E8": 0, "F9": 0}
+    passing_scores_count = 0
+    student_failing_counts = {} # student_id -> count of failing subjects
+
+    for sc in all_scores:
+        total = (sc.class_score or 0.0) + (sc.exam_score or 0.0)
+        if total >= 50.0:
+            passing_scores_count += 1
+        else:
+            student_failing_counts[sc.student_id] = student_failing_counts.get(sc.student_id, 0) + 1
+
+        if total >= 75.0:
+            grade_dist["A1"] += 1
+        elif total >= 65.0:
+            grade_dist["B2_B3"] += 1
+        elif total >= 50.0:
+            grade_dist["C4_C6"] += 1
+        elif total >= 40.0:
+            grade_dist["D7_E8"] += 1
+        else:
+            grade_dist["F9"] += 1
+
+    school_pass_rate_pct = round((passing_scores_count / max(1, total_scores_recorded)) * 100.0, 1) if total_scores_recorded > 0 else 0.0
+    at_risk_students_count = sum(1 for cnt in student_failing_counts.values() if cnt >= 2)
+
+    # Core Subjects Performance Matrix
+    core_subjects = ["English Language", "Core Mathematics", "Integrated Science", "Social Studies", "Mathematics", "Science"]
+    core_matrix = []
+    for c_name in ["English Language", "Core Mathematics", "Integrated Science", "Social Studies"]:
+        sub_scores = [sc for sc in all_scores if sc.subject and c_name.lower() in sc.subject.name.lower()]
+        if sub_scores:
+            totals = [(sc.class_score or 0.0) + (sc.exam_score or 0.0) for sc in sub_scores]
+            avg = round(sum(totals) / max(1, len(totals)), 1)
+            pass_cnt = sum(1 for t in totals if t >= 50.0)
+            pass_p = round((pass_cnt / max(1, len(totals))) * 100.0, 1)
+            core_matrix.append({"subject": c_name, "average": avg, "pass_rate": pass_p, "count": len(totals)})
+        else:
+            core_matrix.append({"subject": c_name, "average": 0.0, "pass_rate": 0.0, "count": 0})
+
+    # Department Compliance Matrix
     departments_matrix = []
     if school_mode != "BASIC_ONLY":
-        depts = db.query(Department).all()
+        depts = dept_query.all()
         for d in depts:
-            hod_user = db.query(User).filter(User.id == d.hod_user_id).first() if d.hod_user_id else None
-            dept_subjects = db.query(Subject).filter(Subject.department_id == d.id).all()
+            hod_user = d.hod
+            dept_subjects = d.subjects or []
             dept_subject_ids = [s.id for s in dept_subjects]
             
             dept_teachers_count = db.query(TeacherAssignment.teacher_id).filter(TeacherAssignment.subject_id.in_(dept_subject_ids)).distinct().count() if dept_subject_ids else 0
-            dept_scores_count = db.query(Score).filter(Score.subject_id.in_(dept_subject_ids)).count() if dept_subject_ids else 0
+            dept_scores_count = len([sc for sc in all_scores if sc.subject_id in dept_subject_ids]) if dept_subject_ids else 0
             dept_expected = max(1, active_students_count * len(dept_subject_ids)) if dept_subject_ids else 1
             pct = round(min(100.0, (dept_scores_count / dept_expected) * 100.0), 1) if dept_subject_ids else 0.0
             
             status_str = "COMPLETE" if pct >= 100 else ("IN_PROGRESS" if pct > 0 else "PENDING")
-            
-            hod_display = "Unassigned"
-            if hod_user:
-                hod_display = getattr(hod_user, 'full_name', None) or hod_user.username
+            hod_display = (getattr(hod_user, 'full_name', None) or hod_user.username) if hod_user else "Unassigned"
 
             departments_matrix.append({
                 "id": d.id,
@@ -244,6 +314,27 @@ def get_executive_analytics(
                 "status": status_str
             })
 
+    # Pending Teacher Submissions Roster (Top 6 Unsubmitted allocations)
+    pending_submissions = []
+    for asgn in all_assignments[:12]:
+        sub_id = asgn.subject_id
+        cls_id = asgn.class_section_id
+        asgn_scores = [sc for sc in all_scores if sc.subject_id == sub_id and sc.student and sc.student.class_section_id == cls_id]
+        if not asgn_scores:
+            t_user = asgn.teacher
+            t_name = (getattr(t_user, 'full_name', None) or t_user.username) if t_user else "Unassigned Teacher"
+            c_name = asgn.class_section.name if asgn.class_section else "General"
+            s_name = asgn.subject.name if asgn.subject else "Subject"
+            pending_submissions.append({
+                "teacher_name": t_name,
+                "class_name": c_name,
+                "subject_name": s_name,
+                "status": "NOT_STARTED"
+            })
+
+    pending_hod_approvals = db.query(ClassSubjectScoreStatus).filter(ClassSubjectScoreStatus.status != "Approved").count()
+    published_classes_count = db.query(ClassSectionReportStatus).filter(ClassSectionReportStatus.is_published == True).count()
+
     # 2. Domestic Executive Metrics
     total_boarders = db.query(Student).filter(Student.is_active == True, Student.residential_status.ilike("%boarding%")).count() if school_mode != "BASIC_ONLY" else 0
     currently_away_exeat = db.query(ExeatRecord).filter(ExeatRecord.status.in_(["Departed", "Away"])).count() if school_mode != "BASIC_ONLY" else 0
@@ -255,13 +346,13 @@ def get_executive_analytics(
     ).count() if school_mode != "BASIC_ONLY" else 0
 
     active_discipline_incidents = db.query(DisciplineRecord).filter(DisciplineRecord.action_taken.is_(None)).count()
-    total_houses = db.query(House).count() if school_mode != "BASIC_ONLY" else 0
+    total_houses = house_query.count() if school_mode != "BASIC_ONLY" else 0
 
-    # House & Dormitory Occupancy Matrix (SHS & Combined modes only)
+    # House & Dormitory Occupancy Matrix
     houses_matrix = []
     medical_flags_count = 0
     if school_mode != "BASIC_ONLY":
-        all_houses = db.query(House).all()
+        all_houses = house_query.all()
         from ..models import StudentHealth
         medical_flags_count = db.query(StudentHealth).filter(
             ((StudentHealth.allergies.isnot(None)) & (StudentHealth.allergies != "")) |
@@ -277,9 +368,7 @@ def get_executive_analytics(
             capacity = max(1, capacity)
             occ_pct = round(min(100.0, (boarders_count / capacity) * 100.0), 1)
             
-            hm_display = "Unassigned"
-            if hm_user:
-                hm_display = getattr(hm_user, 'full_name', None) or hm_user.username
+            hm_display = (getattr(hm_user, 'full_name', None) or hm_user.username) if hm_user else "Unassigned"
 
             status_str = "OPTIMAL"
             if occ_pct >= 95:
@@ -290,7 +379,7 @@ def get_executive_analytics(
             houses_matrix.append({
                 "id": h.id,
                 "name": h.name,
-                "gender_type": getattr(h, 'gender_type', None) or "MIXED",
+                "gender_type": getattr(h, 'gender', None) or "MIXED",
                 "house_master_name": hm_display,
                 "dorm_count": dorms_count,
                 "boarder_count": boarders_count,
@@ -303,6 +392,11 @@ def get_executive_analytics(
         "school_mode": school_mode,
         "academic": {
             "sba_completion_pct": sba_completion_pct,
+            "school_pass_rate_pct": school_pass_rate_pct,
+            "at_risk_students_count": at_risk_students_count,
+            "grade_distribution": grade_dist,
+            "core_subjects_performance": core_matrix,
+            "pending_submissions": pending_submissions[:6],
             "total_teachers": teachers_count,
             "total_departments": depts_count,
             "total_classes": classes_count,

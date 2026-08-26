@@ -478,6 +478,97 @@ def get_executive_analytics(
                 "status": status_str
             })
 
+    # 3. Administration Executive Metrics
+    all_users = user_query.all()
+    total_staff = len(all_users)
+    active_users_count = sum(1 for u in all_users if getattr(u, 'is_active', True))
+    inactive_users_count = total_staff - active_users_count
+
+    # Faculty teaching vs support staff
+    assigned_teacher_ids = {ta.teacher_id for ta in db.query(TeacherAssignment).all() if ta.teacher_id}
+    teaching_staff_count = 0
+    unassigned_teachers_count = 0
+    for u in all_users:
+        user_role_names = [r.name.lower() for r in getattr(u, 'roles', [])]
+        is_teacher = any(r in ['teacher', 'form_master', 'form_mistress', 'hod', 'assistant_headmaster_academic', 'assistant_head_academic'] for r in user_role_names) or (u.id in assigned_teacher_ids)
+        if is_teacher:
+            teaching_staff_count += 1
+            if u.id not in assigned_teacher_ids:
+                unassigned_teachers_count += 1
+
+    non_teaching_staff_count = max(0, total_staff - teaching_staff_count)
+
+    # Departmental staffing & HR allocation
+    departments_staffing = []
+    all_depts = dept_query.all() if school_mode != "BASIC_ONLY" else []
+    for d in all_depts:
+        hod_u = getattr(d, 'hod', None)
+        hod_name = (getattr(hod_u, 'full_name', None) or hod_u.username) if hod_u else "Unassigned"
+        dept_teachers = [u for u in all_users if getattr(u, 'department_id', None) == d.id]
+        departments_staffing.append({
+            "id": d.id,
+            "name": d.name,
+            "code": getattr(d, 'code', d.name[:4].upper()),
+            "hod_name": hod_name,
+            "staff_count": len(dept_teachers),
+            "subjects_count": len(getattr(d, 'subjects', []))
+        })
+
+    # Admissions & CSSPS Funnel
+    all_active_students = student_query.filter(Student.is_active == True).all()
+    total_students_enrolled = len(all_active_students)
+    
+    placed_count = sum(1 for s in all_active_students if str(getattr(s, 'enrollment_status', '')).upper() == 'PLACED')
+    form_completed_count = sum(1 for s in all_active_students if str(getattr(s, 'enrollment_status', '')).upper() in ['FORM_COMPLETED', 'FORM COMPLETED'])
+    fully_registered_count = sum(1 for s in all_active_students if str(getattr(s, 'enrollment_status', '')).upper() in ['FULLY REGISTERED', 'FULLY_REGISTERED', 'REGISTERED'])
+    if (placed_count + form_completed_count + fully_registered_count) == 0 and total_students_enrolled > 0:
+        fully_registered_count = total_students_enrolled
+
+    # Form Demographics
+    form1_boys = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 1 and (getattr(s, 'gender', 'M') or '').upper().startswith('M'))
+    form1_girls = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 1 and (getattr(s, 'gender', 'F') or '').upper().startswith('F'))
+    
+    form2_boys = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 2 and (getattr(s, 'gender', 'M') or '').upper().startswith('M'))
+    form2_girls = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 2 and (getattr(s, 'gender', 'F') or '').upper().startswith('F'))
+
+    form3_boys = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 3 and (getattr(s, 'gender', 'M') or '').upper().startswith('M'))
+    form3_girls = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 3 and (getattr(s, 'gender', 'F') or '').upper().startswith('F'))
+
+    form_demographics = [
+        {"form": "Form 1", "boys": form1_boys, "girls": form1_girls, "total": form1_boys + form1_girls},
+        {"form": "Form 2", "boys": form2_boys, "girls": form2_girls, "total": form2_boys + form2_girls},
+        {"form": "Form 3", "boys": form3_boys, "girls": form3_girls, "total": form3_boys + form3_girls},
+    ]
+
+    # Institutional Broadcast SMS Stats
+    total_broadcast_messages = 0
+    from ..models import MessageLog
+    try:
+        total_broadcast_messages = db.query(MessageLog).count()
+    except Exception:
+        pass
+
+    # Recent Audit Log Activity
+    recent_audit_logs = []
+    from ..models import ActivityAuditLog
+    try:
+        audit_query = db.query(ActivityAuditLog)
+        if school_id is not None:
+            audit_query = audit_query.filter(ActivityAuditLog.school_id == school_id)
+        audit_records = audit_query.order_by(ActivityAuditLog.timestamp.desc()).limit(6).all()
+        for al in audit_records:
+            ts_str = al.timestamp.strftime("%d %b, %H:%M") if al.timestamp else "Recent"
+            recent_audit_logs.append({
+                "id": al.id,
+                "user_name": al.user_name or "System",
+                "action": al.action,
+                "entity_type": al.entity_type,
+                "details": al.details or "",
+                "timestamp": ts_str
+            })
+    except Exception:
+        pass
+
     return {
         "school_mode": school_mode,
         "academic": {
@@ -507,6 +598,27 @@ def get_executive_analytics(
             "active_exeats_breakdown": exeat_breakdown,
             "critical_medical_roster": medical_roster,
             "pending_discipline_cases": pending_discipline_cases
+        },
+        "administration": {
+            "total_staff": total_staff,
+            "teaching_staff_count": teaching_staff_count,
+            "non_teaching_staff_count": non_teaching_staff_count,
+            "unassigned_teachers_count": unassigned_teachers_count,
+            "active_users_count": active_users_count,
+            "inactive_users_count": inactive_users_count,
+            "total_students_enrolled": total_students_enrolled,
+            "admissions_funnel": {
+                "placed": placed_count,
+                "form_completed": form_completed_count,
+                "fully_registered": fully_registered_count,
+                "total": total_students_enrolled
+            },
+            "form_demographics": form_demographics,
+            "departments_staffing": departments_staffing,
+            "total_broadcast_messages": total_broadcast_messages,
+            "recent_audit_logs": recent_audit_logs,
+            "total_classes": classes_count,
+            "total_departments": depts_count
         }
     }
 

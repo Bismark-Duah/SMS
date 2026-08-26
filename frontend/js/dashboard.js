@@ -215,6 +215,16 @@ function renderDailyShortcuts(activeRole) {
       { label: '🩺 Student Health Registry', href: 'students.html' },
       { label: '💬 Broadcast Boarding Alert', href: 'messaging.html' }
     ];
+  } else if (['assistant_headmaster_admin', 'assistant_head_admin'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ Administrative Operations Shortcuts';
+    shortcuts = [
+      { label: '👥 User Accounts & Roles', href: 'users.html' },
+      { label: '👨‍🏫 Teacher Workload & Allocations', href: 'assignments.html' },
+      { label: '🏫 Class Streams & Sections', href: 'classes.html' },
+      { label: '📊 Student Admissions & Census', href: 'students.html' },
+      { label: '🛡️ Institutional Audit Logs', href: 'audit-logs.html' },
+      { label: '💬 Institutional Broadcast & SMS', href: 'messaging.html' }
+    ];
   } else {
     if (heading) heading.innerHTML = '⚡ Daily Operations Shortcuts';
     shortcuts = [
@@ -354,7 +364,7 @@ async function loadAlertsStat() {
 async function loadFeesStat() {
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || '').toLowerCase();
   const feesCard = document.getElementById('statFeesCard');
-  if (['assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'senior_housemaster', 'senior_housemistress', 'house_master', 'house_mistress'].includes(activeRole)) {
+  if (['assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'assistant_headmaster_admin', 'assistant_head_admin', 'senior_housemaster', 'senior_housemistress', 'house_master', 'house_mistress'].includes(activeRole)) {
     if (feesCard) feesCard.style.display = 'none';
     return;
   }
@@ -399,7 +409,7 @@ async function loadHousesStat() {
   const isBoarding = F ? F.showBoardingKpi : ((localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || '').toLowerCase();
 
-  if (!isBoarding || ['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole)) {
+  if (!isBoarding || ['assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_admin', 'assistant_head_admin'].includes(activeRole)) {
     if (cardEl) cardEl.style.display = 'none';
     return;
   }
@@ -439,7 +449,7 @@ async function loadHousesStat() {
 async function loadDashboardStats() {
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || localStorage.getItem('userRole') || '').toLowerCase();
 
-  const allowedStatsRoles = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'hod', 'bursar', 'form_master', 'form_mistress', 'teacher'];
+  const allowedStatsRoles = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'assistant_headmaster_admin', 'assistant_head_admin', 'hod', 'bursar', 'form_master', 'form_mistress', 'teacher'];
   const canSeeStats = allowedStatsRoles.includes(activeRole);
   if (!canSeeStats) return;
 
@@ -448,6 +458,7 @@ async function loadDashboardStats() {
 
   const isAcademicHead = ['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole);
   const isDomesticHead = ['assistant_headmaster_domestic', 'assistant_head_domestic', 'senior_housemaster', 'senior_housemistress'].includes(activeRole);
+  const isAdminHead = ['assistant_headmaster_admin', 'assistant_head_admin'].includes(activeRole);
 
   const feesCard = document.getElementById('statFeesCard');
   const housesCard = document.getElementById('statHousesCard');
@@ -458,6 +469,9 @@ async function loadDashboardStats() {
   const exeatCard = document.getElementById('statExeatCard');
   const medicalCard = document.getElementById('statMedicalCard');
   const disciplineCard = document.getElementById('statDisciplineCard');
+  const staffCard = document.getElementById('statStaffCard');
+  const usersCard = document.getElementById('statUsersCard');
+  const broadcastsCard = document.getElementById('statBroadcastsCard');
 
   if (isAcademicHead) {
     if (feesCard) feesCard.style.display = 'none';
@@ -466,6 +480,9 @@ async function loadDashboardStats() {
     if (exeatCard) exeatCard.style.display = 'none';
     if (medicalCard) medicalCard.style.display = 'none';
     if (disciplineCard) disciplineCard.style.display = 'none';
+    if (staffCard) staffCard.style.display = 'none';
+    if (usersCard) usersCard.style.display = 'none';
+    if (broadcastsCard) broadcastsCard.style.display = 'none';
     if (sbaCard) sbaCard.style.display = 'flex';
     if (passRateCard) passRateCard.style.display = 'flex';
     if (atRiskCard) atRiskCard.style.display = 'flex';
@@ -474,11 +491,27 @@ async function loadDashboardStats() {
     if (sbaCard) sbaCard.style.display = 'none';
     if (passRateCard) passRateCard.style.display = 'none';
     if (atRiskCard) atRiskCard.style.display = 'none';
+    if (staffCard) staffCard.style.display = 'none';
+    if (usersCard) usersCard.style.display = 'none';
+    if (broadcastsCard) broadcastsCard.style.display = 'none';
     if (boardersCard) boardersCard.style.display = 'flex';
     if (exeatCard) exeatCard.style.display = 'flex';
     if (medicalCard) medicalCard.style.display = 'flex';
     if (disciplineCard) disciplineCard.style.display = 'flex';
     if (housesCard) housesCard.style.display = 'flex';
+  } else if (isAdminHead) {
+    if (feesCard) feesCard.style.display = 'none';
+    if (sbaCard) sbaCard.style.display = 'none';
+    if (passRateCard) passRateCard.style.display = 'none';
+    if (atRiskCard) atRiskCard.style.display = 'none';
+    if (boardersCard) boardersCard.style.display = 'none';
+    if (exeatCard) exeatCard.style.display = 'none';
+    if (medicalCard) medicalCard.style.display = 'none';
+    if (disciplineCard) disciplineCard.style.display = 'none';
+    if (housesCard) housesCard.style.display = 'none';
+    if (staffCard) staffCard.style.display = 'flex';
+    if (usersCard) usersCard.style.display = 'flex';
+    if (broadcastsCard) broadcastsCard.style.display = 'flex';
   } else {
     if (feesCard) feesCard.style.display = 'flex';
     if (sbaCard) sbaCard.style.display = 'none';
@@ -488,6 +521,9 @@ async function loadDashboardStats() {
     if (exeatCard) exeatCard.style.display = 'none';
     if (medicalCard) medicalCard.style.display = 'none';
     if (disciplineCard) disciplineCard.style.display = 'none';
+    if (staffCard) staffCard.style.display = 'none';
+    if (usersCard) usersCard.style.display = 'none';
+    if (broadcastsCard) broadcastsCard.style.display = 'none';
     if (housesCard) housesCard.style.display = 'flex';
   }
 
@@ -583,7 +619,7 @@ async function loadAnalytics() {
 // ── Executive Analytics Widgets ────────────────────────────────────────────────
 async function loadExecutiveAnalytics() {
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || localStorage.getItem('userRole') || '').toLowerCase();
-  const execRoles = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'hod'];
+  const execRoles = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'assistant_headmaster_admin', 'assistant_head_admin', 'hod'];
 
   const isExecutive = execRoles.includes(activeRole);
   if (!isExecutive) {
@@ -605,14 +641,21 @@ async function loadExecutiveAnalytics() {
     const data = await res.json();
     const ac = data.academic || {};
     const dom = data.domestic || {};
+    const adm = data.administration || {};
 
     section.style.display = 'block';
 
-    // Populate top KPI cards if Academic Head
-    const isAcademicHead = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'hod'].includes(activeRole);
-    const isDomesticHead = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_domestic', 'assistant_head_domestic'].includes(activeRole);
+    const isAcademicHead = ['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole);
+    const isDomesticHead = ['assistant_headmaster_domestic', 'assistant_head_domestic', 'senior_housemaster', 'senior_housemistress'].includes(activeRole);
+    const isAdminHead = ['assistant_headmaster_admin', 'assistant_head_admin'].includes(activeRole);
+    const isSuperOrHead = ['admin', 'super_admin', 'headmaster', 'headmistress'].includes(activeRole);
 
-    if (isAcademicHead) {
+    const showAcademic = isAcademicHead || isSuperOrHead || activeRole === 'hod';
+    const showDomestic = isDomesticHead || isSuperOrHead;
+    const showAdmin = isAdminHead || isSuperOrHead;
+
+    // Populate top KPI cards if Academic Head
+    if (isAcademicHead || isSuperOrHead) {
       const sbaEl = document.getElementById('statSba');
       const passRateEl = document.getElementById('statPassRate');
       const atRiskEl = document.getElementById('statAtRisk');
@@ -632,10 +675,38 @@ async function loadExecutiveAnalytics() {
       }
     }
 
+    // Populate top KPI cards if Admin Head
+    if (isAdminHead || isSuperOrHead) {
+      const staffEl = document.getElementById('statStaff');
+      const staffSub = document.getElementById('statStaffSub');
+      const progStaff = document.getElementById('progStaff');
+      const usersEl = document.getElementById('statUsers');
+      const usersSub = document.getElementById('statUsersSub');
+      const broadcastsEl = document.getElementById('statBroadcasts');
+      const broadcastsSub = document.getElementById('statBroadcastsSub');
+
+      if (staffEl && adm.total_staff !== undefined) {
+        animateCountUp(staffEl, adm.total_staff);
+        if (staffSub) staffSub.textContent = `${adm.teaching_staff_count || 0} teaching | ${adm.non_teaching_staff_count || 0} support`;
+        if (progStaff) {
+          const sPct = (adm.total_staff || 0) > 0 ? Math.round(((adm.teaching_staff_count || 0) / adm.total_staff) * 100) : 0;
+          setTimeout(() => { progStaff.style.width = `${sPct}%`; }, 150);
+        }
+      }
+      if (usersEl && adm.active_users_count !== undefined) {
+        animateCountUp(usersEl, adm.active_users_count);
+        if (usersSub) usersSub.textContent = `${adm.inactive_users_count || 0} inactive / pending`;
+      }
+      if (broadcastsEl && adm.total_broadcast_messages !== undefined) {
+        animateCountUp(broadcastsEl, adm.total_broadcast_messages);
+        if (broadcastsSub) broadcastsSub.textContent = 'Sent notices & SMS';
+      }
+    }
+
     let cardsHtml = '';
 
     // ── Academic Executive Command Center ─────────────────────────────────────
-    if (isAcademicHead) {
+    if (showAcademic) {
       // 1. Academic Quality & Assessment Overview Card
       cardsHtml += `
         <div class="card" style="border-left: 4px solid #818cf8; background: var(--card-bg, #1e293b);">
@@ -891,11 +962,237 @@ async function loadExecutiveAnalytics() {
             </div>
           </div>
         `;
+    // ── Administration Executive Command Center ───────────────────────────────
+    if (showAdmin) {
+      const unassignedBadge = ((adm.unassigned_teachers_count || 0) > 0)
+        ? `<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">⚠️ ${adm.unassigned_teachers_count} Unallocated Staff</span>`
+        : `<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">✓ Staff Fully Allocated</span>`;
+
+      // 1. Institutional Staffing & Human Resources Overview
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #3b82f6; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#60a5fa; display:flex; align-items:center; gap:8px;">
+              <span>🏛️</span> Institutional Staffing & Human Resources Overview
+            </h4>
+            ${unassignedBadge}
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Teaching Staff Strength:</span><br/>
+              <strong style="font-size:1.15rem; color:#38bdf8;">${adm.teaching_staff_count || 0} Teachers</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Across ${adm.total_departments || 0} Academic Departments</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Non-Teaching / Support:</span><br/>
+              <strong style="font-size:1.15rem; color:#a855f7;">${adm.non_teaching_staff_count || 0} Staff</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Admin, Operations, Security & Boarding</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Active User Portals:</span><br/>
+              <strong style="font-size:1.15rem; color:#4ade80;">${adm.active_users_count || 0} Active</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">${adm.inactive_users_count || 0} Inactive / Pending</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Active Class Sections:</span><br/>
+              <strong style="font-size:1.15rem; color:#f59e0b;">${adm.total_classes || 0} Streams</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Under academic administration</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // 2. CSSPS Admission & Enrollment Funnel Radar
+      const funnel = adm.admissions_funnel || {};
+      const totEnrolled = funnel.total || 1;
+      const regPct = Math.min(100, Math.round(((funnel.fully_registered || 0) / totEnrolled) * 100));
+
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #10b981; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#34d399; display:flex; align-items:center; gap:8px;">
+              <span>📈</span> CSSPS Admission & Enrollment Funnel
+            </h4>
+            <a href="students.html" class="btn sm" style="background:#059669; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Admissions Desk</a>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
+            <div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                <span style="font-weight:600; color:#38bdf8;">📋 CSSPS Placed:</span>
+                <strong>${funnel.placed || 0} Candidates</strong>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                <div style="width:${Math.min(100, ((funnel.placed || 0) / totEnrolled) * 100)}%; height:100%; background:#0284c7;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                <span style="font-weight:600; color:#fbbf24;">📝 Form Completed:</span>
+                <strong>${funnel.form_completed || 0} Students</strong>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                <div style="width:${Math.min(100, ((funnel.form_completed || 0) / totEnrolled) * 100)}%; height:100%; background:#f59e0b;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                <span style="font-weight:600; color:#4ade80;">🎓 Fully Registered:</span>
+                <strong>${funnel.fully_registered || 0} Students (${regPct}%)</strong>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                <div style="width:${regPct}%; height:100%; background:#10b981;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // 3. Departmental Staffing & Faculty Deployment Matrix Table
+      if (Array.isArray(adm.departments_staffing) && adm.departments_staffing.length > 0) {
+        let deptRows = adm.departments_staffing.map(d => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🏛️ ${d.name} <span style="font-size:0.75rem; opacity:0.6;">(${d.code})</span></td>
+            <td style="padding:10px 12px; color:#38bdf8;">👨‍🏫 ${d.hod_name}</td>
+            <td style="padding:10px 12px;"><strong>${d.staff_count}</strong> Staff Assigned</td>
+            <td style="padding:10px 12px;">${d.subjects_count} Subjects</td>
+            <td style="padding:10px 12px; text-align:right;">
+              <a href="assignments.html" class="btn sm" style="padding:4px 10px; font-size:0.75rem; background:rgba(59,130,246,0.2); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); text-decoration:none; border-radius:6px; font-weight:600;">👨‍🏫 Staff Allocation</a>
+            </td>
+          </tr>
+        `).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #3b82f6; background: var(--card-bg, #1e293b); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#60a5fa; display:flex; align-items:center; gap:8px;">
+                  <span>🏛️</span> Departmental Staffing & Faculty Deployment Matrix
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Human resources distribution across academic departments and faculty leadership</div>
+              </div>
+              <a class="btn sm" href="users.html" style="background:#2563eb; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">👥 Staff Register</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:8px 12px;">Department</th>
+                    <th style="padding:8px 12px;">HOD Leadership</th>
+                    <th style="padding:8px 12px;">Staff Strength</th>
+                    <th style="padding:8px 12px;">Subject Scope</th>
+                    <th style="padding:8px 12px; text-align:right;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${deptRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // 4. Student Census & Gender Demographics by Form Level
+      if (Array.isArray(adm.form_demographics) && adm.form_demographics.length > 0) {
+        let demoRows = adm.form_demographics.map(f => {
+          const bPct = f.total > 0 ? Math.round((f.boys / f.total) * 100) : 50;
+          return `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🎓 ${f.form}</td>
+              <td style="padding:10px 12px; color:#38bdf8;">👦 ${f.boys} Boys</td>
+              <td style="padding:10px 12px; color:#f472b6;">👧 ${f.girls} Girls</td>
+              <td style="padding:10px 12px; font-weight:700;">${f.total} Total</td>
+              <td style="padding:10px 12px; min-width:140px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:2px;">
+                  <span>${bPct}% Boys</span>
+                  <span>${100 - bPct}% Girls</span>
+                </div>
+                <div style="width:100%; height:6px; background:#ec4899; border-radius:3px; overflow:hidden;">
+                  <div style="width:${bPct}%; height:100%; background:#0284c7;"></div>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #10b981; background: var(--card-bg, #1e293b); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#34d399; display:flex; align-items:center; gap:8px;">
+                  <span>👥</span> Student Census & Gender Demographics by Form Level
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Institutional student population breakdown across form streams and gender balance</div>
+              </div>
+              <a class="btn sm" href="students.html" style="background:#059669; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">📊 Student Census</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:8px 12px;">Academic Level</th>
+                    <th style="padding:8px 12px;">Male Census</th>
+                    <th style="padding:8px 12px;">Female Census</th>
+                    <th style="padding:8px 12px;">Total Enrollment</th>
+                    <th style="padding:8px 12px;">Gender Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${demoRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // 5. Institutional Governance & System Audit Activity Stream
+      if (Array.isArray(adm.recent_audit_logs) && adm.recent_audit_logs.length > 0) {
+        let auditRows = adm.recent_audit_logs.map(al => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🛡️ ${al.action}</td>
+            <td style="padding:10px 12px; color:#38bdf8;">👤 ${al.user_name}</td>
+            <td style="padding:10px 12px; font-size:0.75rem; opacity:0.8;">${al.entity_type || 'System'}</td>
+            <td style="padding:10px 12px; color:#94a3b8; font-size:0.78rem;">${escapeHtml(al.details)}</td>
+            <td style="padding:10px 12px; font-size:0.75rem; opacity:0.7; white-space:nowrap;">⏰ ${al.timestamp}</td>
+          </tr>
+        `).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #8b5cf6; background: var(--card-bg, #1e293b); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#a78bfa; display:flex; align-items:center; gap:8px;">
+                  <span>🛡️</span> Real-Time Governance & System Audit Activity Stream
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Recent administrative actions, role assignments, mark updates, and security events</div>
+              </div>
+              <a class="btn sm" href="audit-logs.html" style="background:#7c3aed; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">🛡️ Full Audit Log</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:8px 12px;">Action Event</th>
+                    <th style="padding:8px 12px;">Responsible Actor</th>
+                    <th style="padding:8px 12px;">Target Entity</th>
+                    <th style="padding:8px 12px;">Details</th>
+                    <th style="padding:8px 12px;">Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${auditRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
       }
     }
 
     // ── Domestic Executive Widget Card ────────────────────────────────────────
-    if (isDomesticHead) {
+    if (showDomestic) {
       // Update top KPI cards if elements exist
       const boardersEl = document.getElementById('statBoarders');
       const boardersSub = document.getElementById('statBoardersSub');

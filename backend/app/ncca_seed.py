@@ -73,10 +73,15 @@ def seed_ncca_curriculum(db: Session):
         {"name": "Typewriting & Keyboarding", "code": "TYPE-SHS", "is_core": False, "category": "Elective", "group_code": "Group C", "assessment_type": "External_WASSCE", "school_level": "SHS"},
 
         # Agriculture Electives
+        {"name": "General Agriculture", "code": "GAGRI-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
+        {"name": "Animal Husbandry", "code": "AHUSB-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
+        {"name": "Crop Husbandry & Horticulture", "code": "CHORT-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
+        {"name": "Fisheries", "code": "FISH-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Forestry", "code": "FOR-SHS", "is_core": False, "category": "Elective", "group_code": "Group C", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Horticulture", "code": "HORT-SHS", "is_core": False, "category": "Elective", "group_code": "Group C", "assessment_type": "External_WASSCE", "school_level": "SHS"},
 
         # Technical, TVET & Applied Technology
+        {"name": "Applied Technology", "code": "APTECH-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Applied Electricity", "code": "AE-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Electronics", "code": "ELEC-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Auto Mechanics", "code": "AUTO-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
@@ -90,11 +95,19 @@ def seed_ncca_curriculum(db: Session):
         {"name": "Metalwork", "code": "MW-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Technical Drawing", "code": "TD-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Design & Communication Tech", "code": "DCT-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
+        {"name": "Design and Communication", "code": "DCOM-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
+
+        # Home Economics
+        {"name": "Management in Living", "code": "MIL-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
+        {"name": "Clothing and Textiles", "code": "CTEX-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
+        {"name": "Food and Nutrition", "code": "FN-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Catering & Hospitality", "code": "CATER-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Garment Making & Fashion", "code": "GARMENT-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Cosmetology & Beauty Therapy", "code": "COSM-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
 
         # Visual Arts
+        {"name": "Art and Design Foundation", "code": "ADF-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
+        {"name": "Art and Design Studio", "code": "ADS-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "General Knowledge in Art", "code": "GKA-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Graphic Design", "code": "GD-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "Picture Making", "code": "PM-SHS", "is_core": False, "category": "Elective", "group_code": "Group B", "assessment_type": "External_WASSCE", "school_level": "SHS"},

@@ -186,6 +186,7 @@ window.openAccreditationModal = async function(schoolId, schoolName, schoolMode)
     if (!res.ok) throw new Error('Failed to load school accreditation data');
     const data = await res.json();
     currentAccreditationData = data;
+    window.renderAccreditationPresets(data.presets);
     window.renderAccreditationCatalog(data);
   } catch (err) {
     if (container) container.innerHTML = `<p style="color:#ef4444; padding:20px;">❌ ${err.message}</p>`;
@@ -195,6 +196,50 @@ window.openAccreditationModal = async function(schoolId, schoolName, schoolMode)
 window.closeAccreditationModal = function() {
   const modal = document.getElementById('accreditationModal');
   if (modal) modal.style.display = 'none';
+};
+
+window.renderAccreditationPresets = function(presets) {
+  const container = document.getElementById('accreditationPresetsToolbar');
+  if (!container || !presets) return;
+
+  const presetKeys = Object.keys(presets);
+  if (presetKeys.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = presetKeys.map(key => {
+    const p = presets[key];
+    return `
+      <button type="button" class="btn" style="padding:4px 10px; font-size:0.75rem; background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); color:#a5b4fc; font-weight:600;" onclick="window.applyAccreditationPreset('${key}')">
+        ${p.name}
+      </button>
+    `;
+  }).join('');
+};
+
+window.applyAccreditationPreset = function(presetKey) {
+  if (!currentAccreditationData || !currentAccreditationData.presets) return;
+  const preset = currentAccreditationData.presets[presetKey];
+  if (!preset || !Array.isArray(preset.subject_ids)) return;
+
+  const targetIds = new Set(preset.subject_ids);
+  const checkboxes = document.querySelectorAll('.accred-sub-chk');
+  checkboxes.forEach(cb => {
+    const subId = parseInt(cb.value);
+    cb.checked = targetIds.has(subId);
+  });
+
+  // Update group parent checkboxes
+  const grouped = currentAccreditationData.grouped_catalog || {};
+  Object.keys(grouped).forEach((_, idx) => {
+    const groupCbs = document.querySelectorAll(`.group-sub-${idx}`);
+    const groupChecked = Array.from(groupCbs).every(cb => cb.checked);
+    const parentCb = document.getElementById(`group_chk_${idx}`);
+    if (parentCb) parentCb.checked = groupChecked && groupCbs.length > 0;
+  });
+
+  window.updateAccreditationSummaryBadge();
 };
 
 window.renderAccreditationCatalog = function(data) {

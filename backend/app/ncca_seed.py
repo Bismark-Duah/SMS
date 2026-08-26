@@ -38,6 +38,7 @@ def seed_ncca_curriculum(db: Session):
         {"name": "Social Studies (SHS)", "code": "SOC-SHS", "is_core": True, "category": "Core", "group_code": "Group A", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "English Language (SHS)", "code": "ENG-SHS", "is_core": True, "category": "Core", "group_code": "Group A", "assessment_type": "External_WASSCE", "school_level": "SHS"},
         {"name": "General Science (Core)", "code": "GSCI-SHS", "is_core": True, "category": "Core", "group_code": "Group A", "assessment_type": "External_WASSCE", "school_level": "SHS"},
+        {"name": "Information and Communication Technology (Core)", "code": "ICT-CORE", "is_core": True, "category": "Core", "group_code": "Group A", "assessment_type": "Internal_Transcript", "school_level": "SHS"},
         {"name": "PEH (Core)", "code": "PEH-SHS", "is_core": True, "category": "Core", "group_code": "Group A", "assessment_type": "Internal_Transcript", "school_level": "SHS"},
         {"name": "Robotics and Coding (Form 2)", "code": "ROB-F2", "is_core": True, "category": "Core", "group_code": "Group A", "assessment_type": "Internal_Transcript", "school_level": "SHS"},
 

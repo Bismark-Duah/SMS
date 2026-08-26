@@ -91,8 +91,8 @@ def run_migrations():
             ("first_name", "VARCHAR"),
             ("middle_name", "VARCHAR"),
             ("last_name", "VARCHAR"),
-            ("bece_index_number", "VARCHAR(12)"),
-            ("enrolment_code", "VARCHAR(15)"),
+            ("bece_index_number", "VARCHAR(64)"),
+            ("enrolment_code", "VARCHAR(64)"),
             ("bece_raw_score", "INTEGER"),
             ("bece_aggregate", "INTEGER"),
             ("jhs_attended", "VARCHAR"),
@@ -109,7 +109,8 @@ def run_migrations():
             ("co_curricular_activities", "TEXT"),
             ("hobbies_talents", "TEXT"),
             ("awards", "TEXT"),
-            ("elective_combination", "VARCHAR")
+            ("elective_combination", "VARCHAR"),
+            ("elective_combination_id", "INTEGER REFERENCES elective_combinations(id) ON DELETE SET NULL")
         ],
         "programs": [
             ("code", "VARCHAR"),
@@ -156,6 +157,15 @@ def run_migrations():
                             print(f"Notice: Could not add column {col_name} to {table_name}: {add_err}")
             except Exception as table_err:
                 print(f"Notice: Migration inspection for table {table_name}: {table_err}")
+
+        # Expand column lengths for PostgreSQL on Render
+        if not is_sqlite:
+            for col in ["bece_index_number", "enrolment_code", "student_code"]:
+                try:
+                    conn.execute(text(f"ALTER TABLE students ALTER COLUMN {col} TYPE VARCHAR(64)"))
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
 
 def get_db():
     db = SessionLocal()

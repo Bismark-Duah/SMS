@@ -147,8 +147,15 @@ window.handleCSSPSCSVFileSelected = async function(event) {
       body: formData
     });
 
-    const data = await res.json();
-    if (res.ok) {
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      const textErr = await res.text().catch(() => '');
+      throw new Error(`Server returned ${res.status}: ${textErr || res.statusText}`);
+    }
+
+    if (res.ok && data.status !== 'error') {
       if (window.showCSSPSImportResultsModal) {
         window.showCSSPSImportResultsModal(data);
       } else {
@@ -159,13 +166,18 @@ window.handleCSSPSCSVFileSelected = async function(event) {
 
       if (window.loadStudents) window.loadStudents();
     } else {
-      const err = data.detail || 'CSSPS import failed';
-      if (window.showToast) window.showToast(`Error: ${err}`, 'error');
-      else alert(`Error: ${err}`);
+      let errMsg = 'CSSPS import failed';
+      if (data.errors && data.errors.length > 0) {
+        errMsg = data.errors.slice(0, 5).join('\n');
+      } else if (data.detail) {
+        errMsg = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+      }
+      if (window.showToast) window.showToast(`Import Notice:\n${errMsg}`, 'error');
+      else alert(`Import Notice:\n${errMsg}`);
     }
   } catch (error) {
-    if (window.showToast) window.showToast("Network error importing CSSPS CSV: " + error.message, 'error');
-    else alert("Network error importing CSSPS CSV: " + error.message);
+    if (window.showToast) window.showToast("Import error: " + error.message, 'error');
+    else alert("Import error: " + error.message);
   } finally {
     event.target.value = '';
   }

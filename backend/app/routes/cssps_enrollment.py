@@ -176,7 +176,7 @@ async def import_cssps_csv(file: UploadFile = File(...), db: Session = Depends(g
     skipped_count = 0
     errors = []
 
-    programs_by_name = {p.name.lower(): p.id for p in db.query(Program).all()}
+    programs_by_name = {p.name.lower(): p.id for p in db.query(Program).all() if p.name}
     programs_by_code = {p.code.lower(): p.id for p in db.query(Program).all() if p.code}
 
     # Enterprise Column Aliases

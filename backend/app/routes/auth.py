@@ -436,10 +436,10 @@ def create_user(
     gender = payload.get("gender")
     role_names = payload.get("roles", ["teacher"])
 
-    # Enforce security: non-super_admin callers cannot assign super_admin or admin
+    # Enforce security: non-super_admin callers cannot assign super_admin, admin, headmaster, headmistress
     caller_roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, "roles") and current_user.roles else []
     if "super_admin" not in caller_roles:
-        role_names = [r for r in role_names if r not in ["super_admin", "admin"]]
+        role_names = [r for r in role_names if r not in ["super_admin", "admin", "headmaster", "headmistress"]]
 
     # Enforce mutual exclusivity: Assistant Head executive roles strip generic admin
     assist_head_keys = {
@@ -464,9 +464,25 @@ def create_user(
         school_id=school_id
     )
     
-    for r_name in role_names:
+    # Expand gender-aligned role pairs for flawless RBAC query compatibility
+    expanded_roles = set(role_names)
+    is_female = str(gender).lower().startswith("f")
+    if "form_master" in expanded_roles:
+        if is_female:
+            expanded_roles.add("form_mistress")
+    if "house_master" in expanded_roles:
+        if is_female:
+            expanded_roles.add("house_mistress")
+    if "senior_house_master" in expanded_roles:
+        if is_female:
+            expanded_roles.add("senior_house_mistress")
+    if "assistant_house_master" in expanded_roles:
+        if is_female:
+            expanded_roles.add("assistant_house_mistress")
+
+    for r_name in expanded_roles:
         role = db.query(Role).filter(Role.name == r_name).first()
-        if role:
+        if role and role not in new_user.roles:
             new_user.roles.append(role)
             
     db.add(new_user)
@@ -496,10 +512,10 @@ def update_user_roles(
     if not new_role_names:
         raise HTTPException(status_code=400, detail="At least one role must be assigned")
 
-    # If caller is not super_admin, prevent granting super_admin or admin
+    # If caller is not super_admin, prevent granting super_admin, admin, headmaster, headmistress
     is_caller_super = "super_admin" in role_names_caller
     if not is_caller_super:
-        new_role_names = [r for r in new_role_names if r not in ["super_admin", "admin"]]
+        new_role_names = [r for r in new_role_names if r not in ["super_admin", "admin", "headmaster", "headmistress"]]
 
     # Mutual exclusion check for Assistant Heads
     assist_head_keys = {
@@ -509,10 +525,26 @@ def update_user_roles(
     if any(r in assist_head_keys for r in new_role_names) and "super_admin" not in new_role_names:
         new_role_names = [r for r in new_role_names if r != "admin"]
 
+    # Gender-aligned role synchronization
+    is_female = str(target.gender).lower().startswith("f")
+    expanded_roles = set(new_role_names)
+    if "form_master" in expanded_roles:
+        if is_female:
+            expanded_roles.add("form_mistress")
+    if "house_master" in expanded_roles:
+        if is_female:
+            expanded_roles.add("house_mistress")
+    if "senior_house_master" in expanded_roles:
+        if is_female:
+            expanded_roles.add("senior_house_mistress")
+    if "assistant_house_master" in expanded_roles:
+        if is_female:
+            expanded_roles.add("assistant_house_mistress")
+
     matched_roles = []
-    for r_name in new_role_names:
+    for r_name in expanded_roles:
         role_obj = db.query(Role).filter(Role.name == r_name).first()
-        if role_obj:
+        if role_obj and role_obj not in matched_roles:
             matched_roles.append(role_obj)
 
     target.roles = matched_roles

@@ -11,54 +11,71 @@ function getHeaders(headers = {}) {
   return h;
 }
 
-const ROLE_METADATA = {
-  // Leadership & Administration
-  headmaster: { title: 'Headmaster', icon: '👨‍🏫', category: 'executive' },
-  headmistress: { title: 'Headmistress', icon: '👩‍🏫', category: 'executive' },
-  assistant_headmaster_academic: { title: 'Assistant Head (Academic)', icon: '📘', category: 'executive' },
-  assistant_head_academic: { title: 'Assistant Head (Academic)', icon: '📘', category: 'executive' },
-  assistant_headmaster_admin: { title: 'Assistant Head (Administration)', icon: '🏢', category: 'executive' },
-  assistant_head_admin: { title: 'Assistant Head (Administration)', icon: '🏢', category: 'executive' },
-  assistant_headmaster_domestic: { title: 'Assistant Head (Domestic / Boarding)', icon: '🏡', category: 'executive' },
-  assistant_head_domestic: { title: 'Assistant Head (Domestic / Boarding)', icon: '🏡', category: 'executive' },
-  
-  // Teaching & Academics
-  teacher: { title: 'Teacher', icon: '📚', category: 'academic' },
-  hod: { title: 'Head of Department (HOD)', icon: '🔬', category: 'academic' },
-  form_master: { title: 'Form Master', icon: '🎓', category: 'academic' },
-  form_mistress: { title: 'Form Mistress', icon: '🎓', category: 'academic' },
-  
-  // Boarding & Pastoral Care
-  senior_house_master: { title: 'Senior Housemaster', icon: '🏠', category: 'boarding' },
-  senior_housemaster: { title: 'Senior Housemaster', icon: '🏠', category: 'boarding' },
-  senior_house_mistress: { title: 'Senior Housemistress', icon: '🏠', category: 'boarding' },
-  senior_housemistress: { title: 'Senior Housemistress', icon: '🏠', category: 'boarding' },
-  house_master: { title: 'Housemaster', icon: '🛌', category: 'boarding' },
-  housemaster: { title: 'Housemaster', icon: '🛌', category: 'boarding' },
-  house_mistress: { title: 'Housemistress', icon: '🛌', category: 'boarding' },
-  housemistress: { title: 'Housemistress', icon: '🛌', category: 'boarding' },
-  assistant_house_master: { title: 'Assistant Housemaster', icon: '🚪', category: 'boarding' },
-  assistant_house_mistress: { title: 'Assistant Housemistress', icon: '🚪', category: 'boarding' },
-  
-  // Operations & Finance
-  bursar: { title: 'School Accountant / Bursar', icon: '💰', category: 'operations' },
-  storekeeper: { title: 'Storekeeper (Asset & Books)', icon: '📦', category: 'operations' },
-  security_officer: { title: 'Security Officer (Gate & Exeats)', icon: '🛡️', category: 'operations' },
-  
-  // Stakeholder Portals
-  parent: { title: 'Parent / Guardian', icon: '👨‍👩‍👧', category: 'portal' },
-  student: { title: 'Student', icon: '🎒', category: 'portal' }
+const UNIFIED_ROLES = [
+  // 1. Executive Leadership (Delegated sub-administrators)
+  { id: 'assistant_headmaster_academic', category: 'executive', icon: '📘', male: 'Assistant Head (Academic)', female: 'Assistant Head (Academic)', defaultChecked: false },
+  { id: 'assistant_headmaster_admin', category: 'executive', icon: '🏢', male: 'Assistant Head (Administration)', female: 'Assistant Head (Administration)', defaultChecked: false },
+  { id: 'assistant_headmaster_domestic', category: 'executive', icon: '🏡', male: 'Assistant Head (Domestic / Boarding)', female: 'Assistant Head (Domestic / Boarding)', defaultChecked: false, boardingOnly: true },
+
+  // 2. Academic Faculty
+  { id: 'teacher', category: 'academic', icon: '📚', male: 'Teacher', female: 'Teacher', defaultChecked: true },
+  { id: 'hod', category: 'academic', icon: '🔬', male: 'Head of Department (HOD)', female: 'Head of Department (HOD)', defaultChecked: false },
+  { id: 'form_master', category: 'academic', icon: '🎓', male: 'Form Master', female: 'Form Mistress', defaultChecked: false },
+
+  // 3. Boarding & Pastoral Care
+  { id: 'senior_house_master', category: 'boarding', icon: '🏠', male: 'Senior Housemaster', female: 'Senior Housemistress', defaultChecked: false, boardingOnly: true },
+  { id: 'house_master', category: 'boarding', icon: '🛌', male: 'Housemaster', female: 'Housemistress', defaultChecked: false, boardingOnly: true },
+  { id: 'assistant_house_master', category: 'boarding', icon: '🚪', male: 'Assistant Housemaster', female: 'Assistant Housemistress', defaultChecked: false, boardingOnly: true },
+
+  // 4. Operations & Finance
+  { id: 'bursar', category: 'operations', icon: '💰', male: 'School Accountant / Bursar', female: 'School Accountant / Bursar', defaultChecked: false },
+  { id: 'storekeeper', category: 'operations', icon: '📦', male: 'Storekeeper (Asset & Books)', female: 'Storekeeper (Asset & Books)', defaultChecked: false },
+  { id: 'security_officer', category: 'operations', icon: '🛡️', male: 'Security Officer (Gate & Exeats)', female: 'Security Officer (Gate & Exeats)', defaultChecked: false, boardingOnly: true },
+
+  // 5. Stakeholder Portals
+  { id: 'parent', category: 'portal', icon: '👨‍👩‍👧', male: 'Parent / Guardian', female: 'Parent / Guardian', defaultChecked: false },
+  { id: 'student', category: 'portal', icon: '🎒', male: 'Student', female: 'Student', defaultChecked: false },
+];
+
+const GENDER_ROLE_ALIASES = {
+  form_mistress: 'form_master',
+  senior_housemaster: 'senior_house_master',
+  senior_house_mistress: 'senior_house_master',
+  senior_housemistress: 'senior_house_master',
+  housemaster: 'house_master',
+  house_mistress: 'house_master',
+  housemistress: 'house_master',
+  assistant_housemaster: 'assistant_house_master',
+  assistant_house_mistress: 'assistant_house_master',
+  assistant_housemistress: 'assistant_house_master',
+  assistant_head_academic: 'assistant_headmaster_academic',
+  assistant_head_admin: 'assistant_headmaster_admin',
+  assistant_head_domestic: 'assistant_headmaster_domestic',
+  accountant: 'bursar'
 };
 
-function getRoleInfo(name) {
+function formatRoleTitle(name, gender = 'Male') {
   const clean = (name || '').toLowerCase();
-  if (ROLE_METADATA[clean]) return ROLE_METADATA[clean];
-  const title = clean.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  return { title, icon: '🏷️', category: 'custom' };
+  const canonical = GENDER_ROLE_ALIASES[clean] || clean;
+  const isFemale = String(gender).toLowerCase().startsWith('f');
+
+  const found = UNIFIED_ROLES.find(r => r.id === canonical);
+  if (found) return isFemale ? found.female : found.male;
+
+  if (clean === 'admin') return isFemale ? 'School Admin / Headmistress' : 'School Admin / Headmaster';
+  if (clean === 'headmaster') return 'Headmaster';
+  if (clean === 'headmistress') return 'Headmistress';
+  if (clean === 'super_admin') return 'Super Admin';
+  return clean.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
-function formatRoleTitle(name) {
-  return getRoleInfo(name).title;
+function getRoleIcon(name) {
+  const clean = (name || '').toLowerCase();
+  const canonical = GENDER_ROLE_ALIASES[clean] || clean;
+  const found = UNIFIED_ROLES.find(r => r.id === canonical);
+  if (found) return found.icon;
+  if (clean === 'admin' || clean === 'super_admin') return '👑';
+  return '🏷️';
 }
 
 let allRawRoles = [];
@@ -78,10 +95,9 @@ async function loadRoles() {
     const roles = await res.json();
     allRawRoles = roles || [];
 
-    if (!roles || !roles.length) {
-      container.innerHTML = '<span style="opacity:.6;">No roles found.</span>';
-      return;
-    }
+    const genderSelect = document.getElementById('userGender');
+    const currentGender = genderSelect ? genderSelect.value : 'Male';
+    const isFemale = currentGender.toLowerCase().startsWith('f');
 
     const F = (window.SchoolFeatures && window.SchoolFeatures.version)
       ? window.SchoolFeatures
@@ -90,57 +106,72 @@ async function loadRoles() {
     const isBoarding = F ? F.showBoardingRoles : ((localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
     const isBasicOnly = F ? F.isBasicOnly : (localStorage.getItem('school_mode') === 'BASIC_ONLY');
 
-    const BOARDING_ROLES = [
-      'senior_house_master', 'senior_housemaster', 'senior_house_mistress', 'senior_housemistress',
-      'house_master', 'housemaster', 'assistant_house_master',
-      'house_mistress', 'housemistress', 'assistant_house_mistress',
-      'assistant_headmaster_domestic', 'assistant_head_domestic',
-      'security_officer'
-    ];
-
-    // Filter out super_admin and admin (security & architecture rule)
-    const allowedRoles = roles.filter(r => {
-      const rName = r.name.toLowerCase();
-      if (rName === 'super_admin' || rName === 'admin') return false;
-      if (!isBoarding && BOARDING_ROLES.includes(rName)) return false;
-      if (isBasicOnly && rName === 'hod') return false;
-      return true;
-    });
+    // Retain checked values if re-rendering on gender change
+    const previouslyChecked = new Set(
+      Array.from(container.querySelectorAll('input[name="user_role"]:checked')).map(cb => cb.value)
+    );
 
     const groups = {
-      executive: { title: '🏛️ School Executive & Leadership', roles: [] },
-      academic: { title: '👨‍🏫 Teaching Faculty & Academics', roles: [] },
-      boarding: { title: '🏡 Boarding & Pastoral Care', roles: [] },
-      operations: { title: '💼 Finance, Assets & Operations', roles: [] },
-      portal: { title: '👥 Stakeholder Portals', roles: [] },
-      custom: { title: '🌟 Custom Privileges', roles: [] }
+      executive: { title: '🏛️ School Executive & Leadership', items: [] },
+      academic: { title: '👨‍🏫 Teaching Faculty & Academics', items: [] },
+      boarding: { title: '🏡 Boarding & Pastoral Care', items: [] },
+      operations: { title: '💼 Finance, Assets & Operations', items: [] },
+      portal: { title: '👥 Stakeholder Portals', items: [] },
+      custom: { title: '🌟 Custom Privileges', items: [] }
     };
 
-    allowedRoles.forEach(r => {
-      const info = getRoleInfo(r.name);
-      const cat = groups[info.category] ? info.category : 'custom';
-      groups[cat].roles.push({ ...r, info });
+    UNIFIED_ROLES.forEach(r => {
+      if (r.boardingOnly && !isBoarding) return;
+      if (isBasicOnly && r.id === 'hod') return;
+
+      const title = isFemale ? r.female : r.male;
+      const isChecked = previouslyChecked.size ? previouslyChecked.has(r.id) : r.defaultChecked;
+      groups[r.category].items.push({
+        id: r.id,
+        title,
+        icon: r.icon,
+        isChecked: isChecked ? 'checked' : ''
+      });
+    });
+
+    // Handle any custom roles created dynamically
+    const standardRoleKeys = new Set(UNIFIED_ROLES.map(r => r.id));
+    standardRoleKeys.add('admin');
+    standardRoleKeys.add('super_admin');
+    standardRoleKeys.add('headmaster');
+    standardRoleKeys.add('headmistress');
+    Object.keys(GENDER_ROLE_ALIASES).forEach(k => standardRoleKeys.add(k));
+
+    (roles || []).forEach(r => {
+      const rName = r.name.toLowerCase();
+      if (!standardRoleKeys.has(rName)) {
+        const title = formatRoleTitle(r.name, currentGender);
+        const isChecked = previouslyChecked.has(r.name) ? 'checked' : '';
+        groups.custom.items.push({
+          id: r.name,
+          title,
+          icon: '🏷️',
+          isChecked
+        });
+      }
     });
 
     let html = '';
     Object.values(groups).forEach(grp => {
-      if (!grp.roles.length) return;
+      if (!grp.items.length) return;
       html += `
         <div class="role-group-section">
           <div class="role-group-title">${grp.title}</div>
           <div class="role-tile-grid">
-            ${grp.roles.map(r => {
-              const isDefaultChecked = r.name === 'teacher' ? 'checked' : '';
-              return `
-                <label class="role-tile-card">
-                  <input type="checkbox" name="user_role" value="${r.name}" ${isDefaultChecked} />
-                  <div>
-                    <span style="font-size:1.05rem; margin-right:4px;">${r.info.icon}</span>
-                    <span class="role-tile-title">${r.info.title}</span>
-                  </div>
-                </label>
-              `;
-            }).join('')}
+            ${grp.items.map(item => `
+              <label class="role-tile-card">
+                <input type="checkbox" name="user_role" value="${item.id}" ${item.isChecked} />
+                <div>
+                  <span style="font-size:1.05rem; margin-right:4px;">${item.icon}</span>
+                  <span class="role-tile-title">${item.title}</span>
+                </div>
+              </label>
+            `).join('')}
           </div>
         </div>
       `;
@@ -152,6 +183,14 @@ async function loadRoles() {
     console.error('Error loading roles:', err);
     container.innerHTML = '<span style="color:var(--danger, #ef4444);">Failed to load roles.</span>';
   }
+}
+
+// Bind Gender Change to update role labels dynamically
+const userGenderSelect = document.getElementById('userGender');
+if (userGenderSelect) {
+  userGenderSelect.addEventListener('change', () => {
+    loadRoles();
+  });
 }
 
 // ── Super-Admin Tenant Filter ──────────────────────────────────────────────────
@@ -262,7 +301,6 @@ function renderUserTable(users) {
   }
 
   const currentUserId = parseInt(localStorage.getItem('userId') || sessionStorage.getItem('userId') || '0', 10);
-  const isSuperAdminSession = (localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('userRole') === 'super_admin');
 
   let tableHtml = `
     <table class="user-directory-table">
@@ -293,13 +331,15 @@ function renderUserTable(users) {
 
     const rolePills = u.roles.length 
       ? u.roles.map(r => {
-          const info = getRoleInfo(r.name);
-          const isExec = info.category === 'executive' || r.name === 'admin';
+          const title = formatRoleTitle(r.name, u.gender);
+          const icon = getRoleIcon(r.name);
+          const clean = (r.name || '').toLowerCase();
+          const isExec = clean === 'admin' || clean === 'super_admin' || clean.includes('assistant_head') || clean.includes('headmaster') || clean.includes('headmistress');
           const bg = isExec ? 'rgba(239, 68, 68, 0.15)' : 'rgba(99, 102, 241, 0.15)';
           const border = isExec ? 'rgba(239, 68, 68, 0.4)' : 'rgba(99, 102, 241, 0.4)';
           const color = isExec ? '#fca5a5' : '#a5b4fc';
           return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:${bg}; border:1px solid ${border}; color:${color}; margin:2px 4px 2px 0;">
-            <span>${info.icon}</span> ${info.title}
+            <span>${icon}</span> ${title}
           </span>`;
         }).join('')
       : '<span style="font-size:0.75rem; color:var(--text-secondary);">No Role Assigned</span>';
@@ -401,14 +441,17 @@ window.filterUserDirectory = function() {
     // Keyword match
     const usernameMatch = (u.username || '').toLowerCase().includes(query);
     const emailMatch = (u.email || '').toLowerCase().includes(query);
-    const roleMatchText = u.roles.some(r => formatRoleTitle(r.name).toLowerCase().includes(query));
+    const roleMatchText = u.roles.some(r => formatRoleTitle(r.name, u.gender).toLowerCase().includes(query));
 
     const matchesQuery = !query || usernameMatch || emailMatch || roleMatchText;
 
     // Role filter match
     let matchesRole = true;
     if (selectedRole !== 'ALL') {
-      matchesRole = u.roles.some(r => r.name.toLowerCase().includes(selectedRole.toLowerCase()));
+      matchesRole = u.roles.some(r => {
+        const canonical = GENDER_ROLE_ALIASES[r.name.toLowerCase()] || r.name.toLowerCase();
+        return canonical.includes(selectedRole.toLowerCase()) || r.name.toLowerCase().includes(selectedRole.toLowerCase());
+      });
     }
 
     return matchesQuery && matchesRole;
@@ -476,27 +519,35 @@ window.openEditRolesModal = function(userId) {
 
   idInput.value = user.id;
   if (title) title.textContent = `✏️ Edit Roles: ${user.username}`;
-  if (subtitle) subtitle.textContent = `Configure assigned permissions for ${user.username} (${user.email || 'No email'})`;
+  if (subtitle) subtitle.textContent = `Configure assigned permissions for ${user.username} (${user.email || 'No email'}) • ${user.gender || 'Male'}`;
 
-  const userRoleNames = new Set(user.roles.map(r => r.name.toLowerCase()));
+  const isFemale = String(user.gender).toLowerCase().startsWith('f');
+  const userRoleNames = new Set(user.roles.map(r => (GENDER_ROLE_ALIASES[r.name.toLowerCase()] || r.name.toLowerCase())));
 
-  // Render role checkboxes inside modal
-  const allowedRoles = allRawRoles.filter(r => {
-    const rName = r.name.toLowerCase();
-    return rName !== 'super_admin' && rName !== 'admin';
+  const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+    ? window.SchoolFeatures
+    : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+  const isBoarding = F ? F.showBoardingRoles : ((localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
+  const isBasicOnly = F ? F.isBasicOnly : (localStorage.getItem('school_mode') === 'BASIC_ONLY');
+
+  const visibleUnified = UNIFIED_ROLES.filter(r => {
+    if (r.boardingOnly && !isBoarding) return false;
+    if (isBasicOnly && r.id === 'hod') return false;
+    return true;
   });
 
   container.innerHTML = `
     <div class="role-tile-grid">
-      ${allowedRoles.map(r => {
-        const info = getRoleInfo(r.name);
-        const isChecked = userRoleNames.has(r.name.toLowerCase()) ? 'checked' : '';
+      ${visibleUnified.map(r => {
+        const roleTitle = isFemale ? r.female : r.male;
+        const isChecked = userRoleNames.has(r.id) ? 'checked' : '';
         return `
           <label class="role-tile-card">
-            <input type="checkbox" name="edit_user_role" value="${r.name}" ${isChecked} />
+            <input type="checkbox" name="edit_user_role" value="${r.id}" ${isChecked} />
             <div>
-              <span style="font-size:1.05rem; margin-right:4px;">${info.icon}</span>
-              <span class="role-tile-title">${info.title}</span>
+              <span style="font-size:1.05rem; margin-right:4px;">${r.icon}</span>
+              <span class="role-tile-title">${roleTitle}</span>
             </div>
           </label>
         `;

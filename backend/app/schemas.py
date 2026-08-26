@@ -13,7 +13,7 @@ class Role(RoleBase):
 
 class UserBase(BaseModel):
     username: str
-    email: str
+    email: Optional[str] = None
     gender: Optional[str] = None
 
 class UserCreate(UserBase):

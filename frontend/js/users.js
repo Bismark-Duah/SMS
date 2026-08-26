@@ -522,7 +522,14 @@ window.openEditRolesModal = function(userId) {
   if (subtitle) subtitle.textContent = `Configure assigned permissions for ${user.username} (${user.email || 'No email'}) • ${user.gender || 'Male'}`;
 
   const isFemale = String(user.gender).toLowerCase().startsWith('f');
-  const userRoleNames = new Set(user.roles.map(r => (GENDER_ROLE_ALIASES[r.name.toLowerCase()] || r.name.toLowerCase())));
+  
+  const userRoleNames = new Set();
+  (user.roles || []).forEach(r => {
+    const raw = (r.name || '').toLowerCase();
+    userRoleNames.add(raw);
+    const canonical = GENDER_ROLE_ALIASES[raw] || raw;
+    userRoleNames.add(canonical);
+  });
 
   const F = (window.SchoolFeatures && window.SchoolFeatures.version)
     ? window.SchoolFeatures
@@ -536,6 +543,39 @@ window.openEditRolesModal = function(userId) {
     if (isBasicOnly && r.id === 'hod') return false;
     return true;
   });
+
+  // Handle any custom roles
+  const standardRoleKeys = new Set(UNIFIED_ROLES.map(r => r.id));
+  standardRoleKeys.add('admin');
+  standardRoleKeys.add('super_admin');
+  standardRoleKeys.add('headmaster');
+  standardRoleKeys.add('headmistress');
+  Object.keys(GENDER_ROLE_ALIASES).forEach(k => standardRoleKeys.add(k));
+
+  const customRoles = (allRawRoles || []).filter(r => !standardRoleKeys.has(r.name.toLowerCase()));
+
+  let customHtml = '';
+  if (customRoles.length) {
+    customHtml = `
+      <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px;">
+        <div style="font-size:0.8rem; font-weight:700; color:var(--primary-light,#818cf8); margin-bottom:8px;">🌟 Custom Privileges</div>
+        <div class="role-tile-grid">
+          ${customRoles.map(r => {
+            const isChecked = userRoleNames.has(r.name.toLowerCase()) ? 'checked' : '';
+            return `
+              <label class="role-tile-card">
+                <input type="checkbox" name="edit_user_role" value="${r.name}" ${isChecked} />
+                <div>
+                  <span style="font-size:1.05rem; margin-right:4px;">🏷️</span>
+                  <span class="role-tile-title">${formatRoleTitle(r.name, user.gender)}</span>
+                </div>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
 
   container.innerHTML = `
     <div class="role-tile-grid">
@@ -553,6 +593,7 @@ window.openEditRolesModal = function(userId) {
         `;
       }).join('')}
     </div>
+    ${customHtml}
   `;
 
   modal.style.display = 'flex';
@@ -565,7 +606,7 @@ window.closeEditRolesModal = function() {
 
 window.saveUserRoles = async function() {
   const userId = document.getElementById('editUserId').value;
-  const checkedRoles = Array.from(document.querySelectorAll('input[name="edit_user_role"]:checked')).map(cb => cb.value);
+  const checkedRoles = Array.from(document.querySelectorAll('#editRolesContainer input[name="edit_user_role"]:checked')).map(cb => cb.value);
 
   if (!checkedRoles.length) {
     alert('Please select at least one role.');

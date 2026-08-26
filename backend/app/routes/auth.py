@@ -422,6 +422,47 @@ def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_c
 
     return query.all()
 
+def _resolve_or_create_role(db: Session, r_name: str) -> Optional[Role]:
+    if not r_name:
+        return None
+    raw = r_name.strip().lower()
+    
+    # 1. Exact match
+    role = db.query(Role).filter(func.lower(Role.name) == raw).first()
+    if role:
+        return role
+
+    # 2. Canonical alias match
+    canonical = ROLE_ALIASES.get(raw)
+    if canonical:
+        role = db.query(Role).filter(func.lower(Role.name) == canonical.lower()).first()
+        if role:
+            return role
+
+    # 3. Check variations with / without underscores
+    variations = [
+        raw.replace("_", ""),
+        raw.replace(" ", "_"),
+        raw.replace("master", "_master"),
+        raw.replace("mistress", "_mistress"),
+        raw.replace("_master", "master"),
+        raw.replace("_mistress", "mistress"),
+    ]
+    for v in variations:
+        role = db.query(Role).filter(func.lower(Role.name) == v.lower()).first()
+        if role:
+            return role
+
+    # 4. Auto-create role in DB if missing
+    try:
+        new_role = Role(name=canonical or raw)
+        db.add(new_role)
+        db.flush()
+        return new_role
+    except Exception:
+        db.rollback()
+        return db.query(Role).filter(func.lower(Role.name) == (canonical or raw).lower()).first()
+
 @router.post("/users", dependencies=[Depends(rate_limit_auth)])
 def create_user(
     payload: dict,
@@ -480,10 +521,12 @@ def create_user(
         if is_female:
             expanded_roles.add("assistant_house_mistress")
 
+    seen_role_ids = set()
     for r_name in expanded_roles:
-        role = db.query(Role).filter(Role.name == r_name).first()
-        if role and role not in new_user.roles:
-            new_user.roles.append(role)
+        role_obj = _resolve_or_create_role(db, r_name)
+        if role_obj and role_obj.id not in seen_role_ids:
+            seen_role_ids.add(role_obj.id)
+            new_user.roles.append(role_obj)
             
     db.add(new_user)
     db.flush()
@@ -542,13 +585,16 @@ def update_user_roles(
             expanded_roles.add("assistant_house_mistress")
 
     matched_roles = []
+    seen_role_ids = set()
     for r_name in expanded_roles:
-        role_obj = db.query(Role).filter(Role.name == r_name).first()
-        if role_obj and role_obj not in matched_roles:
+        role_obj = _resolve_or_create_role(db, r_name)
+        if role_obj and role_obj.id not in seen_role_ids:
+            seen_role_ids.add(role_obj.id)
             matched_roles.append(role_obj)
 
     target.roles = matched_roles
     db.commit()
+    db.refresh(target)
     return {"status": "success", "message": f"Roles updated for {target.username}"}
 
 @router.delete("/users/{user_id}")

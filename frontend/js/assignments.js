@@ -180,14 +180,47 @@ function handleAssignChipToggle(labelEl, cbClass, onChangeCallback) {
   if (typeof onChangeCallback === 'function') onChangeCallback();
 }
 
+let isSubjectDeptFilterActive = true;
+
+function getTeacherDepartment(teacherId) {
+  if (!teacherId || !allDepartments.length) return null;
+  const t = allTeachers.find(u => u.id == teacherId);
+  if (!t) return null;
+
+  // 1. Direct department_id
+  if (t.department_id) {
+    const dept = allDepartments.find(d => d.id == t.department_id);
+    if (dept) return dept;
+  }
+
+  // 2. Teacher is HOD of a department
+  const hodDept = allDepartments.find(d => d.hod_id == teacherId);
+  if (hodDept) return hodDept;
+
+  // 3. Listed in department teachers array
+  const facultyDept = allDepartments.find(d => d.teachers && d.teachers.some(dt => dt.id == teacherId));
+  if (facultyDept) return facultyDept;
+
+  return null;
+}
+
+window.toggleSubjectDeptFilter = function() {
+  isSubjectDeptFilterActive = !isSubjectDeptFilterActive;
+  handleClassCheckboxChange();
+};
+
 // Handle Class Checkbox Selection change to dynamically load subjects for all selected classes
 async function handleClassCheckboxChange() {
   const checkedClassCbs = Array.from(document.querySelectorAll('.assign-class-cb:checked'));
   const cbListContainer = document.getElementById('subjectsCheckboxList');
+  const filterIndicator = document.getElementById('deptFilterIndicator');
+  const toggleBtn = document.getElementById('toggleAllSubjectsBtn');
   if (!cbListContainer) return;
 
   if (checkedClassCbs.length === 0) {
     cbListContainer.innerHTML = '<span style="opacity: 0.6; font-style: italic; font-size: 0.85rem;">Select at least one Class Section above to load subjects...</span>';
+    if (filterIndicator) filterIndicator.style.display = 'none';
+    if (toggleBtn) toggleBtn.style.display = 'none';
     return;
   }
 
@@ -211,29 +244,102 @@ async function handleClassCheckboxChange() {
       }
     }
 
-    let assignedSubjects = Array.from(subjectMap.values());
+    let allClassSubjects = Array.from(subjectMap.values());
+    const selectedTeacherId = document.getElementById('teacherSelect')?.value;
+    const teacherDept = getTeacherDepartment(selectedTeacherId);
+
+    let displaySubjects = allClassSubjects;
+    let deptSubjectIds = new Set();
+
+    if (teacherDept && teacherDept.subject_ids) {
+      deptSubjectIds = new Set(teacherDept.subject_ids);
+    }
+
     if (!_userIsAdmin()) {
-      // Scope subject choices to HOD's departmental subjects
+      // HOD scope: restrict to HOD department subjects always
       const userSubsRes = await fetch(`${API_BASE}/subjects/`, { headers: getHeaders() });
       if (userSubsRes.ok) {
         const userSubs = await userSubsRes.json();
         const allowedSubIds = new Set(userSubs.map(s => s.id));
-        assignedSubjects = assignedSubjects.filter(s => allowedSubIds.has(s.id));
+        displaySubjects = displaySubjects.filter(s => allowedSubIds.has(s.id));
       }
+      if (filterIndicator) filterIndicator.style.display = 'none';
+      if (toggleBtn) toggleBtn.style.display = 'none';
+    } else if (teacherDept && deptSubjectIds.size > 0) {
+      const matchingDeptSubjects = allClassSubjects.filter(s => deptSubjectIds.has(s.id));
+
+      if (isSubjectDeptFilterActive) {
+        // Active filter mode: show only teacher's department subjects for the selected class(es)
+        displaySubjects = matchingDeptSubjects;
+
+        if (filterIndicator) {
+          filterIndicator.style.display = 'inline-flex';
+          filterIndicator.innerHTML = `🔬 ${teacherDept.name} (${matchingDeptSubjects.length} subject${matchingDeptSubjects.length === 1 ? '' : 's'})`;
+          filterIndicator.style.background = 'rgba(14,165,233,0.15)';
+          filterIndicator.style.color = '#38bdf8';
+        }
+        if (toggleBtn) {
+          toggleBtn.style.display = 'inline-flex';
+          toggleBtn.textContent = `🌐 Show All Class Subjects (${allClassSubjects.length})`;
+          toggleBtn.title = 'Switch to view subjects from all departments for these classes';
+        }
+      } else {
+        // All subjects mode: show all, with department subjects marked
+        displaySubjects = allClassSubjects;
+
+        if (filterIndicator) {
+          filterIndicator.style.display = 'inline-flex';
+          filterIndicator.innerHTML = `🌐 All Departments (${allClassSubjects.length} subjects)`;
+          filterIndicator.style.background = 'rgba(255,255,255,0.08)';
+          filterIndicator.style.color = 'var(--text-secondary,#94a3b8)';
+        }
+        if (toggleBtn) {
+          toggleBtn.style.display = 'inline-flex';
+          toggleBtn.textContent = `🔬 Filter: ${teacherDept.name} (${matchingDeptSubjects.length})`;
+          toggleBtn.title = `Filter back to ${teacherDept.name} subjects only`;
+        }
+      }
+    } else {
+      // Teacher has no department or admin hasn't selected a teacher yet
+      if (filterIndicator) {
+        if (selectedTeacherId) {
+          filterIndicator.style.display = 'inline-flex';
+          filterIndicator.innerHTML = `💡 General / Unassigned Dept (${allClassSubjects.length} subjects)`;
+          filterIndicator.style.background = 'rgba(234,179,8,0.15)';
+          filterIndicator.style.color = '#fde047';
+        } else {
+          filterIndicator.style.display = 'none';
+        }
+      }
+      if (toggleBtn) toggleBtn.style.display = 'none';
     }
 
-    if (assignedSubjects.length === 0) {
-      cbListContainer.innerHTML = '<span style="opacity:0.6; font-style:italic; font-size:0.85rem; color:var(--warning);">No subjects matching your department assigned to the selected class section(s) yet.</span>';
+    if (displaySubjects.length === 0) {
+      if (teacherDept && isSubjectDeptFilterActive) {
+        cbListContainer.innerHTML = `
+          <div style="grid-column: 1 / -1; padding: 14px; text-align: center; background: rgba(234,179,8,0.06); border: 1px dashed rgba(234,179,8,0.3); border-radius: 8px;">
+            <p style="margin: 0 0 8px 0; font-size: 0.85rem; color: #fde047;">No subjects from <strong>${teacherDept.name}</strong> are assigned to the selected class section(s).</p>
+            <button type="button" class="btn sm" onclick="toggleSubjectDeptFilter()" style="padding: 4px 10px; font-size: 0.8rem; background: #0284c7; color: #fff;">🌐 Show All Subjects For This Class</button>
+          </div>
+        `;
+      } else {
+        cbListContainer.innerHTML = '<span style="opacity:0.6; font-style:italic; font-size:0.85rem; color:var(--warning);">No subjects found for the selected class section(s).</span>';
+      }
     } else {
-      const selectedTeacherId = document.getElementById('teacherSelect').value;
       const teacherAssignedSubjectIds = selectedTeacherId ? allAssignmentsData.filter(a => a.teacher_id == selectedTeacherId).map(a => a.subject_id) : [];
 
       cbListContainer.innerHTML = `
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:7px; width:100%;">
-          ${assignedSubjects.map(s => {
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(175px, 1fr)); gap:7px; width:100%;">
+          ${displaySubjects.map(s => {
             const isAlreadyAssigned = teacherAssignedSubjectIds.includes(s.id);
-            const borderColor = isAlreadyAssigned ? 'rgba(234,179,8,0.5)' : 'rgba(255,255,255,0.1)';
-            const bgColor = isAlreadyAssigned ? 'rgba(234,179,8,0.08)' : 'rgba(255,255,255,0.04)';
+            const isDeptSubject = deptSubjectIds.has(s.id);
+            const borderColor = isAlreadyAssigned 
+              ? 'rgba(234,179,8,0.5)' 
+              : (isDeptSubject ? 'rgba(56,189,248,0.4)' : 'rgba(255,255,255,0.1)');
+            const bgColor = isAlreadyAssigned 
+              ? 'rgba(234,179,8,0.08)' 
+              : (isDeptSubject ? 'rgba(14,165,233,0.06)' : 'rgba(255,255,255,0.04)');
+
             return `
               <label class="assign-chip-label assign-subject-chip" onclick="handleAssignChipToggle(this, 'assign-subject-cb', null)"
                 style="display:flex; align-items:flex-start; gap:6px; padding:8px 10px; border-radius:7px;
@@ -242,7 +348,10 @@ async function handleClassCheckboxChange() {
                 <input type="checkbox" class="assign-subject-cb" value="${s.id}" data-name="${s.name}" style="display:none;" />
                 <span class="assign-chip-check" style="margin-top:2px; width:14px; height:14px; border-radius:3px; border:1.5px solid rgba(255,255,255,0.3); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px; transition:all 0.15s;"></span>
                 <div style="flex:1; min-width:0;">
-                  <div style="font-size:0.82rem; font-weight:600; color:#f1f5f9; line-height:1.3;">${s.name}</div>
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                    <span style="font-size:0.82rem; font-weight:600; color:#f1f5f9; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${s.name}">${s.name}</span>
+                    ${isDeptSubject ? '<span style="font-size:0.65rem; background:rgba(14,165,233,0.25); color:#38bdf8; padding:1px 4px; border-radius:3px; flex-shrink:0;">Dept</span>' : ''}
+                  </div>
                   <div style="font-size:0.72rem; color:#64748b; margin-top:1px;">${s.is_core ? 'Core' : 'Elective'}</div>
                   ${isAlreadyAssigned ? '<div style="margin-top:3px; font-size:0.68rem; background:rgba(234,179,8,0.25); color:#fde047; padding:1px 5px; border-radius:3px; display:inline-block;">⚠ Already Assigned</div>' : ''}
                 </div>
@@ -277,16 +386,24 @@ function handleTeacherSelectChange(teacherId) {
   const uniqueSubjects = new Set(teacherAssignments.map(a => a.subject_name)).size;
   const privLabels = teacherPrivileges.map(p => `${p.privilege_type || p.role_title || 'Role'} (${p.target_name || 'Global'})`).join(', ');
 
+  const teacherDept = getTeacherDepartment(teacherId);
+  const deptLabel = teacherDept ? `<span style="margin-left:6px; background:rgba(14,165,233,0.18); color:#38bdf8; padding:2px 8px; border-radius:4px; font-weight:600;">🔬 ${teacherDept.name}</span>` : '';
+
   badgeContainer.innerHTML = `
-    📊 <strong>${teacherName} Current Workload:</strong> 
+    📊 <strong>${teacherName} Current Workload:</strong> ${deptLabel}
     <span style="margin-left:8px; background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:4px;">🏫 <strong>${uniqueClasses}</strong> Class Section(s)</span>
     <span style="margin-left:6px; background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:4px;">📘 <strong>${uniqueSubjects}</strong> Subject(s)</span>
     ${teacherPrivileges.length > 0 ? `<span style="margin-left:6px; background:rgba(234,179,8,0.2); color:#fde047; padding:2px 8px; border-radius:4px;">⭐ ${privLabels}</span>` : ''}
   `;
   badgeContainer.style.display = 'block';
 
-  // Highlight already assigned subjects for this teacher
-  handleClassCheckboxChange();
+  // Reset department filter to active when switching teacher
+  isSubjectDeptFilterActive = true;
+  // Re-run class checkbox change to refresh subjects list matching this teacher's department!
+  const checkedClassCbs = document.querySelectorAll('.assign-class-cb:checked');
+  if (checkedClassCbs.length > 0) {
+    handleClassCheckboxChange();
+  }
 }
 
 // Toggle field blocks based on assignment category

@@ -24,6 +24,7 @@ class User(UserBase):
     id: int
     is_active: bool
     roles: List[Role] = []
+    department_id: Optional[int] = None
     children: List[int] = [] # List of student IDs
 
     @field_validator("children", mode="before")

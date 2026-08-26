@@ -355,12 +355,12 @@ function renderUserTable(users) {
         }).join('')
       : '<span style="font-size:0.75rem; color:var(--text-secondary);">No Role Assigned</span>';
 
-    const isUserAdminOrExec = u.roles.some(r => {
+    const isRootAdmin = u.roles.some(r => {
       const rName = (r.name || '').toLowerCase();
-      return rName === 'admin' || rName === 'super_admin' || rName.includes('assistant_head');
+      return rName === 'admin' || rName === 'super_admin';
     });
 
-    const canImpersonate = (u.id !== currentUserId) && !isUserAdminOrExec && (selectedSchoolScope !== 'system_only');
+    const canImpersonate = (u.id !== currentUserId) && !isRootAdmin && (selectedSchoolScope !== 'system_only');
     const canDelete = (u.id !== currentUserId);
 
     const impersonateBtn = canImpersonate ? `

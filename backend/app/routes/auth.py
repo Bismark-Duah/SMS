@@ -309,7 +309,12 @@ def impersonate_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    admin_roles = {'admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_admin', 'assistant_head_admin'}
+    admin_roles = {
+        'admin', 'super_admin', 'headmaster', 'headmistress',
+        'assistant_headmaster_academic', 'assistant_head_academic',
+        'assistant_headmaster_admin', 'assistant_head_admin',
+        'assistant_headmaster_domestic', 'assistant_head_domestic'
+    }
     user_roles = {r.name.lower() for r in current_user.roles}
     if not user_roles.intersection(admin_roles):
         raise HTTPException(status_code=403, detail="Only administrators can impersonate users")
@@ -317,6 +322,10 @@ def impersonate_user(
     target_user = db.query(User).filter(User.id == user_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="User to impersonate not found")
+
+    target_roles = {r.name.lower() for r in target_user.roles}
+    if ("super_admin" in target_roles or "admin" in target_roles) and "super_admin" not in user_roles:
+        raise HTTPException(status_code=403, detail="Cannot impersonate root administrator accounts")
 
     role_names = [r.name for r in target_user.roles]
     if "form_master" not in role_names:

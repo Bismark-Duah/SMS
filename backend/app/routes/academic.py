@@ -336,29 +336,119 @@ def get_executive_analytics(
     published_classes_count = db.query(ClassSectionReportStatus).filter(ClassSectionReportStatus.is_published == True).count()
 
     # 2. Domestic Executive Metrics
-    total_boarders = db.query(Student).filter(Student.is_active == True, Student.residential_status.ilike("%boarding%")).count() if school_mode != "BASIC_ONLY" else 0
-    currently_away_exeat = db.query(ExeatRecord).filter(ExeatRecord.status.in_(["Departed", "Away"])).count() if school_mode != "BASIC_ONLY" else 0
-    
-    now = datetime.now()
-    overdue_exeat_count = db.query(ExeatRecord).filter(
-        ExeatRecord.status == "Departed",
-        ExeatRecord.expected_return < now
-    ).count() if school_mode != "BASIC_ONLY" else 0
+    is_boarder_filter = (Student.residential_status.in_(["B", "b", "Boarding", "BOARDING", "boarding"])) | (Student.house_id.isnot(None))
+    total_boarders = student_query.filter(is_boarder_filter).count() if school_mode != "BASIC_ONLY" else 0
+    total_day_students = max(0, active_students_count - total_boarders)
 
-    active_discipline_incidents = db.query(DisciplineRecord).filter(DisciplineRecord.action_taken.is_(None)).count()
+    now = datetime.now()
+
+    # Exeats Movement & Safe Custody
+    away_exeats_query = db.query(ExeatRecord).join(Student, Student.id == ExeatRecord.student_id).filter(
+        Student.is_active == True,
+        ExeatRecord.status.in_(["Departed", "Away", "Approved"])
+    )
+    if school_id is not None:
+        away_exeats_query = away_exeats_query.filter(Student.school_id == school_id)
+
+    away_exeats = away_exeats_query.all()
+    currently_away_exeat = len(away_exeats) if school_mode != "BASIC_ONLY" else 0
+
+    overdue_exeats = [ex for ex in away_exeats if ex.status == "Departed" and ex.expected_return and ex.expected_return < now]
+    overdue_exeat_count = len(overdue_exeats) if school_mode != "BASIC_ONLY" else 0
+
+    overdue_roster = []
+    if school_mode != "BASIC_ONLY":
+        for ex in overdue_exeats[:8]:
+            st = ex.student
+            st_name = st.full_name if st else "Unknown Student"
+            h_name = st.house.name if st and st.house else "General"
+            parent_phone = ex.parent_contact or (st.phone if st else None) or "Not Recorded"
+            exp_str = ex.expected_return.strftime("%d %b, %H:%M") if ex.expected_return else "Overdue"
+            overdue_roster.append({
+                "id": ex.id,
+                "student_name": st_name,
+                "house_name": h_name,
+                "expected_return": exp_str,
+                "parent_phone": parent_phone,
+                "reason": ex.reason or "Exeat",
+                "exeat_type": ex.exeat_type or "General"
+            })
+
+    # Active Exeats Breakdown
+    exeat_breakdown = {"Weekend": 0, "Medical": 0, "Special": 0, "Official": 0, "Day": 0}
+    for ex in away_exeats:
+        t = (ex.exeat_type or "Special").capitalize()
+        if t in exeat_breakdown:
+            exeat_breakdown[t] += 1
+        else:
+            exeat_breakdown["Special"] += 1
+
+    # Student Health & Medical Registry Roster
+    from ..models import StudentHealth
+    health_query = db.query(StudentHealth).join(Student, Student.id == StudentHealth.student_id).filter(
+        Student.is_active == True,
+        (
+            ((StudentHealth.allergies.isnot(None)) & (StudentHealth.allergies != "")) |
+            ((StudentHealth.chronic_conditions.isnot(None)) & (StudentHealth.chronic_conditions != ""))
+        )
+    )
+    if school_id is not None:
+        health_query = health_query.filter(Student.school_id == school_id)
+
+    health_records = health_query.all()
+    medical_flags_count = len(health_records)
+
+    medical_roster = []
+    for hr in health_records[:8]:
+        st = hr.student
+        st_name = st.full_name if st else "Student"
+        h_name = st.house.name if st and st.house else "Day/Unassigned"
+        conds = []
+        if hr.allergies:
+            conds.append(f"Allergies: {hr.allergies}")
+        if hr.chronic_conditions:
+            conds.append(f"Chronic: {hr.chronic_conditions}")
+        cond_str = " | ".join(conds) if conds else "Health Flag"
+        emergency_phone = hr.emergency_contact or (st.phone if st else None) or "Not Recorded"
+        medical_roster.append({
+            "student_name": st_name,
+            "house_name": h_name,
+            "condition": cond_str,
+            "emergency_phone": emergency_phone,
+            "blood_group": hr.blood_group or "—"
+        })
+
+    # Discipline Queue
+    disc_query = db.query(DisciplineRecord).join(Student, Student.id == DisciplineRecord.student_id).filter(
+        DisciplineRecord.action_taken.is_(None)
+    )
+    if school_id is not None:
+        disc_query = disc_query.filter(Student.school_id == school_id)
+
+    disc_records = disc_query.order_by(DisciplineRecord.id.desc()).all()
+    active_discipline_incidents = len(disc_records)
+
+    pending_discipline_cases = []
+    for dr in disc_records[:6]:
+        st = dr.student
+        st_name = st.full_name if st else "Student"
+        h_name = st.house.name if st and st.house else "General"
+        dt_str = dr.incident_date.strftime("%d %b %Y") if dr.incident_date else "Recent"
+        pending_discipline_cases.append({
+            "id": dr.id,
+            "student_name": st_name,
+            "house_name": h_name,
+            "incident_type": dr.incident_type,
+            "incident_date": dt_str,
+            "description": dr.description
+        })
+
     total_houses = house_query.count() if school_mode != "BASIC_ONLY" else 0
 
     # House & Dormitory Occupancy Matrix
     houses_matrix = []
-    medical_flags_count = 0
     if school_mode != "BASIC_ONLY":
         all_houses = house_query.all()
-        from ..models import StudentHealth
-        medical_flags_count = db.query(StudentHealth).filter(
-            ((StudentHealth.allergies.isnot(None)) & (StudentHealth.allergies != "")) |
-            ((StudentHealth.chronic_conditions.isnot(None)) & (StudentHealth.chronic_conditions != ""))
-        ).count()
-
         for h in all_houses:
             hm_user = db.query(User).filter(User.id == h.house_master_id).first() if h.house_master_id else None
             dorms = getattr(h, 'dormitories', [])
@@ -406,12 +496,17 @@ def get_executive_analytics(
         },
         "domestic": {
             "total_boarders": total_boarders,
+            "total_day_students": total_day_students,
             "currently_away_exeat": currently_away_exeat,
             "overdue_exeat_count": overdue_exeat_count,
             "active_discipline_incidents": active_discipline_incidents,
             "medical_flags_count": medical_flags_count,
             "total_houses": total_houses,
-            "houses_matrix": houses_matrix
+            "houses_matrix": houses_matrix,
+            "overdue_exeats_roster": overdue_roster,
+            "active_exeats_breakdown": exeat_breakdown,
+            "critical_medical_roster": medical_roster,
+            "pending_discipline_cases": pending_discipline_cases
         }
     }
 

@@ -211,7 +211,9 @@ function renderDailyShortcuts(activeRole) {
       { label: '🏡 Exeat Approval Desk', href: 'exeat.html' },
       { label: '🏠 Houses & Dormitories', href: 'houses.html' },
       { label: '⚖️ Student Discipline Records', href: 'discipline.html' },
-      { label: '💬 Broadcast Parent SMS', href: 'messaging.html' }
+      { label: '📋 Roll Call & Prep Attendance', href: 'attendance.html' },
+      { label: '🩺 Student Health Registry', href: 'students.html' },
+      { label: '💬 Broadcast Boarding Alert', href: 'messaging.html' }
     ];
   } else {
     if (heading) heading.innerHTML = '⚡ Daily Operations Shortcuts';
@@ -352,7 +354,7 @@ async function loadAlertsStat() {
 async function loadFeesStat() {
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || '').toLowerCase();
   const feesCard = document.getElementById('statFeesCard');
-  if (['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole)) {
+  if (['assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'senior_housemaster', 'senior_housemistress', 'house_master', 'house_mistress'].includes(activeRole)) {
     if (feesCard) feesCard.style.display = 'none';
     return;
   }
@@ -445,23 +447,48 @@ async function loadDashboardStats() {
   if (statsRow) statsRow.style.display = 'block';
 
   const isAcademicHead = ['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole);
+  const isDomesticHead = ['assistant_headmaster_domestic', 'assistant_head_domestic', 'senior_housemaster', 'senior_housemistress'].includes(activeRole);
+
   const feesCard = document.getElementById('statFeesCard');
   const housesCard = document.getElementById('statHousesCard');
   const sbaCard = document.getElementById('statSbaCard');
   const passRateCard = document.getElementById('statPassRateCard');
   const atRiskCard = document.getElementById('statAtRiskCard');
+  const boardersCard = document.getElementById('statBoardersCard');
+  const exeatCard = document.getElementById('statExeatCard');
+  const medicalCard = document.getElementById('statMedicalCard');
+  const disciplineCard = document.getElementById('statDisciplineCard');
 
   if (isAcademicHead) {
     if (feesCard) feesCard.style.display = 'none';
     if (housesCard) housesCard.style.display = 'none';
+    if (boardersCard) boardersCard.style.display = 'none';
+    if (exeatCard) exeatCard.style.display = 'none';
+    if (medicalCard) medicalCard.style.display = 'none';
+    if (disciplineCard) disciplineCard.style.display = 'none';
     if (sbaCard) sbaCard.style.display = 'flex';
     if (passRateCard) passRateCard.style.display = 'flex';
     if (atRiskCard) atRiskCard.style.display = 'flex';
+  } else if (isDomesticHead) {
+    if (feesCard) feesCard.style.display = 'none';
+    if (sbaCard) sbaCard.style.display = 'none';
+    if (passRateCard) passRateCard.style.display = 'none';
+    if (atRiskCard) atRiskCard.style.display = 'none';
+    if (boardersCard) boardersCard.style.display = 'flex';
+    if (exeatCard) exeatCard.style.display = 'flex';
+    if (medicalCard) medicalCard.style.display = 'flex';
+    if (disciplineCard) disciplineCard.style.display = 'flex';
+    if (housesCard) housesCard.style.display = 'flex';
   } else {
     if (feesCard) feesCard.style.display = 'flex';
     if (sbaCard) sbaCard.style.display = 'none';
     if (passRateCard) passRateCard.style.display = 'none';
     if (atRiskCard) atRiskCard.style.display = 'none';
+    if (boardersCard) boardersCard.style.display = 'none';
+    if (exeatCard) exeatCard.style.display = 'none';
+    if (medicalCard) medicalCard.style.display = 'none';
+    if (disciplineCard) disciplineCard.style.display = 'none';
+    if (housesCard) housesCard.style.display = 'flex';
   }
 
   // All load in parallel — each handles its own errors
@@ -869,38 +896,137 @@ async function loadExecutiveAnalytics() {
 
     // ── Domestic Executive Widget Card ────────────────────────────────────────
     if (isDomesticHead) {
-      const overdueAlertHtml = dom.overdue_exeat_count > 0 
-        ? `<span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">🚨 ${dom.overdue_exeat_count} Overdue Exeat(s)</span>`
-        : `<span style="background:rgba(34,197,94,0.2); color:#4ade80; padding:2px 8px; border-radius:12px; font-size:0.75rem;">✓ Exeats On Schedule</span>`;
+      // Update top KPI cards if elements exist
+      const boardersEl = document.getElementById('statBoarders');
+      const boardersSub = document.getElementById('statBoardersSub');
+      const progBoarders = document.getElementById('progBoarders');
+      const exeatEl = document.getElementById('statExeat');
+      const exeatSub = document.getElementById('statExeatSub');
+      const progExeat = document.getElementById('progExeat');
+      const medicalEl = document.getElementById('statMedical');
+      const medicalSub = document.getElementById('statMedicalSub');
+      const disciplineEl = document.getElementById('statDiscipline');
+      const disciplineSub = document.getElementById('statDisciplineSub');
 
+      if (boardersEl && dom.total_boarders !== undefined) {
+        animateCountUp(boardersEl, dom.total_boarders);
+        if (boardersSub) boardersSub.textContent = `${dom.total_boarders} boarders | ${dom.total_day_students || 0} day`;
+        if (progBoarders) {
+          const tot = (dom.total_boarders || 0) + (dom.total_day_students || 0);
+          const pct = tot > 0 ? Math.round((dom.total_boarders / tot) * 100) : 100;
+          setTimeout(() => { progBoarders.style.width = `${pct}%`; }, 150);
+        }
+      }
+      if (exeatEl && dom.currently_away_exeat !== undefined) {
+        animateCountUp(exeatEl, dom.currently_away_exeat);
+        if (exeatSub) exeatSub.textContent = `${dom.overdue_exeat_count || 0} overdue curfew`;
+        if (progExeat) {
+          const pWidth = (dom.overdue_exeat_count > 0) ? 100 : Math.min(100, (dom.currently_away_exeat || 0) * 12);
+          setTimeout(() => { progExeat.style.width = `${pWidth}%`; }, 150);
+        }
+      }
+      if (medicalEl && dom.medical_flags_count !== undefined) {
+        animateCountUp(medicalEl, dom.medical_flags_count);
+        if (medicalSub) medicalSub.textContent = 'Special Care & Allergies';
+      }
+      if (disciplineEl && dom.active_discipline_incidents !== undefined) {
+        animateCountUp(disciplineEl, dom.active_discipline_incidents);
+        if (disciplineSub) disciplineSub.textContent = 'Pending Investigation';
+      }
+
+      const overdueAlertHtml = (dom.overdue_exeat_count > 0) 
+        ? `<span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">🚨 ${dom.overdue_exeat_count} Overdue Curfew Alert(s)</span>`
+        : `<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">✓ Exeats On Schedule</span>`;
+
+      // 1. Campus Life & Welfare Summary Card
       cardsHtml += `
         <div class="card" style="border-left: 4px solid #f472b6; background: var(--card-bg, #1e293b);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h4 style="margin:0; font-size:1rem; color:#f472b6;">🏡 Campus Life & Welfare Summary</h4>
+            <h4 style="margin:0; font-size:1.05rem; color:#f472b6; display:flex; align-items:center; gap:8px;">
+              <span>🏡</span> Campus Life, Welfare & Safe Custody
+            </h4>
             ${overdueAlertHtml}
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
-            <div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
-              <span style="opacity:0.7;">Active Boarders:</span><br/>
-              <strong style="font-size:1.1rem; color:#38bdf8;">${dom.total_boarders} Students (${dom.total_houses} Houses)</strong>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Active Boarders & Capacity:</span><br/>
+              <strong style="font-size:1.15rem; color:#38bdf8;">${dom.total_boarders} Boarders</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Across ${dom.total_houses} Boarding Houses</div>
             </div>
-            <div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
-              <span style="opacity:0.7;">Currently Away on Exeat:</span><br/>
-              <strong style="font-size:1.1rem; color:#f59e0b;">${dom.currently_away_exeat} Departed</strong>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Currently Away on Exeat:</span><br/>
+              <strong style="font-size:1.15rem; color:#f59e0b;">${dom.currently_away_exeat} Departed</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">${dom.overdue_exeat_count} Overdue for return</div>
             </div>
-            <div style="grid-column:1/-1; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <span style="opacity:0.7;">Unresolved Security & Discipline Incidents:</span><br/>
-                <strong style="font-size:1.1rem; color:${dom.active_discipline_incidents>0?'#f87171':'#4ade80'};">${dom.active_discipline_incidents} Alert(s) Pending Action</strong>
-              </div>
-              <a href="discipline.html" class="btn sm" style="font-size:0.75rem; background:rgba(244,114,182,0.2); color:#f472b6; border:1px solid rgba(244,114,182,0.4);">View Discipline</a>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Medical & Special Care:</span><br/>
+              <strong style="font-size:1.15rem; color:#f87171;">${dom.medical_flags_count} Health Alerts</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Allergies & chronic cases</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Discipline Incidents:</span><br/>
+              <strong style="font-size:1.15rem; color:${dom.active_discipline_incidents>0?'#f87171':'#4ade80'};">${dom.active_discipline_incidents} Active</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Awaiting sanction</div>
             </div>
           </div>
         </div>
       `;
 
-      // Render House Occupancy Matrix (SHS & Combined modes only)
+      // 2. Live Exeat Movement & Safe Custody Breakdown
+      if (dom.active_exeats_breakdown) {
+        const eb = dom.active_exeats_breakdown;
+        cardsHtml += `
+          <div class="card" style="border-left: 4px solid #f59e0b; background: var(--card-bg, #1e293b);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <h4 style="margin:0; font-size:1.05rem; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+                <span>🗺️</span> Live Exeat Movement & Custody Radar
+              </h4>
+              <a href="exeat.html" class="btn sm" style="background:#d97706; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Exeat Gate Desk</a>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#38bdf8;">🏖️ Weekend Exeats:</span>
+                  <strong>${eb.Weekend || 0} Students</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${Math.min(100, (eb.Weekend || 0) * 20)}%; height:100%; background:#0284c7;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#f87171;">🏥 Medical / Hospital Exeats:</span>
+                  <strong>${eb.Medical || 0} Students</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${Math.min(100, (eb.Medical || 0) * 20)}%; height:100%; background:#ef4444;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#fbbf24;">💼 Special / Emergency Exeats:</span>
+                  <strong>${eb.Special || 0} Students</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${Math.min(100, (eb.Special || 0) * 20)}%; height:100%; background:#f59e0b;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#a855f7;">🚌 Official / Academic Exeats:</span>
+                  <strong>${eb.Official || 0} Students</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${Math.min(100, (eb.Official || 0) * 20)}%; height:100%; background:#9333ea;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // 3. Boarding House Occupancy & Dormitory Capacity Matrix Table
       if (data.school_mode !== 'BASIC_ONLY' && Array.isArray(dom.houses_matrix) && dom.houses_matrix.length > 0) {
         let houseRows = dom.houses_matrix.map(h => {
           let badge = `<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">✓ OPTIMAL</span>`;
@@ -960,6 +1086,156 @@ async function loadExecutiveAnalytics() {
           </div>
         `;
       }
+
+      // 4. Dormitory Medical & Special Care Registry (Health Radar)
+      if (Array.isArray(dom.critical_medical_roster) && dom.critical_medical_roster.length > 0) {
+        let healthRows = dom.critical_medical_roster.map(hr => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">👨‍🎓 ${hr.student_name}</td>
+            <td style="padding:10px 12px; color:#38bdf8;">${hr.house_name}</td>
+            <td style="padding:10px 12px;">
+              <span style="background:rgba(239,68,68,0.15); color:#fca5a5; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:600;">
+                ${hr.condition}
+              </span>
+            </td>
+            <td style="padding:10px 12px; font-weight:700; color:#f87171;">🩸 ${hr.blood_group}</td>
+            <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
+              <button type="button" onclick="callEmergencyContact('${escapeHtml(hr.emergency_phone)}', '${escapeHtml(hr.student_name)}')" 
+                      style="background:rgba(34,197,94,0.2); border:1px solid rgba(34,197,94,0.4); color:#4ade80; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer;">
+                📞 ${hr.emergency_phone || 'Call Contact'}
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #ef4444; background: var(--card-bg, #1e293b); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#f87171; display:flex; align-items:center; gap:8px;">
+                  <span>🩺</span> Dormitory Special Care & Medical Flags Registry
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Boarders with registered allergies or chronic conditions requiring housemaster awareness</div>
+              </div>
+              <a class="btn sm" href="students.html" style="background:#dc2626; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">👨‍🎓 Student Registry</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:8px 12px;">Student Name</th>
+                    <th style="padding:8px 12px;">House</th>
+                    <th style="padding:8px 12px;">Medical Condition / Allergies</th>
+                    <th style="padding:8px 12px;">Blood Group</th>
+                    <th style="padding:8px 12px; text-align:right;">Emergency Contact</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${healthRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // 5. Overdue Exeat Early Warning Watchlist (if overdue records exist)
+      if (Array.isArray(dom.overdue_exeats_roster) && dom.overdue_exeats_roster.length > 0) {
+        let overdueRows = dom.overdue_exeats_roster.map(ox => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🚨 ${ox.student_name}</td>
+            <td style="padding:10px 12px; color:#38bdf8;">${ox.house_name}</td>
+            <td style="padding:10px 12px; font-weight:700; color:#f87171;">⏰ Expected: ${ox.expected_return}</td>
+            <td style="padding:10px 12px;">${ox.reason} (${ox.exeat_type})</td>
+            <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
+              <button type="button" onclick="sendExeatParentAlert('${escapeHtml(ox.parent_phone)}', '${escapeHtml(ox.student_name)}')" 
+                      style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer; margin-right:6px;">
+                📲 Alert Parent
+              </button>
+              <a href="exeat.html" class="btn sm" style="padding:4px 10px; font-size:0.75rem; background:rgba(219,39,119,0.2); color:#f472b6; border:1px solid rgba(219,39,119,0.4); text-decoration:none; border-radius:6px; font-weight:600;">
+                🏡 View Exeat
+              </a>
+            </td>
+          </tr>
+        `).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #ef4444; background: var(--card-bg, #1e293b); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#f87171; display:flex; align-items:center; gap:8px;">
+                  <span>🚨</span> Overdue Exeat Returnee Watchlist (Curfew Breach)
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Departed students who have breached their expected return deadline</div>
+              </div>
+              <a class="btn sm" href="exeat.html" style="background:#dc2626; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">🏡 Exeat Desk</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:8px 12px;">Student Name</th>
+                    <th style="padding:8px 12px;">House</th>
+                    <th style="padding:8px 12px;">Deadline</th>
+                    <th style="padding:8px 12px;">Reason</th>
+                    <th style="padding:8px 12px; text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${overdueRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // 6. Unresolved Campus Discipline Cases Queue
+      if (Array.isArray(dom.pending_discipline_cases) && dom.pending_discipline_cases.length > 0) {
+        let discRows = dom.pending_discipline_cases.map(dc => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">👨‍🎓 ${dc.student_name}</td>
+            <td style="padding:10px 12px; color:#38bdf8;">${dc.house_name}</td>
+            <td style="padding:10px 12px; font-weight:700; color:#fbbf24;">⚖️ ${dc.incident_type}</td>
+            <td style="padding:10px 12px; font-size:0.75rem; opacity:0.8;">${dc.incident_date}</td>
+            <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
+              <a href="discipline.html" class="btn sm" style="padding:4px 10px; font-size:0.75rem; background:rgba(244,114,182,0.2); color:#f472b6; border:1px solid rgba(244,114,182,0.4); text-decoration:none; border-radius:6px; font-weight:600;">
+                ⚖️ Review & Sanction
+              </a>
+            </td>
+          </tr>
+        `).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #f472b6; background: var(--card-bg, #1e293b); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#f472b6; display:flex; align-items:center; gap:8px;">
+                  <span>⚖️</span> Active Campus Discipline & Behavioral Queue
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Reported student conduct infractions pending disciplinary action</div>
+              </div>
+              <a class="btn sm" href="discipline.html" style="background:#db2777; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">⚖️ Discipline Desk</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:8px 12px;">Student Name</th>
+                    <th style="padding:8px 12px;">House</th>
+                    <th style="padding:8px 12px;">Infraction</th>
+                    <th style="padding:8px 12px;">Incident Date</th>
+                    <th style="padding:8px 12px; text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${discRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
     }
 
     container.innerHTML = cardsHtml;
@@ -969,11 +1245,28 @@ async function loadExecutiveAnalytics() {
   }
 }
 
-// ── Reminder Dispatch Helper ───────────────────────────────────────────────────
+// ── Reminder & Emergency Dispatch Helpers ─────────────────────────────────────
 window.sendAssessmentReminder = function(teacherName, subjectName, className) {
   const msg = `📨 Assessment reminder dispatched to ${teacherName} for ${subjectName} (${className}).`;
   if (window.showToast) {
     window.showToast(msg, 'success');
+  } else {
+    alert(msg);
+  }
+};
+
+window.callEmergencyContact = function(phone, studentName) {
+  if (phone && phone !== 'Not Recorded' && phone !== 'N/A') {
+    window.location.href = `tel:${phone}`;
+  } else {
+    alert(`No emergency contact phone recorded for ${studentName}.`);
+  }
+};
+
+window.sendExeatParentAlert = function(parentPhone, studentName) {
+  const msg = `🚨 Curfew breach notification sent to guardian (${parentPhone}) for ${studentName}.`;
+  if (window.showToast) {
+    window.showToast(msg, 'warning');
   } else {
     alert(msg);
   }

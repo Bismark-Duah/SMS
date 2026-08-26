@@ -736,6 +736,149 @@ def get_executive_analytics(
             "subjects_matrix": class_subjects_matrix[:8]
         }
 
+    # 6. Subject Teacher Personal Analytics
+    teacher_allocations = []
+    teacher_at_risk_list = []
+    today_periods = []
+    t_sba_overall_pct = 0.0
+    
+    t_user_id = current_user.id if current_user else None
+    t_assignments = db.query(TeacherAssignment).filter(TeacherAssignment.teacher_id == t_user_id).all() if t_user_id else []
+    if not t_assignments and all_assignments:
+        first_t_id = all_assignments[0].teacher_id
+        t_assignments = db.query(TeacherAssignment).filter(TeacherAssignment.teacher_id == first_t_id).all()
+        t_user_id = first_t_id
+
+    if t_assignments:
+        total_rec = 0
+        total_exp = 0
+        for asgn in t_assignments:
+            c_id = asgn.class_section_id
+            s_id = asgn.subject_id
+            c_name = asgn.class_section.name if asgn.class_section else "Class"
+            s_name = asgn.subject.name if asgn.subject else "Subject"
+            c_size = db.query(Student).filter(Student.class_section_id == c_id, Student.is_active == True).count() if c_id else 0
+            sc_list = [sc for sc in all_scores if sc.subject_id == s_id and sc.student and sc.student.class_section_id == c_id]
+            rec_cnt = len(sc_list)
+            pct = round(min(100.0, (rec_cnt / max(1, c_size)) * 100.0), 1) if c_size > 0 else 0.0
+            
+            total_rec += rec_cnt
+            total_exp += c_size
+            
+            for sc in sc_list:
+                tot = (sc.class_score or 0.0) + (sc.exam_score or 0.0)
+                if tot < 50.0 and sc.student:
+                    teacher_at_risk_list.append({
+                        "id": sc.student.id,
+                        "name": sc.student.full_name,
+                        "class_name": c_name,
+                        "subject_name": s_name,
+                        "score": tot,
+                        "phone": sc.student.phone or "Not Recorded"
+                    })
+
+            teacher_allocations.append({
+                "assignment_id": asgn.id,
+                "class_id": c_id,
+                "class_name": c_name,
+                "subject_id": s_id,
+                "subject_name": s_name,
+                "class_size": c_size,
+                "scores_recorded": rec_cnt,
+                "completion_pct": pct,
+                "status": "COMPLETE" if pct >= 100 else ("IN_PROGRESS" if pct > 0 else "NOT_STARTED")
+            })
+
+        t_sba_overall_pct = round(min(100.0, (total_rec / max(1, total_exp)) * 100.0), 1) if total_exp > 0 else 0.0
+
+        dow = datetime.now().isoweekday()
+        from ..models import Timetable
+        tt_records = db.query(Timetable).filter(
+            Timetable.teacher_id == t_user_id,
+            Timetable.day_of_week == dow
+        ).order_by(Timetable.period_number.asc()).all()
+        for tt in tt_records:
+            today_periods.append({
+                "period_number": tt.period_number,
+                "start_time": tt.start_time or "—",
+                "end_time": tt.end_time or "—",
+                "subject_name": tt.subject.name if tt.subject else "Subject",
+                "class_name": tt.class_section.name if tt.class_section else "Class",
+                "room": tt.room or "Standard Classroom"
+            })
+
+    teacher_data = {
+        "total_classes": len({a.class_section_id for a in t_assignments if a.class_section_id}),
+        "total_subjects": len({a.subject_id for a in t_assignments if a.subject_id}),
+        "total_allocations": len(t_assignments),
+        "sba_completion_pct": t_sba_overall_pct,
+        "allocations": teacher_allocations,
+        "today_timetable": today_periods,
+        "at_risk_students": teacher_at_risk_list[:8]
+    }
+
+    # 7. Housemaster / Housemistress Personal House Analytics
+    target_house = None
+    if current_user:
+        target_house = db.query(House).filter(
+            (House.house_master_id == current_user.id) |
+            (House.assistant_house_master_id == current_user.id) |
+            (House.senior_in_charge_id == current_user.id) |
+            (House.house_master_girls_id == current_user.id) |
+            (House.assistant_house_master_girls_id == current_user.id)
+        ).first()
+    if not target_house and school_mode != "BASIC_ONLY":
+        target_house = house_query.first()
+
+    house_master_data = {}
+    if target_house:
+        h_boarders = db.query(Student).filter(Student.house_id == target_house.id, Student.is_active == True).all()
+        h_dorms = getattr(target_house, 'dormitories', [])
+        h_cap = sum([d.capacity for d in h_dorms if hasattr(d, 'capacity') and d.capacity]) if h_dorms else 50
+        h_cap = max(1, h_cap)
+        h_occ_pct = round(min(100.0, (len(h_boarders) / h_cap) * 100.0), 1)
+
+        h_st_ids = {s.id for s in h_boarders}
+        h_away_exeats = [ex for ex in away_exeats if ex.student_id in h_st_ids]
+        h_overdue = [ex for ex in h_away_exeats if ex.status == "Departed" and ex.expected_return and ex.expected_return < now]
+
+        h_medical = [hr for hr in medical_roster if any(s.full_name == hr["student_name"] for s in h_boarders)]
+        h_discipline = [dc for dc in pending_discipline_cases if any(s.full_name == dc["student_name"] for s in h_boarders)]
+
+        dorm_list = []
+        for d in h_dorms:
+            d_students_cnt = db.query(Student).filter(Student.dormitory_id == d.id, Student.is_active == True).count()
+            d_cap = d.capacity if hasattr(d, 'capacity') and d.capacity else 20
+            d_pct = round(min(100.0, (d_students_cnt / max(1, d_cap)) * 100.0), 1)
+            dorm_list.append({
+                "id": d.id,
+                "name": d.name,
+                "occupants": d_students_cnt,
+                "capacity": d_cap,
+                "occupancy_pct": d_pct
+            })
+
+        house_master_data = {
+            "house_id": target_house.id,
+            "house_name": target_house.name,
+            "gender_type": getattr(target_house, 'gender', 'MIXED'),
+            "total_boarders": len(h_boarders),
+            "total_capacity": h_cap,
+            "occupancy_pct": h_occ_pct,
+            "dormitories": dorm_list,
+            "active_exeats_count": len(h_away_exeats),
+            "active_exeats": [{
+                "id": ex.id,
+                "student_name": ex.student.full_name if ex.student else "Student",
+                "exeat_type": ex.exeat_type or "Special",
+                "expected_return": ex.expected_return.strftime("%d %b, %H:%M") if ex.expected_return else "—",
+                "is_overdue": ex in h_overdue,
+                "parent_phone": ex.parent_contact or (ex.student.phone if ex.student else None) or "Not Recorded"
+            } for ex in h_away_exeats[:8]],
+            "medical_alerts": h_medical[:6],
+            "discipline_cases": h_discipline[:6]
+        }
+
     return {
         "school_mode": school_mode,
         "academic": {
@@ -788,6 +931,8 @@ def get_executive_analytics(
             "total_departments": depts_count
         },
         "departmental": departmental_data,
-        "class_master": class_master_data
+        "class_master": class_master_data,
+        "teacher": teacher_data,
+        "house_master": house_master_data
     }
 

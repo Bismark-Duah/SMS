@@ -245,6 +245,26 @@ function renderDailyShortcuts(activeRole) {
       { label: '🎓 Student Clearance Desk', href: 'clearance.html' },
       { label: '💬 Message Class Parents', href: 'messaging.html' }
     ];
+  } else if (role === 'teacher') {
+    if (heading) heading.innerHTML = '⚡ Faculty Teaching & Score Desk Shortcuts';
+    shortcuts = [
+      { label: '✍️ Record Class Scores', href: 'bulk-entry.html' },
+      { label: '📅 My Teaching Timetable', href: 'timetable.html' },
+      { label: '⚡ Mark Period Attendance', href: 'attendance.html' },
+      { label: '📚 Subject Schemes & Notes', href: 'subjects.html' },
+      { label: '📜 Student Terminal Progress', href: 'report-card.html' },
+      { label: '💬 Message Subject Parents', href: 'messaging.html' }
+    ];
+  } else if (['house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ House Custody & Welfare Shortcuts';
+    shortcuts = [
+      { label: '🏡 House Exeat Approvals', href: 'exeat.html' },
+      { label: '🏠 Dormitory Bed Allocations', href: 'houses.html' },
+      { label: '📋 Evening Roll Call', href: 'attendance.html' },
+      { label: '⚖️ House Discipline Cases', href: 'discipline.html' },
+      { label: '🩺 Dormitory Health Alerts', href: 'students.html' },
+      { label: '💬 Broadcast House Alert', href: 'messaging.html' }
+    ];
   } else {
     if (heading) heading.innerHTML = '⚡ Daily Operations Shortcuts';
     shortcuts = [
@@ -558,6 +578,32 @@ async function loadDashboardStats() {
     if (sbaCard) sbaCard.style.display = 'flex';
     if (passRateCard) passRateCard.style.display = 'flex';
     if (atRiskCard) atRiskCard.style.display = 'flex';
+  } else if (activeRole === 'teacher') {
+    if (feesCard) feesCard.style.display = 'none';
+    if (housesCard) housesCard.style.display = 'none';
+    if (boardersCard) boardersCard.style.display = 'none';
+    if (exeatCard) exeatCard.style.display = 'none';
+    if (medicalCard) medicalCard.style.display = 'none';
+    if (disciplineCard) disciplineCard.style.display = 'none';
+    if (staffCard) staffCard.style.display = 'none';
+    if (usersCard) usersCard.style.display = 'none';
+    if (broadcastsCard) broadcastsCard.style.display = 'none';
+    if (sbaCard) sbaCard.style.display = 'flex';
+    if (passRateCard) passRateCard.style.display = 'flex';
+    if (atRiskCard) atRiskCard.style.display = 'flex';
+  } else if (['house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress'].includes(activeRole)) {
+    if (feesCard) feesCard.style.display = 'none';
+    if (sbaCard) sbaCard.style.display = 'none';
+    if (passRateCard) passRateCard.style.display = 'none';
+    if (atRiskCard) atRiskCard.style.display = 'none';
+    if (staffCard) staffCard.style.display = 'none';
+    if (usersCard) usersCard.style.display = 'none';
+    if (broadcastsCard) broadcastsCard.style.display = 'none';
+    if (boardersCard) boardersCard.style.display = 'flex';
+    if (exeatCard) exeatCard.style.display = 'flex';
+    if (medicalCard) medicalCard.style.display = 'flex';
+    if (disciplineCard) disciplineCard.style.display = 'flex';
+    if (housesCard) housesCard.style.display = 'flex';
   } else {
     if (feesCard) feesCard.style.display = 'flex';
     if (sbaCard) sbaCard.style.display = 'none';
@@ -670,7 +716,9 @@ async function loadExecutiveAnalytics() {
     'assistant_headmaster_academic', 'assistant_head_academic',
     'assistant_headmaster_domestic', 'assistant_head_domestic',
     'assistant_headmaster_admin', 'assistant_head_admin',
-    'hod', 'form_master', 'form_mistress'
+    'hod', 'form_master', 'form_mistress',
+    'teacher', 'senior_housemaster', 'senior_housemistress',
+    'house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress'
   ];
 
   const isExecutive = execRoles.includes(activeRole);
@@ -696,6 +744,8 @@ async function loadExecutiveAnalytics() {
     const adm = data.administration || {};
     const dept = data.departmental || {};
     const cls = data.class_master || {};
+    const tchr = data.teacher || {};
+    const hm = data.house_master || {};
 
     section.style.display = 'block';
 
@@ -704,6 +754,8 @@ async function loadExecutiveAnalytics() {
     const isAdminHead = ['assistant_headmaster_admin', 'assistant_head_admin'].includes(activeRole);
     const isHOD = activeRole === 'hod';
     const isFormMaster = ['form_master', 'form_mistress'].includes(activeRole);
+    const isTeacher = activeRole === 'teacher';
+    const isHouseMaster = ['house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress'].includes(activeRole);
     const isSuperOrHead = ['admin', 'super_admin', 'headmaster', 'headmistress'].includes(activeRole);
 
     const showAcademic = isAcademicHead || isSuperOrHead;
@@ -711,6 +763,8 @@ async function loadExecutiveAnalytics() {
     const showAdmin = isAdminHead || isSuperOrHead;
     const showHOD = isHOD;
     const showFormMaster = isFormMaster;
+    const showTeacher = isTeacher;
+    const showHouseMaster = isHouseMaster;
 
     // Populate top KPI cards if Academic Head
     if (isAcademicHead || isSuperOrHead) {
@@ -784,6 +838,71 @@ async function loadExecutiveAnalytics() {
       }
       if (atRiskEl && cls.at_risk_count !== undefined) {
         animateCountUp(atRiskEl, cls.at_risk_count);
+      }
+    }
+
+    // Populate top KPI cards if Subject Teacher
+    if (isTeacher) {
+      const sbaEl = document.getElementById('statSba');
+      const sbaSub = document.getElementById('statSbaSub');
+      const passRateEl = document.getElementById('statPassRate');
+      const passRateSub = document.getElementById('statPassRateSub');
+      const atRiskEl = document.getElementById('statAtRisk');
+      const atRiskSub = document.getElementById('statAtRiskSub');
+      const progSba = document.getElementById('progSba');
+      const progPassRate = document.getElementById('progPassRate');
+
+      if (sbaSub) sbaSub.textContent = 'My SBA Marks Entry';
+      if (passRateSub) passRateSub.textContent = 'Allocations Completion';
+      if (atRiskSub) atRiskSub.textContent = 'Failing My Subjects';
+
+      if (sbaEl && tchr.sba_completion_pct !== undefined) {
+        animateCountUp(sbaEl, tchr.sba_completion_pct, '%');
+        if (progSba) setTimeout(() => { progSba.style.width = `${Math.min(100, tchr.sba_completion_pct)}%`; }, 150);
+      }
+      if (passRateEl) {
+        const passPct = tchr.sba_completion_pct !== undefined ? tchr.sba_completion_pct : 100;
+        animateCountUp(passRateEl, passPct, '%');
+        if (progPassRate) setTimeout(() => { progPassRate.style.width = `${passPct}%`; }, 150);
+      }
+      if (atRiskEl && tchr.at_risk_students) {
+        animateCountUp(atRiskEl, tchr.at_risk_students.length);
+      }
+    }
+
+    // Populate top KPI cards if Housemaster / Housemistress
+    if (isHouseMaster) {
+      const boardersEl = document.getElementById('statBoarders');
+      const boardersSub = document.getElementById('statBoardersSub');
+      const progBoarders = document.getElementById('progBoarders');
+      const exeatEl = document.getElementById('statExeat');
+      const exeatSub = document.getElementById('statExeatSub');
+      const progExeat = document.getElementById('progExeat');
+      const medicalEl = document.getElementById('statMedical');
+      const medicalSub = document.getElementById('statMedicalSub');
+      const disciplineEl = document.getElementById('statDiscipline');
+      const disciplineSub = document.getElementById('statDisciplineSub');
+
+      if (boardersEl && hm.total_boarders !== undefined) {
+        animateCountUp(boardersEl, hm.total_boarders);
+        if (boardersSub) boardersSub.textContent = `${hm.total_boarders} of ${hm.total_capacity || 50} beds (${hm.occupancy_pct || 0}%)`;
+        if (progBoarders) setTimeout(() => { progBoarders.style.width = `${Math.min(100, hm.occupancy_pct || 0)}%`; }, 150);
+      }
+      if (exeatEl && hm.active_exeats_count !== undefined) {
+        animateCountUp(exeatEl, hm.active_exeats_count);
+        if (exeatSub) exeatSub.textContent = 'Active house exeats';
+        if (progExeat) {
+          const ePct = hm.total_boarders > 0 ? Math.round((hm.active_exeats_count / hm.total_boarders) * 100) : 0;
+          setTimeout(() => { progExeat.style.width = `${ePct}%`; }, 150);
+        }
+      }
+      if (medicalEl && hm.medical_alerts) {
+        animateCountUp(medicalEl, hm.medical_alerts.length);
+        if (medicalSub) medicalSub.textContent = 'In my house';
+      }
+      if (disciplineEl && hm.discipline_cases) {
+        animateCountUp(disciplineEl, hm.discipline_cases.length);
+        if (disciplineSub) disciplineSub.textContent = 'Reported in my house';
       }
     }
 
@@ -1600,6 +1719,300 @@ async function loadExecutiveAnalytics() {
                 </thead>
                 <tbody>
                   ${riskRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // ── Subject Teacher Personal Command Center ───────────────────────────────
+    if (showTeacher) {
+      const headingEl = document.getElementById('execAnalyticsTitle');
+      if (headingEl) headingEl.innerHTML = `✍️ Faculty Teaching & Continuous Assessment (SBA) Desk`;
+
+      // 1. My Teaching Allocations & Score Entry Matrix
+      let allocRows = '';
+      if (Array.isArray(tchr.allocations) && tchr.allocations.length > 0) {
+        allocRows = tchr.allocations.map(al => {
+          let badge = al.status === 'COMPLETE'
+            ? `<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">✓ COMPLETE</span>`
+            : (al.status === 'IN_PROGRESS'
+              ? `<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">⏳ IN PROGRESS (${al.completion_pct}%)</span>`
+              : `<span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">❌ NOT STARTED</span>`);
+
+          return `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🏫 ${escapeHtml(al.class_name)}</td>
+              <td style="padding:10px 12px; color:#38bdf8; font-weight:600;">📚 ${escapeHtml(al.subject_name)}</td>
+              <td style="padding:10px 12px;">${al.scores_recorded} / ${al.class_size} Students</td>
+              <td style="padding:10px 12px; min-width:110px;">
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${al.completion_pct}%; height:100%; background:${al.status === 'COMPLETE' ? '#10b981' : (al.status === 'IN_PROGRESS' ? '#f59e0b' : '#ef4444')};"></div>
+                </div>
+              </td>
+              <td style="padding:10px 12px;">${badge}</td>
+              <td style="padding:10px 12px; text-align:right;">
+                <a href="bulk-entry.html" class="btn sm" style="padding:5px 12px; font-size:0.78rem; background:rgba(99,102,241,0.2); color:#818cf8; border:1px solid rgba(99,102,241,0.4); text-decoration:none; border-radius:6px; font-weight:600; white-space:nowrap;">
+                  ✍️ Enter Marks
+                </a>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } else {
+        allocRows = `<tr><td colspan="6" style="padding:16px; text-align:center; opacity:0.6;">No subject allocations assigned yet.</td></tr>`;
+      }
+
+      cardsHtml += `
+        <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #6366f1; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+            <div>
+              <h4 style="margin:0; font-size:1.05rem; color:#818cf8; display:flex; align-items:center; gap:8px;">
+                <span>✍️</span> My Teaching Allocations & Continuous Assessment (SBA) Progress
+              </h4>
+              <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Track class-by-class marks upload and continuous assessment completion across your assigned subjects</div>
+            </div>
+            <a class="btn sm" href="bulk-entry.html" style="background:#4f46e5; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">✍️ Open Score Desk</a>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                  <th style="padding:8px 12px;">Class Section</th>
+                  <th style="padding:8px 12px;">Assigned Subject</th>
+                  <th style="padding:8px 12px;">Enrollment / Entered</th>
+                  <th style="padding:8px 12px;">Progress</th>
+                  <th style="padding:8px 12px;">Status</th>
+                  <th style="padding:8px 12px; text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${allocRows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      // 2. Today's Teaching Schedule & Timetable Countdown Card
+      let ttRows = '';
+      if (Array.isArray(tchr.today_timetable) && tchr.today_timetable.length > 0) {
+        ttRows = tchr.today_timetable.map(tt => `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05); margin-bottom:8px;">
+            <div>
+              <span style="font-weight:700; color:#38bdf8; font-size:0.88rem;">Period ${tt.period_number}</span>
+              <span style="font-size:0.75rem; opacity:0.65; margin-left:8px;">(${escapeHtml(tt.start_time)} - ${escapeHtml(tt.end_time)})</span>
+              <div style="font-size:0.82rem; font-weight:600; margin-top:2px; color:#f8fafc;">
+                📚 ${escapeHtml(tt.subject_name)} &bull; <span style="color:#a855f7;">${escapeHtml(tt.class_name)}</span>
+              </div>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:1px;">Room: ${escapeHtml(tt.room)}</div>
+            </div>
+            <a href="attendance.html" class="btn sm" style="padding:4px 10px; font-size:0.75rem; background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); text-decoration:none; border-radius:6px; font-weight:600; white-space:nowrap;">
+              ⚡ Mark Attendance
+            </a>
+          </div>
+        `).join('');
+      } else {
+        ttRows = `
+          <div style="text-align:center; padding:24px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px dashed rgba(255,255,255,0.1);">
+            <div style="font-size:1.8rem; margin-bottom:6px;">☕</div>
+            <strong style="color:#f8fafc; font-size:0.9rem;">No Teaching Periods Scheduled Today</strong>
+            <div style="font-size:0.75rem; opacity:0.6; margin-top:4px;">Check your weekly teaching master timetable for upcoming lessons.</div>
+          </div>
+        `;
+      }
+
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #0284c7; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#38bdf8; display:flex; align-items:center; gap:8px;">
+              <span>📅</span> Today's Teaching Schedule
+            </h4>
+            <a href="timetable.html" class="btn sm" style="background:#0284c7; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Full Timetable</a>
+          </div>
+          <div>
+            ${ttRows}
+          </div>
+        </div>
+      `;
+
+      // 3. Academic Remedial Watchlist Card
+      let tRiskRows = '';
+      if (Array.isArray(tchr.at_risk_students) && tchr.at_risk_students.length > 0) {
+        tRiskRows = tchr.at_risk_students.map(rs => `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.06); padding:10px 12px; border-radius:8px; border:1px solid rgba(239,68,68,0.2); margin-bottom:8px;">
+            <div>
+              <strong style="color:#f87171; font-size:0.85rem;">⚠️ ${escapeHtml(rs.name)}</strong>
+              <div style="font-size:0.75rem; opacity:0.7; margin-top:1px;">
+                ${escapeHtml(rs.class_name)} &bull; ${escapeHtml(rs.subject_name)}
+              </div>
+              <div style="font-size:0.72rem; color:#f87171; font-weight:600; margin-top:2px;">
+                Score: ${rs.score}% (Requires Remedial Attention)
+              </div>
+            </div>
+            <button type="button" onclick="sendExeatParentAlert('${escapeHtml(rs.phone)}', '${escapeHtml(rs.name)}')" 
+                    style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer; white-space:nowrap;">
+              📲 Alert Parent
+            </button>
+          </div>
+        `).join('');
+      } else {
+        tRiskRows = `
+          <div style="text-align:center; padding:24px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px dashed rgba(255,255,255,0.1);">
+            <div style="font-size:1.8rem; margin-bottom:6px;">🌟</div>
+            <strong style="color:#34d399; font-size:0.9rem;">No Students Flagged At Risk</strong>
+            <div style="font-size:0.75rem; opacity:0.6; margin-top:4px;">All evaluated students currently meeting satisfactory academic threshold (&ge; 50%).</div>
+          </div>
+        `;
+      }
+
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #ef4444; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#f87171; display:flex; align-items:center; gap:8px;">
+              <span>⚠️</span> Subject Remedial Watchlist
+            </h4>
+            <a href="report-card.html" class="btn sm" style="background:#dc2626; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Progress Desk</a>
+          </div>
+          <div>
+            ${tRiskRows}
+          </div>
+        </div>
+      `;
+    }
+
+    // ── Housemaster / Housemistress Command Center ────────────────────────────
+    if (showHouseMaster) {
+      const headingEl = document.getElementById('execAnalyticsTitle');
+      if (headingEl) headingEl.innerHTML = `🏡 Housemaster Custody & Welfare Command Center (${escapeHtml(hm.house_name || 'My House')})`;
+
+      // 1. House Dormitory Bed Occupancy & Capacity Matrix Card
+      let dormRows = '';
+      if (Array.isArray(hm.dormitories) && hm.dormitories.length > 0) {
+        dormRows = hm.dormitories.map(dm => `
+          <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05); margin-bottom:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; margin-bottom:4px;">
+              <strong style="color:#f8fafc;">🛏️ ${escapeHtml(dm.name)}</strong>
+              <span style="font-weight:700; color:#38bdf8;">${dm.occupants} / ${dm.capacity} beds (${dm.occupancy_pct}%)</span>
+            </div>
+            <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+              <div style="width:${Math.min(100, dm.occupancy_pct)}%; height:100%; background:${dm.occupancy_pct > 90 ? '#ef4444' : '#10b981'};"></div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        dormRows = `<div style="opacity:0.6; font-size:0.8rem; padding:8px 0;">No dormitories configured for this house yet.</div>`;
+      }
+
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #10b981; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#34d399; display:flex; align-items:center; gap:8px;">
+              <span>🛌</span> Dormitory Bed Capacity & Census
+            </h4>
+            <a href="houses.html" class="btn sm" style="background:#059669; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Dorm Roster</a>
+          </div>
+          <div>
+            ${dormRows}
+          </div>
+        </div>
+      `;
+
+      // 2. Active Exeats & Curfew Returnee Watchlist Card
+      let exRows = '';
+      if (Array.isArray(hm.active_exeats) && hm.active_exeats.length > 0) {
+        exRows = hm.active_exeats.map(ex => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:8px 10px; font-weight:600; color:#f8fafc;">🏡 ${escapeHtml(ex.student_name)}</td>
+            <td style="padding:8px 10px; color:#38bdf8;">${escapeHtml(ex.exeat_type)}</td>
+            <td style="padding:8px 10px; font-size:0.78rem;">${escapeHtml(ex.expected_return)}</td>
+            <td style="padding:8px 10px;">
+              ${ex.is_overdue 
+                ? `<span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:12px; font-size:0.72rem; font-weight:700;">🚨 OVERDUE</span>`
+                : `<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:12px; font-size:0.72rem; font-weight:700;">✓ AWAY</span>`}
+            </td>
+            <td style="padding:8px 10px; text-align:right;">
+              <button type="button" onclick="sendExeatParentAlert('${escapeHtml(ex.parent_phone)}', '${escapeHtml(ex.student_name)}')" 
+                      style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:600; cursor:pointer;">
+                📲 Alert
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } else {
+        exRows = `<tr><td colspan="5" style="padding:14px; text-align:center; opacity:0.6;">All boarders currently accounted for on campus.</td></tr>`;
+      }
+
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #f59e0b; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+              <span>🏡</span> Active Exeats & Curfew Tracking
+            </h4>
+            <a href="exeat.html" class="btn sm" style="background:#d97706; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Exeat Desk</a>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                  <th style="padding:6px 10px;">Boarder Name</th>
+                  <th style="padding:6px 10px;">Category</th>
+                  <th style="padding:6px 10px;">Return Due</th>
+                  <th style="padding:6px 10px;">Status</th>
+                  <th style="padding:6px 10px; text-align:right;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${exRows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      // 3. House Special Care & Health Registry Card
+      if (Array.isArray(hm.medical_alerts) && hm.medical_alerts.length > 0) {
+        let medRows = hm.medical_alerts.map(mr => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:8px 10px; font-weight:600; color:#f8fafc;">🩺 ${escapeHtml(mr.student_name)}</td>
+            <td style="padding:8px 10px; color:#f87171; font-weight:600;">${escapeHtml(mr.condition)}</td>
+            <td style="padding:8px 10px; color:#38bdf8;">${escapeHtml(mr.blood_group || '—')}</td>
+            <td style="padding:8px 10px; font-size:0.75rem; color:#fbbf24;">${escapeHtml(mr.allergies || 'None')}</td>
+            <td style="padding:8px 10px; text-align:right;">
+              <button type="button" onclick="sendExeatParentAlert('${escapeHtml(mr.emergency_contact)}', '${escapeHtml(mr.student_name)}')" 
+                      style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:600; cursor:pointer;">
+                📞 Contact
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #ef4444; background: var(--card-bg, #1e293b); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#f87171; display:flex; align-items:center; gap:8px;">
+                  <span>🩺</span> House Special Care & Health Registry
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Boarders in this house requiring active medical monitoring, dietary care, or chronic management</div>
+              </div>
+              <a class="btn sm" href="students.html" style="background:#dc2626; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">🩺 Medical Profile Registry</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:8px 10px;">Boarder Name</th>
+                    <th style="padding:8px 10px;">Primary Condition</th>
+                    <th style="padding:8px 10px;">Blood Group</th>
+                    <th style="padding:8px 10px;">Allergies / Special Instructions</th>
+                    <th style="padding:8px 10px; text-align:right;">Emergency Contact</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${medRows}
                 </tbody>
               </table>
             </div>

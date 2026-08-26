@@ -101,10 +101,6 @@ async function buildTabNav(formClassIds) {
   }
 }
 
-  // Switch to first available tab
-  if (tabs.length > 0) switchTab(tabs[0].id);
-}
-
 // ── Status Chip HTML ───────────────────────────────────────────────────────────
 function statusChip(status) {
   const map = { Present: 'success', Absent: 'danger', Late: 'warning', Excused: 'info' };

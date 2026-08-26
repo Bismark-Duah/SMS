@@ -962,6 +962,9 @@ async function loadExecutiveAnalytics() {
             </div>
           </div>
         `;
+      }
+    }
+
     // ── Administration Executive Command Center ───────────────────────────────
     if (showAdmin) {
       const unassignedBadge = ((adm.unassigned_teachers_count || 0) > 0)

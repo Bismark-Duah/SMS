@@ -191,15 +191,18 @@ async function loadCurriculumData(programId) {
       coreContainer.innerHTML = '<p style="opacity:.6">No core subjects registered in the system yet. Please add subjects first.</p>';
     } else {
       coreContainer.innerHTML = `
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:8px;">
+        <div class="catalog-grid">
           ${coreCandidates.map(sub => {
             const isChecked = configuredCoreIds.has(sub.id);
             return `
-              <label style="display:flex; align-items:center; gap:8px; padding:10px; border-radius:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); cursor:pointer;">
+              <label class="subject-tile-card">
                 <input type="checkbox" name="trackCoreSubjectIds" value="${sub.id}" ${isChecked ? 'checked' : ''} onchange="updateCoreSubjectsCountBadge()" />
-                <div>
-                  <div style="font-weight:600; font-size:0.85rem; color:#f1f5f9;">${sub.name}</div>
-                  <div style="font-size:0.72rem; color:#818cf8; font-family:monospace;">${sub.code || 'CORE'}</div>
+                <div class="subject-tile-info">
+                  <div class="subject-tile-name">${sub.name}</div>
+                  <div class="subject-tile-meta">
+                    <span class="subject-tile-code">${sub.code || 'CORE'}</span>
+                    <span>Mandatory Track Core</span>
+                  </div>
                 </div>
               </label>
             `;
@@ -230,11 +233,17 @@ async function loadCurriculumData(programId) {
       electivesList.innerHTML = '<p style="opacity:.6">No elective subjects available. Add subjects in Subjects page.</p>';
     } else {
       electivesList.innerHTML = `
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:6px;">
+        <div class="catalog-grid">
           ${electiveCandidates.map(sub => `
-            <label style="display:flex; align-items:center; gap:6px; padding:6px 8px; border-radius:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); cursor:pointer; font-size:0.8rem;">
+            <label class="subject-tile-card">
               <input type="checkbox" name="pkgSubjectIds" value="${sub.id}" />
-              <span>${sub.name}</span>
+              <div class="subject-tile-info">
+                <div class="subject-tile-name">${sub.name}</div>
+                <div class="subject-tile-meta">
+                  <span class="subject-tile-code">${sub.code || 'ELEC'}</span>
+                  <span>${sub.category || 'Elective'}</span>
+                </div>
+              </div>
             </label>
           `).join('')}
         </div>

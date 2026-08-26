@@ -211,7 +211,7 @@ window.renderAccreditationPresets = function(presets) {
   container.innerHTML = presetKeys.map(key => {
     const p = presets[key];
     return `
-      <button type="button" class="btn" style="padding:4px 10px; font-size:0.75rem; background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); color:#a5b4fc; font-weight:600;" onclick="window.applyAccreditationPreset('${key}')">
+      <button type="button" class="preset-pill-btn" onclick="window.applyAccreditationPreset('${key}')">
         ${p.name}
       </button>
     `;
@@ -254,31 +254,53 @@ window.renderAccreditationCatalog = function(data) {
     return;
   }
 
+  const getGroupIcon = (name) => {
+    if (name.includes('Core Curriculum')) return '🏫';
+    if (name.includes('Cross-Cutting')) return '🌐';
+    if (name.includes('STEM')) return '🚀';
+    if (name.includes('General Science')) return '🔬';
+    if (name.includes('Business')) return '📊';
+    if (name.includes('General Arts')) return '📜';
+    if (name.includes('Visual Arts')) return '🎨';
+    if (name.includes('Home Economics')) return '🍳';
+    if (name.includes('Technical')) return '🛠️';
+    if (name.includes('Agricultural')) return '🌱';
+    if (name.includes('Basic')) return '🎒';
+    return '📚';
+  };
+
   let html = '';
 
   groupKeys.forEach((groupName, idx) => {
     const subjects = grouped[groupName] || [];
     const activeCount = subjects.filter(s => s.is_active_for_school).length;
     const allChecked = activeCount === subjects.length && subjects.length > 0;
+    const icon = getGroupIcon(groupName);
 
     html += `
-      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 14px; margin-bottom:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="group_chk_${idx}" onchange="window.toggleGroupSubjects('${idx}', this.checked)" ${allChecked ? 'checked' : ''} style="cursor:pointer;" />
-            <label for="group_chk_${idx}" style="font-weight:700; font-size:0.92rem; color:#f1f5f9; cursor:pointer;">${groupName}</label>
-          </div>
-          <span style="font-size:0.78rem; background:rgba(99,102,241,0.15); color:#a5b4fc; padding:2px 8px; border-radius:12px; font-weight:600;" id="group_badge_${idx}">
+      <div class="catalog-group-card">
+        <div class="catalog-group-header">
+          <label class="catalog-group-title" for="group_chk_${idx}">
+            <input type="checkbox" id="group_chk_${idx}" onchange="window.toggleGroupSubjects('${idx}', this.checked)" ${allChecked ? 'checked' : ''} />
+            <span>${icon} ${groupName}</span>
+          </label>
+          <span class="catalog-group-badge" id="group_badge_${idx}">
             ${activeCount} / ${subjects.length} Active
           </span>
         </div>
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:6px;">
+        <div class="catalog-grid">
           ${subjects.map(s => {
             const checkedAttr = s.is_active_for_school ? 'checked' : '';
             return `
-              <label style="display:flex; align-items:center; gap:6px; padding:6px 8px; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); font-size:0.8rem; cursor:pointer; color:#cbd5e1;">
+              <label class="subject-tile-card">
                 <input type="checkbox" class="accred-sub-chk group-sub-${idx}" value="${s.id}" ${checkedAttr} onchange="window.updateAccreditationSummaryBadge()" />
-                <span title="${s.code || ''}">${s.name}</span>
+                <div class="subject-tile-info">
+                  <div class="subject-tile-name">${s.name}</div>
+                  <div class="subject-tile-meta">
+                    <span class="subject-tile-code">${s.code || 'SUB'}</span>
+                    <span>${s.category || (s.is_core ? 'Core' : 'Elective')}</span>
+                  </div>
+                </div>
               </label>
             `;
           }).join('')}

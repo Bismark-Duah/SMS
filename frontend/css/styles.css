@@ -2626,5 +2626,160 @@ thead th {
   }
 }
 
+/* ==========================================================================
+   ACADEMIC SELECTION & CONTAINER DESIGN SYSTEM
+   Standardized Grid, Card, and Chip Tiles across Super-Admin, Programs,
+   Admissions, and Subject Pickers.
+   ========================================================================== */
 
+.catalog-group-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
 
+.catalog-group-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.catalog-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.catalog-group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary, #f8fafc);
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.catalog-group-title input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary, #6366f1);
+  cursor: pointer;
+}
+
+.catalog-group-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.subject-tile-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.subject-tile-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.subject-tile-card input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--primary, #6366f1);
+  cursor: pointer;
+}
+
+.subject-tile-card.is-selected,
+.subject-tile-card:has(input[type="checkbox"]:checked) {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.12);
+}
+
+.subject-tile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.subject-tile-name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary, #f1f5f9);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.subject-tile-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.subject-tile-code {
+  font-family: monospace;
+  font-size: 0.68rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+}
+
+.preset-pill-btn {
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.08);
+  color: #c7d2fe;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preset-pill-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #ffffff;
+  transform: translateY(-1px);
+}

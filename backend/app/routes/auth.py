@@ -424,11 +424,13 @@ def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_c
     # Scrub duplicate roles in memory / DB
     for u in users:
         if u.roles:
-            seen_r_ids = set()
+            seen_canonical = set()
             unique_roles = []
             for r in u.roles:
-                if r.id not in seen_r_ids:
-                    seen_r_ids.add(r.id)
+                raw = r.name.lower()
+                norm = _normalize_role_for_gender(raw, u.gender)
+                if norm not in seen_canonical:
+                    seen_canonical.add(norm)
                     unique_roles.append(r)
             if len(unique_roles) != len(u.roles):
                 u.roles = unique_roles
@@ -542,13 +544,14 @@ def create_user(
         school_id=school_id
     )
     
-    seen_role_ids = set()
+    seen_canonical = set()
     for r_name in role_names:
         normalized_name = _normalize_role_for_gender(r_name, gender)
-        role_obj = _resolve_or_create_role(db, normalized_name)
-        if role_obj and role_obj.id not in seen_role_ids:
-            seen_role_ids.add(role_obj.id)
-            new_user.roles.append(role_obj)
+        if normalized_name not in seen_canonical:
+            seen_canonical.add(normalized_name)
+            role_obj = _resolve_or_create_role(db, normalized_name)
+            if role_obj and role_obj not in new_user.roles:
+                new_user.roles.append(role_obj)
             
     db.add(new_user)
     db.flush()
@@ -591,13 +594,14 @@ def update_user_roles(
         new_role_names = [r for r in new_role_names if r != "admin"]
 
     matched_roles = []
-    seen_role_ids = set()
+    seen_canonical = set()
     for r_name in new_role_names:
         normalized_name = _normalize_role_for_gender(r_name, target.gender)
-        role_obj = _resolve_or_create_role(db, normalized_name)
-        if role_obj and role_obj.id not in seen_role_ids:
-            seen_role_ids.add(role_obj.id)
-            matched_roles.append(role_obj)
+        if normalized_name not in seen_canonical:
+            seen_canonical.add(normalized_name)
+            role_obj = _resolve_or_create_role(db, normalized_name)
+            if role_obj and role_obj not in matched_roles:
+                matched_roles.append(role_obj)
 
     target.roles = matched_roles
     db.commit()

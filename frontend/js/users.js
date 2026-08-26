@@ -333,8 +333,9 @@ function renderUserTable(users) {
     const uniqueRolePills = [];
     (u.roles || []).forEach(r => {
       const title = formatRoleTitle(r.name, u.gender);
-      if (!seenPillTitles.has(title)) {
-        seenPillTitles.add(title);
+      const titleKey = (title || '').trim().toLowerCase();
+      if (!seenPillTitles.has(titleKey)) {
+        seenPillTitles.add(titleKey);
         uniqueRolePills.push({ ...r, displayTitle: title });
       }
     });

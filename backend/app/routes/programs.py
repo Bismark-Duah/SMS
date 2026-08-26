@@ -13,6 +13,48 @@ from ..dependencies import get_current_user, get_school_id
 
 router = APIRouter()
 
+def _auto_sync_program_from_class_sections(p: Program, db: Session, school_id: Optional[int] = None):
+    sections = db.query(ClassSection).filter(ClassSection.program_id == p.id).all()
+    changed = False
+    for sec in sections:
+        if sec.subjects:
+            elective_subs = [s for s in sec.subjects if not s.is_core]
+            core_subs = [s for s in sec.subjects if s.is_core]
+
+            if elective_subs:
+                existing_combo = db.query(ElectiveCombination).filter(
+                    ElectiveCombination.program_id == p.id,
+                    ElectiveCombination.class_section_id == sec.id
+                ).first()
+                if not existing_combo:
+                    base_code = p.code or "PROG"
+                    combo_code = f"{base_code}-{sec.name.replace(' ', '')}"
+                    combo_name = f"{p.name} ({sec.name})"
+                    new_combo = ElectiveCombination(
+                        name=combo_name,
+                        code=combo_code,
+                        program_id=p.id,
+                        class_section_id=sec.id,
+                        capacity=60,
+                        is_active=True,
+                        subjects=elective_subs
+                    )
+                    if school_id is not None and hasattr(ElectiveCombination, "school_id"):
+                        new_combo.school_id = school_id
+                    db.add(new_combo)
+                    changed = True
+                else:
+                    if not existing_combo.subjects or len(existing_combo.subjects) != len(elective_subs):
+                        existing_combo.subjects = elective_subs
+                        changed = True
+
+            if core_subs and not p.core_subjects:
+                p.core_subjects = core_subs
+                changed = True
+    if changed:
+        db.commit()
+        db.refresh(p)
+
 @router.get("/")
 def list_programs(
     db: Session = Depends(get_db),
@@ -26,6 +68,9 @@ def list_programs(
 
     result = []
     for p in programs:
+        # Retroactively auto-heal any packages from configured class sections
+        _auto_sync_program_from_class_sections(p, db, school_id)
+
         combos = p.elective_combinations or []
         cores = p.core_subjects or []
         
@@ -117,6 +162,8 @@ def get_program_curriculum(
     program = query.first()
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
+
+    _auto_sync_program_from_class_sections(program, db, school_id)
 
     # Filter strictly for Senior High School (SHS/STEM) subjects, excluding Basic & KG
     shs_filter = [

@@ -329,9 +329,19 @@ function renderUserTable(users) {
     const initial = (u.username || 'U').charAt(0).toUpperCase();
     const genderBadge = u.gender ? `<span style="font-size:0.72rem; opacity:0.75; margin-left:4px;">(${u.gender})</span>` : '';
 
-    const rolePills = u.roles.length 
-      ? u.roles.map(r => {
-          const title = formatRoleTitle(r.name, u.gender);
+    const seenPillTitles = new Set();
+    const uniqueRolePills = [];
+    (u.roles || []).forEach(r => {
+      const title = formatRoleTitle(r.name, u.gender);
+      if (!seenPillTitles.has(title)) {
+        seenPillTitles.add(title);
+        uniqueRolePills.push({ ...r, displayTitle: title });
+      }
+    });
+
+    const rolePills = uniqueRolePills.length 
+      ? uniqueRolePills.map(r => {
+          const title = r.displayTitle;
           const icon = getRoleIcon(r.name);
           const clean = (r.name || '').toLowerCase();
           const isExec = clean === 'admin' || clean === 'super_admin' || clean.includes('assistant_head') || clean.includes('headmaster') || clean.includes('headmistress');

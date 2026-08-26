@@ -420,7 +420,44 @@ def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_c
         else:
             query = query.filter(User.id == current_user.id)
 
-    return query.all()
+    users = query.all()
+    # Scrub duplicate roles in memory / DB
+    for u in users:
+        if u.roles:
+            seen_r_ids = set()
+            unique_roles = []
+            for r in u.roles:
+                if r.id not in seen_r_ids:
+                    seen_r_ids.add(r.id)
+                    unique_roles.append(r)
+            if len(unique_roles) != len(u.roles):
+                u.roles = unique_roles
+                db.commit()
+    return users
+
+def _normalize_role_for_gender(r_name: str, gender: Optional[str]) -> str:
+    raw = r_name.strip().lower()
+    is_female = str(gender).lower().startswith("f") if gender else False
+    
+    if is_female:
+        if raw in ["form_master", "form_mistress"]:
+            return "form_mistress"
+        if raw in ["house_master", "housemaster", "house_mistress", "housemistress"]:
+            return "house_mistress"
+        if raw in ["senior_house_master", "senior_housemaster", "senior_house_mistress", "senior_housemistress"]:
+            return "senior_housemistress"
+        if raw in ["assistant_house_master", "assistant_housemaster", "assistant_house_mistress", "assistant_housemistress"]:
+            return "assistant_house_mistress"
+    else:
+        if raw in ["form_master", "form_mistress"]:
+            return "form_master"
+        if raw in ["house_master", "housemaster", "house_mistress", "housemistress"]:
+            return "house_master"
+        if raw in ["senior_house_master", "senior_housemaster", "senior_house_mistress", "senior_housemistress"]:
+            return "senior_housemaster"
+        if raw in ["assistant_house_master", "assistant_housemaster", "assistant_house_mistress", "assistant_housemistress"]:
+            return "assistant_house_master"
+    return raw
 
 def _resolve_or_create_role(db: Session, r_name: str) -> Optional[Role]:
     if not r_name:
@@ -505,25 +542,10 @@ def create_user(
         school_id=school_id
     )
     
-    # Expand gender-aligned role pairs for flawless RBAC query compatibility
-    expanded_roles = set(role_names)
-    is_female = str(gender).lower().startswith("f")
-    if "form_master" in expanded_roles:
-        if is_female:
-            expanded_roles.add("form_mistress")
-    if "house_master" in expanded_roles:
-        if is_female:
-            expanded_roles.add("house_mistress")
-    if "senior_house_master" in expanded_roles:
-        if is_female:
-            expanded_roles.add("senior_house_mistress")
-    if "assistant_house_master" in expanded_roles:
-        if is_female:
-            expanded_roles.add("assistant_house_mistress")
-
     seen_role_ids = set()
-    for r_name in expanded_roles:
-        role_obj = _resolve_or_create_role(db, r_name)
+    for r_name in role_names:
+        normalized_name = _normalize_role_for_gender(r_name, gender)
+        role_obj = _resolve_or_create_role(db, normalized_name)
         if role_obj and role_obj.id not in seen_role_ids:
             seen_role_ids.add(role_obj.id)
             new_user.roles.append(role_obj)
@@ -568,26 +590,11 @@ def update_user_roles(
     if any(r in assist_head_keys for r in new_role_names) and "super_admin" not in new_role_names:
         new_role_names = [r for r in new_role_names if r != "admin"]
 
-    # Gender-aligned role synchronization
-    is_female = str(target.gender).lower().startswith("f")
-    expanded_roles = set(new_role_names)
-    if "form_master" in expanded_roles:
-        if is_female:
-            expanded_roles.add("form_mistress")
-    if "house_master" in expanded_roles:
-        if is_female:
-            expanded_roles.add("house_mistress")
-    if "senior_house_master" in expanded_roles:
-        if is_female:
-            expanded_roles.add("senior_house_mistress")
-    if "assistant_house_master" in expanded_roles:
-        if is_female:
-            expanded_roles.add("assistant_house_mistress")
-
     matched_roles = []
     seen_role_ids = set()
-    for r_name in expanded_roles:
-        role_obj = _resolve_or_create_role(db, r_name)
+    for r_name in new_role_names:
+        normalized_name = _normalize_role_for_gender(r_name, target.gender)
+        role_obj = _resolve_or_create_role(db, normalized_name)
         if role_obj and role_obj.id not in seen_role_ids:
             seen_role_ids.add(role_obj.id)
             matched_roles.append(role_obj)

@@ -879,6 +879,187 @@ def get_executive_analytics(
             "discipline_cases": h_discipline[:6]
         }
 
+    # 8. Bursar & Financial Analytics
+    from ..models import Fee, Payment, Asset, TextbookAllocation, UniformItem, UniformDisbursement, GatePassLog, StudentClearanceRecord
+    all_fees = db.query(Fee).all()
+    all_payments = db.query(Payment).all()
+
+    total_billed = sum(f.amount for f in all_fees) if all_fees else 0.0
+    total_collected = sum(f.amount_paid for f in all_fees) if all_fees else 0.0
+    total_arrears = max(0.0, total_billed - total_collected)
+    collection_rate = round((total_collected / max(1.0, total_billed)) * 100.0, 1) if total_billed > 0 else 0.0
+
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+    payments_today = [p for p in all_payments if p.payment_date and p.payment_date >= today_start and p.payment_date <= today_end]
+    collected_today = sum(p.amount_paid for p in payments_today)
+
+    fee_types_map = {}
+    for f in all_fees:
+        ft = f.fee_type or "Tuition"
+        if ft not in fee_types_map:
+            fee_types_map[ft] = {"billed": 0.0, "collected": 0.0}
+        fee_types_map[ft]["billed"] += f.amount or 0.0
+        fee_types_map[ft]["collected"] += f.amount_paid or 0.0
+
+    fee_categories = []
+    for ft, vals in fee_types_map.items():
+        b = vals["billed"]
+        c = vals["collected"]
+        pct = round((c / max(1.0, b)) * 100.0, 1) if b > 0 else 0.0
+        fee_categories.append({
+            "category": ft,
+            "billed": round(b, 2),
+            "collected": round(c, 2),
+            "arrears": round(max(0.0, b - c), 2),
+            "collection_pct": pct
+        })
+
+    recent_payments_list = []
+    sorted_payments = sorted(all_payments, key=lambda x: x.payment_date or datetime.min, reverse=True)
+    for p in sorted_payments[:8]:
+        st = p.fee.student if p.fee and p.fee.student else None
+        st_ident = (st.student_code or st.bece_index_number or st.enrolment_code) if st else "—"
+        recent_payments_list.append({
+            "id": p.id,
+            "receipt_no": p.reference_no or f"REC-{p.id:04d}",
+            "student_name": st.full_name if st else "Student",
+            "index_number": st_ident,
+            "amount": round(p.amount_paid, 2),
+            "method": p.payment_method or "Cash",
+            "date": p.payment_date.strftime("%d %b, %H:%M") if p.payment_date else "—"
+        })
+
+    debtors_list = []
+    for f in all_fees:
+        owed = (f.amount or 0.0) - (f.amount_paid or 0.0)
+        if owed > 0 and f.student and f.student.is_active:
+            debtors_list.append({
+                "student_id": f.student.id,
+                "student_name": f.student.full_name,
+                "class_name": f.student.class_section.name if f.student.class_section else "—",
+                "fee_type": f.fee_type or "Fees",
+                "amount_owed": round(owed, 2),
+                "guardian_phone": f.student.phone or "Not Recorded"
+            })
+    debtors_list = sorted(debtors_list, key=lambda x: x["amount_owed"], reverse=True)[:8]
+
+    bursar_data = {
+        "total_billed_ghc": round(total_billed, 2),
+        "total_collected_ghc": round(total_collected, 2),
+        "total_arrears_ghc": round(total_arrears, 2),
+        "collection_rate_pct": collection_rate,
+        "collected_today_ghc": round(collected_today, 2),
+        "payments_today_count": len(payments_today),
+        "fee_categories": fee_categories,
+        "recent_payments": recent_payments_list,
+        "top_debtors": debtors_list
+    }
+
+    # 9. Storekeeper & Inventory Analytics
+    all_assets = db.query(Asset).all()
+    all_uniforms = db.query(UniformItem).all()
+    all_textbooks = db.query(TextbookAllocation).all()
+    
+    total_uniform_stock = sum(u.quantity_in_stock for u in all_uniforms) if all_uniforms else 0
+    low_stock_uniforms = [u for u in all_uniforms if (u.quantity_in_stock or 0) < 10]
+    damaged_assets = [a for a in all_assets if (a.status or '').lower() in ['damaged', 'repair', 'broken']]
+
+    storekeeper_data = {
+        "total_assets_count": len(all_assets),
+        "total_textbooks_issued": len([t for t in all_textbooks if t.status == 'Issued']),
+        "total_uniforms_in_stock": total_uniform_stock,
+        "low_stock_alerts_count": len(low_stock_uniforms) + len(damaged_assets),
+        "low_stock_items": [{
+            "item_name": u.item_name,
+            "type": "Uniform / Kit",
+            "quantity_remaining": u.quantity_in_stock,
+            "unit_price": u.unit_price or 0.0
+        } for u in low_stock_uniforms[:6]],
+        "damaged_assets": [{
+            "name": a.name,
+            "category": a.category,
+            "location": a.location or "General Store",
+            "status": a.status
+        } for a in damaged_assets[:6]]
+    }
+
+    # 10. Security & Gatehouse Analytics
+    all_gate_logs = db.query(GatePassLog).all()
+    today_gate = [g for g in all_gate_logs if g.timestamp and g.timestamp >= today_start and g.timestamp <= today_end]
+    
+    security_data = {
+        "active_gate_exeats_count": len([ex for ex in away_exeats if ex.status == "Departed"]),
+        "overdue_exeats_count": len(overdue_roster),
+        "today_gate_movements_count": len(today_gate),
+        "overdue_watchlist": [{
+            "id": ex.id,
+            "student_name": ex.student.full_name if ex.student else "Student",
+            "class_name": ex.student.class_section.name if ex.student and ex.student.class_section else "—",
+            "destination": ex.destination,
+            "expected_return": ex.expected_return.strftime("%d %b, %H:%M") if ex.expected_return else "—",
+            "parent_phone": ex.parent_contact or (ex.student.phone if ex.student else None) or "Not Recorded"
+        } for ex in overdue_roster[:8]],
+        "recent_gate_logs": [{
+            "action": g.action,
+            "student_name": g.student.full_name if g.student else "Student",
+            "time": g.timestamp.strftime("%H:%M") if g.timestamp else "—",
+            "officer": g.officer_name or "Security Officer"
+        } for g in sorted(today_gate, key=lambda x: x.timestamp or datetime.min, reverse=True)[:8]]
+    }
+
+    # 11. Student & Parent Stakeholder Portals
+    st_record = None
+    if current_user:
+        st_record = db.query(Student).filter(Student.parent_id == current_user.id).first()
+        if not st_record:
+            st_record = db.query(Student).filter(Student.student_code == current_user.username).first()
+    if not st_record:
+        st_record = db.query(Student).filter(Student.is_active == True).first()
+
+    student_portal_data = {}
+    if st_record:
+        st_scores = [sc for sc in all_scores if sc.student_id == st_record.id]
+        st_avg = round(sum((sc.class_score or 0.0) + (sc.exam_score or 0.0) for sc in st_scores) / max(1, len(st_scores)), 1) if st_scores else 0.0
+        
+        st_fees = db.query(Fee).filter(Fee.student_id == st_record.id).all()
+        st_billed = sum(f.amount for f in st_fees) if st_fees else 0.0
+        st_paid = sum(f.amount_paid for f in st_fees) if st_fees else 0.0
+
+        st_att = db.query(Attendance).filter(Attendance.student_id == st_record.id).all()
+        st_pres = sum(1 for a in st_att if (a.status or '').capitalize() in ['Present', 'Late'])
+        st_att_pct = round((st_pres / max(1, len(st_att))) * 100.0, 1) if st_att else 100.0
+
+        st_active_ex = db.query(ExeatRecord).filter(
+            ExeatRecord.student_id == st_record.id,
+            ExeatRecord.status.in_(["Approved", "Departed", "Pending"])
+        ).first()
+
+        st_code = st_record.student_code or st_record.bece_index_number or st_record.enrolment_code or "—"
+        student_portal_data = {
+            "student_id": st_record.id,
+            "name": st_record.full_name,
+            "index_number": st_code,
+            "class_name": st_record.class_section.name if st_record.class_section else "Unassigned",
+            "stage_name": st_record.class_section.stage.name if st_record.class_section and st_record.class_section.stage else "",
+            "program_name": st_record.program.name if st_record.program else "General",
+            "house_name": st_record.house.name if st_record.house else "Day Student",
+            "dormitory_name": st_record.dormitory.name if st_record.dormitory else "None",
+            "term_average": st_avg,
+            "attendance_rate_pct": st_att_pct,
+            "fee_summary": {
+                "billed": round(st_billed, 2),
+                "paid": round(st_paid, 2),
+                "balance": round(max(0.0, st_billed - st_paid), 2)
+            },
+            "subjects_count": len(st_scores),
+            "active_exeat_status": st_active_ex.status if st_active_ex else "On Campus"
+        }
+
+    parent_portal_data = {
+        "wards": [student_portal_data] if student_portal_data else []
+    }
+
     return {
         "school_mode": school_mode,
         "academic": {
@@ -933,6 +1114,11 @@ def get_executive_analytics(
         "departmental": departmental_data,
         "class_master": class_master_data,
         "teacher": teacher_data,
-        "house_master": house_master_data
+        "house_master": house_master_data,
+        "bursar": bursar_data,
+        "storekeeper": storekeeper_data,
+        "security": security_data,
+        "student_portal": student_portal_data,
+        "parent_portal": parent_portal_data
     }
 

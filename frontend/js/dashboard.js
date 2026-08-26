@@ -265,6 +265,48 @@ function renderDailyShortcuts(activeRole) {
       { label: '🩺 Dormitory Health Alerts', href: 'students.html' },
       { label: '💬 Broadcast House Alert', href: 'messaging.html' }
     ];
+  } else if (['bursar', 'accountant'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ Bursary & Financial Operations Shortcuts';
+    shortcuts = [
+      { label: '💳 Record Fee Payment', href: 'fees.html' },
+      { label: '🧾 Batch Invoicing & Billing', href: 'fees.html' },
+      { label: '📊 Financial Statements', href: 'fees.html' },
+      { label: '📜 Student Clearance Desk', href: 'clearance.html' },
+      { label: '💬 Fee Arrears Reminder SMS', href: 'messaging.html' }
+    ];
+  } else if (['storekeeper', 'inventory_officer'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ Store & Inventory Operations Shortcuts';
+    shortcuts = [
+      { label: '📦 Log Item Requisition', href: 'inventory.html' },
+      { label: '📥 Receive Stock Delivery', href: 'inventory.html' },
+      { label: '⚠️ Low Stock Reorder Desk', href: 'inventory.html' },
+      { label: '📋 Inventory Audit Register', href: 'inventory.html' },
+      { label: '🎓 Final Year Clearance', href: 'clearance.html' }
+    ];
+  } else if (['security', 'security_officer'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ Gatehouse & Campus Security Shortcuts';
+    shortcuts = [
+      { label: '🚪 Gate Pass Scanner', href: 'exeat.html' },
+      { label: '🏡 Verify Return & Check-In', href: 'exeat.html' },
+      { label: '🚨 Overdue Exeat Watch', href: 'exeat.html' },
+      { label: '📋 Campus Visitor Log', href: 'exeat.html' }
+    ];
+  } else if (role === 'student') {
+    if (heading) heading.innerHTML = '⚡ Student Self-Service Shortcuts';
+    shortcuts = [
+      { label: '🖨️ My Terminal Report Card', href: 'report-card.html' },
+      { label: '📊 My Academic Transcript', href: 'broadsheet.html' },
+      { label: '💳 My Fee Account Statement', href: 'fees.html' },
+      { label: '🏡 My Exeat Requests', href: 'exeat.html' }
+    ];
+  } else if (['parent', 'guardian'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ Parent Portal Shortcuts';
+    shortcuts = [
+      { label: '🖨️ Download Ward\'s Terminal Report', href: 'report-card.html' },
+      { label: '💳 Pay Ward\'s School Fees Online', href: 'fees.html' },
+      { label: '🏡 Request Exeat for Ward', href: 'exeat.html' },
+      { label: '💬 Message Form / House Master', href: 'messaging.html' }
+    ];
   } else {
     if (heading) heading.innerHTML = '⚡ Daily Operations Shortcuts';
     shortcuts = [
@@ -718,7 +760,9 @@ async function loadExecutiveAnalytics() {
     'assistant_headmaster_admin', 'assistant_head_admin',
     'hod', 'form_master', 'form_mistress',
     'teacher', 'senior_housemaster', 'senior_housemistress',
-    'house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress'
+    'house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress',
+    'bursar', 'accountant', 'storekeeper', 'inventory_officer',
+    'security', 'security_officer', 'student', 'parent', 'guardian'
   ];
 
   const isExecutive = execRoles.includes(activeRole);
@@ -746,6 +790,11 @@ async function loadExecutiveAnalytics() {
     const cls = data.class_master || {};
     const tchr = data.teacher || {};
     const hm = data.house_master || {};
+    const bur = data.bursar || {};
+    const stk = data.storekeeper || {};
+    const sec = data.security || {};
+    const stp = data.student_portal || {};
+    const prt = data.parent_portal || {};
 
     section.style.display = 'block';
 
@@ -756,6 +805,11 @@ async function loadExecutiveAnalytics() {
     const isFormMaster = ['form_master', 'form_mistress'].includes(activeRole);
     const isTeacher = activeRole === 'teacher';
     const isHouseMaster = ['house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress'].includes(activeRole);
+    const isBursar = ['bursar', 'accountant'].includes(activeRole);
+    const isStorekeeper = ['storekeeper', 'inventory_officer'].includes(activeRole);
+    const isSecurity = ['security', 'security_officer'].includes(activeRole);
+    const isStudent = activeRole === 'student';
+    const isParent = ['parent', 'guardian'].includes(activeRole);
     const isSuperOrHead = ['admin', 'super_admin', 'headmaster', 'headmistress'].includes(activeRole);
 
     const showAcademic = isAcademicHead || isSuperOrHead;
@@ -765,6 +819,11 @@ async function loadExecutiveAnalytics() {
     const showFormMaster = isFormMaster;
     const showTeacher = isTeacher;
     const showHouseMaster = isHouseMaster;
+    const showBursar = isBursar;
+    const showStorekeeper = isStorekeeper;
+    const showSecurity = isSecurity;
+    const showStudent = isStudent;
+    const showParent = isParent;
 
     // Populate top KPI cards if Academic Head
     if (isAcademicHead || isSuperOrHead) {
@@ -903,6 +962,61 @@ async function loadExecutiveAnalytics() {
       if (disciplineEl && hm.discipline_cases) {
         animateCountUp(disciplineEl, hm.discipline_cases.length);
         if (disciplineSub) disciplineSub.textContent = 'Reported in my house';
+      }
+    }
+
+    // Populate top KPI cards if Bursar / Accountant
+    if (isBursar) {
+      const feesEl = document.getElementById('statFees');
+      const feesSub = document.getElementById('statFeesSub');
+      const progFees = document.getElementById('progFees');
+      if (feesEl && bur.total_collected_ghc !== undefined) {
+        feesEl.textContent = `GH₵ ${bur.total_collected_ghc.toLocaleString()}`;
+        if (feesSub) feesSub.textContent = `Rate: ${bur.collection_rate_pct}% of GH₵ ${bur.total_billed_ghc.toLocaleString()}`;
+        if (progFees) setTimeout(() => { progFees.style.width = `${Math.min(100, bur.collection_rate_pct)}%`; }, 150);
+      }
+    }
+
+    // Populate top KPI cards if Storekeeper
+    if (isStorekeeper) {
+      const housesEl = document.getElementById('statHouses');
+      const housesSub = document.getElementById('statHousesSub');
+      if (housesEl && stk.total_assets_count !== undefined) {
+        animateCountUp(housesEl, stk.total_assets_count);
+        if (housesSub) housesSub.textContent = `${stk.total_uniforms_in_stock} uniforms | ${stk.total_textbooks_issued} books`;
+      }
+    }
+
+    // Populate top KPI cards if Security Officer
+    if (isSecurity) {
+      const exeatEl = document.getElementById('statExeat');
+      const exeatSub = document.getElementById('statExeatSub');
+      if (exeatEl && sec.active_gate_exeats_count !== undefined) {
+        animateCountUp(exeatEl, sec.active_gate_exeats_count);
+        if (exeatSub) exeatSub.textContent = `${sec.overdue_exeats_count} overdue curfew violations`;
+      }
+    }
+
+    // Populate top KPI cards if Student / Parent
+    if (isStudent || isParent) {
+      const sbaEl = document.getElementById('statSba');
+      const sbaSub = document.getElementById('statSbaSub');
+      const passRateEl = document.getElementById('statPassRate');
+      const passRateSub = document.getElementById('statPassRateSub');
+      const attEl = document.getElementById('statAttendance');
+      const attSub = document.getElementById('statAttendanceSub');
+
+      if (sbaEl && stp.term_average !== undefined) {
+        animateCountUp(sbaEl, stp.term_average, '%');
+        if (sbaSub) sbaSub.textContent = 'Cumulative Term Average';
+      }
+      if (attEl && stp.attendance_rate_pct !== undefined) {
+        animateCountUp(attEl, stp.attendance_rate_pct, '%');
+        if (attSub) attSub.textContent = 'Academic Attendance';
+      }
+      if (passRateEl && stp.fee_summary) {
+        passRateEl.textContent = `GH₵ ${stp.fee_summary.balance.toLocaleString()}`;
+        if (passRateSub) passRateSub.textContent = 'Outstanding Fee Balance';
       }
     }
 
@@ -2021,6 +2135,333 @@ async function loadExecutiveAnalytics() {
       }
     }
 
+    // ── Bursar / Accountant Financial Command Center ──────────────────────────
+    if (showBursar) {
+      const headingEl = document.getElementById('execAnalyticsTitle');
+      if (headingEl) headingEl.innerHTML = `💳 Bursary & Financial Management Command Center`;
+
+      // 1. Fee Revenue Breakdown & Collection Efficiency Matrix Card
+      let catRows = '';
+      if (Array.isArray(bur.fee_categories) && bur.fee_categories.length > 0) {
+        catRows = bur.fee_categories.map(c => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">📋 ${escapeHtml(c.category)}</td>
+            <td style="padding:10px 12px; color:#94a3b8;">GH₵ ${c.billed.toLocaleString()}</td>
+            <td style="padding:10px 12px; color:#34d399; font-weight:700;">GH₵ ${c.collected.toLocaleString()}</td>
+            <td style="padding:10px 12px; color:#f87171; font-weight:700;">GH₵ ${c.arrears.toLocaleString()}</td>
+            <td style="padding:10px 12px; min-width:110px;">
+              <div style="display:flex; justify-content:space-between; font-size:0.72rem; margin-bottom:2px;">
+                <span>${c.collection_pct}%</span>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                <div style="width:${Math.min(100, c.collection_pct)}%; height:100%; background:#10b981;"></div>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } else {
+        catRows = `<tr><td colspan="5" style="padding:14px; text-align:center; opacity:0.6;">No fee categories recorded yet.</td></tr>`;
+      }
+
+      cardsHtml += `
+        <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #10b981; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+            <div>
+              <h4 style="margin:0; font-size:1.05rem; color:#34d399; display:flex; align-items:center; gap:8px;">
+                <span>💳</span> Institutional Revenue & Fee Collection Breakdown
+              </h4>
+              <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Comprehensive tracking of student billing, collections, and outstanding debt by category</div>
+            </div>
+            <a class="btn sm" href="fees.html" style="background:#059669; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">💳 Open Bursary Desk</a>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                  <th style="padding:8px 12px;">Billing Head / Stream</th>
+                  <th style="padding:8px 12px;">Total Invoiced</th>
+                  <th style="padding:8px 12px;">Revenue Collected</th>
+                  <th style="padding:8px 12px;">Outstanding Arrears</th>
+                  <th style="padding:8px 12px;">Recovery Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${catRows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      // 2. Daily Cash Ledger & Recent Payments Activity Stream
+      let payRows = '';
+      if (Array.isArray(bur.recent_payments) && bur.recent_payments.length > 0) {
+        payRows = bur.recent_payments.map(p => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:8px 10px; font-weight:600; color:#38bdf8;">🧾 ${escapeHtml(p.receipt_no)}</td>
+            <td style="padding:8px 10px; font-weight:600; color:#f8fafc;">${escapeHtml(p.student_name)}</td>
+            <td style="padding:8px 10px; color:#34d399; font-weight:700;">GH₵ ${p.amount.toLocaleString()}</td>
+            <td style="padding:8px 10px; font-size:0.78rem;">${escapeHtml(p.method)}</td>
+            <td style="padding:8px 10px; font-size:0.75rem; color:#94a3b8;">${escapeHtml(p.date)}</td>
+          </tr>
+        `).join('');
+      } else {
+        payRows = `<tr><td colspan="5" style="padding:14px; text-align:center; opacity:0.6;">No payments recorded today.</td></tr>`;
+      }
+
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #0284c7; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#38bdf8; display:flex; align-items:center; gap:8px;">
+              <span>🧾</span> Recent Payments Stream
+            </h4>
+            <a href="fees.html" class="btn sm" style="background:#0284c7; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Transactions</a>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                  <th style="padding:6px 10px;">Receipt #</th>
+                  <th style="padding:6px 10px;">Student</th>
+                  <th style="padding:6px 10px;">Amount</th>
+                  <th style="padding:6px 10px;">Channel</th>
+                  <th style="padding:6px 10px;">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${payRows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      // 3. Fee Arrears & High-Risk Debtors Watchlist
+      let debtRows = '';
+      if (Array.isArray(bur.top_debtors) && bur.top_debtors.length > 0) {
+        debtRows = bur.top_debtors.map(d => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:8px 10px; font-weight:600; color:#f8fafc;">⚠️ ${escapeHtml(d.student_name)}</td>
+            <td style="padding:8px 10px; color:#38bdf8;">${escapeHtml(d.class_name)}</td>
+            <td style="padding:8px 10px; color:#f87171; font-weight:700;">GH₵ ${d.amount_owed.toLocaleString()}</td>
+            <td style="padding:8px 10px; text-align:right;">
+              <button type="button" onclick="sendFeeReminder('${escapeHtml(d.guardian_phone)}', '${escapeHtml(d.student_name)}', '${d.amount_owed}')"
+                      style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:600; cursor:pointer;">
+                📲 SMS Debt Notice
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } else {
+        debtRows = `<tr><td colspan="4" style="padding:14px; text-align:center; opacity:0.6;">No outstanding arrears above threshold.</td></tr>`;
+      }
+
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #ef4444; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#f87171; display:flex; align-items:center; gap:8px;">
+              <span>⚠️</span> High Arrears Watchlist
+            </h4>
+            <a href="fees.html" class="btn sm" style="background:#dc2626; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Arrears Desk</a>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                  <th style="padding:6px 10px;">Student</th>
+                  <th style="padding:6px 10px;">Class</th>
+                  <th style="padding:6px 10px;">Balance Owed</th>
+                  <th style="padding:6px 10px; text-align:right;">Recovery Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${debtRows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── Storekeeper & Inventory Command Center ────────────────────────────────
+    if (showStorekeeper) {
+      const headingEl = document.getElementById('execAnalyticsTitle');
+      if (headingEl) headingEl.innerHTML = `📦 Store & Inventory Management Command Center`;
+
+      cardsHtml += `
+        <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #f59e0b; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+            <div>
+              <h4 style="margin:0; font-size:1.05rem; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+                <span>📦</span> Institutional Store & Inventory Asset Overview
+              </h4>
+              <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Summary of assets, uniform stocks, textbook allocations, and equipment health</div>
+            </div>
+            <a class="btn sm" href="inventory.html" style="background:#d97706; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">📦 Open Store Desk</a>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; font-size:0.85rem;">
+            <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Total School Assets:</span><br/>
+              <strong style="font-size:1.25rem; color:#38bdf8;">${stk.total_assets_count || 0} Registered</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Furniture, ICT & lab equipment</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Textbooks Issued:</span><br/>
+              <strong style="font-size:1.25rem; color:#34d399;">${stk.total_textbooks_issued || 0} With Students</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Active book loans</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Uniforms in Stock:</span><br/>
+              <strong style="font-size:1.25rem; color:#a855f7;">${stk.total_uniforms_in_stock || 0} Units</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Available for disbursement</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Low Stock Alerts:</span><br/>
+              <strong style="font-size:1.25rem; color:#ef4444;">${stk.low_stock_alerts_count || 0} Items</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Below reorder threshold</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── Security & Gatehouse Command Center ───────────────────────────────────
+    if (showSecurity) {
+      const headingEl = document.getElementById('execAnalyticsTitle');
+      if (headingEl) headingEl.innerHTML = `🚪 Campus Gatehouse & Security Command Center`;
+
+      let secLogs = '';
+      if (Array.isArray(sec.recent_gate_logs) && sec.recent_gate_logs.length > 0) {
+        secLogs = sec.recent_gate_logs.map(g => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:8px 10px; font-weight:600; color:#f8fafc;">👤 ${escapeHtml(g.student_name)}</td>
+            <td style="padding:8px 10px; color:#38bdf8;">${escapeHtml(g.action)}</td>
+            <td style="padding:8px 10px; font-size:0.78rem;">${escapeHtml(g.time)}</td>
+            <td style="padding:8px 10px; font-size:0.75rem; color:#94a3b8;">${escapeHtml(g.officer)}</td>
+          </tr>
+        `).join('');
+      } else {
+        secLogs = `<tr><td colspan="4" style="padding:14px; text-align:center; opacity:0.6;">No gate movements logged today.</td></tr>`;
+      }
+
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #0284c7; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#38bdf8; display:flex; align-items:center; gap:8px;">
+              <span>🚪</span> Today's Gate Movement Activity Log
+            </h4>
+            <a href="exeat.html" class="btn sm" style="background:#0284c7; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Gate Scanner</a>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                  <th style="padding:6px 10px;">Student Name</th>
+                  <th style="padding:6px 10px;">Movement Type</th>
+                  <th style="padding:6px 10px;">Time</th>
+                  <th style="padding:6px 10px;">Verified By</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${secLogs}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      let secOverdue = '';
+      if (Array.isArray(sec.overdue_watchlist) && sec.overdue_watchlist.length > 0) {
+        secOverdue = sec.overdue_watchlist.map(ov => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:8px 10px; font-weight:600; color:#f8fafc;">🚨 ${escapeHtml(ov.student_name)}</td>
+            <td style="padding:8px 10px; color:#38bdf8;">${escapeHtml(ov.class_name)}</td>
+            <td style="padding:8px 10px; color:#f87171; font-weight:700;">${escapeHtml(ov.expected_return)}</td>
+            <td style="padding:8px 10px; text-align:right;">
+              <button type="button" onclick="sendExeatParentAlert('${escapeHtml(ov.parent_phone)}', '${escapeHtml(ov.student_name)}')"
+                      style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:600; cursor:pointer;">
+                📲 Alert Guardian
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } else {
+        secOverdue = `<tr><td colspan="4" style="padding:14px; text-align:center; opacity:0.6;">All students currently accounted for.</td></tr>`;
+      }
+
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #ef4444; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#f87171; display:flex; align-items:center; gap:8px;">
+              <span>🚨</span> Gatehouse Overdue Exeat Watchlist
+            </h4>
+            <a href="exeat.html" class="btn sm" style="background:#dc2626; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Exeat Desk</a>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                  <th style="padding:6px 10px;">Student Name</th>
+                  <th style="padding:6px 10px;">Class</th>
+                  <th style="padding:6px 10px;">Due Return</th>
+                  <th style="padding:6px 10px; text-align:right;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${secOverdue}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── Student / Parent Stakeholder Portal ───────────────────────────────────
+    if (showStudent || showParent) {
+      const headingEl = document.getElementById('execAnalyticsTitle');
+      if (headingEl) headingEl.innerHTML = showParent ? `👨‍👩‍👧 Parent & Guardian Academic Portal` : `🎓 Student Academic & Welfare Profile`;
+
+      cardsHtml += `
+        <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #6366f1; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+            <div>
+              <h4 style="margin:0; font-size:1.05rem; color:#818cf8; display:flex; align-items:center; gap:8px;">
+                <span>🎓</span> Academic & Residential Profile: ${escapeHtml(stp.name || 'Student')}
+              </h4>
+              <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">
+                ${escapeHtml(stp.class_name || 'Class')} &bull; ${escapeHtml(stp.program_name || 'Program')} &bull; ${escapeHtml(stp.house_name || 'House')}
+              </div>
+            </div>
+            <a class="btn sm" href="report-card.html" style="background:#4f46e5; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">🖨️ View Full Report Card</a>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; font-size:0.85rem;">
+            <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Term Average:</span><br/>
+              <strong style="font-size:1.25rem; color:#10b981;">${stp.term_average || 0}%</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Continuous Assessment Score</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Attendance Rate:</span><br/>
+              <strong style="font-size:1.25rem; color:#38bdf8;">${stp.attendance_rate_pct || 100}%</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Class Attendance</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Outstanding Fees:</span><br/>
+              <strong style="font-size:1.25rem; color:${(stp.fee_summary && stp.fee_summary.balance > 0) ? '#ef4444' : '#10b981'};">
+                GH₵ ${stp.fee_summary ? stp.fee_summary.balance.toLocaleString() : 0}
+              </strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Account Balance</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Exeat Status:</span><br/>
+              <strong style="font-size:1.15rem; color:#fbbf24;">${escapeHtml(stp.active_exeat_status || 'On Campus')}</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Residential Standing</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     // ── Domestic Executive Widget Card ────────────────────────────────────────
     if (showDomestic) {
       // Update top KPI cards if elements exist
@@ -2394,6 +2835,15 @@ window.sendExeatParentAlert = function(parentPhone, studentName) {
   const msg = `🚨 Curfew breach notification sent to guardian (${parentPhone}) for ${studentName}.`;
   if (window.showToast) {
     window.showToast(msg, 'warning');
+  } else {
+    alert(msg);
+  }
+};
+
+window.sendFeeReminder = function(parentPhone, studentName, amount) {
+  const msg = `💳 Fee arrears reminder dispatched to guardian (${parentPhone}) for ${studentName} (GH₵ ${amount}).`;
+  if (window.showToast) {
+    window.showToast(msg, 'success');
   } else {
     alert(msg);
   }

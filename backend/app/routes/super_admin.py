@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from ..database import get_db
-from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog, Program
+from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog, Program, ActivityAuditLog
 from ..routes.auth import get_current_user, get_password_hash
 from ..ncca_seed import seed_ncca_curriculum
 
@@ -53,13 +53,17 @@ def get_super_admin_dashboard(
     current_user: User = Depends(require_super_admin)
 ):
     """
-    Returns global system-wide metrics across all registered schools in Ghana.
+    Returns global system-wide metrics across all registered schools in Ghana,
+    including comparative enrollment, financial recovery, staffing, and storage diagnostics.
     """
     total_schools = db.query(School).count()
     active_schools = db.query(School).filter(School.status == "ACTIVE").count()
     total_students = db.query(Student).count()
     total_users = db.query(User).filter(User.username != "superadmin", User.school_id.isnot(None)).count()
+    
     total_fees_collected = db.query(func.sum(Fee.amount_paid)).scalar() or 0.0
+    total_fees_billed = db.query(func.sum(Fee.amount)).scalar() or 0.0
+    overall_collection_rate = round((total_fees_collected / total_fees_billed * 100), 1) if total_fees_billed > 0 else 0.0
 
     # System diagnostics & storage health
     db_size_bytes = os.path.getsize("school.db") if os.path.exists("school.db") else 0
@@ -79,12 +83,37 @@ def get_super_admin_dashboard(
         "COMBINED": db.query(School).filter(School.school_mode == "COMBINED").count(),
     }
 
+    boarding_distribution = {
+        "BOARDING_AND_DAY": db.query(School).filter(School.boarding_type == "BOARDING_AND_DAY").count(),
+        "DAY_ONLY": db.query(School).filter(School.boarding_type == "DAY_ONLY").count(),
+        "BOARDING_ONLY": db.query(School).filter(School.boarding_type == "BOARDING_ONLY").count(),
+    }
+
+    # Demographics aggregations
+    total_boys = db.query(Student).filter(func.lower(Student.gender).in_(["male", "boy", "m"])).count()
+    total_girls = db.query(Student).filter(func.lower(Student.gender).in_(["female", "girl", "f"])).count()
+    total_boarding = db.query(Student).filter(func.lower(Student.residential_status).in_(["boarding", "boarder"])).count()
+    total_day = total_students - total_boarding
+
     schools = db.query(School).order_by(School.id.asc()).all()
     school_summary = []
+    comparative_analytics = []
+
     for s in schools:
         student_cnt = db.query(Student).filter(Student.school_id == s.id).count()
+        boys_cnt = db.query(Student).filter(Student.school_id == s.id, func.lower(Student.gender).in_(["male", "boy", "m"])).count()
+        girls_cnt = db.query(Student).filter(Student.school_id == s.id, func.lower(Student.gender).in_(["female", "girl", "f"])).count()
+        brd_cnt = db.query(Student).filter(Student.school_id == s.id, func.lower(Student.residential_status).in_(["boarding", "boarder"])).count()
+        day_cnt = student_cnt - brd_cnt
+
         user_cnt = db.query(User).filter(User.school_id == s.id).count()
-        school_summary.append({
+        
+        # Financials for this school
+        billed = db.query(func.sum(Fee.amount)).join(Student, Fee.student_id == Student.id).filter(Student.school_id == s.id).scalar() or 0.0
+        collected = db.query(func.sum(Fee.amount_paid)).join(Student, Fee.student_id == Student.id).filter(Student.school_id == s.id).scalar() or 0.0
+        rate = round((collected / billed * 100), 1) if billed > 0 else 0.0
+
+        school_data = {
             "id": s.id,
             "name": s.name,
             "code": s.code,
@@ -92,23 +121,94 @@ def get_super_admin_dashboard(
             "boarding_type": s.boarding_type,
             "status": s.status,
             "student_count": student_cnt,
+            "boys_count": boys_cnt,
+            "girls_count": girls_cnt,
+            "boarding_count": brd_cnt,
+            "day_count": day_cnt,
             "user_count": user_cnt,
+            "fees_billed": float(billed),
+            "fees_collected": float(collected),
+            "collection_rate": rate,
             "created_at": s.created_at.isoformat() if s.created_at else None
+        }
+        school_summary.append(school_data)
+        comparative_analytics.append({
+            "id": s.id,
+            "name": s.name,
+            "code": s.code,
+            "students": student_cnt,
+            "boys": boys_cnt,
+            "girls": girls_cnt,
+            "boarding": brd_cnt,
+            "day": day_cnt,
+            "billed": float(billed),
+            "collected": float(collected),
+            "rate": rate
         })
 
     return {
         "total_schools": total_schools,
         "active_schools": active_schools,
         "total_students": total_students,
+        "total_boys": total_boys,
+        "total_girls": total_girls,
+        "total_boarding": total_boarding,
+        "total_day": total_day,
         "total_users": total_users,
+        "total_fees_billed": float(total_fees_billed),
         "total_fees_collected": float(total_fees_collected),
+        "overall_collection_rate": overall_collection_rate,
         "mode_distribution": mode_distribution,
+        "boarding_distribution": boarding_distribution,
         "diagnostics": {
             "db_size_mb": db_size_mb,
             "backups_count": backups_count,
             "last_backup_time": last_backup_time or "No backup yet"
         },
-        "schools": school_summary
+        "schools": school_summary,
+        "comparative_analytics": comparative_analytics
+    }
+
+@router.get("/audit-stream")
+def get_super_admin_audit_stream(
+    limit: int = 50,
+    school_id: Optional[int] = None,
+    action: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Returns unified real-time security and administrative audit logs across all schools.
+    """
+    schools_map = {s.id: {"name": s.name, "code": s.code} for s in db.query(School).all()}
+    
+    query = db.query(ActivityAuditLog)
+    if school_id is not None:
+        query = query.filter(ActivityAuditLog.school_id == school_id)
+    if action:
+        query = query.filter(ActivityAuditLog.action == action.upper())
+
+    logs = query.order_by(ActivityAuditLog.timestamp.desc()).limit(limit).all()
+
+    return {
+        "total": len(logs),
+        "logs": [
+            {
+                "id": log.id,
+                "school_id": log.school_id,
+                "school_name": schools_map.get(log.school_id, {}).get("name", "Master System") if log.school_id else "Master System",
+                "school_code": schools_map.get(log.school_id, {}).get("code", "SYS") if log.school_id else "SYS",
+                "user_name": log.user_name or "System",
+                "user_role": log.user_role or "N/A",
+                "action": log.action,
+                "entity_type": log.entity_type,
+                "entity_id": log.entity_id,
+                "details": log.details,
+                "ip_address": log.ip_address,
+                "timestamp": log.timestamp.isoformat() if log.timestamp else None
+            }
+            for log in logs
+        ]
     }
 
 @router.get("/schools")

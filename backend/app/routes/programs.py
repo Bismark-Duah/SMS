@@ -88,10 +88,19 @@ def get_program_curriculum(
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
 
-    # Core subjects: if not custom-configured yet, default to all core subjects
+    # Filter strictly for Senior High School (SHS/STEM) subjects, excluding Basic & KG
+    shs_filter = [
+        (Subject.school_level.in_(["SHS", "STEM"]) | (Subject.school_level == None)),
+        ~Subject.code.ilike("%-BAS"),
+        ~Subject.code.ilike("%-KG"),
+        ~Subject.code.ilike("%-PRIM"),
+        ~Subject.code.ilike("%-JHS"),
+    ]
+
+    # Core subjects: if not custom-configured yet, default to SHS core subjects
     configured_cores = program.core_subjects
     if not configured_cores:
-        default_cores_query = db.query(Subject).filter(Subject.is_core == True)
+        default_cores_query = db.query(Subject).filter(Subject.is_core == True, *shs_filter)
         if school_id is not None and hasattr(Subject, "school_id"):
             default_cores_query = default_cores_query.filter((Subject.school_id == school_id) | (Subject.school_id == None))
         configured_cores = default_cores_query.all()
@@ -113,11 +122,11 @@ def get_program_curriculum(
             ],
         })
 
-    # Available subjects for selection
-    sub_query = db.query(Subject)
+    # Available subjects for selection (SHS & STEM only)
+    sub_query = db.query(Subject).filter(*shs_filter)
     if school_id is not None and hasattr(Subject, "school_id"):
         sub_query = sub_query.filter((Subject.school_id == school_id) | (Subject.school_id == None))
-    all_subjects = sub_query.all()
+    all_subjects = sub_query.order_by(Subject.name).all()
 
     # Available class sections for this program
     sec_query = db.query(ClassSection).filter((ClassSection.program_id == program_id) | (ClassSection.program_id == None))
@@ -135,7 +144,7 @@ def get_program_curriculum(
         ],
         "elective_combinations": combinations,
         "all_subjects": [
-            {"id": s.id, "name": s.name, "code": s.code, "is_core": s.is_core, "category": getattr(s, "category", "General")}
+            {"id": s.id, "name": s.name, "code": s.code, "is_core": s.is_core, "category": getattr(s, "category", "General"), "school_level": getattr(s, "school_level", "SHS")}
             for s in all_subjects
         ],
         "available_sections": [

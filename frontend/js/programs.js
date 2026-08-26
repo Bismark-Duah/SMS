@@ -169,8 +169,23 @@ async function loadCurriculumData(programId) {
     const configuredCoreIds = new Set((currentCurriculumData.core_subjects || []).map(s => s.id));
     const allSubjects = currentCurriculumData.all_subjects || [];
 
-    // Filter subjects that can be cores
-    const coreCandidates = allSubjects.filter(s => s.is_core || s.category === 'Core' || ['english', 'math', 'science', 'social'].some(k => s.name.toLowerCase().includes(k)));
+    const isBasicOrKGSubject = (s) => {
+      const lvl = (s.school_level || '').toUpperCase();
+      const code = (s.code || '').toUpperCase();
+      const name = (s.name || '').toLowerCase();
+      if (lvl === 'BASIC' || lvl === 'KG' || lvl === 'PRIMARY' || lvl === 'JHS') return true;
+      if (code.endsWith('-BAS') || code.endsWith('-KG') || code.endsWith('-JHS') || code.endsWith('-PRIM')) return true;
+      if (name.includes('(basic)') || name.includes('(kg)')) return true;
+      const kgKeywords = ['sensory', 'rhymes', 'early numeracy', 'creative play', 'language and literacy', 'our world our people', 'physical development'];
+      if (kgKeywords.some(k => name.includes(k)) && !name.includes('(shs)')) return true;
+      return false;
+    };
+
+    // Filter to purely SHS and STEM subjects
+    const shsSubjects = allSubjects.filter(s => !isBasicOrKGSubject(s));
+
+    // Core candidates for SHS
+    const coreCandidates = shsSubjects.filter(s => s.is_core || s.category === 'Core' || ['english language', 'core mathematics', 'social studies', 'general science', 'integrated science', 'peh'].some(k => s.name.toLowerCase().includes(k)));
 
     if (coreCandidates.length === 0) {
       coreContainer.innerHTML = '<p style="opacity:.6">No core subjects registered in the system yet. Please add subjects first.</p>';
@@ -204,8 +219,13 @@ async function loadCurriculumData(programId) {
       ${availableSections.map(sec => `<option value="${sec.id}">${sec.name}</option>`).join('')}
     `;
 
-    // 4. Populate Electives Checkbox in New Package Form
-    const electiveCandidates = allSubjects.filter(s => !s.is_core || s.category !== 'Core');
+    // 4. Populate Electives Checkbox in New Package Form (True SHS Electives)
+    const electiveCandidates = shsSubjects.filter(s => {
+      const n = s.name.toLowerCase();
+      if (['core mathematics', 'social studies (shs)', 'english language (shs)'].includes(n)) return false;
+      return true;
+    });
+
     if (electiveCandidates.length === 0) {
       electivesList.innerHTML = '<p style="opacity:.6">No elective subjects available. Add subjects in Subjects page.</p>';
     } else {

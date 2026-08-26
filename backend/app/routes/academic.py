@@ -569,6 +569,173 @@ def get_executive_analytics(
     except Exception:
         pass
 
+    # 4. HOD Departmental Analytics
+    dept = None
+    if current_user:
+        dept = db.query(Department).filter(
+            (Department.hod_id == current_user.id) | (Department.id == getattr(current_user, 'department_id', None))
+        ).first()
+    if not dept and school_mode != "BASIC_ONLY":
+        dept = dept_query.first()
+
+    departmental_data = {}
+    if dept:
+        dept_subjects = dept.subjects or []
+        dept_sub_ids = [s.id for s in dept_subjects]
+        dept_teachers = [u for u in all_users if getattr(u, 'department_id', None) == dept.id]
+        
+        # Dept scores
+        dept_scores = [sc for sc in all_scores if sc.subject_id in dept_sub_ids]
+        dept_pass_cnt = sum(1 for sc in dept_scores if (sc.class_score or 0.0) + (sc.exam_score or 0.0) >= 50.0)
+        dept_pass_rate = round((dept_pass_cnt / max(1, len(dept_scores))) * 100.0, 1) if dept_scores else 0.0
+        
+        dept_exp_scores = max(1, active_students_count * max(1, len(dept_subjects))) if dept_subjects else 1
+        dept_sba_pct = round(min(100.0, (len(dept_scores) / dept_exp_scores) * 100.0), 1) if dept_subjects else 0.0
+
+        dept_grade_dist = {"A1": 0, "B2_B3": 0, "C4_C6": 0, "D7_E8": 0, "F9": 0}
+        for sc in dept_scores:
+            tot = (sc.class_score or 0.0) + (sc.exam_score or 0.0)
+            if tot >= 75.0:
+                dept_grade_dist["A1"] += 1
+            elif tot >= 65.0:
+                dept_grade_dist["B2_B3"] += 1
+            elif tot >= 50.0:
+                dept_grade_dist["C4_C6"] += 1
+            elif tot >= 40.0:
+                dept_grade_dist["D7_E8"] += 1
+            else:
+                dept_grade_dist["F9"] += 1
+
+        # Teacher allocations & submission status in this department
+        dept_submissions = []
+        for asgn in db.query(TeacherAssignment).filter(TeacherAssignment.subject_id.in_(dept_sub_ids)).all():
+            t_user = asgn.teacher
+            t_name = (getattr(t_user, 'full_name', None) or t_user.username) if t_user else "Unassigned Teacher"
+            c_name = asgn.class_section.name if asgn.class_section else "General"
+            s_name = asgn.subject.name if asgn.subject else "Subject"
+            c_id = asgn.class_section_id
+            
+            c_scores = [sc for sc in all_scores if sc.subject_id == asgn.subject_id and sc.student and sc.student.class_section_id == c_id]
+            c_size = db.query(Student).filter(Student.class_section_id == c_id, Student.is_active == True).count() if c_id else 0
+            c_pct = round(min(100.0, (len(c_scores) / max(1, c_size)) * 100.0), 1) if c_size > 0 else 0.0
+            
+            status_label = "COMPLETE" if c_pct >= 100 else ("IN_PROGRESS" if c_pct > 0 else "PENDING")
+            dept_submissions.append({
+                "teacher_name": t_name,
+                "class_name": c_name,
+                "subject_name": s_name,
+                "recorded_count": len(c_scores),
+                "total_students": c_size,
+                "completion_pct": c_pct,
+                "status": status_label
+            })
+
+        hod_u = getattr(dept, 'hod', None)
+        hod_display = (getattr(hod_u, 'full_name', None) or hod_u.username) if hod_u else "Unassigned"
+
+        departmental_data = {
+            "id": dept.id,
+            "name": dept.name,
+            "code": getattr(dept, 'code', dept.name[:4].upper()),
+            "hod_name": hod_display,
+            "teacher_count": len(dept_teachers),
+            "subject_count": len(dept_subjects),
+            "sba_completion_pct": dept_sba_pct,
+            "pass_rate_pct": dept_pass_rate,
+            "grade_distribution": dept_grade_dist,
+            "submissions": dept_submissions[:10],
+            "total_scores_recorded": len(dept_scores)
+        }
+
+    # 5. Form Master Class Analytics
+    cls = None
+    if current_user:
+        cls = db.query(ClassSection).filter(ClassSection.form_master_id == current_user.id).first()
+    if not cls:
+        cls = class_query.first()
+
+    class_master_data = {}
+    if cls:
+        c_students = db.query(Student).filter(Student.class_section_id == cls.id, Student.is_active == True).all()
+        c_boys = sum(1 for s in c_students if (s.gender or '').upper().startswith('M') or (s.gender or '').upper() == 'BOY')
+        c_girls = len(c_students) - c_boys
+        
+        # Today's attendance for this class
+        c_st_ids = {s.id for s in c_students}
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+        from ..models import Attendance
+        att_records = db.query(Attendance).filter(
+            Attendance.student_id.in_(c_st_ids),
+            Attendance.date >= today_start,
+            Attendance.date <= today_end
+        ).all() if c_st_ids else []
+        att_present = sum(1 for a in att_records if (a.status or '').capitalize() in ['Present', 'Late'])
+        att_pct = round((att_present / max(1, len(c_students))) * 100.0, 1) if c_students and att_records else 0.0
+
+        # Class scores & performance
+        cls_scores = [sc for sc in all_scores if sc.student_id in c_st_ids]
+        cls_pass_cnt = sum(1 for sc in cls_scores if (sc.class_score or 0.0) + (sc.exam_score or 0.0) >= 50.0)
+        cls_pass_rate = round((cls_pass_cnt / max(1, len(cls_scores))) * 100.0, 1) if cls_scores else 0.0
+
+        # At-risk students in this class
+        c_failing_counts = {}
+        st_avg_scores = {}
+        for sc in cls_scores:
+            tot = (sc.class_score or 0.0) + (sc.exam_score or 0.0)
+            if sc.student_id not in st_avg_scores:
+                st_avg_scores[sc.student_id] = []
+            st_avg_scores[sc.student_id].append(tot)
+            if tot < 50.0:
+                c_failing_counts[sc.student_id] = c_failing_counts.get(sc.student_id, 0) + 1
+
+        at_risk_list = []
+        for s in c_students:
+            f_cnt = c_failing_counts.get(s.id, 0)
+            if f_cnt >= 2:
+                scores_arr = st_avg_scores.get(s.id, [0])
+                avg_m = round(sum(scores_arr) / max(1, len(scores_arr)), 1)
+                at_risk_list.append({
+                    "id": s.id,
+                    "name": s.full_name,
+                    "index_number": s.index_number or s.admission_number or "—",
+                    "failing_subjects_count": f_cnt,
+                    "average_score": avg_m,
+                    "guardian_phone": s.phone or "Not Recorded"
+                })
+
+        # Subject continuous assessment completion matrix for this class
+        class_subjects_matrix = []
+        for asgn in db.query(TeacherAssignment).filter(TeacherAssignment.class_section_id == cls.id).all():
+            s_name = asgn.subject.name if asgn.subject else "Subject"
+            t_user = asgn.teacher
+            t_name = (getattr(t_user, 'full_name', None) or t_user.username) if t_user else "Unassigned"
+            sub_sc = [sc for sc in cls_scores if sc.subject_id == asgn.subject_id]
+            pct = round(min(100.0, (len(sub_sc) / max(1, len(c_students))) * 100.0), 1) if c_students else 0.0
+            class_subjects_matrix.append({
+                "subject_name": s_name,
+                "teacher_name": t_name,
+                "scores_recorded": len(sub_sc),
+                "total_students": len(c_students),
+                "completion_pct": pct,
+                "status": "COMPLETE" if pct >= 100 else ("IN_PROGRESS" if pct > 0 else "PENDING")
+            })
+
+        class_master_data = {
+            "class_id": cls.id,
+            "class_name": cls.name,
+            "stage_name": cls.stage.name if cls.stage else "",
+            "total_students": len(c_students),
+            "boys_count": c_boys,
+            "girls_count": c_girls,
+            "attendance_today_pct": att_pct,
+            "attendance_taken": len(att_records) > 0,
+            "pass_rate_pct": cls_pass_rate,
+            "at_risk_count": len(at_risk_list),
+            "at_risk_students": at_risk_list[:6],
+            "subjects_matrix": class_subjects_matrix[:8]
+        }
+
     return {
         "school_mode": school_mode,
         "academic": {
@@ -619,6 +786,8 @@ def get_executive_analytics(
             "recent_audit_logs": recent_audit_logs,
             "total_classes": classes_count,
             "total_departments": depts_count
-        }
+        },
+        "departmental": departmental_data,
+        "class_master": class_master_data
     }
 

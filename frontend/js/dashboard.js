@@ -225,6 +225,26 @@ function renderDailyShortcuts(activeRole) {
       { label: '🛡️ Institutional Audit Logs', href: 'audit-logs.html' },
       { label: '💬 Institutional Broadcast & SMS', href: 'messaging.html' }
     ];
+  } else if (role === 'hod') {
+    if (heading) heading.innerHTML = '⚡ Departmental Operations Shortcuts';
+    shortcuts = [
+      { label: '✍️ Department Score Review', href: 'bulk-entry.html' },
+      { label: '👨‍🏫 Faculty Allocations', href: 'assignments.html' },
+      { label: '📜 Department Broadsheet', href: 'broadsheet.html' },
+      { label: '📚 Department Subjects & Scheme', href: 'subjects.html' },
+      { label: '🖨️ Terminal Reports & Transcripts', href: 'report-card.html' },
+      { label: '💬 Broadcast Department SMS', href: 'messaging.html' }
+    ];
+  } else if (['form_master', 'form_mistress'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ Class Master Operations Shortcuts';
+    shortcuts = [
+      { label: '📋 Daily Class Register', href: 'attendance.html' },
+      { label: '📜 Master Class Broadsheet', href: 'broadsheet.html' },
+      { label: '🖨️ Terminal Reports & Remarks', href: 'report-card.html' },
+      { label: '👥 Class Student Census', href: 'students.html' },
+      { label: '🎓 Student Clearance Desk', href: 'clearance.html' },
+      { label: '💬 Message Class Parents', href: 'messaging.html' }
+    ];
   } else {
     if (heading) heading.innerHTML = '⚡ Daily Operations Shortcuts';
     shortcuts = [
@@ -512,6 +532,32 @@ async function loadDashboardStats() {
     if (staffCard) staffCard.style.display = 'flex';
     if (usersCard) usersCard.style.display = 'flex';
     if (broadcastsCard) broadcastsCard.style.display = 'flex';
+  } else if (activeRole === 'hod') {
+    if (feesCard) feesCard.style.display = 'none';
+    if (housesCard) housesCard.style.display = 'none';
+    if (boardersCard) boardersCard.style.display = 'none';
+    if (exeatCard) exeatCard.style.display = 'none';
+    if (medicalCard) medicalCard.style.display = 'none';
+    if (disciplineCard) disciplineCard.style.display = 'none';
+    if (staffCard) staffCard.style.display = 'none';
+    if (usersCard) usersCard.style.display = 'none';
+    if (broadcastsCard) broadcastsCard.style.display = 'none';
+    if (sbaCard) sbaCard.style.display = 'flex';
+    if (passRateCard) passRateCard.style.display = 'flex';
+    if (atRiskCard) atRiskCard.style.display = 'flex';
+  } else if (['form_master', 'form_mistress'].includes(activeRole)) {
+    if (feesCard) feesCard.style.display = 'none';
+    if (housesCard) housesCard.style.display = 'none';
+    if (boardersCard) boardersCard.style.display = 'none';
+    if (exeatCard) exeatCard.style.display = 'none';
+    if (medicalCard) medicalCard.style.display = 'none';
+    if (disciplineCard) disciplineCard.style.display = 'none';
+    if (staffCard) staffCard.style.display = 'none';
+    if (usersCard) usersCard.style.display = 'none';
+    if (broadcastsCard) broadcastsCard.style.display = 'none';
+    if (sbaCard) sbaCard.style.display = 'flex';
+    if (passRateCard) passRateCard.style.display = 'flex';
+    if (atRiskCard) atRiskCard.style.display = 'flex';
   } else {
     if (feesCard) feesCard.style.display = 'flex';
     if (sbaCard) sbaCard.style.display = 'none';
@@ -619,7 +665,13 @@ async function loadAnalytics() {
 // ── Executive Analytics Widgets ────────────────────────────────────────────────
 async function loadExecutiveAnalytics() {
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || localStorage.getItem('userRole') || '').toLowerCase();
-  const execRoles = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'assistant_headmaster_admin', 'assistant_head_admin', 'hod'];
+  const execRoles = [
+    'admin', 'super_admin', 'headmaster', 'headmistress',
+    'assistant_headmaster_academic', 'assistant_head_academic',
+    'assistant_headmaster_domestic', 'assistant_head_domestic',
+    'assistant_headmaster_admin', 'assistant_head_admin',
+    'hod', 'form_master', 'form_mistress'
+  ];
 
   const isExecutive = execRoles.includes(activeRole);
   if (!isExecutive) {
@@ -642,17 +694,23 @@ async function loadExecutiveAnalytics() {
     const ac = data.academic || {};
     const dom = data.domestic || {};
     const adm = data.administration || {};
+    const dept = data.departmental || {};
+    const cls = data.class_master || {};
 
     section.style.display = 'block';
 
     const isAcademicHead = ['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole);
     const isDomesticHead = ['assistant_headmaster_domestic', 'assistant_head_domestic', 'senior_housemaster', 'senior_housemistress'].includes(activeRole);
     const isAdminHead = ['assistant_headmaster_admin', 'assistant_head_admin'].includes(activeRole);
+    const isHOD = activeRole === 'hod';
+    const isFormMaster = ['form_master', 'form_mistress'].includes(activeRole);
     const isSuperOrHead = ['admin', 'super_admin', 'headmaster', 'headmistress'].includes(activeRole);
 
-    const showAcademic = isAcademicHead || isSuperOrHead || activeRole === 'hod';
+    const showAcademic = isAcademicHead || isSuperOrHead;
     const showDomestic = isDomesticHead || isSuperOrHead;
     const showAdmin = isAdminHead || isSuperOrHead;
+    const showHOD = isHOD;
+    const showFormMaster = isFormMaster;
 
     // Populate top KPI cards if Academic Head
     if (isAcademicHead || isSuperOrHead) {
@@ -672,6 +730,60 @@ async function loadExecutiveAnalytics() {
       }
       if (atRiskEl && ac.at_risk_students_count !== undefined) {
         animateCountUp(atRiskEl, ac.at_risk_students_count);
+      }
+    }
+
+    // Populate top KPI cards if HOD
+    if (isHOD) {
+      const sbaEl = document.getElementById('statSba');
+      const passRateEl = document.getElementById('statPassRate');
+      const atRiskEl = document.getElementById('statAtRisk');
+      const progSba = document.getElementById('progSba');
+      const progPassRate = document.getElementById('progPassRate');
+
+      if (sbaEl && dept.sba_completion_pct !== undefined) {
+        animateCountUp(sbaEl, dept.sba_completion_pct, '%');
+        if (progSba) setTimeout(() => { progSba.style.width = `${Math.min(100, dept.sba_completion_pct)}%`; }, 150);
+      }
+      if (passRateEl && dept.pass_rate_pct !== undefined) {
+        animateCountUp(passRateEl, dept.pass_rate_pct, '%');
+        if (progPassRate) setTimeout(() => { progPassRate.style.width = `${Math.min(100, dept.pass_rate_pct)}%`; }, 150);
+      }
+      if (atRiskEl && dept.submissions) {
+        const pendingCount = dept.submissions.filter(s => s.status !== 'COMPLETE').length;
+        animateCountUp(atRiskEl, pendingCount);
+      }
+    }
+
+    // Populate top KPI cards if Form Master
+    if (isFormMaster) {
+      const sbaEl = document.getElementById('statSba');
+      const passRateEl = document.getElementById('statPassRate');
+      const atRiskEl = document.getElementById('statAtRisk');
+      const progSba = document.getElementById('progSba');
+      const progPassRate = document.getElementById('progPassRate');
+      const attEl = document.getElementById('statAttendance');
+      const attSub = document.getElementById('statAttendanceSub');
+      const progAtt = document.getElementById('progAttendance');
+
+      if (cls.attendance_today_pct !== undefined && attEl) {
+        animateCountUp(attEl, cls.attendance_today_pct, '%');
+        if (attSub) attSub.textContent = cls.attendance_taken ? 'Today (Class Register)' : 'Not Recorded Today';
+        if (progAtt) setTimeout(() => { progAtt.style.width = `${Math.min(100, cls.attendance_today_pct)}%`; }, 150);
+      }
+      if (sbaEl && cls.subjects_matrix) {
+        const avgSba = cls.subjects_matrix.length > 0
+          ? Math.round(cls.subjects_matrix.reduce((acc, s) => acc + (s.completion_pct || 0), 0) / cls.subjects_matrix.length)
+          : 0;
+        animateCountUp(sbaEl, avgSba, '%');
+        if (progSba) setTimeout(() => { progSba.style.width = `${avgSba}%`; }, 150);
+      }
+      if (passRateEl && cls.pass_rate_pct !== undefined) {
+        animateCountUp(passRateEl, cls.pass_rate_pct, '%');
+        if (progPassRate) setTimeout(() => { progPassRate.style.width = `${Math.min(100, cls.pass_rate_pct)}%`; }, 150);
+      }
+      if (atRiskEl && cls.at_risk_count !== undefined) {
+        animateCountUp(atRiskEl, cls.at_risk_count);
       }
     }
 
@@ -1186,6 +1298,308 @@ async function loadExecutiveAnalytics() {
                 </thead>
                 <tbody>
                   ${auditRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // ── HOD Departmental Command Center ───────────────────────────────────────
+    if (showHOD) {
+      const headingEl = document.getElementById('execAnalyticsTitle');
+      if (headingEl) headingEl.innerHTML = `🔬 Departmental Curriculum & SBA Command Center (${escapeHtml(dept.name || 'Department')})`;
+
+      // 1. Departmental Curriculum & SBA Completion Overview Card
+      const sbaRate = dept.sba_completion_pct || 0;
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #6366f1; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#818cf8; display:flex; align-items:center; gap:8px;">
+              <span>🔬</span> Departmental Curriculum & SBA Overview
+            </h4>
+            <span style="background:rgba(99,102,241,0.2); color:#a5b4fc; border:1px solid rgba(99,102,241,0.4); padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">${escapeHtml(dept.code || 'DEPT')}</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Department Faculty:</span><br/>
+              <strong style="font-size:1.15rem; color:#38bdf8;">${dept.teacher_count || 0} Assigned</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Head: ${escapeHtml(dept.hod_name || 'HOD')}</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Department Subjects:</span><br/>
+              <strong style="font-size:1.15rem; color:#a855f7;">${dept.subject_count || 0} Subjects</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">${dept.total_scores_recorded || 0} scores logged</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">SBA Continuous Assessment:</span><br/>
+              <strong style="font-size:1.15rem; color:#10b981;">${sbaRate}%</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Entry completion rate</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Subject Pass Rate:</span><br/>
+              <strong style="font-size:1.15rem; color:#f59e0b;">${dept.pass_rate_pct || 0}%</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Score &ge; 50%</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // 2. Department Grade Distribution Curve Card
+      const gd = dept.grade_distribution || { A1: 0, B2_B3: 0, C4_C6: 0, D7_E8: 0, F9: 0 };
+      const totG = Object.values(gd).reduce((a, b) => a + b, 0) || 1;
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #10b981; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#34d399; display:flex; align-items:center; gap:8px;">
+              <span>📈</span> Departmental Grade Distribution & Pass Curve
+            </h4>
+            <a href="broadsheet.html" class="btn sm" style="background:#059669; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Dept Broadsheet</a>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
+            <div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                <span style="font-weight:600; color:#34d399;">🌟 Excellent (A1):</span>
+                <strong>${gd.A1 || 0} (${Math.round(((gd.A1 || 0) / totG) * 100)}%)</strong>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                <div style="width:${Math.min(100, ((gd.A1 || 0) / totG) * 100)}%; height:100%; background:#10b981;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                <span style="font-weight:600; color:#60a5fa;">📘 Very Good / Good (B2–B3):</span>
+                <strong>${gd.B2_B3 || 0} (${Math.round(((gd.B2_B3 || 0) / totG) * 100)}%)</strong>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                <div style="width:${Math.min(100, ((gd.B2_B3 || 0) / totG) * 100)}%; height:100%; background:#3b82f6;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                <span style="font-weight:600; color:#fbbf24;">📙 Credit Pass (C4–C6):</span>
+                <strong>${gd.C4_C6 || 0} (${Math.round(((gd.C4_C6 || 0) / totG) * 100)}%)</strong>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                <div style="width:${Math.min(100, ((gd.C4_C6 || 0) / totG) * 100)}%; height:100%; background:#f59e0b;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                <span style="font-weight:600; color:#f87171;">⚠️ Pass / Fail (D7–F9):</span>
+                <strong>${(gd.D7_E8 || 0) + (gd.F9 || 0)} (${Math.round((((gd.D7_E8 || 0) + (gd.F9 || 0)) / totG) * 100)}%)</strong>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                <div style="width:${Math.min(100, (((gd.D7_E8 || 0) + (gd.F9 || 0)) / totG) * 100)}%; height:100%; background:#ef4444;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // 3. Department Teacher Score Sheet Submission Roster
+      if (Array.isArray(dept.submissions) && dept.submissions.length > 0) {
+        let subRows = dept.submissions.map(s => {
+          let badge = s.status === 'COMPLETE'
+            ? `<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">✓ SUBMITTED</span>`
+            : (s.status === 'IN_PROGRESS'
+              ? `<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">⏳ IN PROGRESS (${s.completion_pct}%)</span>`
+              : `<span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">❌ PENDING</span>`);
+
+          return `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">👨‍🏫 ${escapeHtml(s.teacher_name)}</td>
+              <td style="padding:10px 12px; color:#38bdf8;">${escapeHtml(s.class_name)}</td>
+              <td style="padding:10px 12px; font-weight:600;">${escapeHtml(s.subject_name)}</td>
+              <td style="padding:10px 12px;">${s.recorded_count} / ${s.total_students} scores</td>
+              <td style="padding:10px 12px;">${badge}</td>
+              <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
+                ${s.status !== 'COMPLETE' ? `
+                  <button type="button" onclick="sendAssessmentReminder('${escapeHtml(s.teacher_name)}', '${escapeHtml(s.subject_name)}', '${escapeHtml(s.class_name)}')" 
+                          style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer; margin-right:6px;">
+                    📲 Reminder
+                  </button>
+                ` : ''}
+                <a href="bulk-entry.html" class="btn sm" style="padding:4px 10px; font-size:0.75rem; background:rgba(99,102,241,0.2); color:#818cf8; border:1px solid rgba(99,102,241,0.4); text-decoration:none; border-radius:6px; font-weight:600;">
+                  ✍️ Review Scores
+                </a>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #6366f1; background: var(--card-bg, #1e293b); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#818cf8; display:flex; align-items:center; gap:8px;">
+                  <span>📋</span> Departmental Teacher Score Sheet Submission Roster
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Track continuous assessment mark entry and exam score submissions across departmental subjects</div>
+              </div>
+              <a class="btn sm" href="bulk-entry.html" style="background:#4f46e5; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">✍️ Department Score Desk</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:8px 12px;">Assigned Teacher</th>
+                    <th style="padding:8px 12px;">Class Section</th>
+                    <th style="padding:8px 12px;">Subject</th>
+                    <th style="padding:8px 12px;">Progress</th>
+                    <th style="padding:8px 12px;">Status</th>
+                    <th style="padding:8px 12px; text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${subRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // ── Form Master / Form Mistress Command Center ────────────────────────────
+    if (showFormMaster) {
+      const headingEl = document.getElementById('execAnalyticsTitle');
+      if (headingEl) headingEl.innerHTML = `🎓 Class Master Academic & Pastoral Command Center (${escapeHtml(cls.class_name || 'My Class')})`;
+
+      // 1. Class Census & Attendance Standing Card
+      const attBadge = cls.attendance_taken
+        ? `<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">✓ Register Marked Today (${cls.attendance_today_pct}%)</span>`
+        : `<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">⚠️ Roll Call Pending Today</span>`;
+
+      cardsHtml += `
+        <div class="card" style="border-left: 4px solid #10b981; background: var(--card-bg, #1e293b);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="margin:0; font-size:1.05rem; color:#34d399; display:flex; align-items:center; gap:8px;">
+              <span>🎓</span> Class Master Operational Standing
+            </h4>
+            ${attBadge}
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Total Class Enrollment:</span><br/>
+              <strong style="font-size:1.15rem; color:#38bdf8;">${cls.total_students || 0} Students</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">👦 ${cls.boys_count || 0} Boys | 👧 ${cls.girls_count || 0} Girls</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Academic Stage:</span><br/>
+              <strong style="font-size:1.15rem; color:#a855f7;">${escapeHtml(cls.stage_name || 'Senior High')}</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Class: ${escapeHtml(cls.class_name || 'Stream')}</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">Class Pass Rate:</span><br/>
+              <strong style="font-size:1.15rem; color:#10b981;">${cls.pass_rate_pct || 0}%</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Scores &ge; 50%</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+              <span style="opacity:0.7; font-size:0.75rem;">At-Risk Students:</span><br/>
+              <strong style="font-size:1.15rem; color:#ef4444;">${cls.at_risk_count || 0} Flagged</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Failing &ge; 2 Core Subjects</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // 2. Class Continuous Assessment Progress Matrix by Subject
+      if (Array.isArray(cls.subjects_matrix) && cls.subjects_matrix.length > 0) {
+        let subMatrixRows = cls.subjects_matrix.map(sm => {
+          let badge = sm.status === 'COMPLETE'
+            ? `<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">✓ COMPLETE</span>`
+            : (sm.status === 'IN_PROGRESS'
+              ? `<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">⏳ ${sm.completion_pct}%</span>`
+              : `<span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">❌ PENDING</span>`);
+
+          return `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">📚 ${escapeHtml(sm.subject_name)}</td>
+              <td style="padding:10px 12px; color:#38bdf8;">👨‍🏫 ${escapeHtml(sm.teacher_name)}</td>
+              <td style="padding:10px 12px;">${sm.scores_recorded} / ${sm.total_students} scores</td>
+              <td style="padding:10px 12px;">${badge}</td>
+              <td style="padding:10px 12px; text-align:right;">
+                <a href="bulk-entry.html" class="btn sm" style="padding:4px 10px; font-size:0.75rem; background:rgba(99,102,241,0.2); color:#818cf8; border:1px solid rgba(99,102,241,0.4); text-decoration:none; border-radius:6px; font-weight:600;">
+                  ✍️ View Scores
+                </a>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        cardsHtml += `
+          <div class="card" style="border-left: 4px solid #3b82f6; background: var(--card-bg, #1e293b);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <h4 style="margin:0; font-size:1.05rem; color:#60a5fa; display:flex; align-items:center; gap:8px;">
+                <span>📋</span> Class SBA Subject Score Entry Progress
+              </h4>
+              <a href="broadsheet.html" class="btn sm" style="background:#2563eb; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Class Broadsheet</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:6px 10px;">Subject</th>
+                    <th style="padding:6px 10px;">Assigned Faculty</th>
+                    <th style="padding:6px 10px;">Progress</th>
+                    <th style="padding:6px 10px;">Status</th>
+                    <th style="padding:6px 10px; text-align:right;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${subMatrixRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // 3. Class Early Warning & At-Risk Intervention Roster
+      if (Array.isArray(cls.at_risk_students) && cls.at_risk_students.length > 0) {
+        let riskRows = cls.at_risk_students.map(rs => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">⚠️ ${escapeHtml(rs.name)}</td>
+            <td style="padding:10px 12px; color:#94a3b8; font-size:0.78rem;">${escapeHtml(rs.index_number)}</td>
+            <td style="padding:10px 12px; color:#f87171; font-weight:700;">${rs.failing_subjects_count} Subjects Failing</td>
+            <td style="padding:10px 12px; font-weight:600;">Avg: ${rs.average_score}%</td>
+            <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
+              <button type="button" onclick="sendExeatParentAlert('${escapeHtml(rs.guardian_phone)}', '${escapeHtml(rs.name)}')" 
+                      style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer;">
+                📲 Contact Guardian
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #ef4444; background: var(--card-bg, #1e293b); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#f87171; display:flex; align-items:center; gap:8px;">
+                  <span>⚠️</span> Class Early Warning & Academic Intervention Roster
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Students currently failing 2 or more core subjects requiring immediate academic remedial attention</div>
+              </div>
+              <a class="btn sm" href="report-card.html" style="background:#dc2626; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">🖨️ Terminal Remarks Desk</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:8px 12px;">Student Name</th>
+                    <th style="padding:8px 12px;">Index / Admission No.</th>
+                    <th style="padding:8px 12px;">Failing Load</th>
+                    <th style="padding:8px 12px;">Current Average</th>
+                    <th style="padding:8px 12px; text-align:right;">Guardian Intervention</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${riskRows}
                 </tbody>
               </table>
             </div>

@@ -269,37 +269,85 @@ def get_school_accreditation(
     all_subjects = db.query(Subject).order_by(Subject.name.asc()).all()
     all_programs = db.query(Program).order_by(Program.name.asc()).all()
 
+    ORDERED_CATEGORIES = [
+        "🌐 Cross-Cutting / Multi-Track Electives",
+        "🏫 SHS Core Curriculum",
+        "🔬 General Science",
+        "🚀 STEM & Applied Technologies",
+        "📊 Business & Finance",
+        "📜 General Arts",
+        "🎨 Visual Arts",
+        "🍳 Home Economics",
+        "🛠️ Technical",
+        "⚙️ TVET & Vocational Studies",
+        "🌱 Agricultural Science",
+        "🎒 Basic School Common Core",
+    ]
+
     def categorize_subject(sub: Subject) -> str:
-        name_lower = sub.name.lower()
-        code_upper = (sub.code or "").upper()
-        lvl_upper = (sub.school_level or "").upper()
+        name_lower = sub.name.lower().strip()
+        code_upper = (sub.code or "").upper().strip()
+        lvl_upper = (sub.school_level or "").upper().strip()
 
-        if lvl_upper in ["BASIC", "KG"] or code_upper.endswith("-BAS") or code_upper.endswith("-KG"):
-            return "Basic School Common Core"
-        if sub.is_core or sub.category == "Core" or code_upper.endswith("-CORE") or "core" in name_lower or code_upper in ["MATH-SHS", "ENG-SHS", "SOC-SHS", "GSCI-SHS", "PEH-SHS", "ROB-F2", "ICT-CORE"]:
-            return "SHS Core Curriculum"
-        # Cross-cutting electives shared across multiple programs
-        if any(w == name_lower for w in ["elective mathematics", "additional mathematics", "economics", "geography", "chemistry", "biology", "general knowledge in art", "french (elective)", "arabic", "music"]) or code_upper in ["AMATH-SHS", "ECON-SHS", "GEO-SHS", "CHEM-SHS", "BIO-SHS", "GKA-SHS", "FRE-SHS", "ARAB-SHS", "MUS-SHS"]:
+        # 1. Basic School
+        if lvl_upper in ["BASIC", "KG", "PRIMARY", "JHS"] or code_upper.endswith("-BAS") or code_upper.endswith("-KG") or code_upper.endswith("-JHS") or code_upper.endswith("-PRIM"):
+            return "🎒 Basic School Common Core"
+
+        # 2. SHS Core Curriculum
+        if sub.is_core or sub.category == "Core" or code_upper.endswith("-CORE") or code_upper in ["MATH-SHS", "ENG-SHS", "SOC-SHS", "GSCI-SHS", "PEH-SHS", "ROB-F2", "ICT-CORE"] or name_lower in ["core mathematics", "english language (shs)", "social studies (shs)", "general science (core)", "information and communication technology (core)", "peh (core)", "robotics and coding (form 2)"]:
+            return "🏫 SHS Core Curriculum"
+
+        # 3. Cross-Cutting / Multi-Track Electives (Art & Design Foundation, GKA, Comp Sci, ICT, Auto Mech, Auto Elec, E-Maths, Econs, Geog, Chem, Bio, French, Arabic, Music)
+        cross_cutting_names = [
+            "additional mathematics", "elective mathematics", "economics", "geography", "chemistry", "biology",
+            "computer science (elective)", "ict (elective)", "art and design foundation", "general knowledge in art",
+            "auto mechanics", "auto electricals", "french (elective)", "arabic", "music", "ghanaian language"
+        ]
+        cross_cutting_codes = ["AMATH-SHS", "ECON-SHS", "GEO-SHS", "CHEM-SHS", "BIO-SHS", "CS-SHS", "ICT-SHS", "ADF-SHS", "GKA-SHS", "AUTO-SHS", "AUTOELE-SHS", "FRE-SHS", "ARAB-SHS", "MUS-SHS"]
+        if name_lower in cross_cutting_names or code_upper in cross_cutting_codes:
             return "🌐 Cross-Cutting / Multi-Track Electives"
-        if any(w in name_lower for w in ["robotics", "artificial intelligence", "aviation", "cybersecurity", "engineering", "biomedical", "renewable", "lab-stem"]):
-            return "STEM & Applied Technology"
-        if any(w in name_lower for w in ["physics", "computer science", "ict (elective)"]):
-            return "General Science"
-        if any(w in name_lower for w in ["accounting", "business management", "cost", "clerical", "typewriting"]):
-            return "Business"
-        if any(w in name_lower for w in ["government", "history", "literature", "christian", "islamic"]):
-            return "General Arts & Humanities"
-        if any(w in name_lower for w in ["art and design", "design and communication", "graphic", "picture", "ceramics", "sculpture", "textiles", "leatherwork", "basketry"]):
-            return "Visual Arts"
-        if any(w in name_lower for w in ["management in living", "clothing and textiles", "food and nutrition", "catering", "garment", "cosmetology"]):
-            return "Home Economics"
-        if any(w in name_lower for w in ["agriculture", "animal husbandry", "crop husbandry", "fisheries", "forestry", "horticulture"]):
-            return "Agricultural Science"
-        if any(w in name_lower for w in ["applied technology", "applied electricity", "electronics", "auto", "refrigeration", "welding", "plumbing", "building", "woodwork", "metalwork", "technical drawing"]):
-            return "Technical & TVET"
-        return "General Electives"
 
-    grouped_subjects = {}
+        # 4. STEM & Applied Technologies (Exclusive)
+        if any(w in name_lower for w in ["robotics", "artificial intelligence", "aviation", "cybersecurity", "engineering science", "biomedical", "renewable", "manufacturing", "lab-stem"]) or lvl_upper == "STEM":
+            return "🚀 STEM & Applied Technologies"
+
+        # 5. General Science (Exclusive)
+        if "physics" in name_lower:
+            return "🔬 General Science"
+
+        # 6. Business & Finance (Exclusive)
+        if any(w in name_lower for w in ["accounting", "business management", "cost", "clerical", "typewriting"]):
+            return "📊 Business & Finance"
+
+        # 7. General Arts (Exclusive)
+        if any(w in name_lower for w in ["government", "history", "literature", "christian", "islamic"]):
+            return "📜 General Arts"
+
+        # 8. Home Economics (Check BEFORE Visual Arts to prioritize Clothing and Textiles)
+        if any(w in name_lower for w in ["clothing", "management in living", "food and nutrition", "catering", "garment", "cosmetology"]):
+            return "🍳 Home Economics"
+
+        # 9. Visual Arts (Exclusive)
+        if any(w in name_lower for w in ["art and design studio", "design and communication", "graphic", "picture", "ceramics", "sculpture", "textiles", "leatherwork", "basketry"]):
+            return "🎨 Visual Arts"
+
+        # 10. TVET & Vocational Studies (Exclusive)
+        if any(w in name_lower for w in ["refrigeration", "mechanical engineering craft", "plumbing", "welding"]):
+            return "⚙️ TVET & Vocational Studies"
+
+        # 11. Technical (Exclusive)
+        if any(w in name_lower for w in ["applied technology", "applied electricity", "electronics", "building construction", "woodwork", "metalwork", "technical drawing"]):
+            return "🛠️ Technical"
+
+        # 12. Agricultural Science (Exclusive)
+        if any(w in name_lower for w in ["agriculture", "animal husbandry", "crop husbandry", "fisheries", "forestry", "horticulture"]):
+            return "🌱 Agricultural Science"
+
+        return "🌐 Cross-Cutting / Multi-Track Electives"
+
+    # Initialize dictionary with strictly ordered categories
+    grouped_subjects = {cat: [] for cat in ORDERED_CATEGORIES}
+
     for sub in all_subjects:
         cat = categorize_subject(sub)
         if cat not in grouped_subjects:
@@ -319,19 +367,39 @@ def get_school_accreditation(
 
     # Track presets mapping
     presets = {
-        "science_stem": {
-            "name": "🔬 Pure Science & STEM",
+        "cross_cutting": {
+            "name": "🌐 Cross-Cutting Electives",
+            "subject_names": [
+                "Additional Mathematics", "Economics", "Geography", "Chemistry", "Biology", "Computer Science (Elective)",
+                "ICT (Elective)", "Art and Design Foundation", "General Knowledge in Art", "Auto Mechanics", "Auto Electricals", "French (Elective)", "Arabic", "Music"
+            ]
+        },
+        "shs_core": {
+            "name": "🏫 SHS Core Curriculum",
+            "subject_names": [
+                "Core Mathematics", "English Language (SHS)", "Social Studies (SHS)", "General Science (Core)", "Information and Communication Technology (Core)", "PEH (Core)", "Robotics and Coding (Form 2)"
+            ]
+        },
+        "general_science": {
+            "name": "🔬 General Science",
             "subject_names": [
                 "Core Mathematics", "English Language (SHS)", "Social Studies (SHS)", "General Science (Core)", "PEH (Core)", "Robotics and Coding (Form 2)",
-                "Physics", "Chemistry", "Biology", "Additional Mathematics", "Computer Science (Elective)", "ICT (Elective)", "Geography",
-                "Engineering Science", "Robotics Engineering", "Artificial Intelligence & Data Science", "Renewable Energy Technology", "STEM Group C Lab Practical"
+                "Physics", "Chemistry", "Biology", "Additional Mathematics", "Computer Science (Elective)", "ICT (Elective)", "Geography"
+            ]
+        },
+        "stem_tech": {
+            "name": "🚀 STEM & Applied Tech",
+            "subject_names": [
+                "Core Mathematics", "English Language (SHS)", "Social Studies (SHS)", "General Science (Core)", "PEH (Core)", "Robotics and Coding (Form 2)",
+                "Physics", "Chemistry", "Additional Mathematics", "Computer Science (Elective)",
+                "Engineering Science", "Biomedical Science", "Aviation & Aerospace Eng", "Robotics Engineering", "Artificial Intelligence & Data Science", "Cybersecurity & Network Security", "Renewable Energy Technology", "Manufacturing Engineering", "STEM Group C Lab Practical"
             ]
         },
         "business": {
             "name": "📊 Business & Finance",
             "subject_names": [
                 "Core Mathematics", "English Language (SHS)", "Social Studies (SHS)", "General Science (Core)", "Information and Communication Technology (Core)", "PEH (Core)",
-                "Business Management", "Financial Accounting", "Cost Accounting", "Economics", "Additional Mathematics", "Clerical Office Duties", "Typewriting & Keyboarding", "French (Elective)"
+                "Business Management", "Financial Accounting", "Cost Accounting", "Economics", "Additional Mathematics", "Clerical Office Duties", "Typewriting & Keyboarding", "ICT (Elective)", "French (Elective)"
             ]
         },
         "general_arts": {
@@ -355,11 +423,18 @@ def get_school_accreditation(
                 "Management in Living", "Clothing and Textiles", "Food and Nutrition", "General Knowledge in Art", "Biology", "Chemistry", "Catering & Hospitality", "Garment Making & Fashion", "Cosmetology & Beauty Therapy", "Economics", "French (Elective)"
             ]
         },
-        "technical_tvet": {
-            "name": "🛠️ Technical & TVET",
+        "technical": {
+            "name": "🛠️ Technical",
             "subject_names": [
                 "Core Mathematics", "English Language (SHS)", "Social Studies (SHS)", "General Science (Core)", "Information and Communication Technology (Core)", "PEH (Core)",
-                "Applied Technology", "Technical Drawing", "Applied Electricity", "Electronics", "Auto Mechanics", "Auto Electricals", "Refrigeration & Air Conditioning", "Mechanical Engineering Craft Practice", "Plumbing & Pipe Fitting", "Welding & Fabrication", "Building Construction", "Woodwork", "Metalwork", "Additional Mathematics", "Physics"
+                "Applied Technology", "Technical Drawing", "Applied Electricity", "Electronics", "Auto Mechanics", "Auto Electricals", "Building Construction", "Woodwork", "Metalwork", "Additional Mathematics", "Physics", "Computer Science (Elective)"
+            ]
+        },
+        "tvet_vocational": {
+            "name": "⚙️ TVET & Vocational",
+            "subject_names": [
+                "Core Mathematics", "English Language (SHS)", "Social Studies (SHS)", "General Science (Core)", "Information and Communication Technology (Core)", "PEH (Core)",
+                "Auto Mechanics", "Auto Electricals", "Refrigeration & Air Conditioning", "Mechanical Engineering Craft Practice", "Plumbing & Pipe Fitting", "Welding & Fabrication", "Applied Technology"
             ]
         },
         "agriculture": {
@@ -368,6 +443,10 @@ def get_school_accreditation(
                 "Core Mathematics", "English Language (SHS)", "Social Studies (SHS)", "General Science (Core)", "Information and Communication Technology (Core)", "PEH (Core)",
                 "General Agriculture", "Animal Husbandry", "Crop Husbandry & Horticulture", "Fisheries", "Forestry", "Horticulture", "Chemistry", "Biology", "Physics", "Geography"
             ]
+        },
+        "basic_core": {
+            "name": "🎒 Basic Common Core",
+            "subject_names": [s.name for s in all_subjects if (s.school_level or "").upper() in ["BASIC", "KG", "PRIMARY", "JHS"] or (s.code or "").endswith("-BAS") or (s.code or "").endswith("-KG")]
         },
         "comprehensive_shs": {
             "name": "🌟 Comprehensive All-Track SHS",

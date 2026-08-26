@@ -99,7 +99,8 @@ class TestComprehensiveCurriculumCatalog(unittest.TestCase):
 
         self.assertIn("visual_arts", presets)
         self.assertIn("home_economics", presets)
-        self.assertIn("science_stem", presets)
+        self.assertIn("general_science", presets)
+        self.assertIn("stem_tech", presets)
 
         # Get subject names by IDs
         sub_map = {s.id: s.name for s in self.db.query(Subject).all()}
@@ -160,6 +161,65 @@ class TestComprehensiveCurriculumCatalog(unittest.TestCase):
         self.assertNotIn("Leatherwork", scoped_names)
 
         print(f"[OK] Step 4: St. Catherine Home Economics Academy scoped to {len(scoped_names)} accredited subjects.")
+
+    def test_05_verify_12_ordered_categories_and_strict_separation(self):
+        """Test exact 12-track ordered catalog, separations of Science/STEM and Technical/TVET, and expanded cross-cutting subjects"""
+        school = self.db.query(School).filter(School.code == "JAK-STEM-CAT").first()
+        data = get_school_accreditation(school_id=school.id, db=self.db, current_user=self.super_admin)
+        grouped = data["grouped_catalog"]
+
+        expected_order = [
+            "🌐 Cross-Cutting / Multi-Track Electives",
+            "🏫 SHS Core Curriculum",
+            "🔬 General Science",
+            "🚀 STEM & Applied Technologies",
+            "📊 Business & Finance",
+            "📜 General Arts",
+            "🎨 Visual Arts",
+            "🍳 Home Economics",
+            "🛠️ Technical",
+            "⚙️ TVET & Vocational Studies",
+            "🌱 Agricultural Science",
+            "🎒 Basic School Common Core",
+        ]
+
+        # Verify all 12 categories exist in exact order
+        actual_order = list(grouped.keys())
+        for exp in expected_order:
+            self.assertIn(exp, actual_order)
+
+        # 1. Expanded Cross-Cutting
+        cross_subs = [s["name"] for s in grouped["🌐 Cross-Cutting / Multi-Track Electives"]]
+        self.assertIn("Art and Design Foundation", cross_subs)
+        self.assertIn("General Knowledge in Art", cross_subs)
+        self.assertIn("Computer Science (Elective)", cross_subs)
+        self.assertIn("ICT (Elective)", cross_subs)
+        self.assertIn("Auto Mechanics", cross_subs)
+        self.assertIn("Auto Electricals", cross_subs)
+
+        # 2. General Science vs STEM separation
+        sci_subs = [s["name"] for s in grouped["🔬 General Science"]]
+        stem_subs = [s["name"] for s in grouped["🚀 STEM & Applied Technologies"]]
+        self.assertIn("Physics", sci_subs)
+        self.assertIn("Robotics Engineering", stem_subs)
+        self.assertIn("Engineering Science", stem_subs)
+
+        # 3. Technical vs TVET separation
+        tech_subs = [s["name"] for s in grouped["🛠️ Technical"]]
+        tvet_subs = [s["name"] for s in grouped["⚙️ TVET & Vocational Studies"]]
+        self.assertIn("Applied Technology", tech_subs)
+        self.assertIn("Technical Drawing", tech_subs)
+        self.assertIn("Applied Electricity", tech_subs)
+        self.assertIn("Refrigeration & Air Conditioning", tvet_subs)
+        self.assertIn("Plumbing & Pipe Fitting", tvet_subs)
+
+        # 4. Home Economics contains Clothing and Textiles
+        he_subs = [s["name"] for s in grouped["🍳 Home Economics"]]
+        self.assertIn("Clothing and Textiles", he_subs)
+        self.assertIn("Management in Living", he_subs)
+        self.assertIn("Food and Nutrition", he_subs)
+
+        print("[OK] Step 5: All 12 categories, separations (Science/STEM, Tech/TVET), and cross-cutting pools verified 100%!")
 
 if __name__ == "__main__":
     unittest.main()

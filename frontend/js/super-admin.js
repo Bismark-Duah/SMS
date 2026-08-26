@@ -232,7 +232,8 @@ window.applyAccreditationPreset = function(presetKey) {
 
   // Update group parent checkboxes
   const grouped = currentAccreditationData.grouped_catalog || {};
-  Object.keys(grouped).forEach((_, idx) => {
+  const groupKeys = Object.keys(grouped);
+  groupKeys.forEach((_, idx) => {
     const groupCbs = document.querySelectorAll(`.group-sub-${idx}`);
     const groupChecked = Array.from(groupCbs).every(cb => cb.checked);
     const parentCb = document.getElementById(`group_chk_${idx}`);
@@ -240,6 +241,42 @@ window.applyAccreditationPreset = function(presetKey) {
   });
 
   window.updateAccreditationSummaryBadge();
+
+  // Smooth Scroll & Spotlight Pulse to the Matching Group Card
+  const presetToGroupMap = {
+    'cross_cutting': 'Cross-Cutting',
+    'shs_core': 'Core Curriculum',
+    'general_science': 'General Science',
+    'stem_tech': 'STEM',
+    'business': 'Business',
+    'general_arts': 'General Arts',
+    'visual_arts': 'Visual Arts',
+    'home_economics': 'Home Economics',
+    'technical': 'Technical',
+    'tvet_vocational': 'TVET',
+    'agriculture': 'Agricultural',
+    'basic_core': 'Basic'
+  };
+
+  const targetKeyword = presetToGroupMap[presetKey];
+  let targetIdx = -1;
+  if (targetKeyword) {
+    targetIdx = groupKeys.findIndex(k => k.includes(targetKeyword));
+  }
+
+  if (targetIdx >= 0) {
+    const targetCard = document.getElementById(`group_card_${targetIdx}`);
+    if (targetCard) {
+      targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      targetCard.classList.remove('spotlight-active');
+      void targetCard.offsetWidth; // Trigger reflow for animation restart
+      targetCard.classList.add('spotlight-active');
+      setTimeout(() => targetCard.classList.remove('spotlight-active'), 1400);
+    }
+  } else if (presetKey === 'comprehensive_shs') {
+    const container = document.getElementById('accreditationCatalogContainer');
+    if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 };
 
 window.renderAccreditationCatalog = function(data) {
@@ -254,35 +291,19 @@ window.renderAccreditationCatalog = function(data) {
     return;
   }
 
-  const getGroupIcon = (name) => {
-    if (name.includes('Core Curriculum')) return '🏫';
-    if (name.includes('Cross-Cutting')) return '🌐';
-    if (name.includes('STEM')) return '🚀';
-    if (name.includes('General Science')) return '🔬';
-    if (name.includes('Business')) return '📊';
-    if (name.includes('General Arts')) return '📜';
-    if (name.includes('Visual Arts')) return '🎨';
-    if (name.includes('Home Economics')) return '🍳';
-    if (name.includes('Technical')) return '🛠️';
-    if (name.includes('Agricultural')) return '🌱';
-    if (name.includes('Basic')) return '🎒';
-    return '📚';
-  };
-
   let html = '';
 
   groupKeys.forEach((groupName, idx) => {
     const subjects = grouped[groupName] || [];
     const activeCount = subjects.filter(s => s.is_active_for_school).length;
     const allChecked = activeCount === subjects.length && subjects.length > 0;
-    const icon = getGroupIcon(groupName);
 
     html += `
-      <div class="catalog-group-card">
+      <div class="catalog-group-card" id="group_card_${idx}">
         <div class="catalog-group-header">
           <label class="catalog-group-title" for="group_chk_${idx}">
             <input type="checkbox" id="group_chk_${idx}" onchange="window.toggleGroupSubjects('${idx}', this.checked)" ${allChecked ? 'checked' : ''} />
-            <span>${icon} ${groupName}</span>
+            <span>${groupName}</span>
           </label>
           <span class="catalog-group-badge" id="group_badge_${idx}">
             ${activeCount} / ${subjects.length} Active

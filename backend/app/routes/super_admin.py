@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from ..database import get_db
-from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog
+from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog, Program
 from ..routes.auth import get_current_user, get_password_hash
 from ..ncca_seed import seed_ncca_curriculum
 
@@ -37,9 +37,15 @@ class SchoolCreateSchema(BaseModel):
     admin_username: str
     admin_email: str
     admin_password: str
+    accredited_program_ids: Optional[List[int]] = None
+    active_subject_ids: Optional[List[int]] = None
 
 class SchoolStatusSchema(BaseModel):
     status: str  # ACTIVE, SUSPENDED
+
+class SchoolAccreditationUpdateSchema(BaseModel):
+    program_ids: Optional[List[int]] = None
+    subject_ids: Optional[List[int]] = None
 
 @router.get("/dashboard")
 def get_super_admin_dashboard(
@@ -198,6 +204,32 @@ def create_new_school(
         ("report_title", "TERMINAL REPORT"),
         ("report_publishing_mode", "HYBRID_BOTH")
     ]
+    for k, v in default_settings:
+        db.add(Setting(school_id=new_school.id, key=k, value=v))
+
+    # Bind accredited programs and active subjects
+    if payload.active_subject_ids:
+        active_subs = db.query(Subject).filter(Subject.id.in_(payload.active_subject_ids)).all()
+        new_school.active_subjects = active_subs
+    else:
+        # Default auto-provisioning according to school_mode
+        if new_school.school_mode == "SHS_ONLY":
+            active_subs = db.query(Subject).filter(
+                (Subject.school_level.in_(["SHS", "STEM"]) | (Subject.school_level == None)),
+                ~Subject.code.ilike("%-BAS"),
+                ~Subject.code.ilike("%-KG")
+            ).all()
+            new_school.active_subjects = active_subs
+        elif new_school.school_mode == "BASIC_ONLY":
+            active_subs = db.query(Subject).filter(
+                (Subject.school_level.in_(["Basic", "KG"])) | (Subject.code.ilike("%-BAS")) | (Subject.code.ilike("%-KG"))
+            ).all()
+            new_school.active_subjects = active_subs
+
+    if payload.accredited_program_ids:
+        accredited_progs = db.query(Program).filter(Program.id.in_(payload.accredited_program_ids)).all()
+        new_school.accredited_programs = accredited_progs
+
     try:
         db.commit()
         db.refresh(new_school)
@@ -215,6 +247,132 @@ def create_new_school(
             "status": new_school.status,
             "admin_username": school_admin.username
         }
+    }
+
+@router.get("/schools/{school_id}/accreditation")
+def get_school_accreditation(
+    school_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Returns the national master catalog categorized by learning area/track,
+    along with the school's active subscribed subjects and accredited programs.
+    """
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+
+    active_subject_ids = [s.id for s in school.active_subjects]
+    accredited_program_ids = [p.id for p in school.accredited_programs]
+
+    all_subjects = db.query(Subject).order_by(Subject.name.asc()).all()
+    all_programs = db.query(Program).order_by(Program.name.asc()).all()
+
+    def categorize_subject(sub: Subject) -> str:
+        name_lower = sub.name.lower()
+        code_upper = (sub.code or "").upper()
+        lvl_upper = (sub.school_level or "").upper()
+
+        if lvl_upper in ["BASIC", "KG"] or code_upper.endswith("-BAS") or code_upper.endswith("-KG"):
+            return "Basic School Common Core"
+        if sub.is_core or sub.category == "Core" or code_upper.endswith("-CORE") or "core" in name_lower or code_upper in ["MATH-SHS", "ENG-SHS", "SOC-SHS", "GSCI-SHS", "PEH-SHS", "ROB-F2"]:
+            return "SHS Core Curriculum"
+        if any(w in name_lower for w in ["robotics", "artificial intelligence", "aviation", "cybersecurity", "engineering", "biomedical", "renewable"]):
+            return "STEM & Applied Technology"
+        if any(w in name_lower for w in ["physics", "chemistry", "biology", "additional math", "computer science", "ict (elective)", "geography"]):
+            return "General Science"
+        if any(w in name_lower for w in ["accounting", "business management", "cost", "economics", "clerical", "typewriting"]):
+            return "Business"
+        if any(w in name_lower for w in ["government", "history", "literature", "christian", "islamic", "french", "arabic", "music"]):
+            return "General Arts & Humanities"
+        if any(w in name_lower for w in ["art", "graphic", "picture", "ceramics", "sculpture", "textiles", "leatherwork", "basketry"]):
+            return "Visual Arts"
+        if any(w in name_lower for w in ["catering", "garment", "cosmetology", "home economics"]):
+            return "Home Economics"
+        if any(w in name_lower for w in ["agriculture", "forestry", "horticulture"]):
+            return "Agricultural Science"
+        if any(w in name_lower for w in ["applied electricity", "electronics", "auto", "refrigeration", "welding", "plumbing", "building", "woodwork", "metalwork", "technical drawing", "design & communication"]):
+            return "Technical & TVET"
+        return "General Electives"
+
+    grouped_subjects = {}
+    for sub in all_subjects:
+        cat = categorize_subject(sub)
+        if cat not in grouped_subjects:
+            grouped_subjects[cat] = []
+        is_active = sub.id in active_subject_ids if len(active_subject_ids) > 0 else (
+            sub.school_level == school.school_mode or school.school_mode == "COMBINED" or (school.school_mode == "SHS_ONLY" and sub.school_level in ["SHS", "STEM"]) or (school.school_mode == "BASIC_ONLY" and sub.school_level == "Basic")
+        )
+        grouped_subjects[cat].append({
+            "id": sub.id,
+            "name": sub.name,
+            "code": sub.code,
+            "is_core": sub.is_core,
+            "category": sub.category,
+            "school_level": sub.school_level,
+            "is_active_for_school": is_active
+        })
+
+    return {
+        "school_id": school.id,
+        "school_name": school.name,
+        "school_code": school.code,
+        "school_mode": school.school_mode,
+        "active_subject_ids": active_subject_ids,
+        "accredited_program_ids": accredited_program_ids,
+        "grouped_catalog": grouped_subjects,
+        "all_programs": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "code": p.code,
+                "is_accredited_for_school": p.id in accredited_program_ids if len(accredited_program_ids) > 0 else True
+            }
+            for p in all_programs
+        ]
+    }
+
+@router.put("/schools/{school_id}/accreditation")
+def update_school_accreditation(
+    school_id: int,
+    payload: SchoolAccreditationUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Updates the active subjects and accredited programs for a school.
+    """
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+
+    if payload.subject_ids is not None:
+        target_subjects = db.query(Subject).filter(Subject.id.in_(payload.subject_ids)).all() if payload.subject_ids else []
+        school.active_subjects = target_subjects
+
+    if payload.program_ids is not None:
+        target_programs = db.query(Program).filter(Program.id.in_(payload.program_ids)).all() if payload.program_ids else []
+        school.accredited_programs = target_programs
+
+    # Audit log
+    audit = ConfigAuditLog(
+        school_id=school_id,
+        changed_by_user_id=current_user.id,
+        change_type="ACCREDITATION_UPDATE",
+        old_value="",
+        new_value=f"Active Subjects: {len(school.active_subjects)}, Programs: {len(school.accredited_programs)}",
+        notes=f"Updated accredited learning areas ({len(school.accredited_programs)} programs) and active subjects ({len(school.active_subjects)} subjects)."
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Accreditation updated: {len(school.active_subjects)} active subjects and {len(school.accredited_programs)} accredited programs.",
+        "school_id": school.id,
+        "active_subjects_count": len(school.active_subjects),
+        "accredited_programs_count": len(school.accredited_programs)
     }
 
 @router.put("/schools/{school_id}/status")

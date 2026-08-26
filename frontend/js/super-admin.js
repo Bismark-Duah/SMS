@@ -147,6 +147,7 @@ window.loadSuperAdminDashboard = async function() {
           <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
             <div style="display:inline-flex; gap:5px; align-items:center; justify-content:flex-end;">
               <button class="btn primary" style="padding:5px 10px; font-size:0.78rem; font-weight:600;" onclick="window.enterSchoolView(${s.id}, '${window.escapeJsQuotes(s.name)}', '${s.school_mode}', '${window.escapeJsQuotes(s.code || '')}')" title="Enter live school view">👁 Enter</button>
+              <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:rgba(99,102,241,0.2); border-color:#6366f1; color:#a5b4fc;" onclick="window.openAccreditationModal(${s.id}, '${window.escapeJsQuotes(s.name)}', '${s.school_mode}')" title="Configure accredited tracks and active subjects">⚙️ Accredit</button>
               <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:#0284c7; border-color:#0369a1; color:#fff;" onclick="window.downloadSchoolBackup(${s.id}, '${s.code}')" title="Download school backup snapshot">📥 Backup</button>
               <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:${s.status === 'ACTIVE' ? '#d97706' : '#10b981'}; border-color:${s.status === 'ACTIVE' ? '#b45309' : '#059669'}; color:#fff;" onclick="window.toggleSchoolStatus(${s.id}, '${s.status}')" title="${s.status === 'ACTIVE' ? 'Suspend School Account' : 'Activate School'}">${s.status === 'ACTIVE' ? '⏸ Suspend' : '▶ Activate'}</button>
               <button class="btn danger" style="padding:5px 8px; font-size:0.78rem; background:#dc2626; border-color:#b91c1c;" onclick="window.openDeleteSchoolModal(${s.id}, '${window.escapeJsQuotes(s.name)}', '${window.escapeJsQuotes(s.code || '')}')" title="Permanently Purge School">🗑 Delete</button>
@@ -159,6 +160,145 @@ window.loadSuperAdminDashboard = async function() {
 
   } catch (error) {
     console.error('Super-Admin dashboard error:', error);
+  }
+};
+
+// ── Curriculum Accreditation & Subject Activation Handlers ───────────────
+
+let currentAccreditationData = null;
+
+window.openAccreditationModal = async function(schoolId, schoolName, schoolMode) {
+  const modal = document.getElementById('accreditationModal');
+  const title = document.getElementById('accreditationModalTitle');
+  const subtitle = document.getElementById('accreditationModalSubtitle');
+  const idInput = document.getElementById('accreditationSchoolId');
+  const container = document.getElementById('accreditationCatalogContainer');
+
+  if (idInput) idInput.value = String(schoolId);
+  if (title) title.innerHTML = `<span>⚙️</span> Curriculum Accreditation — ${schoolName}`;
+  if (subtitle) subtitle.textContent = `Mode: ${schoolMode} | Select accredited learning areas and active subjects for this institution.`;
+  if (container) container.innerHTML = '<p style="opacity:0.7; text-align:center; padding:20px;">Loading national subject catalog...</p>';
+
+  if (modal) modal.style.display = 'flex';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}/accreditation`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load school accreditation data');
+    const data = await res.json();
+    currentAccreditationData = data;
+    window.renderAccreditationCatalog(data);
+  } catch (err) {
+    if (container) container.innerHTML = `<p style="color:#ef4444; padding:20px;">❌ ${err.message}</p>`;
+  }
+};
+
+window.closeAccreditationModal = function() {
+  const modal = document.getElementById('accreditationModal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.renderAccreditationCatalog = function(data) {
+  const container = document.getElementById('accreditationCatalogContainer');
+  if (!container) return;
+
+  const grouped = data.grouped_catalog || {};
+  const groupKeys = Object.keys(grouped);
+
+  if (groupKeys.length === 0) {
+    container.innerHTML = '<p style="opacity:0.7; text-align:center;">No subjects found in national catalog.</p>';
+    return;
+  }
+
+  let html = '';
+
+  groupKeys.forEach((groupName, idx) => {
+    const subjects = grouped[groupName] || [];
+    const activeCount = subjects.filter(s => s.is_active_for_school).length;
+    const allChecked = activeCount === subjects.length && subjects.length > 0;
+
+    html += `
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 14px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="group_chk_${idx}" onchange="window.toggleGroupSubjects('${idx}', this.checked)" ${allChecked ? 'checked' : ''} style="cursor:pointer;" />
+            <label for="group_chk_${idx}" style="font-weight:700; font-size:0.92rem; color:#f1f5f9; cursor:pointer;">${groupName}</label>
+          </div>
+          <span style="font-size:0.78rem; background:rgba(99,102,241,0.15); color:#a5b4fc; padding:2px 8px; border-radius:12px; font-weight:600;" id="group_badge_${idx}">
+            ${activeCount} / ${subjects.length} Active
+          </span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:6px;">
+          ${subjects.map(s => {
+            const checkedAttr = s.is_active_for_school ? 'checked' : '';
+            return `
+              <label style="display:flex; align-items:center; gap:6px; padding:6px 8px; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); font-size:0.8rem; cursor:pointer; color:#cbd5e1;">
+                <input type="checkbox" class="accred-sub-chk group-sub-${idx}" value="${s.id}" ${checkedAttr} onchange="window.updateAccreditationSummaryBadge()" />
+                <span title="${s.code || ''}">${s.name}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  window.updateAccreditationSummaryBadge();
+};
+
+window.toggleGroupSubjects = function(groupIdx, isChecked) {
+  const checkboxes = document.querySelectorAll(`.group-sub-${groupIdx}`);
+  checkboxes.forEach(cb => cb.checked = isChecked);
+  window.updateAccreditationSummaryBadge();
+};
+
+window.toggleAllAccreditationSubjects = function(isChecked) {
+  const checkboxes = document.querySelectorAll('.accred-sub-chk');
+  checkboxes.forEach(cb => cb.checked = isChecked);
+  const groupBoxes = document.querySelectorAll('[id^="group_chk_"]');
+  groupBoxes.forEach(gb => gb.checked = isChecked);
+  window.updateAccreditationSummaryBadge();
+};
+
+window.updateAccreditationSummaryBadge = function() {
+  const checked = document.querySelectorAll('.accred-sub-chk:checked');
+  const all = document.querySelectorAll('.accred-sub-chk');
+  const badge = document.getElementById('accreditationSummaryBadge');
+  if (badge) {
+    badge.textContent = `✔ ${checked.length} of ${all.length} Total Subjects Activated for this School`;
+  }
+};
+
+window.handleSaveAccreditation = async function() {
+  const schoolId = document.getElementById('accreditationSchoolId')?.value;
+  const btn = document.getElementById('saveAccreditationBtn');
+  if (!schoolId) return;
+
+  const checkedIds = Array.from(document.querySelectorAll('.accred-sub-chk:checked')).map(cb => parseInt(cb.value));
+
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Saving Accreditation...';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}/accreditation`, {
+      method: 'PUT',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        subject_ids: checkedIds
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Could not update accreditation');
+
+    alert(`✔ ${data.message}`);
+    window.closeAccreditationModal();
+    window.loadSuperAdminDashboard();
+  } catch (err) {
+    alert(`❌ Save Failed: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Save Accreditation & Active Catalog';
   }
 };
 

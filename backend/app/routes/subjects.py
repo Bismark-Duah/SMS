@@ -24,28 +24,38 @@ def list_subjects(
 ):
     school_id = get_school_id(current_user, x_school_id)
     query = db.query(Subject)
-    if school_id is not None and hasattr(Subject, "school_id"):
-        query = query.filter((Subject.school_id == school_id) | (Subject.school_id.is_(None)))
-    
+
     if not include_inactive:
         query = query.filter((Subject.is_active == True) | (Subject.is_active.is_(None)))
 
-    # Check active school_mode for the school or system default
+    # Check active school_mode and active subscribed subjects for the school
     school_mode = None
+    has_active_subjects = False
     if school_id is not None:
         sch = db.query(School).filter(School.id == school_id).first()
-        if sch and sch.school_mode:
-            school_mode = sch.school_mode
+        if sch:
+            if sch.school_mode:
+                school_mode = sch.school_mode
+            if sch.active_subjects:
+                has_active_subjects = True
+                active_sub_ids = [s.id for s in sch.active_subjects]
+                query = query.filter((Subject.id.in_(active_sub_ids)) | (Subject.school_id == school_id))
+
+    if not has_active_subjects:
+        if school_id is not None and hasattr(Subject, "school_id"):
+            query = query.filter((Subject.school_id == school_id) | (Subject.school_id.is_(None)) | (Subject.school_id == 1))
+
     if not school_mode:
         mode_setting = db.query(Setting).filter(Setting.key == "school_mode").first()
         school_mode = mode_setting.value if mode_setting else "COMBINED"
 
     if school_level:
         query = query.filter(Subject.school_level == school_level)
-    elif school_mode == "SHS_ONLY" or exclude_basic:
-        query = query.filter(Subject.school_level.in_(["SHS", "STEM"]))
-    elif school_mode == "BASIC_ONLY":
-        query = query.filter(Subject.school_level == "Basic")
+    elif not has_active_subjects:
+        if school_mode == "SHS_ONLY" or exclude_basic:
+            query = query.filter(Subject.school_level.in_(["SHS", "STEM"]))
+        elif school_mode == "BASIC_ONLY":
+            query = query.filter(Subject.school_level == "Basic")
 
     # ── Role-based scoping ─────────────────────────────────────────────────────
     from ..dependencies import get_user_assigned_scope

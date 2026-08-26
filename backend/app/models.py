@@ -52,6 +52,22 @@ elective_combination_subjects = Table(
     Column("subject_id", Integer, ForeignKey("subjects.id", ondelete="CASCADE"), primary_key=True),
 )
 
+# Many-to-many relationship table for School Active Subscribed Subjects
+school_subjects = Table(
+    "school_subjects",
+    Base.metadata,
+    Column("school_id", Integer, ForeignKey("schools.id", ondelete="CASCADE"), primary_key=True),
+    Column("subject_id", Integer, ForeignKey("subjects.id", ondelete="CASCADE"), primary_key=True),
+)
+
+# Many-to-many relationship table for School Accredited Programs
+school_programs = Table(
+    "school_programs",
+    Base.metadata,
+    Column("school_id", Integer, ForeignKey("schools.id", ondelete="CASCADE"), primary_key=True),
+    Column("program_id", Integer, ForeignKey("programs.id", ondelete="CASCADE"), primary_key=True),
+)
+
 class School(Base):
     __tablename__ = "schools"
 
@@ -69,6 +85,8 @@ class School(Base):
 
     users = relationship("User", back_populates="school", cascade="all, delete-orphan")
     students = relationship("Student", back_populates="school", cascade="all, delete-orphan")
+    active_subjects = relationship("Subject", secondary=school_subjects, backref="active_schools")
+    accredited_programs = relationship("Program", secondary=school_programs, backref="accredited_schools")
 
 class User(Base):
     __tablename__ = "users"

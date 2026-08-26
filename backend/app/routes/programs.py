@@ -125,7 +125,13 @@ def get_program_curriculum(
     # Available subjects for selection (SHS & STEM only)
     sub_query = db.query(Subject).filter(*shs_filter)
     if school_id is not None and hasattr(Subject, "school_id"):
-        sub_query = sub_query.filter((Subject.school_id == school_id) | (Subject.school_id == None))
+        from ..models import School
+        sch = db.query(School).filter(School.id == school_id).first()
+        if sch and sch.active_subjects:
+            active_ids = [s.id for s in sch.active_subjects]
+            sub_query = sub_query.filter((Subject.id.in_(active_ids)) | (Subject.school_id == school_id))
+        else:
+            sub_query = sub_query.filter((Subject.school_id == school_id) | (Subject.school_id == None))
     all_subjects = sub_query.order_by(Subject.name).all()
 
     # Available class sections for this program

@@ -206,6 +206,46 @@
       </div>
     </div>
 
+    <!-- Modal: Curriculum Accreditation & Active Subjects -->
+    <div id="accreditationModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; backdrop-filter:blur(6px); justify-content:center; align-items:center; padding:16px;">
+      <div class="card" style="max-width:900px; width:100%; max-height:90vh; display:flex; flex-direction:column; padding:24px; background:var(--card-bg, #1e293b); border:1px solid var(--border-color, #334155); border-radius:12px; box-shadow:0 25px 50px rgba(0,0,0,0.7); box-sizing:border-box;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color, #334155); padding-bottom:12px; margin-bottom:14px;">
+          <div>
+            <h3 style="margin:0; font-size:1.2rem; display:flex; align-items:center; gap:8px;" id="accreditationModalTitle">
+              <span>⚙️</span> Curriculum Accreditation & Active Subjects
+            </h3>
+            <p style="margin:4px 0 0 0; font-size:0.8rem; color:#94a3b8;" id="accreditationModalSubtitle">
+              Select accredited tracks and active subjects for this institution.
+            </p>
+          </div>
+          <button type="button" onclick="closeAccreditationModal()" style="background:none; border:none; color:#94a3b8; font-size:1.3rem; cursor:pointer;">✕</button>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:12px; background:rgba(99,102,241,0.08); padding:8px 14px; border-radius:8px; border:1px solid rgba(99,102,241,0.2);">
+          <div id="accreditationSummaryBadge" style="font-size:0.85rem; font-weight:600; color:#818cf8;">
+            Loading active subjects...
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn" style="padding:4px 10px; font-size:0.75rem;" onclick="toggleAllAccreditationSubjects(true)">Select All</button>
+            <button type="button" class="btn" style="padding:4px 10px; font-size:0.75rem;" onclick="toggleAllAccreditationSubjects(false)">Unselect All</button>
+          </div>
+        </div>
+
+        <!-- Scrollable Subject Groups Container -->
+        <div id="accreditationCatalogContainer" style="flex:1; overflow-y:auto; padding-right:6px; margin-bottom:16px;">
+          <p style="opacity:0.7; text-align:center; padding:20px;">Loading national subject catalog...</p>
+        </div>
+
+        <input type="hidden" id="accreditationSchoolId" />
+        <div style="display:flex; gap:10px; border-top:1px solid var(--border-color, #334155); padding-top:14px;">
+          <button type="button" id="saveAccreditationBtn" class="btn primary" style="flex:1; padding:10px; font-weight:600;" onclick="handleSaveAccreditation()">
+            Save Accreditation & Active Catalog
+          </button>
+          <button type="button" class="btn" onclick="closeAccreditationModal()" style="flex:1; padding:10px;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Cloud Pull & Sync Modal -->
     <div id="cloudSyncModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; backdrop-filter:blur(8px); justify-content:center; align-items:center; padding:16px;">
       <div class="card" style="max-width:520px; width:100%; padding:28px; background:var(--card-bg, #1e293b); border:1px solid var(--border-color, #334155); border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.6);">

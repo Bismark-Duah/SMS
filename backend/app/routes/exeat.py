@@ -8,6 +8,7 @@ from ..database import get_db
 from ..models import ExeatRecord, Student, House, Dormitory, User, Role, Setting
 from ..schemas import ExeatCreate, ExeatUpdate, ExeatResponse, ExeatStats
 from ..dependencies import get_current_user, get_school_id
+from ..services.communication_service import CommunicationService
 
 router = APIRouter()
 
@@ -404,6 +405,25 @@ def gate_sign_out(
     db.commit()
     db.refresh(ex)
 
+    # Automated Event Notification Trigger: Ward Departed Gate
+    try:
+        CommunicationService.trigger_event_notification(
+            "EXEAT_GATE_OUT",
+            {
+                "student_id": ex.student_id,
+                "student_name": ex.student.full_name if ex.student else "Student",
+                "class_name": ex.student.class_section.name if (ex.student and ex.student.class_section) else "",
+                "destination": ex.destination,
+                "exeat_type": ex.exeat_type,
+                "expected_return": ex.expected_return.strftime("%d %b, %H:%M") if ex.expected_return else "Scheduled Date",
+                "parent_contact": ex.parent_contact or (ex.student.phone if ex.student else None),
+                "guardian_name": ex.student.guardian_name if ex.student else None
+            },
+            db
+        )
+    except Exception as err:
+        logger.warning(f"Failed to execute auto notification on gate sign out: {err}")
+
     return _format_exeat_response(ex, db)
 
 
@@ -428,6 +448,22 @@ def gate_sign_in(
     ex.gate_in_by_id = current_user.id
     db.commit()
     db.refresh(ex)
+
+    # Automated Event Notification Trigger: Ward Returned to Gate
+    try:
+        CommunicationService.trigger_event_notification(
+            "EXEAT_GATE_IN",
+            {
+                "student_id": ex.student_id,
+                "student_name": ex.student.full_name if ex.student else "Student",
+                "class_name": ex.student.class_section.name if (ex.student and ex.student.class_section) else "",
+                "parent_contact": ex.parent_contact or (ex.student.phone if ex.student else None),
+                "guardian_name": ex.student.guardian_name if ex.student else None
+            },
+            db
+        )
+    except Exception as err:
+        logger.warning(f"Failed to execute auto notification on gate sign in: {err}")
 
     return _format_exeat_response(ex, db)
 

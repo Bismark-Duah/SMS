@@ -100,9 +100,10 @@
 
     <div class="container" style="margin-top: 24px;">
       <!-- Navigation Tabs -->
-      <div style="display: flex; gap: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 24px;">
+      <div style="display: flex; gap: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 24px; flex-wrap: wrap;">
         <button class="btn primary" id="tabDispatchBtn" onclick="switchMainTab('dispatch')">📤 Send Messages & Reports</button>
         <button class="btn secondary" id="tabOutboxBtn" onclick="switchMainTab('outbox')">📋 Delivery Log & Outbox</button>
+        <button class="btn secondary" id="tabGatewayBtn" onclick="switchMainTab('gateway')">⚙️ Gateway & Cloud API Setup</button>
       </div>
 
       <!-- DISPATCH PANEL -->
@@ -239,6 +240,152 @@
           </tbody>
         </table>
       </div>
+
+      <!-- GATEWAY & CLOUD SETUP PANEL -->
+      <div id="panelGateway" class="card" style="padding: 24px; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; color: var(--primary);">⚙️ Multi-Channel Communication Gateway Setup</h3>
+            <p style="margin: 4px 0 0 0; opacity: 0.75; font-size: 0.85rem;">Configure optional cloud SMS, WhatsApp, and SMTP Email gateways with smart zero-cost offline fallback.</p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn secondary" onclick="openTestGatewayModal()">🧪 Test Delivery</button>
+            <button class="btn primary" onclick="saveGatewaySettings()">💾 Save Gateway Settings</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+          <!-- 1. SMS Gateway Settings Card -->
+          <div class="card" style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px;">
+            <h4 style="margin-top: 0; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+              <span>📱</span> Cloud SMS Provider
+            </h4>
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label style="font-size: 0.85rem; font-weight: 600;">SMS Gateway Provider</label>
+              <select id="gwSmsProvider" onchange="onSmsProviderChange()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);">
+                <option value="NONE">Offline / Free Mode (Device Intent & Bulk CSV Export)</option>
+                <option value="ARKESEL">Arkesel Ghana SMS (v2 API)</option>
+                <option value="HUBTEL">Hubtel Ghana SMS</option>
+                <option value="MNOTIFY">mNotify Ghana SMS</option>
+                <option value="TWILIO">Twilio International SMS</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label style="font-size: 0.85rem; font-weight: 600;">Sender ID / Mask (Max 11 chars)</label>
+              <input type="text" id="gwSmsSenderId" placeholder="e.g. EduManage" maxlength="11" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);" />
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label style="font-size: 0.85rem; font-weight: 600;">API Key / Auth Token</label>
+              <input type="password" id="gwSmsApiKey" placeholder="Enter API Key from provider" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);" />
+            </div>
+            <div class="form-group" id="gwSmsClientIdGroup" style="margin-bottom: 14px; display: none;">
+              <label style="font-size: 0.85rem; font-weight: 600;">Client ID / Account SID</label>
+              <input type="text" id="gwSmsClientId" placeholder="Enter Client ID / Account SID" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);" />
+            </div>
+            <div style="font-size: 0.78rem; opacity: 0.7; background: rgba(56, 189, 248, 0.1); padding: 8px 12px; border-radius: 6px; border-left: 3px solid #38bdf8;">
+              💡 <em>When provider is set to "Offline / Free Mode", outgoing messages will not charge any API credits and will open directly on your mobile device or export to CSV.</em>
+            </div>
+          </div>
+
+          <!-- 2. WhatsApp Gateway Settings Card -->
+          <div class="card" style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px;">
+            <h4 style="margin-top: 0; color: #34d399; display: flex; align-items: center; gap: 8px;">
+              <span>💬</span> WhatsApp Cloud Gateway
+            </h4>
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label style="font-size: 0.85rem; font-weight: 600;">WhatsApp Provider</label>
+              <select id="gwWaProvider" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);">
+                <option value="NONE">Direct-to-Device (wa.me 1-Click Free Links)</option>
+                <option value="TWILIO">Twilio WhatsApp Sandbox / Business</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label style="font-size: 0.85rem; font-weight: 600;">Sender Number</label>
+              <input type="text" id="gwWaSenderNumber" placeholder="e.g. whatsapp:+14155238886" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);" />
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label style="font-size: 0.85rem; font-weight: 600;">Twilio Account SID</label>
+              <input type="text" id="gwWaAccountSid" placeholder="Enter Account SID" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);" />
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label style="font-size: 0.85rem; font-weight: 600;">Twilio Auth Token</label>
+              <input type="password" id="gwWaApiKey" placeholder="Enter Auth Token" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);" />
+            </div>
+            <div style="font-size: 0.78rem; opacity: 0.7; background: rgba(52, 211, 153, 0.1); padding: 8px 12px; border-radius: 6px; border-left: 3px solid #34d399;">
+              💡 <em>Direct-to-Device opens WhatsApp Web or your phone's WhatsApp app with the message pre-filled at zero cost.</em>
+            </div>
+          </div>
+
+          <!-- 3. Automated Event Notification Toggles Card -->
+          <div class="card" style="grid-column: 1 / -1; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px;">
+            <h4 style="margin-top: 0; color: #fbbf24; display: flex; align-items: center; gap: 8px;">
+              <span>⚡</span> Real-Time Automated Event Notification Triggers
+            </h4>
+            <p style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 16px;">Enable or disable automated guardian alerts dispatched when system actions occur:</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+              <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <input type="checkbox" id="gwAutoGateOut" checked style="margin-top: 3px;" />
+                <div>
+                  <strong>🏡 Exeat Gate Sign-Out</strong>
+                  <div style="font-size: 0.78rem; opacity: 0.75;">Auto-notify guardian when student departs campus at the security gate</div>
+                </div>
+              </label>
+              <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <input type="checkbox" id="gwAutoGateIn" checked style="margin-top: 3px;" />
+                <div>
+                  <strong>✅ Exeat Gate Sign-In / Return</strong>
+                  <div style="font-size: 0.78rem; opacity: 0.75;">Auto-notify guardian when student safely arrives back on campus</div>
+                </div>
+              </label>
+              <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <input type="checkbox" id="gwAutoFeePayment" checked style="margin-top: 3px;" />
+                <div>
+                  <strong>💳 Fee Payment Receipt</strong>
+                  <div style="font-size: 0.78rem; opacity: 0.75;">Auto-send official payment confirmation and remaining balance receipt</div>
+                </div>
+              </label>
+              <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <input type="checkbox" id="gwAutoAbsence" style="margin-top: 3px;" />
+                <div>
+                  <strong>🔔 Morning Roll-Call Absence</strong>
+                  <div style="font-size: 0.78rem; opacity: 0.75;">Auto-alert guardian if student is recorded unexcused absent</div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEST GATEWAY MODAL -->
+    <div id="testGatewayModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); align-items: center; justify-content: center; z-index: 9999;">
+      <div class="card" style="width: 90%; max-width: 480px; padding: 24px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0; font-size: 1.15rem;">🧪 Test Gateway Delivery</h3>
+          <button class="btn secondary" style="padding: 4px 10px;" onclick="closeTestGatewayModal()">✕</button>
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label>Test Channel</label>
+          <select id="testChannelSelect" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);">
+            <option value="SMS">SMS (Cloud Provider)</option>
+            <option value="WHATSAPP">WhatsApp</option>
+            <option value="EMAIL">SMTP Email</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label>Recipient Phone / Email</label>
+          <input type="text" id="testRecipientInput" placeholder="e.g. 0244123456 or guardian@gmail.com" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);" />
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label>Test Message Content</label>
+          <textarea id="testMessageInput" rows="3" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);">Test message from EduManage360 Communication Gateway.</textarea>
+        </div>
+        <div id="testResultArea" style="margin-bottom: 14px; font-size: 0.85rem; display: none;"></div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button class="btn secondary" onclick="closeTestGatewayModal()">Close</button>
+          <button class="btn primary" id="btnRunTestDelivery" onclick="runTestDelivery()">🚀 Send Test Message</button>
+        </div>
+      </div>
     </div>
 
     <!-- PREVIEW & CONFIRM MODAL (RICH TABLE + WHATSAPP TEXT) -->
@@ -279,6 +426,6 @@
       </div>
     </div>
 
-    <script src="js/messaging.js"></script>
+    <script src="js/messaging.js?v=7.0"></script>
   </body>
 </html>

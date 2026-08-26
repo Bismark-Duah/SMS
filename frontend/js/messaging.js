@@ -540,14 +540,23 @@ async function exportBulkCSV() {
 function switchMainTab(tab) {
   document.getElementById('panelDispatch').style.display = (tab === 'dispatch') ? 'grid' : 'none';
   document.getElementById('panelOutbox').style.display = (tab === 'outbox') ? 'block' : 'none';
+  const gwPanel = document.getElementById('panelGateway');
+  if (gwPanel) gwPanel.style.display = (tab === 'gateway') ? 'block' : 'none';
 
   document.getElementById('tabDispatchBtn').classList.toggle('primary', tab === 'dispatch');
   document.getElementById('tabDispatchBtn').classList.toggle('secondary', tab !== 'dispatch');
   document.getElementById('tabOutboxBtn').classList.toggle('primary', tab === 'outbox');
   document.getElementById('tabOutboxBtn').classList.toggle('secondary', tab !== 'outbox');
+  const gwBtn = document.getElementById('tabGatewayBtn');
+  if (gwBtn) {
+    gwBtn.classList.toggle('primary', tab === 'gateway');
+    gwBtn.classList.toggle('secondary', tab !== 'gateway');
+  }
 
   if (tab === 'outbox') {
     loadOutboxLogs();
+  } else if (tab === 'gateway') {
+    loadGatewaySettings();
   }
 }
 
@@ -565,20 +574,161 @@ async function loadOutboxLogs() {
       return;
     }
 
-    tbody.innerHTML = logs.map(l => `
-      <tr>
-        <td style="padding: 10px;">${l.created_at}</td>
-        <td style="padding: 10px;">${escapeHtml(l.sender_name)}</td>
-        <td style="padding: 10px;">${escapeHtml(l.student_name)} (${escapeHtml(l.recipient_name)})</td>
-        <td style="padding: 10px;">${escapeHtml(l.recipient_phone)}</td>
-        <td style="padding: 10px;"><span class="chip ${l.channel === 'WHATSAPP' ? 'success' : 'primary'}">${l.channel}</span></td>
-        <td style="padding: 10px;">${l.message_type}</td>
-        <td style="padding: 10px;"><strong>${l.overall_grade}</strong></td>
-        <td style="padding: 10px;"><span class="chip ${l.status === 'SENT' ? 'success' : 'warning'}">${l.status}</span></td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = logs.map(l => {
+      let statusChipClass = 'warning';
+      if (l.status === 'SENT') statusChipClass = 'success';
+      else if (l.status === 'FAILED' || l.status === 'FAILED_NO_PHONE') statusChipClass = 'error';
+
+      let channelChipClass = 'primary';
+      if (l.channel === 'WHATSAPP') channelChipClass = 'success';
+      else if (l.channel === 'EMAIL') channelChipClass = 'info';
+
+      return `
+        <tr>
+          <td style="padding: 10px; font-size: 0.82rem; opacity: 0.85;">${l.created_at}</td>
+          <td style="padding: 10px;">${escapeHtml(l.sender_name)}</td>
+          <td style="padding: 10px;"><strong>${escapeHtml(l.student_name)}</strong><br/><span style="font-size:0.75rem; opacity:0.75;">${escapeHtml(l.recipient_name)}</span></td>
+          <td style="padding: 10px; font-size: 0.85rem;">${escapeHtml(l.recipient_phone)}</td>
+          <td style="padding: 10px;"><span class="chip ${channelChipClass}">${l.channel}</span></td>
+          <td style="padding: 10px; font-size: 0.82rem;">${escapeHtml(l.message_type)}</td>
+          <td style="padding: 10px; font-size: 0.82rem;"><strong>${escapeHtml(l.overall_grade)}</strong></td>
+          <td style="padding: 10px;"><span class="chip ${statusChipClass}">${l.status}</span></td>
+        </tr>
+      `;
+    }).join('');
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--error-color);">Failed to load outbox: ${err.message}</td></tr>`;
+  }
+}
+
+// ── Gateway Settings & Live Testing ───────────────────────────────────────────
+
+function onSmsProviderChange() {
+  const prov = document.getElementById('gwSmsProvider').value;
+  const clientGroup = document.getElementById('gwSmsClientIdGroup');
+  if (clientGroup) {
+    clientGroup.style.display = (prov === 'HUBTEL' || prov === 'TWILIO') ? 'block' : 'none';
+  }
+}
+
+async function loadGatewaySettings() {
+  try {
+    const res = await fetch(`${API_BASE}/messaging/gateway-settings`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const cfg = await res.json();
+
+    document.getElementById('gwSmsProvider').value = cfg.sms_provider || 'NONE';
+    document.getElementById('gwSmsSenderId').value = cfg.sms_sender_id || 'EduManage';
+    document.getElementById('gwSmsApiKey').value = cfg.sms_api_key || '';
+    if (document.getElementById('gwSmsClientId')) {
+      document.getElementById('gwSmsClientId').value = cfg.sms_client_id || '';
+    }
+
+    document.getElementById('gwWaProvider').value = cfg.whatsapp_provider || 'NONE';
+    document.getElementById('gwWaSenderNumber').value = cfg.whatsapp_sender_number || '';
+    document.getElementById('gwWaAccountSid').value = cfg.whatsapp_account_sid || '';
+    document.getElementById('gwWaApiKey').value = cfg.whatsapp_api_key || '';
+
+    document.getElementById('gwAutoGateOut').checked = !!cfg.auto_notify_exeat_gateout;
+    document.getElementById('gwAutoGateIn').checked = !!cfg.auto_notify_exeat_gatein;
+    document.getElementById('gwAutoFeePayment').checked = !!cfg.auto_notify_fee_payment;
+    document.getElementById('gwAutoAbsence').checked = !!cfg.auto_notify_absence;
+
+    onSmsProviderChange();
+  } catch (err) {
+    console.error('Failed to load gateway settings:', err);
+  }
+}
+
+async function saveGatewaySettings() {
+  const payload = {
+    sms_provider: document.getElementById('gwSmsProvider').value,
+    sms_sender_id: document.getElementById('gwSmsSenderId').value,
+    sms_api_key: document.getElementById('gwSmsApiKey').value,
+    sms_client_id: document.getElementById('gwSmsClientId') ? document.getElementById('gwSmsClientId').value : '',
+
+    whatsapp_provider: document.getElementById('gwWaProvider').value,
+    whatsapp_sender_number: document.getElementById('gwWaSenderNumber').value,
+    whatsapp_account_sid: document.getElementById('gwWaAccountSid').value,
+    whatsapp_api_key: document.getElementById('gwWaApiKey').value,
+
+    auto_notify_exeat_gateout: document.getElementById('gwAutoGateOut').checked,
+    auto_notify_exeat_gatein: document.getElementById('gwAutoGateIn').checked,
+    auto_notify_fee_payment: document.getElementById('gwAutoFeePayment').checked,
+    auto_notify_absence: document.getElementById('gwAutoAbsence').checked
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/messaging/gateway-settings`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    alert('✅ Gateway and automated event triggers saved successfully!');
+    await loadGatewaySettings();
+  } catch (err) {
+    alert(`Failed to save gateway settings: ${err.message}`);
+  }
+}
+
+function openTestGatewayModal() {
+  document.getElementById('testResultArea').style.display = 'none';
+  document.getElementById('testGatewayModal').style.display = 'flex';
+}
+
+function closeTestGatewayModal() {
+  document.getElementById('testGatewayModal').style.display = 'none';
+}
+
+async function runTestDelivery() {
+  const channel = document.getElementById('testChannelSelect').value;
+  const recipient = document.getElementById('testRecipientInput').value.trim();
+  const message = document.getElementById('testMessageInput').value.trim();
+  const resultArea = document.getElementById('testResultArea');
+
+  if (!recipient) {
+    alert('Please enter a recipient phone number or email address.');
+    return;
+  }
+
+  resultArea.style.display = 'block';
+  resultArea.innerHTML = '<span style="opacity:0.7;">⏳ Dispatching test message through gateway...</span>';
+
+  try {
+    const res = await fetch(`${API_BASE}/messaging/test-gateway`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ channel, recipient, message })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      resultArea.innerHTML = `
+        <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; padding: 10px; border-radius: 6px;">
+          <strong>✅ Delivery Successful / Handled</strong><br/>
+          Provider: <code>${data.provider || channel}</code> &bull; Status: <code>${data.status || 'OK'}</code>
+          ${data.intent_url ? `<br/><a href="${data.intent_url}" target="_blank" style="color: #38bdf8; text-decoration: underline; font-size: 0.8rem; margin-top: 4px; display: inline-block;">Open Intent Link ↗</a>` : ''}
+        </div>
+      `;
+    } else {
+      resultArea.innerHTML = `
+        <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; padding: 10px; border-radius: 6px;">
+          <strong>⚠️ Test Dispatch Notice</strong><br/>
+          Status: <code>${data.status || 'FAILED'}</code><br/>
+          ${data.message || data.error || 'Check provider API key and internet connectivity.'}
+        </div>
+      `;
+    }
+  } catch (err) {
+    resultArea.innerHTML = `
+      <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; padding: 10px; border-radius: 6px;">
+        <strong>❌ Connection Error:</strong> ${err.message}
+      </div>
+    `;
   }
 }
 

@@ -12,6 +12,7 @@ import hashlib
 from ..database import get_db
 from ..models import Fee, Payment, Student, User, ClassSection, Notification, MessageLog, Setting
 from ..dependencies import get_current_user, get_school_id
+from ..services.communication_service import CommunicationService
 
 router = APIRouter()
 
@@ -453,32 +454,27 @@ def record_payment(
         )
         db.add(notif)
 
-    # Draft SMS & WhatsApp payment receipt into MessageLog queue
+    # Automated Event Notification Trigger: Fee Payment Receipt
     student = fee.student
     rem_balance = max(0.0, fee.amount - fee.amount_paid)
     if student and student.phone and len(student.phone.strip()) >= 7:
-        fee_title = fee.description or f"{fee.fee_type} Fee"
-        guardian_name = student.guardian_name or (student.parent.username if student.parent else "Parent/Guardian")
-        now_str = datetime.now().strftime('%Y-%m-%d %H:%M')
-        msg_body = (
-            f"[PAYMENT RECEIPT]\n"
-            f"Dear {guardian_name}, payment of GHS {payload.amount_paid:.2f} for {student.full_name} "
-            f"({fee_title}) has been received on {now_str}. Remaining balance: GHS {rem_balance:.2f}. Thank you."
-        )
-        msg_log = MessageLog(
-            sender_id=current_user.id,
-            student_id=student.id,
-            recipient_name=guardian_name,
-            recipient_phone=student.phone,
-            channel="WHATSAPP",
-            message_type="FEE_NOTICE",
-            message_body=msg_body,
-            overall_grade=f"Paid: GHc {payload.amount_paid:.2f}",
-            status="PENDING"
-        )
-        db.add(msg_log)
-
-    db.commit()
+        try:
+            CommunicationService.trigger_event_notification(
+                "FEE_PAYMENT",
+                {
+                    "student_id": student.id,
+                    "student_name": student.full_name,
+                    "class_name": student.class_section.name if student.class_section else "",
+                    "guardian_name": student.guardian_name,
+                    "phone": student.phone,
+                    "amount": payload.amount_paid,
+                    "receipt_no": payload.reference_no or f"REC-{payment.id:04d}",
+                    "balance": rem_balance
+                },
+                db
+            )
+        except Exception as err:
+            pass
 
     return _enrich(fee)
 

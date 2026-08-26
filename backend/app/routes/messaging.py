@@ -12,6 +12,7 @@ from ..models import (
 from ..dependencies import get_current_user, get_school_id
 from ..services.grading import GradingService
 from ..services.reports import ReportService
+from ..services.communication_service import CommunicationService
 
 router = APIRouter()
 
@@ -547,3 +548,164 @@ def get_message_logs(
         "status": l.status,
         "created_at": l.created_at.strftime("%Y-%m-%d %H:%M") if l.created_at else "—"
     } for l in logs]
+
+
+# ── GET /gateway-settings ─────────────────────────────────────────────────────
+
+@router.get("/gateway-settings")
+def get_gateway_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not _check_messaging_permission(current_user):
+        raise HTTPException(status_code=403, detail="Not authorized to manage gateway settings")
+    return CommunicationService.get_gateway_config(db)
+
+
+# ── POST /gateway-settings ────────────────────────────────────────────────────
+
+@router.post("/gateway-settings")
+def save_gateway_settings(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    roles = _get_user_roles(current_user)
+    if not ("admin" in roles or "headmaster" in roles or "super_admin" in roles):
+        raise HTTPException(status_code=403, detail="Administrator permissions required to update gateway settings")
+
+    CommunicationService.save_gateway_config(db, payload)
+    return {"status": "success", "message": "Gateway configuration saved successfully"}
+
+
+# ── POST /test-gateway ────────────────────────────────────────────────────────
+
+@router.post("/test-gateway")
+def test_gateway_delivery(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not _check_messaging_permission(current_user):
+        raise HTTPException(status_code=403, detail="Not authorized to test gateway")
+
+    channel = (payload.get("channel") or "SMS").upper()
+    recipient = payload.get("recipient", "").strip()
+    test_msg = payload.get("message") or "Test message from School Management System Communication Gateway."
+
+    if not recipient:
+        raise HTTPException(status_code=400, detail="Recipient phone number or email is required")
+
+    if channel == "SMS":
+        result = CommunicationService.send_sms(
+            db=db,
+            to_phone=recipient,
+            message=test_msg,
+            recipient_name="Gateway Test Recipient",
+            sender_id_user=current_user.id,
+            message_type="TEST_GATEWAY"
+        )
+        return result
+
+    elif channel == "WHATSAPP":
+        result = CommunicationService.send_whatsapp(
+            db=db,
+            to_phone=recipient,
+            message=test_msg,
+            recipient_name="Gateway Test Recipient",
+            sender_id_user=current_user.id,
+            message_type="TEST_GATEWAY"
+        )
+        return result
+
+    elif channel == "EMAIL":
+        result = CommunicationService.send_email(
+            db=db,
+            to_email=recipient,
+            subject="Gateway Test Notification",
+            body_text=test_msg,
+            body_html=f"<h3>Gateway Test</h3><p>{test_msg}</p><p><small>School Management System</small></p>",
+            recipient_name="Gateway Test Recipient",
+            sender_id_user=current_user.id
+        )
+        return result
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported channel: {channel}")
+
+
+# ── POST /broadcast-class-reports ─────────────────────────────────────────────
+
+@router.post("/broadcast-class-reports")
+def broadcast_class_reports(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not _check_messaging_permission(current_user):
+        raise HTTPException(status_code=403, detail="Not authorized to broadcast reports")
+
+    class_id = payload.get("class_section_id") or payload.get("class_id")
+    semester_id = payload.get("semester_id")
+    send_live_sms = payload.get("send_live_sms", False)
+
+    if not class_id:
+        raise HTTPException(status_code=400, detail="class_id is required")
+
+    students = db.query(Student).filter(
+        Student.class_section_id == class_id,
+        Student.is_active == True
+    ).order_by(Student.full_name).all()
+
+    if not students:
+        return {"count": 0, "dispatched": 0, "results": []}
+
+    results = []
+    dispatched_count = 0
+
+    for st in students:
+        phone = st.phone or ""
+        guardian_name = st.guardian_name or (st.parent.username if st.parent else "Parent/Guardian")
+        
+        # Generate payload
+        res_payload = generate_report_payload({"student_id": st.id, "semester_id": semester_id}, db, current_user)
+        sms_text = res_payload.get("sms_payload", "")
+        wa_text = res_payload.get("whatsapp_payload", "")
+        
+        item_status = "READY_FOR_INTENT"
+        if send_live_sms and phone:
+            send_res = CommunicationService.send_sms(
+                db=db,
+                to_phone=phone,
+                message=sms_text,
+                student_id=st.id,
+                recipient_name=guardian_name,
+                sender_id_user=current_user.id,
+                message_type="TERMINAL_REPORT"
+            )
+            item_status = send_res.get("status", "SENT")
+            if send_res.get("success"):
+                dispatched_count += 1
+        
+        clean_p = CommunicationService._clean_phone(phone)
+        intent_url = f"https://wa.me/{clean_p}?text={urllib.parse.quote(wa_text)}" if clean_p else ""
+
+        results.append({
+            "student_id": st.id,
+            "student_name": st.full_name,
+            "student_code": st.student_code,
+            "guardian_name": guardian_name,
+            "phone": phone,
+            "avg_score": res_payload.get("avg_score", 0.0),
+            "overall_grade": res_payload.get("overall_grade", "N/A"),
+            "status": item_status,
+            "whatsapp_intent_url": intent_url,
+            "sms_payload": sms_text
+        })
+
+    return {
+        "count": len(students),
+        "dispatched_live": dispatched_count,
+        "results": results
+    }
+

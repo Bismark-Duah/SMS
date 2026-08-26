@@ -397,8 +397,10 @@
     <!-- MODAL 2: PRINTABLE EXEAT SLIP -->
     <div class="modal" id="slipModal">
       <div class="modal-content" style="max-width:700px; background: transparent; border:none; box-shadow:none;">
-        <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
-          <button class="btn" style="background:#ffffff; color:#0f172a; font-weight:700; margin-right:8px;" onclick="printExeatSlipDoc()">🖨️ Print Slip</button>
+        <div style="display:flex; justify-content:flex-end; margin-bottom:10px; gap:8px; flex-wrap:wrap;">
+          <button class="btn" style="background:#25d366; color:white; font-weight:700;" id="btnSlipWhatsApp" onclick="dispatchSlipWhatsApp()">💬 WhatsApp Guardian</button>
+          <button class="btn" style="background:#0284c7; color:white; font-weight:700;" id="btnSlipSms" onclick="dispatchSlipSms()">📲 Native SMS</button>
+          <button class="btn" style="background:#ffffff; color:#0f172a; font-weight:700;" onclick="printExeatSlipDoc()">🖨️ Print Slip</button>
           <button class="btn" style="background:#ef4444; color:white; font-weight:700;" onclick="closeModal('slipModal')">Close</button>
         </div>
 
@@ -476,6 +478,6 @@
       </div>
     </div>
 
-    <script src="js/exeat.js"></script>
+    <script src="js/exeat.js?v=7.0"></script>
   </body>
 </html>

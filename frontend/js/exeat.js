@@ -390,12 +390,16 @@ async function gateSignIn(exeatId) {
   }
 }
 
+let currentSlipData = null;
+
 async function openExeatSlip(exeatId) {
   const headers = await getAuthHeader();
   try {
     const res = await fetch(`/api/exeat/${exeatId}/slip`, { headers });
     if (res.ok) {
       const ex = await res.json();
+      currentSlipData = ex;
+
       document.getElementById("slipStudentName").innerText = ex.student_name;
       document.getElementById("slipStudentCode").innerText = ex.student_code;
       document.getElementById("slipClass").innerText = ex.class_name || "N/A";
@@ -421,6 +425,51 @@ async function openExeatSlip(exeatId) {
   } catch (e) {
     alert("Error opening exeat slip.");
   }
+}
+
+function dispatchSlipWhatsApp() {
+  if (!currentSlipData) return;
+  const ex = currentSlipData;
+  const rawPhone = ex.parent_contact || '';
+  const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+  if (!cleanPhone) {
+    alert('No guardian phone contact recorded on this exeat slip.');
+    return;
+  }
+  const formattedPhone = cleanPhone.startsWith('0') && cleanPhone.length === 10 ? ('233' + cleanPhone.slice(1)) : cleanPhone;
+  const depDate = new Date(ex.expected_departure).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+  const retDate = new Date(ex.expected_return).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+
+  const msg = 
+    `🏡 *OFFICIAL PERMISSION PASS / EXEAT NOTICE*\n\n` +
+    `👤 *Student:* ${ex.student_name} (${ex.student_code})\n` +
+    `📚 *Class:* ${ex.class_name || 'N/A'}\n` +
+    `🏠 *House:* ${ex.house_name || 'N/A'}\n` +
+    `📋 *Category:* ${ex.exeat_type} Exeat\n` +
+    `📍 *Destination:* ${ex.destination}\n` +
+    `🕒 *Departure:* ${depDate}\n` +
+    `📅 *Due Return:* ${retDate}\n` +
+    `📝 *Reason:* ${ex.reason}\n` +
+    `🟢 *Status:* ${ex.status.toUpperCase()}\n` +
+    `✍️ *Authorized By:* ${ex.approved_by_name || 'House Master'}\n\n` +
+    `📌 _Official Clearance Slip issued by School Management System_`;
+
+  const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`;
+  window.open(waUrl, '_blank');
+}
+
+function dispatchSlipSms() {
+  if (!currentSlipData) return;
+  const ex = currentSlipData;
+  const rawPhone = ex.parent_contact || '';
+  const cleanPhone = rawPhone.replace(/[^0-9+]/g, '');
+  if (!cleanPhone) {
+    alert('No guardian phone contact recorded on this exeat slip.');
+    return;
+  }
+  const retDate = new Date(ex.expected_return).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+  const msg = `EXEAT PASS: ${ex.student_name} (${ex.class_name || ''}) granted ${ex.exeat_type} exeat to ${ex.destination}. Due return: ${retDate}. Status: ${ex.status}.`;
+  window.location.href = `sms:${cleanPhone}?body=${encodeURIComponent(msg)}`;
 }
 
 function printExeatSlipDoc() {

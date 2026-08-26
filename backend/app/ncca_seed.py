@@ -141,6 +141,8 @@ def seed_ncca_curriculum(db: Session):
             subject_map[sdata["name"]] = subj
         else:
             # Update metadata fields if present
+            existing.name = sdata["name"]
+            existing.is_core = sdata["is_core"]
             existing.category = sdata["category"]
             existing.group_code = sdata["group_code"]
             existing.assessment_type = sdata["assessment_type"]

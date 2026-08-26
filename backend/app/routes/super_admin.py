@@ -267,6 +267,11 @@ def get_school_accreditation(
     accredited_program_ids = [p.id for p in school.accredited_programs]
 
     all_subjects = db.query(Subject).order_by(Subject.name.asc()).all()
+    if len(all_subjects) < 40:
+        from ..ncca_seed import seed_ncca_curriculum
+        seed_ncca_curriculum(db)
+        all_subjects = db.query(Subject).order_by(Subject.name.asc()).all()
+
     all_programs = db.query(Program).order_by(Program.name.asc()).all()
 
     ORDERED_CATEGORIES = [

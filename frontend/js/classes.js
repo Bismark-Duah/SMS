@@ -610,9 +610,10 @@ async function openSubjectsModal(classId, className, programId) {
       programSubjectsList = await responses[1].json();
       classRawSubjectsList = await responses[2].json();
       
-      // Override is active if class has its own raw subjects saved
-      const isOverridden = classRawSubjectsList.length > 0;
-      toggle.checked = isOverridden;
+      if (classRawSubjectsList.length === 0 && programSubjectsList.length > 0) {
+        classRawSubjectsList = [...programSubjectsList];
+      }
+      toggle.checked = true;
     } else {
       programSubjectsList = [];
       classRawSubjectsList = await responses[1].json();
@@ -731,14 +732,8 @@ subjectsForm.addEventListener('submit', async (e) => {
   const classId = modalClassId.value;
   const toggle = document.getElementById('showAllSubjectsToggle');
   
-  let payload = [];
-  if (!currentClassProgramId || toggle.checked) {
-    const checkboxes = subjectsForm.querySelectorAll('input[name="subjectIds"]:checked');
-    payload = Array.from(checkboxes).map(cb => parseInt(cb.value));
-  } else {
-    // If not manual override, we send [] to clear class-specific subjects so it inherits program subjects
-    payload = [];
-  }
+  const checkboxes = subjectsForm.querySelectorAll('input[name="subjectIds"]:checked');
+  const payload = Array.from(checkboxes).map(cb => parseInt(cb.value));
 
   try {
     const response = await fetch(`${API_BASE}/classes/${classId}/subjects`, {

@@ -30,18 +30,18 @@ async function loadPrograms() {
       return;
     }
 
-    // Load curriculum overview counts for each program
-    const listHtml = await Promise.all(data.map(async (item) => {
-      let coreCount = 0;
-      let pkgCount = 0;
-      try {
-        const curRes = await fetch(`${API_BASE}/programs/${item.id}/curriculum`, { headers: getHeaders() });
-        if (curRes.ok) {
-          const curData = await curRes.json();
-          coreCount = curData.core_subjects ? curData.core_subjects.length : 0;
-          pkgCount = curData.elective_combinations ? curData.elective_combinations.length : 0;
-        }
-      } catch (_) {}
+    const listHtml = data.map((item) => {
+      const coreCount = item.core_count !== undefined ? item.core_count : (item.core_subjects ? item.core_subjects.length : 0);
+      const pkgCount = item.package_count !== undefined ? item.package_count : (item.elective_combinations ? item.elective_combinations.length : 0);
+      
+      let pkgDetailText = '';
+      if (item.packages_summary && item.packages_summary.length > 0) {
+        const allSubs = [];
+        item.packages_summary.forEach(p => {
+          (p.subjects || []).forEach(s => { if (!allSubs.includes(s)) allSubs.push(s); });
+        });
+        pkgDetailText = `(${item.packages_summary.length} Option${item.packages_summary.length > 1 ? 's' : ''}, ${allSubs.length} Elective${allSubs.length === 1 ? '' : 's'}: ${allSubs.slice(0, 4).join(', ')}${allSubs.length > 4 ? '...' : ''})`;
+      }
 
       return `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
@@ -50,9 +50,9 @@ async function loadPrograms() {
               <strong style="font-size:0.95rem; color:#f8fafc;">${item.name}</strong>
               ${item.code ? `<span style="font-size:0.75rem; background:rgba(99,102,241,0.15); color:#818cf8; padding:2px 6px; border-radius:4px; font-family:monospace;">${item.code}</span>` : ''}
             </div>
-            <div style="font-size:0.8rem; color:#94a3b8; margin-top:4px; display:flex; gap:12px;">
+            <div style="font-size:0.8rem; color:#94a3b8; margin-top:4px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
               <span>📘 Cores: <strong style="color:#60a5fa;">${coreCount}</strong></span>
-              <span>📦 Elective Packages: <strong style="color:#facc15;">${pkgCount}</strong></span>
+              <span>📦 Elective Packages: <strong style="color:#facc15;">${pkgCount}</strong> <span style="font-size:0.75rem; color:#cbd5e1; opacity:0.9;">${pkgDetailText}</span></span>
             </div>
           </div>
           <div style="display:flex; gap:6px;">
@@ -63,7 +63,7 @@ async function loadPrograms() {
           </div>
         </div>
       `;
-    }));
+    });
 
     container.innerHTML = listHtml.join('');
   } catch (error) {
@@ -379,3 +379,41 @@ async function deleteElectivePackage(packageId) {
   }
 }
 window.deleteElectivePackage = deleteElectivePackage;
+
+async function quickCreateStreamPrompt() {
+  const programId = curriculumProgramId.value;
+  if (!programId) return;
+
+  const select = document.getElementById('pkg_class_section_id');
+  const count = select ? select.options.length : 1;
+  const defaultName = `Form 1 Stream ${count}`;
+  const streamName = prompt("Enter new Class Stream Name (e.g. Form 1 Science 1, SHS 1 Science A):", defaultName);
+  if (!streamName || !streamName.trim()) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/programs/${programId}/quick-stream`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ name: streamName.trim() })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Could not create stream');
+    }
+
+    const newSec = await res.json();
+    if (select) {
+      const opt = document.createElement('option');
+      opt.value = newSec.id;
+      opt.textContent = newSec.name;
+      opt.selected = true;
+      select.appendChild(opt);
+    }
+    alert(`✔ Stream "${newSec.name}" created and selected!`);
+  } catch (err) {
+    alert(`❌ ${err.message}`);
+  }
+}
+window.quickCreateStreamPrompt = quickCreateStreamPrompt;
+

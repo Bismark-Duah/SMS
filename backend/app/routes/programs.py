@@ -22,7 +22,37 @@ def list_programs(
     query = db.query(Program)
     if school_id is not None and hasattr(Program, "school_id"):
         query = query.filter(Program.school_id == school_id)
-    return query.all()
+    programs = query.order_by(Program.name.asc()).all()
+
+    result = []
+    for p in programs:
+        combos = p.elective_combinations or []
+        cores = p.core_subjects or []
+        
+        all_elective_sub_ids = set()
+        packages_summary = []
+        for c in combos:
+            sub_names = [s.name for s in c.subjects]
+            all_elective_sub_ids.update(s.id for s in c.subjects)
+            packages_summary.append({
+                "id": c.id,
+                "name": c.name,
+                "stream": c.class_section.name if c.class_section else "Unassigned",
+                "subject_count": len(c.subjects),
+                "subjects": sub_names
+            })
+            
+        result.append({
+            "id": p.id,
+            "name": p.name,
+            "code": p.code,
+            "core_count": len(cores),
+            "core_subjects": [{"id": s.id, "name": s.name, "code": s.code} for s in cores],
+            "package_count": len(combos),
+            "unique_electives_count": len(all_elective_sub_ids),
+            "packages_summary": packages_summary
+        })
+    return result
 
 @router.post("/")
 def create_program(
@@ -304,6 +334,50 @@ def delete_elective_combination(
     db.commit()
     return {"message": "Elective combination deleted"}
 
+@router.post("/{program_id}/quick-stream")
+def create_quick_stream(
+    program_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    school_id = get_school_id(current_user)
+    program = db.query(Program).filter(Program.id == program_id).first()
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+        
+    stream_name = payload.get("name", "").strip()
+    if not stream_name:
+        raise HTTPException(status_code=400, detail="Stream name is required")
+        
+    stage_id = payload.get("stage_id")
+    if not stage_id:
+        from ..models import SchoolStage
+        shs_stage = db.query(SchoolStage).filter(
+            (SchoolStage.name.ilike("%Form 1%")) | (SchoolStage.name.ilike("%SHS%")) | (SchoolStage.school_type == "SHS")
+        ).first()
+        if shs_stage:
+            stage_id = shs_stage.id
+            
+    new_section = ClassSection(
+        name=stream_name,
+        stage_id=stage_id,
+        program_id=program_id
+    )
+    if school_id is not None and hasattr(ClassSection, "school_id"):
+        new_section.school_id = school_id
+        
+    db.add(new_section)
+    db.commit()
+    db.refresh(new_section)
+    
+    return {
+        "id": new_section.id,
+        "name": new_section.name,
+        "program_id": new_section.program_id,
+        "stage_id": new_section.stage_id
+    }
+
 # --- Legacy Subject Assignment Compatibility ---
 
 @router.get("/{program_id}/subjects")
@@ -319,6 +393,18 @@ def get_program_subjects(
     program = query.first()
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
+        
+    subjects = list(program.subjects)
+    if not subjects:
+        # Collect from core subjects and combinations
+        collected = {}
+        for cs in program.core_subjects:
+            collected[cs.id] = cs
+        for ec in program.elective_combinations:
+            for es in ec.subjects:
+                collected[es.id] = es
+        subjects = list(collected.values())
+        
     return [
         {
             "id": sub.id,
@@ -326,7 +412,7 @@ def get_program_subjects(
             "code": sub.code,
             "is_core": sub.is_core
         }
-        for sub in program.subjects
+        for sub in subjects
     ]
 
 @router.post("/{program_id}/subjects")

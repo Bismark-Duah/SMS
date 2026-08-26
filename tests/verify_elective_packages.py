@@ -207,6 +207,52 @@ def run_tests():
         print(f"   - Total Student Subjects: {len(student.program.core_subjects) + len(student.elective_combination_rel.subjects)} subjects (3 Core + 5 Electives = 8 Subjects)")
         print(f"   - Enrollment Status: {student.enrollment_status}")
 
+        # 6. Test Bi-Directional Auto-Sync from Class Section Subjects -> Program Elective Package
+        from backend.app.routes.classes import set_class_subjects, get_class_subjects
+        from backend.app.routes.programs import list_programs
+        from backend.app.models import User
+
+        test_admin = User(id=99966, username="test_bidirect_admin", school_id=school.id)
+        sec_sci_1.program_id = program.id
+        db.commit()
+
+        assigned_sub_ids = [
+            subjects_map["English Language"].id,
+            subjects_map["Core Mathematics"].id,
+            subjects_map["Social Studies"].id,
+            subjects_map["Physics"].id,
+            subjects_map["Chemistry"].id,
+            subjects_map["Biology"].id,
+            subjects_map["Elective Mathematics"].id,
+        ]
+
+        set_res = set_class_subjects(section_id=sec_sci_1.id, payload=assigned_sub_ids, db=db, current_user=test_admin)
+        assert "synchronized" in set_res["message"].lower(), "Response should confirm program synchronization"
+
+        # Verify elective package auto-created / updated for this stream
+        auto_combo = db.query(ElectiveCombination).filter(
+            ElectiveCombination.program_id == program.id,
+            ElectiveCombination.class_section_id == sec_sci_1.id
+        ).first()
+
+        assert auto_combo is not None, "ElectiveCombination should be auto-created for this stream"
+        auto_combo_names = [s.name for s in auto_combo.subjects]
+        assert "Physics" in auto_combo_names
+        assert "Chemistry" in auto_combo_names
+        assert "Biology" in auto_combo_names
+        assert "Elective Mathematics" in auto_combo_names
+        assert "Core Mathematics" not in auto_combo_names, "Core subjects should not be in elective package"
+
+        # Verify rich program summary list
+        progs_summary = list_programs(db=db, current_user=test_admin)
+        matched_p = next((p for p in progs_summary if p["id"] == program.id), None)
+        assert matched_p is not None
+        assert matched_p["core_count"] == 3
+        assert matched_p["package_count"] >= 2
+        assert len(matched_p["packages_summary"]) >= 2
+
+        print(f"[OK] Step 5: Bi-Directional Auto-Sync verified 100%! Class Section '{sec_sci_1.name}' created Elective Package '{auto_combo.name}' with {len(auto_combo.subjects)} electives.")
+
         print("\n================================================================")
         print("SUCCESS: ALL PHASE 1 CURRICULUM & ELECTIVE BUILDER TESTS PASSED 100%!")
         print("================================================================")
@@ -216,3 +262,4 @@ def run_tests():
 
 if __name__ == "__main__":
     run_tests()
+

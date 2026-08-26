@@ -265,9 +265,31 @@ def get_class_subjects(
     if not section:
         raise HTTPException(status_code=404, detail="Class section not found")
     
-    subjects = section.subjects
-    if not raw and not subjects and section.program_id:
-        subjects = section.program.subjects
+    subjects = list(section.subjects)
+    if not raw and not subjects and section.program_id and section.program:
+        from ..models import ElectiveCombination
+        
+        collected_subs = {}
+        # 1. Program Cores
+        for cs in section.program.core_subjects:
+            collected_subs[cs.id] = cs
+            
+        # 2. Stream Elective Package
+        stream_combo = db.query(ElectiveCombination).filter(
+            ElectiveCombination.program_id == section.program_id,
+            ElectiveCombination.class_section_id == section.id,
+            ElectiveCombination.is_active == True
+        ).first()
+        if stream_combo:
+            for es in stream_combo.subjects:
+                collected_subs[es.id] = es
+                
+        # 3. Fallback to legacy program.subjects if no cores or combos
+        if not collected_subs and section.program.subjects:
+            for ps in section.program.subjects:
+                collected_subs[ps.id] = ps
+                
+        subjects = list(collected_subs.values())
         
     return [
         {
@@ -295,12 +317,51 @@ def set_class_subjects(
         raise HTTPException(status_code=404, detail="Class section not found")
     
     # Load the subjects from database
-    subjects = db.query(Subject).filter(Subject.id.in_(payload)).all()
+    subjects = db.query(Subject).filter(Subject.id.in_(payload)).all() if payload else []
     
-    # Associate them
+    # Associate directly with class section
     section.subjects = subjects
+    
+    # ── Enterprise Bi-Directional Synchronization with Academic Programs & Elective Packages ──
+    if section.program_id and section.program:
+        from ..models import ElectiveCombination
+        
+        elective_subs = [s for s in subjects if not s.is_core]
+        core_subs = [s for s in subjects if s.is_core]
+        
+        # 1. Sync Elective Package for this stream
+        if elective_subs:
+            existing_combo = db.query(ElectiveCombination).filter(
+                ElectiveCombination.program_id == section.program_id,
+                ElectiveCombination.class_section_id == section.id
+            ).first()
+            
+            if existing_combo:
+                existing_combo.subjects = elective_subs
+                existing_combo.is_active = True
+            else:
+                base_code = section.program.code or "PROG"
+                combo_code = f"{base_code}-{section.name.replace(' ', '')}"
+                combo_name = f"{section.program.name} ({section.name})"
+                new_combo = ElectiveCombination(
+                    name=combo_name,
+                    code=combo_code,
+                    program_id=section.program_id,
+                    class_section_id=section.id,
+                    capacity=60,
+                    is_active=True,
+                    subjects=elective_subs
+                )
+                if school_id is not None and hasattr(ElectiveCombination, "school_id"):
+                    new_combo.school_id = school_id
+                db.add(new_combo)
+        
+        # 2. Sync Program Core Subjects if program currently has no custom cores
+        if core_subs and not section.program.core_subjects:
+            section.program.core_subjects = core_subs
+            
     db.commit()
-    return {"message": f"Subjects updated for class {section.name}"}
+    return {"message": f"Subjects updated for class {section.name} and synchronized with Program"}
 
 @router.delete("/{section_id}")
 def delete_section(

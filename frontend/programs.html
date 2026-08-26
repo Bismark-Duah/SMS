@@ -161,11 +161,15 @@
                 </div>
 
                 <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px; margin-bottom:12px;">
-                  <label style="font-size:0.82rem;">Target Form 1 Class Stream
-                    <select id="pkg_class_section_id" style="font-size:0.85rem;">
+                  <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <label style="font-size:0.82rem; margin:0;">Target Form 1 Class Stream</label>
+                      <button type="button" onclick="quickCreateStreamPrompt()" style="background:none; border:none; color:#38bdf8; font-size:0.78rem; font-weight:600; cursor:pointer; padding:0;">➕ Quick Add Stream</button>
+                    </div>
+                    <select id="pkg_class_section_id" style="width:100%; font-size:0.85rem;">
                       <option value="">-- Select Class Stream (e.g. Form 1 Science 1) --</option>
                     </select>
-                  </label>
+                  </div>
                   <label style="font-size:0.82rem;">Seat Quota / Max Capacity
                     <input type="number" id="pkg_capacity" value="50" min="1" max="500" style="font-size:0.85rem;" />
                   </label>

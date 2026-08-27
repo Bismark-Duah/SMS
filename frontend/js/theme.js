@@ -1371,14 +1371,70 @@
       chips: (pageCtx && pageCtx.chips) || (rolePersona && rolePersona.chips) || ['Enter Marks', 'Class Broadsheet', 'Record Payment', 'Take Attendance']
     };
 
-    // 1. Create Floating Launcher
+    // 1. Create Floating Launcher with Drag & Position Memory
     const launcher = document.createElement('button');
     launcher.id = 'edubot-global-launcher';
     launcher.className = 'no-print';
     launcher.setAttribute('aria-label', 'Open EduBot Assistant');
     launcher.setAttribute('title', 'EduBot In-App Copilot (Alt+E)');
     launcher.innerHTML = '💬<span class="edubot-launcher-pulse"></span>';
+
+    // Restore saved launcher position if available
+    try {
+      const savedPos = JSON.parse(localStorage.getItem('edubot_launcher_pos') || 'null');
+      if (savedPos && savedPos.x !== undefined && savedPos.y !== undefined) {
+        launcher.style.left = `${Math.min(Math.max(10, savedPos.x), window.innerWidth - 64)}px`;
+        launcher.style.top = `${Math.min(Math.max(10, savedPos.y), window.innerHeight - 64)}px`;
+        launcher.style.right = 'auto';
+        launcher.style.bottom = 'auto';
+      }
+    } catch (_) {}
+
     document.body.appendChild(launcher);
+
+    // Draggable Launcher Behavior
+    let isDragging = false;
+    let dragStartX = 0, dragStartY = 0;
+    let initialX = 0, initialY = 0;
+    let hasMoved = false;
+
+    launcher.addEventListener('pointerdown', (e) => {
+      isDragging = true;
+      hasMoved = false;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      const rect = launcher.getBoundingClientRect();
+      initialX = rect.left;
+      initialY = rect.top;
+      launcher.setPointerCapture(e.pointerId);
+    });
+
+    launcher.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        hasMoved = true;
+        const newX = Math.min(Math.max(10, initialX + dx), window.innerWidth - 64);
+        const newY = Math.min(Math.max(10, initialY + dy), window.innerHeight - 64);
+        launcher.style.left = `${newX}px`;
+        launcher.style.top = `${newY}px`;
+        launcher.style.right = 'auto';
+        launcher.style.bottom = 'auto';
+      }
+    });
+
+    launcher.addEventListener('pointerup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      try { launcher.releasePointerCapture(e.pointerId); } catch (_) {}
+      if (hasMoved) {
+        const rect = launcher.getBoundingClientRect();
+        localStorage.setItem('edubot_launcher_pos', JSON.stringify({ x: rect.left, y: rect.top }));
+      } else {
+        toggleModal();
+      }
+    });
 
     // 2. Create Floating Dialog Modal
     const modal = document.createElement('div');
@@ -1403,7 +1459,8 @@
       <div class="edubot-modal-body" id="edubot-modal-msgs"></div>
       <div class="edubot-chips-bar" id="edubot-modal-chips"></div>
       <div class="edubot-input-footer">
-        <input id="edubot-global-input" type="text" placeholder="Ask or type 'find [student name]'…" autocomplete="off" />
+        <input id="edubot-global-input" type="text" placeholder="Ask, or type 'find [student / class / teacher / house]'…" autocomplete="off" />
+        <button id="edubot-voice-btn" class="no-print" title="Voice Search (Hands-Free Dictation)" aria-label="Voice Search">🎙️</button>
         <button id="edubot-global-send" aria-label="Send">➤</button>
       </div>
     `;
@@ -1412,11 +1469,63 @@
     const msgsBox = document.getElementById('edubot-modal-msgs');
     const chipsBox = document.getElementById('edubot-modal-chips');
     const input = document.getElementById('edubot-global-input');
+    const voiceBtn = document.getElementById('edubot-voice-btn');
     const sendBtn = document.getElementById('edubot-global-send');
     const closeBtn = document.getElementById('edubot-close-btn');
     const clearBtn = document.getElementById('edubot-clear-chat-btn');
 
     let isOpen = false;
+
+    // Voice Dictation (Web Speech API)
+    let recognition = null;
+    let isListening = false;
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRec) {
+      try {
+        recognition = new SpeechRec();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+          isListening = true;
+          voiceBtn.classList.add('listening');
+          voiceBtn.setAttribute('title', 'Listening… speak now');
+        };
+
+        recognition.onresult = (evt) => {
+          const transcript = evt.results[0][0].transcript;
+          if (transcript) {
+            input.value = transcript;
+            handleSend(transcript);
+          }
+        };
+
+        recognition.onerror = () => {
+          isListening = false;
+          voiceBtn.classList.remove('listening');
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          voiceBtn.classList.remove('listening');
+          voiceBtn.setAttribute('title', 'Voice Search (Hands-Free Dictation)');
+        };
+
+        voiceBtn.addEventListener('click', () => {
+          if (!recognition) return;
+          if (isListening) {
+            recognition.stop();
+          } else {
+            try { recognition.start(); } catch (_) {}
+          }
+        });
+      } catch (_) {
+        if (voiceBtn) voiceBtn.style.display = 'none';
+      }
+    } else if (voiceBtn) {
+      voiceBtn.style.display = 'none';
+    }
 
     // Chat History in LocalStorage
     function saveHistory(msgObj) {
@@ -1490,63 +1599,199 @@
       });
     }
 
-    async function executeEntitySearch(rawQuery) {
-      const qClean = rawQuery.replace(/^(find|search|lookup|student|who is|check fee for|balance for|exeat for)\s+/i, '').trim();
+    // Multi-Entity Search Engine (Students, Classes, Teachers/Staff, Houses)
+    async function executeUniversalEntitySearch(rawQuery) {
+      const qClean = rawQuery.replace(/^(find|search|lookup|who is|check fee for|balance for|exeat for)\s+/i, '').trim();
       if (!qClean) return null;
 
       const token = localStorage.getItem('accessToken');
       const apiBase = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-      try {
-        const res = await fetch(`${apiBase}/students/?search=${encodeURIComponent(qClean)}`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
-        if (!res.ok) return null;
-        const students = await res.json();
-        if (!students || students.length === 0) {
-          return {
-            text: `🔍 I searched the school directory for "<b>${qClean}</b>", but found no matching student records.`,
-            html: null
-          };
-        }
+      const lowerQ = qClean.toLowerCase();
 
-        const topMatches = students.slice(0, 3);
-        let cardsHtml = topMatches.map(s => {
-          const sName = s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Student';
-          const sClass = s.class_section?.name || s.class_name || 'Unassigned Class';
-          const sHouse = s.house?.name || s.house_name || (s.residential_status === 'Day' ? 'Day Student' : 'Boarding');
-          const bal = typeof s.fee_balance === 'number' ? s.fee_balance : 0;
-
-          return `
-            <div class="edubot-entity-card">
-              <div class="edubot-entity-header">
-                <div class="edubot-entity-avatar">🎓</div>
-                <div>
-                  <strong style="color:var(--text-primary, #fff); font-size:0.88rem;">${sName}</strong>
-                  <div style="font-size:0.75rem; opacity:0.8;">ID: ${s.index_number || s.id} • ${sClass}</div>
+      // 1. Check if query is targeting a Class / Form section
+      if (lowerQ.startsWith('class') || lowerQ.startsWith('form') || lowerQ.startsWith('stream') || lowerQ.startsWith('grade')) {
+        const term = lowerQ.replace(/^(class|form|stream|grade)\s*/i, '').trim();
+        try {
+          const res = await fetch(`${apiBase}/classes/`, { headers });
+          if (res.ok) {
+            const classes = await res.json();
+            const matched = classes.filter(c => !term || (c.name && c.name.toLowerCase().includes(term)) || (c.stage_name && c.stage_name.toLowerCase().includes(term)));
+            if (matched.length > 0) {
+              const top = matched.slice(0, 3);
+              const cards = top.map(c => `
+                <div class="edubot-entity-card">
+                  <div class="edubot-entity-header">
+                    <div class="edubot-entity-avatar" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">🏫</div>
+                    <div>
+                      <div style="display:flex; align-items:center; gap:6px;">
+                        <strong style="color:var(--text-primary, #fff); font-size:0.88rem;">${c.name}</strong>
+                        <span class="edubot-entity-badge class">Class</span>
+                      </div>
+                      <div style="font-size:0.75rem; opacity:0.8;">${c.stage_name || ''} • ${c.program_name || 'General Program'}</div>
+                    </div>
+                  </div>
+                  <div class="edubot-entity-details">
+                    <span>🧑‍🏫 Form Master: <b>${c.form_master_name || 'Unassigned'}</b></span>
+                  </div>
+                  <div class="edubot-entity-actions">
+                    <a href="attendance.html" class="edubot-card-btn">📋 Attendance</a>
+                    <a href="broadsheet.html" class="edubot-card-btn">📈 Broadsheet</a>
+                    <a href="bulk-entry.html" class="edubot-card-btn">📝 Marks</a>
+                    <a href="students.html" class="edubot-card-btn">👥 Students</a>
+                  </div>
                 </div>
-              </div>
-              <div class="edubot-entity-details">
-                <span>🏠 ${sHouse}</span>
-                <span>💰 Balance: GH₵ ${bal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div class="edubot-entity-actions">
-                <a href="students.html" class="edubot-card-btn">👤 Profile</a>
-                <a href="fees.html" class="edubot-card-btn">💰 Fees</a>
-                <a href="exeat.html" class="edubot-card-btn">🚪 Exeat</a>
-                <a href="bulk-entry.html" class="edubot-card-btn">📝 Marks</a>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        return {
-          text: `🔍 Found <b>${students.length}</b> student match${students.length > 1 ? 'es' : ''} in the local database:`,
-          html: cardsHtml
-        };
-      } catch (err) {
-        return null;
+              `).join('');
+              return {
+                text: `🏫 Found <b>${matched.length}</b> class section match${matched.length > 1 ? 'es' : ''}:`,
+                html: cards
+              };
+            }
+          }
+        } catch (_) {}
       }
+
+      // 2. Check if query is targeting a House / Dormitory
+      if (lowerQ.startsWith('house') || lowerQ.startsWith('dorm') || lowerQ.startsWith('hall')) {
+        const term = lowerQ.replace(/^(house|dorm|dormitory|hall)\s*/i, '').trim();
+        try {
+          const res = await fetch(`${apiBase}/houses/`, { headers });
+          if (res.ok) {
+            const houses = await res.json();
+            const matched = houses.filter(h => !term || (h.name && h.name.toLowerCase().includes(term)));
+            if (matched.length > 0) {
+              const top = matched.slice(0, 3);
+              const cards = top.map(h => `
+                <div class="edubot-entity-card">
+                  <div class="edubot-entity-header">
+                    <div class="edubot-entity-avatar" style="background: linear-gradient(135deg, #ec4899, #db2777);">🏠</div>
+                    <div>
+                      <div style="display:flex; align-items:center; gap:6px;">
+                        <strong style="color:var(--text-primary, #fff); font-size:0.88rem;">${h.name}</strong>
+                        <span class="edubot-entity-badge house">House</span>
+                      </div>
+                      <div style="font-size:0.75rem; opacity:0.8;">Gender: ${h.gender || 'Mixed'} • Capacity: ${h.capacity || 0} Beds</div>
+                    </div>
+                  </div>
+                  <div class="edubot-entity-details">
+                    <span>🧑‍💼 Housemaster: <b>${h.house_master_name || 'Unassigned'}</b></span>
+                  </div>
+                  <div class="edubot-entity-actions">
+                    <a href="exeat.html" class="edubot-card-btn">🚪 Exeats</a>
+                    <a href="houses.html" class="edubot-card-btn">🏠 House Manager</a>
+                    <a href="students.html" class="edubot-card-btn">👥 Boarders</a>
+                  </div>
+                </div>
+              `).join('');
+              return {
+                text: `🏠 Found <b>${matched.length}</b> boarding house match${matched.length > 1 ? 'es' : ''}:`,
+                html: cards
+              };
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 3. Check if query is targeting a Teacher / Staff Member
+      if (lowerQ.startsWith('teacher') || lowerQ.startsWith('staff') || lowerQ.startsWith('sir') || lowerQ.startsWith('madam') || lowerQ.startsWith('mr') || lowerQ.startsWith('mrs')) {
+        const term = lowerQ.replace(/^(teacher|staff|sir|madam|mr|mrs|ms)\s*/i, '').trim();
+        try {
+          const res = await fetch(`${apiBase}/users/`, { headers });
+          if (res.ok) {
+            const users = await res.json();
+            const matched = users.filter(u => {
+              const uName = (u.username || '').toLowerCase();
+              const uEmail = (u.email || '').toLowerCase();
+              return term && (uName.includes(term) || uEmail.includes(term));
+            });
+            if (matched.length > 0) {
+              const top = matched.slice(0, 3);
+              const cards = top.map(u => {
+                const rolesList = (u.roles || []).map(r => typeof r === 'string' ? r : r.name).join(', ') || 'Staff';
+                return `
+                  <div class="edubot-entity-card">
+                    <div class="edubot-entity-header">
+                      <div class="edubot-entity-avatar" style="background: linear-gradient(135deg, #f59e0b, #d97706);">🧑‍🏫</div>
+                      <div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                          <strong style="color:var(--text-primary, #fff); font-size:0.88rem;">${u.username}</strong>
+                          <span class="edubot-entity-badge teacher">${rolesList.split(',')[0]}</span>
+                        </div>
+                        <div style="font-size:0.75rem; opacity:0.8;">${u.email || 'No email'} • ${u.department_name || 'Academic Dept'}</div>
+                      </div>
+                    </div>
+                    <div class="edubot-entity-details">
+                      <span>🔑 Roles: <b>${rolesList}</b></span>
+                    </div>
+                    <div class="edubot-entity-actions">
+                      <a href="timetable.html" class="edubot-card-btn">📅 Timetable</a>
+                      <a href="messaging.html" class="edubot-card-btn">✉️ Message</a>
+                      <a href="users.html" class="edubot-card-btn">👤 User Account</a>
+                    </div>
+                  </div>
+                `;
+              }).join('');
+              return {
+                text: `🧑‍🏫 Found <b>${matched.length}</b> staff match${matched.length > 1 ? 'es' : ''}:`,
+                html: cards
+              };
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 4. Default / Student Entity Search
+      try {
+        const res = await fetch(`${apiBase}/students/?search=${encodeURIComponent(qClean)}`, { headers });
+        if (res.ok) {
+          const students = await res.json();
+          if (students && students.length > 0) {
+            const topMatches = students.slice(0, 3);
+            const cardsHtml = topMatches.map(s => {
+              const sName = s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Student';
+              const sClass = s.class_section?.name || s.class_name || 'Unassigned Class';
+              const sHouse = s.house?.name || s.house_name || (s.residential_status === 'Day' ? 'Day Student' : 'Boarding');
+              const bal = typeof s.fee_balance === 'number' ? s.fee_balance : 0;
+
+              return `
+                <div class="edubot-entity-card">
+                  <div class="edubot-entity-header">
+                    <div class="edubot-entity-avatar">🎓</div>
+                    <div>
+                      <div style="display:flex; align-items:center; gap:6px;">
+                        <strong style="color:var(--text-primary, #fff); font-size:0.88rem;">${sName}</strong>
+                        <span class="edubot-entity-badge student">Student</span>
+                      </div>
+                      <div style="font-size:0.75rem; opacity:0.8;">ID: ${s.index_number || s.id} • ${sClass}</div>
+                    </div>
+                  </div>
+                  <div class="edubot-entity-details">
+                    <span>🏠 ${sHouse}</span>
+                    <span>💰 Balance: GH₵ ${bal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div class="edubot-entity-actions">
+                    <a href="students.html" class="edubot-card-btn">👤 Profile</a>
+                    <a href="fees.html" class="edubot-card-btn">💰 Fees</a>
+                    <a href="exeat.html" class="edubot-card-btn">🚪 Exeat</a>
+                    <a href="bulk-entry.html" class="edubot-card-btn">📝 Marks</a>
+                  </div>
+                </div>
+              `;
+            }).join('');
+
+            return {
+              text: `🔍 Found <b>${students.length}</b> student match${students.length > 1 ? 'es' : ''} in the local database:`,
+              html: cardsHtml
+            };
+          }
+        }
+      } catch (_) {}
+
+      return {
+        text: `🔍 I searched the school directory for "<b>${qClean}</b>", but found no matching records. Try searching for a specific <b>student</b>, <b>class</b> (e.g. <i>class 1 Science</i>), <b>teacher</b> (e.g. <i>teacher Kwame</i>), or <b>house</b> (e.g. <i>house Aggrey</i>).`,
+        html: null
+      };
     }
 
     async function processQuery(query) {
@@ -1572,12 +1817,12 @@
         return null;
       }
 
-      // 2. Entity Search Detection
-      const searchTriggers = ['find', 'search', 'lookup', 'student', 'who is', 'check fee', 'balance for', 'exeat for'];
+      // 2. Universal Entity Search Detection
+      const searchTriggers = ['find', 'search', 'lookup', 'student', 'class', 'form', 'stream', 'teacher', 'staff', 'house', 'who is', 'check fee', 'balance for', 'exeat for'];
       const isSearchIntent = searchTriggers.some(t => q.startsWith(t)) || (q.split(' ').length <= 3 && !EDUBOT_KB.some(k => k.keys.some(key => q.includes(key))));
 
       if (isSearchIntent) {
-        const searchResult = await executeEntitySearch(query);
+        const searchResult = await executeUniversalEntitySearch(query);
         if (searchResult) {
           return { text: searchResult.text, html: searchResult.html, action: null };
         }
@@ -1592,7 +1837,7 @@
 
       // 4. Fallback Guidance
       return {
-        text: `🤔 I didn't recognize that exact request. You can:\n• Type <b>"find [Student Name]"</b> to look up any student in the school\n• Ask about <b>marks entry</b>, <b>broadsheets</b>, <b>fees</b>, or <b>exeats</b>\n• Use the Command Palette (<b>Ctrl+K</b>)`,
+        text: `🤔 I didn't recognize that exact request. You can:\n• Type <b>"find [Student / Class / Teacher / House]"</b> to look up institutional records\n• Tap 🎙️ for hands-free voice dictation\n• Ask about <b>marks entry</b>, <b>broadsheets</b>, <b>fees</b>, or <b>exeats</b>\n• Use the Command Palette (<b>Ctrl+K</b>)`,
         action: null,
         html: null
       };
@@ -1632,7 +1877,6 @@
       }
     }
 
-    launcher.addEventListener('click', () => toggleModal());
     closeBtn.addEventListener('click', () => toggleModal(false));
     clearBtn.addEventListener('click', () => clearHistory());
     sendBtn.addEventListener('click', () => handleSend());

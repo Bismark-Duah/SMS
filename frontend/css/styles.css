@@ -2776,6 +2776,78 @@ thead th {
   border-color: rgba(255, 255, 255, 0.08);
 }
 
+/* ── Voice Dictation & Multi-Entity Badges ── */
+#edubot-global-launcher {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+#edubot-global-launcher:active {
+  cursor: grabbing;
+}
+
+#edubot-voice-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+#edubot-voice-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+#edubot-voice-btn.listening {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #dc2626;
+  animation: edubotVoicePulse 1.2s infinite;
+}
+
+@keyframes edubotVoicePulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+
+.edubot-entity-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.edubot-entity-badge.student { background: rgba(16, 185, 129, 0.15); color: #059669; }
+.edubot-entity-badge.class { background: rgba(99, 102, 241, 0.15); color: #4f46e5; }
+.edubot-entity-badge.teacher { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+.edubot-entity-badge.house { background: rgba(236, 72, 153, 0.15); color: #db2777; }
+
+[data-theme="dark"] #edubot-voice-btn,
+[data-theme="midnight"] #edubot-voice-btn,
+.theme-dark #edubot-voice-btn {
+  background: #0f172a;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] #edubot-voice-btn:hover,
+[data-theme="midnight"] #edubot-voice-btn:hover,
+.theme-dark #edubot-voice-btn:hover {
+  background: #1e293b;
+  color: #ffffff;
+}
+
 /* ==========================================================================
    ACADEMIC SELECTION & CONTAINER DESIGN SYSTEM
    Standardized Grid, Card, and Chip Tiles across Super-Admin, Programs,

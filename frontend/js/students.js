@@ -905,22 +905,10 @@ initPage();
 
 // ── Printable ID Card & Offline QR Code Functions ─────────────────────────────
 window.generateOfflineSvgQrCode = function(text) {
-  const hash = Array.from(String(text)).reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) % 1000000007, 7);
-  let rects = '';
-  for (let r = 0; r < 6; r++) {
-    for (let c = 0; c < 6; c++) {
-      if (((r * 6 + c + hash) % 3) === 0) {
-        rects += `<rect x="${c*5 + 7}" y="${r*5 + 7}" width="4" height="4" fill="#0f172a" />`;
-      }
-    }
+  if (typeof window.generateStandardSvgQrCode === 'function') {
+    return window.generateStandardSvgQrCode(text, 2, 2);
   }
-  return `<svg width="40" height="40" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
-    <rect width="44" height="44" fill="#ffffff" />
-    <rect x="2" y="2" width="12" height="12" fill="#0f172a" /><rect x="4" y="4" width="8" height="8" fill="#ffffff" /><rect x="6" y="6" width="4" height="4" fill="#0f172a" />
-    <rect x="30" y="2" width="12" height="12" fill="#0f172a" /><rect x="32" y="4" width="8" height="8" fill="#ffffff" /><rect x="34" y="6" width="4" height="4" fill="#0f172a" />
-    <rect x="2" y="30" width="12" height="12" fill="#0f172a" /><rect x="4" y="32" width="8" height="8" fill="#ffffff" /><rect x="6" y="34" width="4" height="4" fill="#0f172a" />
-    ${rects}
-  </svg>`;
+  return '';
 };
 
 window.openIdCardModal = function(id) {

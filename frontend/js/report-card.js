@@ -436,7 +436,10 @@ function renderWAECTranscriptCard(data) {
   // Render SVG QR code locally
   const qrContainer = document.getElementById("waecQrCodeContainer");
   if (qrContainer) {
-    qrContainer.innerHTML = `<svg width="64" height="64" viewBox="0 0 100 100" style="display:block;"><rect width="100" height="100" fill="#ffffff"/><path d="M10 10h30v30h-30zM15 15v20h20v-20zM60 10h30v30h-30zM65 15v20h20v-20zM10 60h30v30h-30zM15 65v20h20v-20zM50 50h10v10h-10zM70 50h20v10h-20zM50 70h20v10h-20zM80 70h10v20h-10z" fill="#0284c7"/></svg>`;
+    const certPayload = `EDU360-CERT:${data.student ? data.student.student_code : 'STU'}-${data.semester ? data.semester.id : 'TERM'}-${data.summary ? data.summary.average_score : '0'}`;
+    if (typeof window.generateStandardSvgQrCode === 'function') {
+      qrContainer.innerHTML = window.generateStandardSvgQrCode(certPayload, 2, 1);
+    }
   }
 }
 

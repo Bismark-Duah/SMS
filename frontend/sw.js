@@ -1,5 +1,5 @@
 // eduManage360 Offline-First Service Worker
-const CACHE_NAME = 'edumanage360-v7.7';
+const CACHE_NAME = 'edumanage360-v7.8';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -22,6 +22,7 @@ const STATIC_ASSETS = [
   '/js/bulk-entry.js',
   '/js/programs.js',
   '/js/report-card.js',
+  '/js/qrcode.min.js',
   '/assets/logo_primary.png',
   '/assets/logo_compact.png',
   '/manifest.json'

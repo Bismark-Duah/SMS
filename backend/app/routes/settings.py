@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Header
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Header, Request
 from sqlalchemy.orm import Session
 import json
 import os
@@ -497,16 +497,57 @@ def seed_default_settings(db: Session):
 
 
 @router.get("/lan-info")
-def get_lan_info():
+def get_lan_info(request: Request):
     """
-    Returns the host machine's local IPv4 addresses and connection URLs
+    Returns the host machine's local IPv4 addresses or Cloud Host URL
     for offline Wi-Fi / LAN multi-device access across teachers' tablets & phones.
     """
     import socket
+
+    # 1. Detect Cloud / Production Domain Request (Render, Railway, Custom Domain)
+    host_header = ""
+    proto_header = "http"
+    if request is not None:
+        host_header = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+        proto_header = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
+    
+    hostname_clean = host_header.split(":")[0].lower() if host_header else ""
+
+    is_cloud = (
+        bool(hostname_clean)
+        and hostname_clean not in ["localhost", "127.0.0.1"]
+        and not hostname_clean.startswith("192.168.")
+        and not hostname_clean.startswith("10.")
+        and not hostname_clean.startswith("172.")
+    )
+
+    if is_cloud:
+        cloud_url = f"{proto_header}://{host_header}"
+        return {
+            "hostname": hostname_clean,
+            "port": 443 if proto_header == "https" else 80,
+            "primary_url": cloud_url,
+            "is_cloud": True,
+            "interfaces": [
+                {
+                    "ip": hostname_clean,
+                    "label": "Cloud Web Application",
+                    "url": cloud_url,
+                    "is_primary": True
+                }
+            ],
+            "instructions": {
+                "step1": "Open this URL or scan the QR code on any smartphone, tablet, or PC worldwide.",
+                "step2": "No local Wi-Fi pairing required when accessing the Cloud Production Portal.",
+                "step3": "Log in with your assigned institutional credentials."
+            }
+        }
+
+    # 2. Local Offline-First LAN Probing (School Computer / Wi-Fi Hotspot)
     interfaces = []
     seen_ips = set()
 
-    # 1. Probe primary network interface
+    # Probe primary network interface
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.settimeout(0.5)
@@ -524,7 +565,7 @@ def get_lan_info():
     except Exception:
         pass
 
-    # 2. Probe hostname interfaces (including Mobile Hotspots)
+    # Probe hostname interfaces (including Mobile Hotspots)
     try:
         hostname = socket.gethostname()
         for ip in socket.gethostbyname_ex(hostname)[2]:
@@ -557,6 +598,7 @@ def get_lan_info():
         "hostname": hostname,
         "port": 8000,
         "primary_url": primary_url,
+        "is_cloud": False,
         "interfaces": interfaces,
         "instructions": {
             "step1": "Ensure the teacher's phone, tablet, or laptop is connected to the same school Wi-Fi or mobile hotspot.",

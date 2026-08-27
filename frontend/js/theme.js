@@ -1272,6 +1272,20 @@
     if (!modal) return;
     modal.classList.add('open');
 
+    const isCloud = !['localhost', '127.0.0.1'].includes(window.location.hostname) && 
+                    !window.location.hostname.startsWith('192.168.') && 
+                    !window.location.hostname.startsWith('10.') && 
+                    !window.location.hostname.startsWith('172.');
+
+    if (isCloud) {
+      renderLANInfo({
+        primary_url: window.location.origin,
+        is_cloud: true,
+        interfaces: [{ ip: window.location.hostname, label: 'Cloud Web Application', url: window.location.origin, is_primary: true }]
+      });
+      return;
+    }
+
     const apiBase = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
     try {
       const res = await fetch(`${apiBase}/settings/lan-info`);
@@ -1282,6 +1296,7 @@
     } catch (_) {
       renderLANInfo({
         primary_url: window.location.origin,
+        is_cloud: false,
         interfaces: [{ ip: window.location.hostname, label: 'Current Address', url: window.location.origin }]
       });
     }
@@ -1293,11 +1308,50 @@
   }
 
   function renderLANInfo(data) {
+    const isCloud = data.is_cloud || (!['localhost', '127.0.0.1'].includes(window.location.hostname) && !window.location.hostname.startsWith('192.168.') && !window.location.hostname.startsWith('10.'));
+    
+    const titleEl = document.querySelector('#lan-sharing-modal h3');
+    const subTitleEl = document.querySelector('#lan-sharing-modal h3 + span');
+    const descEl = document.querySelector('#lan-sharing-modal .lan-modal-body > div');
+    const guideEl = document.querySelector('#lan-sharing-modal .lan-guide-card');
+
+    if (isCloud) {
+      if (titleEl) titleEl.textContent = '🌐 Cloud Mobile Portal Hub';
+      if (subTitleEl) {
+        subTitleEl.textContent = 'Worldwide Cloud Access';
+        subTitleEl.style.color = '#38bdf8';
+      }
+      if (descEl) descEl.textContent = 'Scan or share this link to access the live EduManage360 cloud system from any smartphone or tablet worldwide.';
+      if (guideEl) {
+        guideEl.innerHTML = `
+          <div style="font-weight:700; margin-bottom:4px; color:#38bdf8;">💡 Cloud Quick Connect:</div>
+          <div style="margin-bottom:2px;"><b>1.</b> Scan the QR code with your phone camera or copy the URL.</div>
+          <div style="margin-bottom:2px;"><b>2.</b> Works on any cellular data or Wi-Fi network worldwide.</div>
+          <div><b>3.</b> Log in with your institutional credentials.</div>
+        `;
+      }
+    } else {
+      if (titleEl) titleEl.textContent = 'LAN Wi-Fi Multi-Device Hub';
+      if (subTitleEl) {
+        subTitleEl.textContent = '100% Offline School Network Sharing';
+        subTitleEl.style.color = '#34d399';
+      }
+      if (descEl) descEl.textContent = "Connect teachers' smartphones, tablets, and laptops to this server machine via local Wi-Fi or phone hotspot.";
+      if (guideEl) {
+        guideEl.innerHTML = `
+          <div style="font-weight:700; margin-bottom:4px;">💡 3-Step Teacher Quick Connect:</div>
+          <div style="margin-bottom:2px;"><b>1.</b> Connect teacher's device to the school's local Wi-Fi or this PC's hotspot.</div>
+          <div style="margin-bottom:2px;"><b>2.</b> Scan the QR code above or type the URL into any mobile browser.</div>
+          <div><b>3.</b> Log in with teacher credentials to take attendance or input marks offline.</div>
+        `;
+      }
+    }
+
     const select = document.getElementById('lan-interface-select');
     const selectWrap = document.getElementById('lan-interface-select-wrap');
     const ifaces = data.interfaces || [];
 
-    if (ifaces.length > 1) {
+    if (ifaces.length > 1 && !isCloud) {
       selectWrap.style.display = 'flex';
       select.innerHTML = '';
       ifaces.forEach((iface, idx) => {
@@ -1312,7 +1366,8 @@
       selectWrap.style.display = 'none';
     }
 
-    updateLANDisplay(data.primary_url || (ifaces[0] && ifaces[0].url) || window.location.origin);
+    const targetUrl = isCloud ? window.location.origin : (data.primary_url || (ifaces[0] && ifaces[0].url) || window.location.origin);
+    updateLANDisplay(targetUrl);
   }
 
   function updateLANDisplay(targetUrl) {

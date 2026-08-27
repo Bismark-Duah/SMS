@@ -2626,6 +2626,156 @@ thead th {
   }
 }
 
+/* ── EduBot Interactive Entity Cards & Theme Adaptivity ── */
+.edubot-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edubot-clear-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.edubot-clear-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.edubot-entity-card {
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edubot-entity-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edubot-entity-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.edubot-entity-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.76rem;
+  color: #64748b;
+  padding: 4px 0;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.edubot-entity-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.edubot-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #ffffff !important;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.edubot-card-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+/* Dark theme / Midnight theme overrides for EduBot */
+[data-theme="dark"] #edubot-global-modal,
+[data-theme="midnight"] #edubot-global-modal,
+.theme-dark #edubot-global-modal {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .edubot-modal-body,
+[data-theme="midnight"] .edubot-modal-body,
+.theme-dark .edubot-modal-body {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .edubot-chat-msg.bot,
+[data-theme="midnight"] .edubot-chat-msg.bot,
+.theme-dark .edubot-chat-msg.bot {
+  background: #1e293b;
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .edubot-chips-bar,
+[data-theme="midnight"] .edubot-chips-bar,
+.theme-dark .edubot-chips-bar {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .edubot-input-footer,
+[data-theme="midnight"] .edubot-input-footer,
+.theme-dark .edubot-input-footer {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] #edubot-global-input,
+[data-theme="midnight"] #edubot-global-input,
+.theme-dark #edubot-global-input {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .edubot-entity-card,
+[data-theme="midnight"] .edubot-entity-card,
+.theme-dark .edubot-entity-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .edubot-entity-details,
+[data-theme="midnight"] .edubot-entity-details,
+.theme-dark .edubot-entity-details {
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
 /* ==========================================================================
    ACADEMIC SELECTION & CONTAINER DESIGN SYSTEM
    Standardized Grid, Card, and Chip Tiles across Super-Admin, Programs,

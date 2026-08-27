@@ -1252,6 +1252,49 @@
     }
   ];
 
+  const ROLE_PERSONA_MAP = {
+    super_admin: {
+      title: 'Super Admin Copilot',
+      greeting: '👑 Greetings, Super Administrator! How can I assist with multi-school governance, cloud synchronization, or database backups today?',
+      chips: ['⚡ Cloud Pull Sync', '⚙️ Accredit Tracks', '📦 Backup Database', '📊 Multi-School Stats']
+    },
+    admin: {
+      title: 'Administration Copilot',
+      greeting: '🏫 Welcome, School Administrator! How can I help oversee academic operations, staff allocations, or student enrollment today?',
+      chips: ['🎓 Enroll Student', '👥 Staff Directory', '📢 Broadcast Notice', '💰 Fee Ledger']
+    },
+    headmaster: {
+      title: 'Executive Copilot',
+      greeting: '🏛️ Welcome, Head of Institution! Ready to review school-wide analytics, class broadsheets, or staff workload today?',
+      chips: ['📈 Broadsheets', '📊 Executive Analytics', '📢 Send Announcement', '🚨 At-Risk Students']
+    },
+    bursar: {
+      title: 'Bursary & Finance Copilot',
+      greeting: '💰 Welcome, Bursar! Ready to record fee payments, audit MoMo receipts, or inspect fee defaulters today?',
+      chips: ['💰 Record Payment', '⚠️ Fee Debtors', '📢 SMS Reminders', '🧾 Print Receipt']
+    },
+    accountant: {
+      title: 'Bursary & Finance Copilot',
+      greeting: '💰 Welcome, Finance Officer! Ready to record payments, audit MoMo receipts, or inspect fee arrears today?',
+      chips: ['💰 Record Payment', '⚠️ Fee Debtors', '📢 SMS Reminders', '🧾 Print Receipt']
+    },
+    housemaster: {
+      title: 'Boarding & Exeat Copilot',
+      greeting: '🏠 Welcome, Housemaster! How can I assist with boarding dormitories, nightly roll-call, or student gate passes today?',
+      chips: ['📋 Night Roll Call', '🚪 Active Exeats', '⏰ Overdue Curfews', '🛏️ Dormitory Beds']
+    },
+    teacher: {
+      title: 'Teaching & SBA Copilot',
+      greeting: '✍️ Welcome, Educator! Ready to enter marks, inspect class broadsheets, or review lesson timetables today?',
+      chips: ['✍️ Enter Marks', '⌨️ Speed Shortcuts', '📈 Class Broadsheet', '📅 My Timetable']
+    },
+    security_officer: {
+      title: 'Security Gate Copilot',
+      greeting: '🛡️ Welcome, Security Gate Officer! Ready to verify student exeat gate passes or log gate movements today?',
+      chips: ['🚪 Scan/Verify Pass', '🚨 Security Incident', '📋 Gate Movements', '⏰ Curfew Check']
+    }
+  };
+
   const PAGE_CONTEXT_MAP = {
     'fees.html': {
       title: 'Fees Copilot',
@@ -1281,14 +1324,33 @@
     'super-admin.html': {
       title: 'Super Admin Copilot',
       greeting: '👑 Welcome, Super Administrator! Manage institutions, database backups, and health diagnostics.',
-      chips: ['Switch School', 'Backup Database', 'Add School', 'User Roles']
+      chips: ['Cloud Pull Sync', 'Accredit Tracks', 'Backup Database', 'Multi-School Stats']
+    },
+    'exeat.html': {
+      title: 'Exeat & Gate Pass Copilot',
+      greeting: '🚪 Managing student leaves? Check active gate passes, overdue curfews, or sign-out approvals.',
+      chips: ['Issue Gate Pass', 'Overdue Exeats', 'Security Roster', 'Gate Sign In']
     },
     'dashboard.html': {
-      title: 'Dashboard Copilot',
+      title: 'Executive Copilot',
       greeting: '👋 Welcome to your Executive Overview! What module would you like to explore today?',
       chips: ['Enter Marks', 'Record Fees', 'Take Attendance', 'Class Broadsheet']
     }
   };
+
+  function getAuthUserContext() {
+    const token = localStorage.getItem('accessToken');
+    let userRole = (localStorage.getItem('user_role') || '').toLowerCase();
+    let username = localStorage.getItem('username') || '';
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (!username && payload.sub) username = payload.sub;
+        if (!userRole && payload.roles && payload.roles.length) userRole = String(payload.roles[0]).toLowerCase();
+      } catch (_) {}
+    }
+    return { username: username || 'Educator', role: userRole || 'staff' };
+  }
 
   function mountEduBotGlobal() {
     const curPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase().split('?')[0];
@@ -1298,10 +1360,15 @@
     // Avoid double injection if global launcher or local edubot toggle is present
     if (document.getElementById('edubot-global-launcher') || document.getElementById('edubot-toggle')) return;
     if (!document.body) return;
-    const ctx = PAGE_CONTEXT_MAP[curPage] || {
-      title: 'EduBot Copilot',
-      greeting: '👋 Hi! I\'m <b>EduBot</b>, your in-app assistant. How can I help you today?',
-      chips: ['Enter Marks', 'Class Broadsheet', 'Record Payment', 'Take Attendance']
+
+    const userCtx = getAuthUserContext();
+    const rolePersona = ROLE_PERSONA_MAP[userCtx.role] || null;
+    const pageCtx = PAGE_CONTEXT_MAP[curPage] || null;
+
+    const ctx = {
+      title: (pageCtx && pageCtx.title) || (rolePersona && rolePersona.title) || 'EduBot Copilot',
+      greeting: (pageCtx && pageCtx.greeting) || (rolePersona && rolePersona.greeting) || `👋 Hi <b>${userCtx.username}</b>! I'm <b>EduBot</b>, your in-app assistant. How can I help you today?`,
+      chips: (pageCtx && pageCtx.chips) || (rolePersona && rolePersona.chips) || ['Enter Marks', 'Class Broadsheet', 'Record Payment', 'Take Attendance']
     };
 
     // 1. Create Floating Launcher
@@ -1324,16 +1391,19 @@
         <div class="edubot-header-left">
           <div class="edubot-avatar-box">🤖</div>
           <div class="edubot-title-wrap">
-            <h4>EduBot Copilot</h4>
-            <span class="edubot-context-pill">● ${ctx.title} · Offline Ready</span>
+            <h4>${ctx.title}</h4>
+            <span class="edubot-context-pill">● ${userCtx.role.toUpperCase()} · Offline Ready</span>
           </div>
         </div>
-        <button class="edubot-close-btn" id="edubot-close-btn" aria-label="Close">✕</button>
+        <div class="edubot-header-actions">
+          <button class="edubot-clear-btn" id="edubot-clear-chat-btn" title="Clear Chat History">🧹 Clear</button>
+          <button class="edubot-close-btn" id="edubot-close-btn" aria-label="Close">✕</button>
+        </div>
       </div>
       <div class="edubot-modal-body" id="edubot-modal-msgs"></div>
       <div class="edubot-chips-bar" id="edubot-modal-chips"></div>
       <div class="edubot-input-footer">
-        <input id="edubot-global-input" type="text" placeholder="Ask EduBot anything (or press ?)…" autocomplete="off" />
+        <input id="edubot-global-input" type="text" placeholder="Ask or type 'find [student name]'…" autocomplete="off" />
         <button id="edubot-global-send" aria-label="Send">➤</button>
       </div>
     `;
@@ -1344,19 +1414,55 @@
     const input = document.getElementById('edubot-global-input');
     const sendBtn = document.getElementById('edubot-global-send');
     const closeBtn = document.getElementById('edubot-close-btn');
+    const clearBtn = document.getElementById('edubot-clear-chat-btn');
 
     let isOpen = false;
 
-    function renderMessage(text, role, action) {
+    // Chat History in LocalStorage
+    function saveHistory(msgObj) {
+      try {
+        let history = JSON.parse(localStorage.getItem('edubot_chat_history') || '[]');
+        history.push(msgObj);
+        if (history.length > 20) history = history.slice(-20);
+        localStorage.setItem('edubot_chat_history', JSON.stringify(history));
+      } catch (_) {}
+    }
+
+    function loadHistory() {
+      try {
+        const history = JSON.parse(localStorage.getItem('edubot_chat_history') || '[]');
+        if (history.length > 0) {
+          history.forEach(m => renderMessage(m.text, m.role, m.action, m.html, false));
+          return true;
+        }
+      } catch (_) {}
+      return false;
+    }
+
+    function clearHistory() {
+      localStorage.removeItem('edubot_chat_history');
+      msgsBox.innerHTML = '';
+      renderMessage(ctx.greeting, 'bot', null, null, false);
+      renderChips(ctx.chips);
+    }
+
+    function renderMessage(text, role, action, rawHtml, persist = true) {
       const msgDiv = document.createElement('div');
       msgDiv.className = `edubot-chat-msg ${role}`;
-      let content = text.replace(/\n/g, '<br/>');
+      let content = text ? text.replace(/\n/g, '<br/>') : '';
+      if (rawHtml) {
+        content += rawHtml;
+      }
       if (action && action.href) {
         content += `<br/><a href="${action.href}" class="edubot-deep-btn">${action.label} →</a>`;
       }
       msgDiv.innerHTML = content;
       msgsBox.appendChild(msgDiv);
       msgsBox.scrollTop = msgsBox.scrollHeight;
+
+      if (persist) {
+        saveHistory({ text, role, action, html: rawHtml });
+      }
     }
 
     function showTyping() {
@@ -1384,30 +1490,129 @@
       });
     }
 
-    function findAnswer(query) {
-      const q = query.toLowerCase();
-      for (const item of EDUBOT_KB) {
-        if (item.keys.some(k => q.includes(k))) return item;
+    async function executeEntitySearch(rawQuery) {
+      const qClean = rawQuery.replace(/^(find|search|lookup|student|who is|check fee for|balance for|exeat for)\s+/i, '').trim();
+      if (!qClean) return null;
+
+      const token = localStorage.getItem('accessToken');
+      const apiBase = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
+
+      try {
+        const res = await fetch(`${apiBase}/students/?search=${encodeURIComponent(qClean)}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (!res.ok) return null;
+        const students = await res.json();
+        if (!students || students.length === 0) {
+          return {
+            text: `🔍 I searched the school directory for "<b>${qClean}</b>", but found no matching student records.`,
+            html: null
+          };
+        }
+
+        const topMatches = students.slice(0, 3);
+        let cardsHtml = topMatches.map(s => {
+          const sName = s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Student';
+          const sClass = s.class_section?.name || s.class_name || 'Unassigned Class';
+          const sHouse = s.house?.name || s.house_name || (s.residential_status === 'Day' ? 'Day Student' : 'Boarding');
+          const bal = typeof s.fee_balance === 'number' ? s.fee_balance : 0;
+
+          return `
+            <div class="edubot-entity-card">
+              <div class="edubot-entity-header">
+                <div class="edubot-entity-avatar">🎓</div>
+                <div>
+                  <strong style="color:var(--text-primary, #fff); font-size:0.88rem;">${sName}</strong>
+                  <div style="font-size:0.75rem; opacity:0.8;">ID: ${s.index_number || s.id} • ${sClass}</div>
+                </div>
+              </div>
+              <div class="edubot-entity-details">
+                <span>🏠 ${sHouse}</span>
+                <span>💰 Balance: GH₵ ${bal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div class="edubot-entity-actions">
+                <a href="students.html" class="edubot-card-btn">👤 Profile</a>
+                <a href="fees.html" class="edubot-card-btn">💰 Fees</a>
+                <a href="exeat.html" class="edubot-card-btn">🚪 Exeat</a>
+                <a href="bulk-entry.html" class="edubot-card-btn">📝 Marks</a>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return {
+          text: `🔍 Found <b>${students.length}</b> student match${students.length > 1 ? 'es' : ''} in the local database:`,
+          html: cardsHtml
+        };
+      } catch (err) {
+        return null;
       }
+    }
+
+    async function processQuery(query) {
+      const q = query.toLowerCase().trim();
+
+      // 1. Direct System Commands
+      if (q === 'dark mode' || q === 'midnight') {
+        if (window.setTheme) window.setTheme('midnight');
+        else document.body.setAttribute('data-theme', 'midnight');
+        return { text: '🌙 Switched to Midnight Dark theme.', action: null, html: null };
+      }
+      if (q === 'light mode') {
+        if (window.setTheme) window.setTheme('light');
+        else document.body.setAttribute('data-theme', 'light');
+        return { text: '☀️ Switched to Crisp Light theme.', action: null, html: null };
+      }
+      if (q === 'emerald') {
+        if (window.setTheme) window.setTheme('emerald');
+        return { text: '🌲 Switched to Forest Emerald theme.', action: null, html: null };
+      }
+      if (q === 'clear' || q === 'clear chat') {
+        clearHistory();
+        return null;
+      }
+
+      // 2. Entity Search Detection
+      const searchTriggers = ['find', 'search', 'lookup', 'student', 'who is', 'check fee', 'balance for', 'exeat for'];
+      const isSearchIntent = searchTriggers.some(t => q.startsWith(t)) || (q.split(' ').length <= 3 && !EDUBOT_KB.some(k => k.keys.some(key => q.includes(key))));
+
+      if (isSearchIntent) {
+        const searchResult = await executeEntitySearch(query);
+        if (searchResult) {
+          return { text: searchResult.text, html: searchResult.html, action: null };
+        }
+      }
+
+      // 3. Static KB Matcher
+      for (const item of EDUBOT_KB) {
+        if (item.keys.some(k => q.includes(k))) {
+          return { text: item.answer, action: item.action, html: null };
+        }
+      }
+
+      // 4. Fallback Guidance
       return {
-        answer: "🤔 I'm not sure about that specific query. You can ask about <b>marks entry</b>, <b>broadsheets</b>, <b>fees</b>, <b>attendance</b>, or <b>report cards</b>, or use the Command Palette (<b>Ctrl+K</b>).",
-        action: null
+        text: `🤔 I didn't recognize that exact request. You can:\n• Type <b>"find [Student Name]"</b> to look up any student in the school\n• Ask about <b>marks entry</b>, <b>broadsheets</b>, <b>fees</b>, or <b>exeats</b>\n• Use the Command Palette (<b>Ctrl+K</b>)`,
+        action: null,
+        html: null
       };
     }
 
-    function handleSend(text) {
+    async function handleSend(text) {
       const q = (text || input.value).trim();
       if (!q) return;
       renderMessage(q, 'user');
       input.value = '';
       chipsBox.innerHTML = '';
       showTyping();
-      setTimeout(() => {
-        hideTyping();
-        const res = findAnswer(q);
-        renderMessage(res.answer, 'bot', res.action);
+
+      const res = await processQuery(q);
+      hideTyping();
+
+      if (res) {
+        renderMessage(res.text, 'bot', res.action, res.html);
         renderChips(ctx.chips);
-      }, 450);
+      }
     }
 
     function toggleModal(open) {
@@ -1417,7 +1622,10 @@
       launcher.innerHTML = isOpen ? '✕' : '💬<span class="edubot-launcher-pulse"></span>';
       if (isOpen) {
         if (msgsBox.children.length === 0) {
-          renderMessage(ctx.greeting, 'bot');
+          const hadHistory = loadHistory();
+          if (!hadHistory) {
+            renderMessage(ctx.greeting, 'bot', null, null, false);
+          }
           renderChips(ctx.chips);
         }
         setTimeout(() => input.focus(), 150);
@@ -1426,6 +1634,7 @@
 
     launcher.addEventListener('click', () => toggleModal());
     closeBtn.addEventListener('click', () => toggleModal(false));
+    clearBtn.addEventListener('click', () => clearHistory());
     sendBtn.addEventListener('click', () => handleSend());
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleSend();

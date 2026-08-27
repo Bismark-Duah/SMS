@@ -66,89 +66,211 @@
     <main class="page">
       <header class="topbar">
         <div>
-          <h1 style="margin:0;font-size:1.3rem;">📜 Class Broadsheet & Remarks</h1>
-          <p style="margin:4px 0 0 0;opacity:.75;font-size:.85rem;">Review class broadsheet matrix, total scores, class ranks, and manage terminal remarks.</p>
+          <h1 style="margin:0;font-size:1.3rem;">📜 Broadsheet & Comparative Intelligence</h1>
+          <p style="margin:4px 0 0 0;opacity:.75;font-size:.85rem;">Review class broadsheets, inter-class league standings, departmental benchmarks, and academic trajectory curves.</p>
         </div>
-        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
-          <button class="btn" style="background:#0284c7; color:white; font-weight:700;" onclick="exportBroadsheetCSV()">📊 Export CSV / Excel</button>
-          <button class="btn-print no-print" title="Print landscape broadsheet" onclick="(function(){var s=document.createElement('style');s.id='_landscapeHint';s.textContent='@page{size:A4 landscape;}';document.head.appendChild(s);window.print();setTimeout(function(){var el=document.getElementById('_landscapeHint');if(el)el.parentNode.removeChild(el);},1000);})()">🖨️ Print Broadsheet</button>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto; flex-wrap:wrap;">
+          <button id="btnExportCSV" class="btn" style="background:#0284c7; color:white; font-weight:700;" onclick="exportBroadsheetCSV()">📊 Export CSV / Excel</button>
+          <button id="btnPrintReport" class="btn-print no-print" title="Print Report" onclick="handlePrintAction()">🖨️ Print Report</button>
           <a class="btn" href="results.html">📝 Results & Scores</a>
           <a class="btn" href="departments.html">🏢 Departments</a>
           <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
 
-      <!-- Selector Controls Card -->
-      <section class="card" style="margin-bottom: 20px;">
-        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
-          <div style="flex:1; min-width:220px;">
-            <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Select Class Section *</label>
-            <select id="selectClassSection" style="width:100%;" onchange="loadBroadsheetData()">
-              <option value="">Select class section...</option>
-            </select>
-          </div>
-
-          <div style="width:200px;">
-            <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Academic Semester / Term</label>
-            <select id="selectSemester" style="width:100%;" onchange="loadBroadsheetData()">
-              <option value="">Current Term</option>
-            </select>
-          </div>
-
-          <div style="margin-top:20px;">
-            <button class="btn btn-primary" onclick="loadBroadsheetData()">🔄 Refresh Broadsheet</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Publishing Policy & Status Banner -->
-      <div id="publishingBanner" class="publishing-banner" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3);">
-        <div>
-          <h4 style="margin:0; color:#818cf8; font-size:0.98rem;" id="bannerTitle">⚙️ Loading Policy Settings...</h4>
-          <p style="margin:4px 0 0 0; font-size:0.85rem; opacity:0.85;" id="bannerDesc">Select a class section above to view the broadsheet matrix.</p>
-        </div>
-        <div id="bannerActionContainer">
-          <!-- Dynamically populated publish / save buttons -->
-        </div>
+      <!-- View Switcher Tabs -->
+      <div class="broadsheet-view-switcher no-print">
+        <button id="viewTabBroadsheet" class="view-switch-btn active" onclick="switchBroadsheetView('matrix')">
+          <span>📜 Single Class Broadsheet Matrix</span>
+        </button>
+        <button id="viewTabComparative" class="view-switch-btn" onclick="switchBroadsheetView('comparative')">
+          <span>🏆 Inter-Class League & Comparative Analytics</span>
+        </button>
       </div>
 
-      <!-- Broadsheet Matrix Container -->
-      <section class="card printable-content" style="max-width:100%; overflow-x:auto;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-          <h3 style="margin:0;" id="broadsheetTitle">Class Section Broadsheet</h3>
-          <button class="btn" style="background:#10b981; color:white; font-weight:600;" onclick="saveBroadsheetRemarks()">💾 Save Remarks</button>
+      <!-- VIEW 1: SINGLE CLASS BROADSHEET MATRIX -->
+      <div id="singleBroadsheetView">
+        <!-- Selector Controls Card -->
+        <section class="card" style="margin-bottom: 20px;">
+          <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+            <div style="flex:1; min-width:220px;">
+              <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Select Class Section *</label>
+              <select id="selectClassSection" style="width:100%;" onchange="loadBroadsheetData()">
+                <option value="">Select class section...</option>
+              </select>
+            </div>
+
+            <div style="width:200px;">
+              <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">Academic Semester / Term</label>
+              <select id="selectSemester" style="width:100%;" onchange="loadBroadsheetData()">
+                <option value="">Current Term</option>
+              </select>
+            </div>
+
+            <div style="margin-top:20px;">
+              <button class="btn btn-primary" onclick="loadBroadsheetData()">🔄 Refresh Broadsheet</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Publishing Policy & Status Banner -->
+        <div id="publishingBanner" class="publishing-banner" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3);">
+          <div>
+            <h4 style="margin:0; color:#818cf8; font-size:0.98rem;" id="bannerTitle">⚙️ Loading Policy Settings...</h4>
+            <p style="margin:4px 0 0 0; font-size:0.85rem; opacity:0.85;" id="bannerDesc">Select a class section above to view the broadsheet matrix.</p>
+          </div>
+          <div id="bannerActionContainer">
+            <!-- Dynamically populated publish / save buttons -->
+          </div>
         </div>
 
-        <form id="remarksForm" onsubmit="event.preventDefault(); saveBroadsheetRemarks();">
+        <!-- Broadsheet Matrix Container -->
+        <section class="card printable-content" style="max-width:100%; overflow-x:auto;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <h3 style="margin:0;" id="broadsheetTitle">Class Section Broadsheet</h3>
+            <button class="btn" style="background:#10b981; color:white; font-weight:600;" onclick="saveBroadsheetRemarks()">💾 Save Remarks</button>
+          </div>
+
+          <form id="remarksForm" onsubmit="event.preventDefault(); saveBroadsheetRemarks();">
+            <div style="overflow-x:auto;">
+              <table class="broadsheet-matrix" id="broadsheetTable">
+                <thead>
+                  <tr id="broadsheetHeaderRow">
+                    <th style="text-align:left;">Student Code & Name</th>
+                    <th>Total</th>
+                    <th>Avg</th>
+                    <th>Rank</th>
+                    <th>Attitude</th>
+                    <th>Conduct</th>
+                    <th>Interest</th>
+                    <th style="min-width:200px;">Form Teacher Remarks</th>
+                  </tr>
+                </thead>
+                <tbody id="broadsheetBody">
+                  <tr>
+                    <td colspan="8" style="text-align:center; padding:40px; opacity:0.6;">Please select a class section above to view the broadsheet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </form>
+        </section>
+
+        <!-- Subject Mastery & Grade Distribution Summary Card -->
+        <section class="card" id="subjectMasterySection" style="display:none; margin-top:20px; border-top:3px solid var(--primary);">
+          <h3 style="margin-top:0; font-size:1.1rem; color:#818cf8;">📊 Class Academic Subject Mastery Analytics</h3>
+          <div id="subjectMasteryContent" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-top:12px;"></div>
+        </section>
+      </div>
+
+      <!-- VIEW 2: INTER-CLASS LEAGUE & COMPARATIVE ANALYTICS HUB -->
+      <div id="comparativeHubView" style="display:none;">
+        <!-- Comparative KPI Ribbon -->
+        <div class="comparative-kpi-grid" id="compKpiRibbon"></div>
+
+        <!-- Comparative Sub-Tabs -->
+        <div class="comparative-tabs-bar no-print">
+          <button class="comp-tab-pill active" id="tabBtnClassLeague" onclick="switchCompSubTab('class_league')">🏆 Inter-Class League Table</button>
+          <button class="comp-tab-pill" id="tabBtnDeptBenchmark" onclick="switchCompSubTab('dept_benchmarks')">🏛️ Departmental Benchmarks</button>
+          <button class="comp-tab-pill" id="tabBtnSubjectMastery" onclick="switchCompSubTab('subject_mastery')">📚 Cross-Class Subject Mastery</button>
+          <button class="comp-tab-pill" id="tabBtnScholars" onclick="switchCompSubTab('scholars_podium')">🌟 Scholars & Trajectory Curves</button>
+        </div>
+
+        <!-- Sub-View 1: Inter-Class League Table -->
+        <div id="compSubViewClassLeague" class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h3 style="margin:0; font-size:1.1rem;">🏆 Inter-Class Academic League Table</h3>
+              <p style="margin:3px 0 0 0; font-size:0.8rem; opacity:0.75;">Ranked standing of all class streams by mean average and quality pass rate.</p>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <select id="leagueStageFilter" style="padding:6px 12px; font-size:0.82rem;" onchange="renderClassLeagueTable()">
+                <option value="ALL">All Stages / Forms</option>
+                <option value="Form 1">Form 1</option>
+                <option value="Form 2">Form 2</option>
+                <option value="Form 3">Form 3</option>
+                <option value="Basic">Basic Division</option>
+              </select>
+            </div>
+          </div>
           <div style="overflow-x:auto;">
-            <table class="broadsheet-matrix" id="broadsheetTable">
+            <table class="broadsheet-matrix" id="leagueTable">
               <thead>
-                <tr id="broadsheetHeaderRow">
-                  <th style="text-align:left;">Student Code & Name</th>
-                  <th>Total</th>
-                  <th>Avg</th>
-                  <th>Rank</th>
-                  <th>Attitude</th>
-                  <th>Conduct</th>
-                  <th>Interest</th>
-                  <th style="min-width:200px;">Form Teacher Remarks</th>
+                <tr>
+                  <th style="width:60px;">Rank</th>
+                  <th style="text-align:left;">Class Section</th>
+                  <th>Form Master</th>
+                  <th>Students</th>
+                  <th>Scores Logged</th>
+                  <th>Class Mean Avg</th>
+                  <th>Quality Pass Rate</th>
+                  <th>Distinctions</th>
+                  <th>Movement (Δ)</th>
+                  <th style="text-align:left;">Top Scholar in Class</th>
                 </tr>
               </thead>
-              <tbody id="broadsheetBody">
-                <tr>
-                  <td colspan="8" style="text-align:center; padding:40px; opacity:0.6;">Please select a class section above to view the broadsheet.</td>
-                </tr>
-              </tbody>
+              <tbody id="leagueTableBody"></tbody>
             </table>
           </div>
-        </form>
-      </section>
+        </div>
 
-      <!-- Subject Mastery & Grade Distribution Summary Card -->
-      <section class="card" id="subjectMasterySection" style="display:none; margin-top:20px; border-top:3px solid var(--primary);">
-        <h3 style="margin-top:0; font-size:1.1rem; color:#818cf8;">📊 Class Academic Subject Mastery Analytics</h3>
-        <div id="subjectMasteryContent" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-top:12px;"></div>
-      </section>
+        <!-- Sub-View 2: Departmental Quality Benchmarks -->
+        <div id="compSubViewDeptBenchmark" class="card" style="display:none;">
+          <div style="margin-bottom:16px;">
+            <h3 style="margin:0; font-size:1.1rem;">🏛️ Departmental Quality Benchmark Matrix</h3>
+            <p style="margin:3px 0 0 0; font-size:0.8rem; opacity:0.75;">Comparison of academic departments by distinction rate (A1-B3) and WASSCE credit pass rate (A1-C6).</p>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="broadsheet-matrix">
+              <thead>
+                <tr>
+                  <th style="width:60px;">Rank</th>
+                  <th style="text-align:left;">Department</th>
+                  <th>Head of Dept (HOD)</th>
+                  <th>Subjects</th>
+                  <th>Faculty</th>
+                  <th>Mean Score</th>
+                  <th>Quality Credit Pass %</th>
+                  <th>Distinction %</th>
+                </tr>
+              </thead>
+              <tbody id="deptBenchmarkBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sub-View 3: Cross-Class Subject Mastery -->
+        <div id="compSubViewSubjectMastery" class="card" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h3 style="margin:0; font-size:1.1rem;">📚 Cross-Class Subject Mastery Comparator</h3>
+              <p style="margin:3px 0 0 0; font-size:0.8rem; opacity:0.75;">Compare performance in any specific subject across all class streams.</p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <label style="font-size:0.82rem; font-weight:700;">Select Subject:</label>
+              <select id="compSubjectSelect" style="padding:6px 12px; font-size:0.82rem;" onchange="renderSubjectMasteryBreakdown()"></select>
+            </div>
+          </div>
+          <div id="subjectMasteryRankedBars" style="display:flex; flex-direction:column; gap:14px;"></div>
+        </div>
+
+        <!-- Sub-View 4: Trajectory Curves & Scholars Podium -->
+        <div id="compSubViewScholars" class="card" style="display:none;">
+          <div style="margin-bottom:16px;">
+            <h3 style="margin:0; font-size:1.1rem;">📈 Score Trajectory Curves & Institutional Scholars</h3>
+            <p style="margin:3px 0 0 0; font-size:0.8rem; opacity:0.75;">Performance trajectories and top academic achievers across the institution.</p>
+          </div>
+          
+          <!-- Vector SVG Trajectory Curve -->
+          <div class="svg-chart-container" id="svgTrajectoryChart"></div>
+
+          <!-- Top Scholars Podium -->
+          <div style="margin-top:24px;">
+            <h4 style="margin:0 0 12px 0; font-size:0.95rem; color:#f59e0b;">🌟 Top 10 Scholars Leaderboard</h4>
+            <div class="podium-grid" id="topScholarsPodium"></div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <script src="js/broadsheet.js"></script>

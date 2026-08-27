@@ -3638,5 +3638,208 @@ thead th {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* ==========================================================================
+   ACADEMIC COMPARATIVE INTELLIGENCE & LEAGUE TABLES
+   ========================================================================== */
+
+.broadsheet-view-switcher {
+  display: flex;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.4);
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 20px;
+}
+
+[data-theme="light"] .broadsheet-view-switcher {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.view-switch-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.view-switch-btn.active {
+  background: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+}
+
+.comparative-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.comparative-kpi-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+[data-theme="light"] .comparative-kpi-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.comparative-tabs-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+}
+
+[data-theme="light"] .comparative-tabs-bar {
+  border-color: #e2e8f0;
+}
+
+.comp-tab-pill {
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary, #94a3b8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-theme="light"] .comp-tab-pill {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.comp-tab-pill.active {
+  background: #6366f1;
+  color: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.league-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-weight: 900;
+  font-size: 0.86rem;
+}
+
+.league-rank-badge.gold {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+.league-rank-badge.silver {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+  color: #ffffff;
+}
+
+.league-rank-badge.bronze {
+  background: linear-gradient(135deg, #d97706, #92400e);
+  color: #ffffff;
+}
+
+.league-rank-badge.normal {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-color, #f8fafc);
+}
+
+[data-theme="light"] .league-rank-badge.normal {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.rank-delta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.rank-delta-badge.up {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.rank-delta-badge.down {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.rank-delta-badge.neutral {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+}
+
+.podium-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.podium-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease;
+}
+
+[data-theme="light"] .podium-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.podium-card:hover {
+  transform: translateY(-2px);
+}
+
+.podium-card.rank-1 {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+.svg-chart-container {
+  width: 100%;
+  overflow-x: auto;
+  padding: 12px 0;
+}
+
+
 
 

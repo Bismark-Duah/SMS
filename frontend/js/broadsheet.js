@@ -362,10 +362,441 @@ function exportBroadsheetCSV() {
   const classNameClean = (data.class_name || "Class").replace(/[^a-zA-Z0-9_-]/g, "_");
   const semNameClean = (data.semester_name || "Term").replace(/[^a-zA-Z0-9_-]/g, "_");
   link.setAttribute("href", url);
-  link.setAttribute("download", `${classNameClean}_Broadsheet_${semNameClean}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+    document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPARATIVE INTELLIGENCE & LEAGUE TABLES CONTROLLER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let currentViewMode = 'matrix';
+let currentComparativeData = null;
+let currentCompSubTab = 'class_league';
+
+function switchBroadsheetView(mode) {
+  currentViewMode = mode;
+  const singleView = document.getElementById("singleBroadsheetView");
+  const compView = document.getElementById("comparativeHubView");
+  const tabMatrix = document.getElementById("viewTabBroadsheet");
+  const tabComp = document.getElementById("viewTabComparative");
+  const btnExport = document.getElementById("btnExportCSV");
+
+  if (mode === 'comparative') {
+    if (singleView) singleView.style.display = "none";
+    if (compView) compView.style.display = "block";
+    if (tabMatrix) tabMatrix.classList.remove("active");
+    if (tabComp) tabComp.classList.add("active");
+    if (btnExport) btnExport.style.display = "none";
+    loadComparativeData();
+  } else {
+    if (singleView) singleView.style.display = "block";
+    if (compView) compView.style.display = "none";
+    if (tabMatrix) tabMatrix.classList.add("active");
+    if (tabComp) tabComp.classList.remove("active");
+    if (btnExport) btnExport.style.display = "inline-flex";
+  }
+}
+
+function switchCompSubTab(tabName) {
+  currentCompSubTab = tabName;
+  const tabs = ['class_league', 'dept_benchmarks', 'subject_mastery', 'scholars_podium'];
+  const viewMap = {
+    class_league: 'compSubViewClassLeague',
+    dept_benchmarks: 'compSubViewDeptBenchmark',
+    subject_mastery: 'compSubViewSubjectMastery',
+    scholars_podium: 'compSubViewScholars'
+  };
+  const btnMap = {
+    class_league: 'tabBtnClassLeague',
+    dept_benchmarks: 'tabBtnDeptBenchmark',
+    subject_mastery: 'tabBtnSubjectMastery',
+    scholars_podium: 'tabBtnScholars'
+  };
+
+  tabs.forEach(t => {
+    const v = document.getElementById(viewMap[t]);
+    const b = document.getElementById(btnMap[t]);
+    if (v) v.style.display = (t === tabName) ? "block" : "none";
+    if (b) b.classList.toggle("active", t === tabName);
+  });
+}
+
+async function loadComparativeData() {
+  const headers = await getAuthHeader();
+  const semId = document.getElementById("selectSemester") ? document.getElementById("selectSemester").value : "";
+  let url = "/api/results/comparative-rankings";
+  if (semId) url += `?semester_id=${semId}`;
+
+  try {
+    const res = await fetch(url, { headers });
+    if (res.ok) {
+      currentComparativeData = await res.json();
+      renderComparativeKpis();
+      renderClassLeagueTable();
+      renderDeptBenchmarks();
+      renderSubjectMasteryOptions();
+      renderSubjectMasteryBreakdown();
+      renderSvgTrajectoryCurves();
+      renderTopScholarsPodium();
+    }
+  } catch (err) {
+    console.error("Error loading comparative rankings:", err);
+  }
+}
+
+function renderComparativeKpis() {
+  const ribbon = document.getElementById("compKpiRibbon");
+  if (!ribbon || !currentComparativeData) return;
+
+  const data = currentComparativeData;
+  const topClass = data.class_league && data.class_league[0];
+  const topDept = data.department_benchmarks && data.department_benchmarks[0];
+  const topScholar = data.top_scholars && data.top_scholars[0];
+  
+  // Calculate average quality pass rate
+  let totalPass = 0, count = 0;
+  (data.class_league || []).forEach(c => {
+    if (c.scores_recorded > 0) {
+      totalPass += c.pass_rate_pct;
+      count++;
+    }
+  });
+  const avgPass = count > 0 ? (totalPass / count).toFixed(1) : "0.0";
+
+  ribbon.innerHTML = `
+    <div class="comparative-kpi-card">
+      <div style="font-size:2rem;">🥇</div>
+      <div>
+        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#f59e0b;">Leading Stream</div>
+        <div style="font-size:1.05rem; font-weight:800;">${topClass ? topClass.class_name : 'N/A'}</div>
+        <div style="font-size:0.78rem; opacity:0.8;">Class Mean: <b>${topClass ? topClass.average_score : '0'}%</b></div>
+      </div>
+    </div>
+
+    <div class="comparative-kpi-card">
+      <div style="font-size:2rem;">🏛️</div>
+      <div>
+        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#6366f1;">Top Department</div>
+        <div style="font-size:1.05rem; font-weight:800;">${topDept ? topDept.department_name : 'N/A'}</div>
+        <div style="font-size:0.78rem; opacity:0.8;">Quality Pass: <b>${topDept ? topDept.quality_pass_rate_pct : '0'}%</b></div>
+      </div>
+    </div>
+
+    <div class="comparative-kpi-card">
+      <div style="font-size:2rem;">🌟</div>
+      <div>
+        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#10b981;">Top Scholar</div>
+        <div style="font-size:1.05rem; font-weight:800;">${topScholar ? topScholar.student_name : 'N/A'}</div>
+        <div style="font-size:0.78rem; opacity:0.8;">Average Score: <b>${topScholar ? topScholar.average_score : '0'}%</b></div>
+      </div>
+    </div>
+
+    <div class="comparative-kpi-card">
+      <div style="font-size:2rem;">📊</div>
+      <div>
+        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#0284c7;">School Quality Pass</div>
+        <div style="font-size:1.05rem; font-weight:800;">${avgPass}%</div>
+        <div style="font-size:0.78rem; opacity:0.8;">${data.class_league ? data.class_league.length : 0} Class Sections</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderClassLeagueTable() {
+  const tbody = document.getElementById("leagueTableBody");
+  if (!tbody || !currentComparativeData) return;
+
+  const stageFilter = (document.getElementById("leagueStageFilter") ? document.getElementById("leagueStageFilter").value : "ALL");
+  let classes = currentComparativeData.class_league || [];
+
+  if (stageFilter !== "ALL") {
+    classes = classes.filter(c => c.stage_name && c.stage_name.toLowerCase().includes(stageFilter.toLowerCase()));
+  }
+
+  if (classes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:30px; opacity:0.6;">No class rankings available for this filter.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = classes.map((c, idx) => {
+    let rankBadgeClass = 'normal';
+    let rankIcon = c.rank;
+    if (c.rank === 1) { rankBadgeClass = 'gold'; rankIcon = '🥇 1'; }
+    else if (c.rank === 2) { rankBadgeClass = 'silver'; rankIcon = '🥈 2'; }
+    else if (c.rank === 3) { rankBadgeClass = 'bronze'; rankIcon = '🥉 3'; }
+
+    let deltaBadge = '<span class="rank-delta-badge neutral">● 0</span>';
+    if (c.rank_delta > 0) {
+      deltaBadge = `<span class="rank-delta-badge up">▲ +${c.rank_delta}</span>`;
+    } else if (c.rank_delta < 0) {
+      deltaBadge = `<span class="rank-delta-badge down">▼ ${c.rank_delta}</span>`;
+    }
+
+    const myClassHighlight = c.is_my_class ? 'style="background: rgba(99, 102, 241, 0.08); font-weight: 700;"' : '';
+    const topStu = c.top_student ? `<b>${c.top_student.name}</b> (${c.top_student.average}%)` : '<span style="opacity:0.5;">None</span>';
+
+    return `
+      <tr ${myClassHighlight}>
+        <td><span class="league-rank-badge ${rankBadgeClass}">${rankIcon}</span></td>
+        <td style="text-align:left;">
+          <div style="font-weight:700;">${c.class_name}</div>
+          <div style="font-size:0.75rem; opacity:0.75;">${c.stage_name} ${c.is_my_class ? '• <span style="color:#818cf8;">My Class</span>' : ''}</div>
+        </td>
+        <td>${c.form_master_name}</td>
+        <td><b>${c.student_count}</b></td>
+        <td>${c.scores_recorded}</td>
+        <td>
+          <div style="font-weight:800; color:#0284c7;">${c.average_score}%</div>
+          <div style="width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; margin-top:4px;">
+            <div style="width:${Math.min(100, c.average_score)}%; height:100%; background:#0284c7; border-radius:2px;"></div>
+          </div>
+        </td>
+        <td>
+          <span style="display:inline-block; padding:3px 8px; border-radius:6px; font-weight:700; font-size:0.78rem; background:${c.pass_rate_pct >= 75 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color:${c.pass_rate_pct >= 75 ? '#10b981' : '#ef4444'};">
+            ${c.pass_rate_pct}%
+          </span>
+        </td>
+        <td><b style="color:#f59e0b;">${c.distinctions_count}</b></td>
+        <td>${deltaBadge}</td>
+        <td style="text-align:left; font-size:0.82rem;">${topStu}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderDeptBenchmarks() {
+  const tbody = document.getElementById("deptBenchmarkBody");
+  if (!tbody || !currentComparativeData) return;
+
+  const depts = currentComparativeData.department_benchmarks || [];
+  if (depts.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; opacity:0.6;">No departmental benchmarks available.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = depts.map(d => {
+    let rankBadgeClass = 'normal';
+    if (d.rank === 1) rankBadgeClass = 'gold';
+    else if (d.rank === 2) rankBadgeClass = 'silver';
+    else if (d.rank === 3) rankBadgeClass = 'bronze';
+
+    const myDeptHighlight = d.is_my_department ? 'style="background: rgba(16, 185, 129, 0.08); font-weight: 700;"' : '';
+
+    return `
+      <tr ${myDeptHighlight}>
+        <td><span class="league-rank-badge ${rankBadgeClass}">${d.rank}</span></td>
+        <td style="text-align:left;">
+          <div style="font-weight:700;">${d.department_name}</div>
+          <div style="font-size:0.75rem; opacity:0.75;">Code: ${d.department_code} ${d.is_my_department ? '• <span style="color:#10b981;">My Dept</span>' : ''}</div>
+        </td>
+        <td><b>${d.hod_name}</b></td>
+        <td>${d.subjects_count}</td>
+        <td>${d.faculty_count}</td>
+        <td><b style="color:#0284c7;">${d.average_score}%</b></td>
+        <td>
+          <span style="display:inline-block; padding:3px 8px; border-radius:6px; font-weight:700; font-size:0.78rem; background:rgba(16,185,129,0.15); color:#10b981;">
+            ${d.quality_pass_rate_pct}%
+          </span>
+        </td>
+        <td><b style="color:#f59e0b;">${d.distinction_rate_pct}%</b></td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderSubjectMasteryOptions() {
+  const select = document.getElementById("compSubjectSelect");
+  if (!select || !currentComparativeData) return;
+
+  const subjects = currentComparativeData.subject_mastery || [];
+  select.innerHTML = '';
+
+  if (subjects.length === 0) {
+    select.innerHTML = '<option value="">No subjects tested</option>';
+    return;
+  }
+
+  subjects.forEach((sub, idx) => {
+    const opt = document.createElement("option");
+    opt.value = sub.subject_id;
+    opt.textContent = `${sub.subject_name} (School Avg: ${sub.overall_average}%)`;
+    if (idx === 0) opt.selected = true;
+    select.appendChild(opt);
+  });
+}
+
+function renderSubjectMasteryBreakdown() {
+  const container = document.getElementById("subjectMasteryRankedBars");
+  const select = document.getElementById("compSubjectSelect");
+  if (!container || !select || !currentComparativeData) return;
+
+  const selectedSubId = parseInt(select.value, 10);
+  const subjectObj = (currentComparativeData.subject_mastery || []).find(s => s.subject_id === selectedSubId);
+
+  if (!subjectObj || !subjectObj.class_rankings || subjectObj.class_rankings.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:30px; opacity:0.6;">No class rankings available for this subject.</div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(99,102,241,0.06); padding:12px 16px; border-radius:10px; border:1px dashed rgba(99,102,241,0.2);">
+      <div>
+        <h4 style="margin:0; font-size:0.95rem; color:#818cf8;">📌 Subject Performance Benchmark: ${subjectObj.subject_name}</h4>
+        <span style="font-size:0.78rem; opacity:0.8;">Total Students Tested: <b>${subjectObj.total_students_tested}</b></span>
+      </div>
+      <div style="text-align:right;">
+        <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; opacity:0.75;">School-Wide Average</span>
+        <div style="font-size:1.25rem; font-weight:900; color:#0284c7;">${subjectObj.overall_average}%</div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+      ${subjectObj.class_rankings.map((c, idx) => `
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="width:24px; height:24px; border-radius:50%; background:${idx === 0 ? '#f59e0b' : 'rgba(255,255,255,0.1)'}; color:${idx === 0 ? '#fff' : 'inherit'}; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">${idx + 1}</span>
+              <span style="font-weight:700; font-size:0.9rem;">${c.class_name}</span>
+              <span style="font-size:0.75rem; opacity:0.65;">(${c.students_tested} students)</span>
+            </div>
+            <div style="font-weight:900; font-size:1rem; color:${c.average_score >= 70 ? '#10b981' : (c.average_score >= 50 ? '#0284c7' : '#ef4444')};">
+              ${c.average_score}%
+            </div>
+          </div>
+          <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+            <div style="width:${Math.min(100, c.average_score)}%; height:100%; background:${c.average_score >= 70 ? '#10b981' : (c.average_score >= 50 ? '#0284c7' : '#ef4444')}; border-radius:3px;"></div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderSvgTrajectoryCurves() {
+  const container = document.getElementById("svgTrajectoryChart");
+  if (!container || !currentComparativeData) return;
+
+  const classes = (currentComparativeData.class_league || []).slice(0, 5); // Top 5 classes
+  if (classes.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:30px; opacity:0.6;">No trajectory data available.</div>';
+    return;
+  }
+
+  const semName = currentComparativeData.semester.name;
+  const prevSemName = currentComparativeData.semester.previous_semester_name || "Prior Term";
+
+  const colors = ['#6366f1', '#10b981', '#f59e0b', '#0284c7', '#ec4899'];
+  let paths = '';
+  let dots = '';
+  let legend = '';
+
+  classes.forEach((c, idx) => {
+    const color = colors[idx % colors.length];
+    const prevScore = c.previous_average !== null ? c.previous_average : (c.average_score * 0.95);
+    const currScore = c.average_score;
+
+    // SVG coordinate mapping: Width 600, Height 200, Y: 100% -> 30px, 0% -> 170px
+    const y1 = 170 - (prevScore / 100 * 140);
+    const y2 = 170 - (currScore / 100 * 140);
+
+    paths += `<path d="M 120 ${y1} C 250 ${y1}, 350 ${y2}, 480 ${y2}" fill="none" stroke="${color}" stroke-width="3" />`;
+    dots += `<circle cx="120" cy="${y1}" r="5" fill="${color}" /><circle cx="480" cy="${y2}" r="5" fill="${color}" />`;
+    
+    legend += `
+      <div style="display:flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:700;">
+        <span style="width:10px; height:10px; border-radius:50%; background:${color};"></span>
+        <span>${c.class_name} (${currScore}%)</span>
+      </div>
+    `;
+  });
+
+  container.innerHTML = `
+    <svg width="100%" height="220" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg" style="background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
+      <!-- Grid Lines -->
+      <line x1="80" y1="30" x2="520" y2="30" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4" />
+      <text x="40" y="34" fill="#94a3b8" font-size="11" font-weight="600">100%</text>
+
+      <line x1="80" y1="100" x2="520" y2="100" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4" />
+      <text x="45" y="104" fill="#94a3b8" font-size="11" font-weight="600">50%</text>
+
+      <line x1="80" y1="170" x2="520" y2="170" stroke="rgba(255,255,255,0.08)" />
+      <text x="50" y="174" fill="#94a3b8" font-size="11" font-weight="600">0%</text>
+
+      <!-- Trajectory Paths & Dots -->
+      ${paths}
+      ${dots}
+
+      <!-- Term Labels -->
+      <text x="120" y="198" fill="#94a3b8" font-size="12" font-weight="700" text-anchor="middle">📅 ${prevSemName}</text>
+      <text x="480" y="198" fill="#818cf8" font-size="12" font-weight="700" text-anchor="middle">📅 ${semName} (Current)</text>
+    </svg>
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; justify-content:center;">
+      ${legend}
+    </div>
+  `;
+}
+
+function renderTopScholarsPodium() {
+  const container = document.getElementById("topScholarsPodium");
+  if (!container || !currentComparativeData) return;
+
+  const scholars = currentComparativeData.top_scholars || [];
+  if (scholars.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:20px; opacity:0.6;">No scholar records logged for this term.</div>';
+    return;
+  }
+
+  container.innerHTML = scholars.map((s, idx) => {
+    let rankBadgeClass = 'normal';
+    let icon = '🎖️';
+    if (idx === 0) { rankBadgeClass = 'gold'; icon = '👑'; }
+    else if (idx === 1) { rankBadgeClass = 'silver'; icon = '🥈'; }
+    else if (idx === 2) { rankBadgeClass = 'bronze'; icon = '🥉'; }
+
+    return `
+      <div class="podium-card ${idx === 0 ? 'rank-1' : ''}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="font-size:1.6rem;">${icon}</div>
+            <div>
+              <h4 style="margin:0; font-size:0.95rem; font-weight:800;">${s.student_name}</h4>
+              <span style="font-size:0.74rem; opacity:0.75;">${s.student_code} • ${s.class_name}</span>
+            </div>
+          </div>
+          <span class="league-rank-badge ${rankBadgeClass}">${idx + 1}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+          <span style="font-size:0.78rem; opacity:0.8;">Subjects Tested: <b>${s.subjects_taken}</b></span>
+          <div style="font-size:1.15rem; font-weight:900; color:#10b981;">${s.average_score}%</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function handlePrintAction() {
+  if (currentViewMode === 'comparative') {
+    const s = document.createElement('style');
+    s.id = '_compLandscapeHint';
+    s.textContent = '@page{size:A4 landscape; margin: 10mm;}';
+    document.head.appendChild(s);
+    window.print();
+    setTimeout(() => {
+      const el = document.getElementById('_compLandscapeHint');
+      if (el) el.parentNode.removeChild(el);
+    }, 1000);
+  } else {
+    const s = document.createElement('style');
+    s.id = '_landscapeHint';
+    s.textContent = '@page{size:A4 landscape;}';
+    document.head.appendChild(s);
+    window.print();
+    setTimeout(() => {
+      const el = document.getElementById('_landscapeHint');
+      if (el) el.parentNode.removeChild(el);
+    }, 1000);
+  }
+}
+
 

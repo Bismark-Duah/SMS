@@ -2856,6 +2856,161 @@ function escapeHtml(text) {
   });
 }
 
+// ── Role-Scoped Comparative Intelligence Dashboard Widget ────────────────────
+async function loadComparativeDashboardWidget() {
+  const container = document.getElementById('executiveAnalyticsContainer') || document.querySelector('.analytics-section');
+  if (!container) return;
+
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('accessToken');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  try {
+    const res = await fetch(`${API_BASE}/results/comparative-rankings`, { headers });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const uctx = data.user_context || {};
+    const topClass = data.class_league && data.class_league[0];
+    const topDept = data.department_benchmarks && data.department_benchmarks[0];
+    const topScholar = data.top_scholars && data.top_scholars[0];
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.marginTop = '20px';
+    card.style.borderTop = '3px solid #6366f1';
+
+    let widgetContent = '';
+
+    if (uctx.is_admin_exec) {
+      widgetContent = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+              <span>🏆 Academic Comparative Intelligence & League Standings</span>
+              <span style="font-size:0.72rem; padding:2px 8px; border-radius:999px; background:rgba(99,102,241,0.15); color:#818cf8; font-weight:700;">${escapeHtml(data.semester.name)}</span>
+            </h3>
+            <p style="margin:2px 0 0 0; font-size:0.78rem; opacity:0.75;">Institutional standing across classes, departments, and top scholars.</p>
+          </div>
+          <a href="broadsheet.html" class="btn btn-sm" style="background:#6366f1; color:#fff; font-weight:700; text-decoration:none;">📜 Open Full Broadsheet & League</a>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:14px;">
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px;">
+            <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; color:#f59e0b;">🥇 1st Place Stream</div>
+            <div style="font-size:0.95rem; font-weight:800; margin-top:2px;">${topClass ? escapeHtml(topClass.class_name) : 'N/A'}</div>
+            <div style="font-size:0.75rem; opacity:0.8;">Avg: <b>${topClass ? topClass.average_score : 0}%</b> | Pass: <b>${topClass ? topClass.pass_rate_pct : 0}%</b></div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px;">
+            <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; color:#6366f1;">🏛️ Top Department</div>
+            <div style="font-size:0.95rem; font-weight:800; margin-top:2px;">${topDept ? escapeHtml(topDept.department_name) : 'N/A'}</div>
+            <div style="font-size:0.75rem; opacity:0.8;">Quality Pass: <b>${topDept ? topDept.quality_pass_rate_pct : 0}%</b></div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px;">
+            <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; color:#10b981;">🌟 Top Scholar</div>
+            <div style="font-size:0.95rem; font-weight:800; margin-top:2px;">${topScholar ? escapeHtml(topScholar.student_name) : 'N/A'}</div>
+            <div style="font-size:0.75rem; opacity:0.8;">${topScholar ? escapeHtml(topScholar.class_name) : ''} (<b>${topScholar ? topScholar.average_score : 0}%</b>)</div>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table class="broadsheet-matrix" style="font-size:0.82rem;">
+            <thead>
+              <tr>
+                <th style="width:50px;">Rank</th>
+                <th style="text-align:left;">Class Section</th>
+                <th>Form Master</th>
+                <th>Mean Avg</th>
+                <th>Pass Rate</th>
+                <th>Δ</th>
+                <th style="text-align:left;">Top Student</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(data.class_league || []).slice(0, 5).map(c => `
+                <tr>
+                  <td><span class="league-rank-badge ${c.rank === 1 ? 'gold' : (c.rank === 2 ? 'silver' : (c.rank === 3 ? 'bronze' : 'normal'))}" style="width:24px; height:24px; font-size:0.75rem;">${c.rank}</span></td>
+                  <td style="text-align:left; font-weight:700;">${escapeHtml(c.class_name)}</td>
+                  <td>${escapeHtml(c.form_master_name)}</td>
+                  <td><b style="color:#0284c7;">${c.average_score}%</b></td>
+                  <td><span style="font-weight:700; color:${c.pass_rate_pct >= 75 ? '#10b981' : '#ef4444'};">${c.pass_rate_pct}%</span></td>
+                  <td><span class="rank-delta-badge ${c.rank_delta > 0 ? 'up' : (c.rank_delta < 0 ? 'down' : 'neutral')}">${c.rank_delta > 0 ? '▲ +' + c.rank_delta : (c.rank_delta < 0 ? '▼ ' + c.rank_delta : '● 0')}</span></td>
+                  <td style="text-align:left;">${c.top_student ? escapeHtml(c.top_student.name) + ' (' + c.top_student.average + '%)' : 'None'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } else if (uctx.is_form_master) {
+      const myClass = (data.class_league || []).find(c => c.is_my_class);
+      widgetContent = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div>
+            <h3 style="margin:0; font-size:1.05rem;">📊 My Class Form Standing</h3>
+            <p style="margin:2px 0 0 0; font-size:0.78rem; opacity:0.75;">Performance of your assigned class in the inter-class rankings.</p>
+          </div>
+          <a href="broadsheet.html" class="btn btn-sm" style="background:#6366f1; color:#fff; font-weight:700; text-decoration:none;">📜 Open Broadsheet</a>
+        </div>
+        ${myClass ? `
+          <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2); border-radius:12px; padding:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div>
+              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#818cf8;">Class Section</div>
+              <div style="font-size:1.2rem; font-weight:900;">${escapeHtml(myClass.class_name)}</div>
+              <div style="font-size:0.8rem; opacity:0.8; margin-top:2px;">Rank: <b>#${myClass.rank}</b> of ${(data.class_league || []).length} Classes</div>
+            </div>
+            <div style="display:flex; gap:16px;">
+              <div style="text-align:center;">
+                <div style="font-size:0.72rem; opacity:0.75; font-weight:700;">CLASS MEAN</div>
+                <div style="font-size:1.3rem; font-weight:900; color:#0284c7;">${myClass.average_score}%</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:0.72rem; opacity:0.75; font-weight:700;">PASS RATE</div>
+                <div style="font-size:1.3rem; font-weight:900; color:#10b981;">${myClass.pass_rate_pct}%</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:0.72rem; opacity:0.75; font-weight:700;">DISTINCTIONS</div>
+                <div style="font-size:1.3rem; font-weight:900; color:#f59e0b;">${myClass.distinctions_count}</div>
+              </div>
+            </div>
+          </div>
+        ` : '<p style="opacity:0.6;">No class assigned.</p>'}
+      `;
+    } else if (uctx.is_teacher && data.teacher_classes_benchmark && data.teacher_classes_benchmark.length > 0) {
+      widgetContent = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div>
+            <h3 style="margin:0; font-size:1.05rem;">🎯 My Allocated Classes Performance Benchmark</h3>
+            <p style="margin:2px 0 0 0; font-size:0.78rem; opacity:0.75;">Comparison of student mastery across your assigned classes.</p>
+          </div>
+          <a href="bulk-entry.html" class="btn btn-sm" style="background:#0284c7; color:#fff; font-weight:700; text-decoration:none;">✍️ Marks Entry</a>
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+          ${data.teacher_classes_benchmark.map(b => `
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px;">
+              <div style="font-weight:800; font-size:0.95rem;">${escapeHtml(b.class_name)}</div>
+              <div style="font-size:0.75rem; color:#818cf8; font-weight:600;">${escapeHtml(b.subject_name)}</div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                <span style="font-size:0.78rem; opacity:0.8;">${b.students_count} Students</span>
+                <span style="font-size:1.05rem; font-weight:900; color:#10b981;">${b.average_score}%</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    if (widgetContent) {
+      card.innerHTML = widgetContent;
+      container.appendChild(card);
+    }
+  } catch (err) {
+    console.error('Failed to load comparative dashboard widget:', err);
+  }
+}
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   window.API_BASE = API_BASE;
@@ -2863,4 +3018,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDashboardStats();
   loadExecutiveAnalytics();
   loadAnalytics();
+  loadComparativeDashboardWidget();
 });
+

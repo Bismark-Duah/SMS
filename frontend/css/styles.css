@@ -2848,6 +2848,91 @@ thead th {
   color: #ffffff;
 }
 
+/* ── Proactive Voice Dictation Status Bar ── */
+.edubot-voice-status-bar {
+  padding: 8px 14px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  animation: edubotStatusIn 0.2s ease;
+  line-height: 1.35;
+}
+
+@keyframes edubotStatusIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.edubot-voice-status-bar.info {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.edubot-voice-status-bar.listening {
+  background: #fef2f2;
+  color: #b91c1c;
+  animation: edubotPulseStatus 1.5s infinite;
+}
+
+@keyframes edubotPulseStatus {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.edubot-voice-status-bar.transcribing {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.edubot-voice-status-bar.warning {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.edubot-voice-status-bar.error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+[data-theme="dark"] .edubot-voice-status-bar,
+[data-theme="midnight"] .edubot-voice-status-bar,
+.theme-dark .edubot-voice-status-bar {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .edubot-voice-status-bar.info,
+[data-theme="midnight"] .edubot-voice-status-bar.info {
+  background: rgba(30, 58, 138, 0.3);
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .edubot-voice-status-bar.listening,
+[data-theme="midnight"] .edubot-voice-status-bar.listening {
+  background: rgba(153, 27, 27, 0.3);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .edubot-voice-status-bar.transcribing,
+[data-theme="midnight"] .edubot-voice-status-bar.transcribing {
+  background: rgba(6, 78, 59, 0.3);
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .edubot-voice-status-bar.warning,
+[data-theme="midnight"] .edubot-voice-status-bar.warning {
+  background: rgba(146, 64, 14, 0.3);
+  color: #fde68a;
+}
+
+[data-theme="dark"] .edubot-voice-status-bar.error,
+[data-theme="midnight"] .edubot-voice-status-bar.error {
+  background: rgba(153, 27, 27, 0.3);
+  color: #fca5a5;
+}
+
 /* ── LAN Wi-Fi Multi-Device Sharing Hub ── */
 .lan-hub-trigger {
   display: inline-flex;

@@ -1647,6 +1647,7 @@
       </div>
       <div class="edubot-modal-body" id="edubot-modal-msgs"></div>
       <div class="edubot-chips-bar" id="edubot-modal-chips"></div>
+      <div class="edubot-voice-status-bar" id="edubot-voice-status" style="display:none;"></div>
       <div class="edubot-input-footer">
         <input id="edubot-global-input" type="text" placeholder="Ask, or type 'find [student / class / teacher / house]'…" autocomplete="off" />
         <button id="edubot-voice-btn" class="no-print" title="Voice Search (Hands-Free Dictation)" aria-label="Voice Search">🎙️</button>
@@ -1657,6 +1658,7 @@
 
     const msgsBox = document.getElementById('edubot-modal-msgs');
     const chipsBox = document.getElementById('edubot-modal-chips');
+    const voiceStatusEl = document.getElementById('edubot-voice-status');
     const input = document.getElementById('edubot-global-input');
     const voiceBtn = document.getElementById('edubot-voice-btn');
     const sendBtn = document.getElementById('edubot-global-send');
@@ -1665,7 +1667,23 @@
 
     let isOpen = false;
 
-    // Voice Dictation (Web Speech API)
+    let voiceStatusTimer = null;
+    function showVoiceStatus(htmlMsg, statusType = 'info', autoHideMs = 0) {
+      if (voiceStatusTimer) clearTimeout(voiceStatusTimer);
+      if (!voiceStatusEl) return;
+      voiceStatusEl.className = `edubot-voice-status-bar ${statusType}`;
+      voiceStatusEl.innerHTML = htmlMsg;
+      voiceStatusEl.style.display = 'flex';
+      if (autoHideMs > 0) {
+        voiceStatusTimer = setTimeout(() => hideVoiceStatus(), autoHideMs);
+      }
+    }
+
+    function hideVoiceStatus() {
+      if (voiceStatusEl) voiceStatusEl.style.display = 'none';
+    }
+
+    // Voice Dictation (Web Speech API) with Proactive Permission Priming
     let recognition = null;
     let isListening = false;
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1680,19 +1698,32 @@
           isListening = true;
           voiceBtn.classList.add('listening');
           voiceBtn.setAttribute('title', 'Listening… speak now');
+          showVoiceStatus('🔴 <b>Listening…</b> Say e.g. <i>"find Kojo Mensah"</i> or <i>"class 1 Science"</i>', 'listening');
+        };
+
+        recognition.onaudiostart = () => {
+          showVoiceStatus('🔴 <b>Listening…</b> Speak clearly into your microphone', 'listening');
         };
 
         recognition.onresult = (evt) => {
           const transcript = evt.results[0][0].transcript;
           if (transcript) {
             input.value = transcript;
+            showVoiceStatus(`✨ <b>Heard:</b> "${transcript}"`, 'transcribing', 1800);
             handleSend(transcript);
           }
         };
 
-        recognition.onerror = () => {
+        recognition.onerror = (evt) => {
           isListening = false;
           voiceBtn.classList.remove('listening');
+          if (evt.error === 'not-allowed' || evt.error === 'service-not-allowed') {
+            showVoiceStatus('⚠️ <b>Microphone blocked.</b> Click the <b>🔒 lock icon</b> in your browser address bar to allow microphone.', 'error', 8000);
+          } else if (evt.error === 'no-speech') {
+            showVoiceStatus('👂 <b>No speech heard.</b> Tap 🎙️ and speak again.', 'warning', 3500);
+          } else {
+            showVoiceStatus(`⚠️ <b>Voice notice:</b> ${evt.error || 'Check microphone'}`, 'warning', 4000);
+          }
         };
 
         recognition.onend = () => {
@@ -1705,8 +1736,17 @@
           if (!recognition) return;
           if (isListening) {
             recognition.stop();
+            hideVoiceStatus();
           } else {
-            try { recognition.start(); } catch (_) {}
+            showVoiceStatus('🎙️ <b>Activating microphone…</b> (Click <b>Allow</b> if prompted above)', 'info');
+            try {
+              recognition.start();
+            } catch (_) {
+              try {
+                recognition.stop();
+                setTimeout(() => recognition.start(), 150);
+              } catch (e) {}
+            }
           }
         });
       } catch (_) {

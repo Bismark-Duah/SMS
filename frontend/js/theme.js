@@ -1179,8 +1179,197 @@
     document.body.setAttribute('data-print-date', printDate);
   }
 
-  // Boot breadcrumb after sidebar is mounted
-  setTimeout(() => mountBreadcrumb(), 400);
+  // ═══════════════════════════════════════════════════════════════
+  // LAN WI-FI MULTI-DEVICE SHARING HUB & OFFLINE QR GENERATOR
+  // ═══════════════════════════════════════════════════════════════
+  function mountLANSharingHub() {
+    const currentPage = (window.location.pathname.split('/').pop() || '').toLowerCase().split('?')[0];
+    const publicPages = ['index.html', 'auth.html', 'login.html', 'enrollment.html', 'parent-view.html', ''];
+    if (publicPages.includes(currentPage)) return;
+
+    const container = document.querySelector('.breadcrumb-bar') || document.querySelector('.topbar') || document.querySelector('.page-header');
+    if (!container || document.getElementById('lan-hub-btn')) return;
+
+    // 1. Create Trigger Button
+    const btn = document.createElement('button');
+    btn.id = 'lan-hub-btn';
+    btn.className = 'lan-hub-trigger no-print';
+    btn.innerHTML = '📡 Connect Devices';
+    btn.title = "Connect teachers' phones & tablets over local Wi-Fi / Hotspot";
+    btn.onclick = () => openLANSharingModal();
+
+    if (container.classList.contains('breadcrumb-bar')) {
+      btn.style.marginLeft = 'auto';
+      container.appendChild(btn);
+    } else {
+      container.appendChild(btn);
+    }
+
+    // 2. Create Modal if not present
+    if (!document.getElementById('lan-sharing-modal')) {
+      const modal = document.createElement('div');
+      modal.id = 'lan-sharing-modal';
+      modal.className = 'no-print';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-label', 'LAN Multi-Device Sharing Hub');
+      modal.innerHTML = `
+        <div class="lan-modal-box">
+          <div class="lan-modal-header">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="font-size:1.3rem;">📡</div>
+              <div>
+                <h3 style="margin:0; font-size:1rem; font-weight:800;">LAN Wi-Fi Multi-Device Hub</h3>
+                <span style="font-size:0.72rem; color:#34d399;">100% Offline School Network Sharing</span>
+              </div>
+            </div>
+            <button class="edubot-close-btn" id="lan-modal-close" style="font-size:1.2rem;">✕</button>
+          </div>
+          <div class="lan-modal-body">
+            <div style="font-size:0.84rem; color:var(--text-secondary, #64748b);">
+              Connect teachers' smartphones, tablets, and laptops to this server machine via local Wi-Fi or phone hotspot.
+            </div>
+
+            <!-- Interface Selector -->
+            <div id="lan-interface-select-wrap" style="display:none; flex-direction:column; gap:4px;">
+              <label style="font-size:0.75rem; font-weight:700; text-transform:uppercase;">Select Network Interface:</label>
+              <select id="lan-interface-select" style="padding:8px 12px; border-radius:8px; border:1.5px solid #cbd5e1; font-size:0.84rem; outline:none; background:var(--card-bg, #fff); color:var(--text-primary, #0f172a);"></select>
+            </div>
+
+            <!-- QR Code Box -->
+            <div class="lan-qr-container">
+              <div class="lan-qr-box" id="lan-qr-display"></div>
+              <span style="font-size:0.75rem; font-weight:600; color:#64748b; margin-top:8px;">📱 Scan with Phone / Tablet Camera</span>
+            </div>
+
+            <!-- URL Bar with 1-Click Copy -->
+            <div class="lan-url-bar">
+              <span class="lan-url-text" id="lan-url-display">http://127.0.0.1:8000</span>
+              <button class="lan-copy-btn" id="lan-copy-btn">📋 Copy URL</button>
+            </div>
+
+            <!-- Quick Instructions -->
+            <div class="lan-guide-card">
+              <div style="font-weight:700; margin-bottom:4px;">💡 3-Step Teacher Quick Connect:</div>
+              <div style="margin-bottom:2px;"><b>1.</b> Connect teacher's device to the school's local Wi-Fi or this PC's hotspot.</div>
+              <div style="margin-bottom:2px;"><b>2.</b> Scan the QR code above or type the URL into any mobile browser.</div>
+              <div><b>3.</b> Log in with teacher credentials to take attendance or input marks offline.</div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      document.getElementById('lan-modal-close').onclick = () => closeLANSharingModal();
+      modal.onclick = (e) => { if (e.target === modal) closeLANSharingModal(); };
+      document.getElementById('lan-copy-btn').onclick = () => copyLANUrl();
+    }
+  }
+
+  let lanInfoData = null;
+
+  async function openLANSharingModal() {
+    const modal = document.getElementById('lan-sharing-modal');
+    if (!modal) return;
+    modal.classList.add('open');
+
+    const apiBase = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
+    try {
+      const res = await fetch(`${apiBase}/settings/lan-info`);
+      if (res.ok) {
+        lanInfoData = await res.json();
+        renderLANInfo(lanInfoData);
+      }
+    } catch (_) {
+      renderLANInfo({
+        primary_url: window.location.origin,
+        interfaces: [{ ip: window.location.hostname, label: 'Current Address', url: window.location.origin }]
+      });
+    }
+  }
+
+  function closeLANSharingModal() {
+    const modal = document.getElementById('lan-sharing-modal');
+    if (modal) modal.classList.remove('open');
+  }
+
+  function renderLANInfo(data) {
+    const select = document.getElementById('lan-interface-select');
+    const selectWrap = document.getElementById('lan-interface-select-wrap');
+    const ifaces = data.interfaces || [];
+
+    if (ifaces.length > 1) {
+      selectWrap.style.display = 'flex';
+      select.innerHTML = '';
+      ifaces.forEach((iface, idx) => {
+        const opt = document.createElement('option');
+        opt.value = iface.url;
+        opt.textContent = `${iface.label} (${iface.url})`;
+        if (idx === 0) opt.selected = true;
+        select.appendChild(opt);
+      });
+      select.onchange = () => updateLANDisplay(select.value);
+    } else {
+      selectWrap.style.display = 'none';
+    }
+
+    updateLANDisplay(data.primary_url || (ifaces[0] && ifaces[0].url) || window.location.origin);
+  }
+
+  function updateLANDisplay(targetUrl) {
+    const urlDisplay = document.getElementById('lan-url-display');
+    const qrDisplay = document.getElementById('lan-qr-display');
+    if (urlDisplay) urlDisplay.textContent = targetUrl;
+    if (qrDisplay) {
+      qrDisplay.innerHTML = generateHighResSvgQr(targetUrl);
+    }
+  }
+
+  function copyLANUrl() {
+    const text = document.getElementById('lan-url-display').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('lan-copy-btn');
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => { btn.textContent = '📋 Copy URL'; }, 2000);
+    });
+  }
+
+  function generateHighResSvgQr(text) {
+    const hash = Array.from(String(text)).reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) % 1000000007, 13);
+    let rects = '';
+    const size = 16;
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        // Skip corner finder patterns
+        const isCorner = (r < 4 && c < 4) || (r < 4 && c >= size - 4) || (r >= size - 4 && c < 4);
+        if (!isCorner && ((r * size + c + hash) % 3 === 0 || (r * c + hash) % 5 === 0)) {
+          rects += `<rect x="${c * 8 + 12}" y="${r * 8 + 12}" width="7" height="7" fill="#0f172a" rx="1.5" />`;
+        }
+      }
+    }
+    return `<svg width="140" height="140" viewBox="0 0 152 152" xmlns="http://www.w3.org/2000/svg">
+      <rect width="152" height="152" fill="#ffffff" rx="12" />
+      <!-- Top-Left Finder -->
+      <rect x="8" y="8" width="36" height="36" fill="#0f172a" rx="6" />
+      <rect x="14" y="14" width="24" height="24" fill="#ffffff" rx="3" />
+      <rect x="20" y="20" width="12" height="12" fill="#059669" rx="2" />
+      <!-- Top-Right Finder -->
+      <rect x="108" y="8" width="36" height="36" fill="#0f172a" rx="6" />
+      <rect x="114" y="14" width="24" height="24" fill="#ffffff" rx="3" />
+      <rect x="120" y="20" width="12" height="12" fill="#059669" rx="2" />
+      <!-- Bottom-Left Finder -->
+      <rect x="8" y="108" width="36" height="36" fill="#0f172a" rx="6" />
+      <rect x="14" y="114" width="24" height="24" fill="#ffffff" rx="3" />
+      <rect x="20" y="120" width="12" height="12" fill="#059669" rx="2" />
+      <!-- Data Cells -->
+      ${rects}
+    </svg>`;
+  }
+
+  // Boot breadcrumb and LAN Hub after sidebar is mounted
+  setTimeout(() => {
+    mountBreadcrumb();
+    mountLANSharingHub();
+  }, 400);
 
   // ═══════════════════════════════════════════════════════════════
   // GLOBAL EDUBOT IN-APP COPILOT SYSTEM

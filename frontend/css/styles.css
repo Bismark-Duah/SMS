@@ -2848,6 +2848,184 @@ thead th {
   color: #ffffff;
 }
 
+/* ── LAN Wi-Fi Multi-Device Sharing Hub ── */
+.lan-hub-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.lan-hub-trigger:hover {
+  background: #059669;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+[data-theme="dark"] .lan-hub-trigger,
+[data-theme="midnight"] .lan-hub-trigger,
+.theme-dark .lan-hub-trigger {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+#lan-sharing-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(6px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: lanFadeIn 0.2s ease;
+}
+
+#lan-sharing-modal.open {
+  display: flex;
+}
+
+@keyframes lanFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lan-modal-box {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 480px;
+  max-width: 100%;
+  box-shadow: 0 24px 64px -12px rgba(15, 23, 42, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme="dark"] .lan-modal-box,
+[data-theme="midnight"] .lan-modal-box,
+.theme-dark .lan-modal-box {
+  background: #1e293b;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lan-modal-header {
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #ffffff;
+}
+
+.lan-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.lan-qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+}
+
+[data-theme="dark"] .lan-qr-container,
+[data-theme="midnight"] .lan-qr-container,
+.theme-dark .lan-qr-container {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.lan-qr-box {
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lan-url-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px 12px;
+}
+
+[data-theme="dark"] .lan-url-bar,
+[data-theme="midnight"] .lan-url-bar,
+.theme-dark .lan-url-bar {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.lan-url-text {
+  font-family: monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #059669;
+  flex: 1;
+  word-break: break-all;
+}
+
+.lan-copy-btn {
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lan-copy-btn:hover {
+  background: #047857;
+}
+
+.lan-guide-card {
+  background: rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #334155;
+}
+
+[data-theme="dark"] .lan-guide-card,
+[data-theme="midnight"] .lan-guide-card,
+.theme-dark .lan-guide-card {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.2);
+  color: #cbd5e1;
+}
+
 /* ==========================================================================
    ACADEMIC SELECTION & CONTAINER DESIGN SYSTEM
    Standardized Grid, Card, and Chip Tiles across Super-Admin, Programs,

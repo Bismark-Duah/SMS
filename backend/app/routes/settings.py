@@ -494,3 +494,74 @@ def seed_default_settings(db: Session):
         if not db.query(Setting).filter(Setting.key == key).first():
             db.add(Setting(key=key, value=val))
     db.commit()
+
+
+@router.get("/lan-info")
+def get_lan_info():
+    """
+    Returns the host machine's local IPv4 addresses and connection URLs
+    for offline Wi-Fi / LAN multi-device access across teachers' tablets & phones.
+    """
+    import socket
+    interfaces = []
+    seen_ips = set()
+
+    # 1. Probe primary network interface
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.5)
+        s.connect(("10.255.255.255", 1))
+        primary_ip = s.getsockname()[0]
+        s.close()
+        if primary_ip and not primary_ip.startswith("127.") and primary_ip not in seen_ips:
+            seen_ips.add(primary_ip)
+            interfaces.append({
+                "ip": primary_ip,
+                "label": "Primary Wi-Fi / School LAN",
+                "url": f"http://{primary_ip}:8000",
+                "is_primary": True
+            })
+    except Exception:
+        pass
+
+    # 2. Probe hostname interfaces (including Mobile Hotspots)
+    try:
+        hostname = socket.gethostname()
+        for ip in socket.gethostbyname_ex(hostname)[2]:
+            if ip not in seen_ips and not ip.startswith("127."):
+                seen_ips.add(ip)
+                is_hotspot = ip.startswith("192.168.43.") or ip.startswith("192.168.137.")
+                label = "Mobile Phone Hotspot" if is_hotspot else "Local Wi-Fi Network"
+                interfaces.append({
+                    "ip": ip,
+                    "label": label,
+                    "url": f"http://{ip}:8000",
+                    "is_primary": False if interfaces else True
+                })
+    except Exception:
+        pass
+
+    # Fallback to localhost if offline standalone
+    if not interfaces:
+        interfaces.append({
+            "ip": "127.0.0.1",
+            "label": "Host Machine (Localhost)",
+            "url": "http://127.0.0.1:8000",
+            "is_primary": True
+        })
+
+    hostname = socket.gethostname() if hasattr(socket, "gethostname") else "Localhost"
+    primary_url = interfaces[0]["url"]
+
+    return {
+        "hostname": hostname,
+        "port": 8000,
+        "primary_url": primary_url,
+        "interfaces": interfaces,
+        "instructions": {
+            "step1": "Ensure the teacher's phone, tablet, or laptop is connected to the same school Wi-Fi or mobile hotspot.",
+            "step2": "Scan the QR code or open the displayed URL in any web browser (Chrome, Safari, Edge).",
+            "step3": "Log in with the teacher's assigned username and password."
+        }
+    }
+

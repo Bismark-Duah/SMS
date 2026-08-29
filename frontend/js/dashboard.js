@@ -480,6 +480,30 @@ async function loadFeesStat() {
   } catch (_) {}
 }
 
+// ── Stats: voucher revenue split ─────────────────────────────────────────────
+async function loadVoucherRevenueStat() {
+  const token = localStorage.getItem('accessToken');
+  try {
+    const res = await fetch(`${API_BASE}/vouchers/financial-summary`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const el = document.getElementById('statVoucherRevenue');
+    const subEl = document.getElementById('statVoucherRevenueSub');
+    const progEl = document.getElementById('progVoucherRevenue');
+    if (el) {
+      el.textContent = `GHS ${data.school_net_share_ghs.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    if (subEl) {
+      subEl.textContent = `Gross: GHS ${data.gross_revenue_ghs.toFixed(2)} | Net: ${data.school_share_percent}% | Fee: ${data.platform_commission_percent}%`;
+    }
+    if (progEl) {
+      setTimeout(() => { progEl.style.width = `${Math.min(100, Math.round(data.school_share_percent))}%`; }, 150);
+    }
+  } catch (_) {}
+}
+
 // ── Stats: boarding houses ───────────────────────────────────────────────────
 async function loadHousesStat() {
   const token = localStorage.getItem('accessToken');
@@ -531,7 +555,7 @@ async function loadHousesStat() {
 async function loadDashboardStats() {
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || localStorage.getItem('userRole') || '').toLowerCase();
 
-  const allowedStatsRoles = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'assistant_headmaster_admin', 'assistant_head_admin', 'hod', 'bursar', 'form_master', 'form_mistress', 'teacher'];
+  const allowedStatsRoles = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'assistant_headmaster_admin', 'assistant_head_admin', 'hod', 'bursar', 'accountant', 'form_master', 'form_mistress', 'teacher'];
   const canSeeStats = allowedStatsRoles.includes(activeRole);
   if (!canSeeStats) return;
 
@@ -541,6 +565,7 @@ async function loadDashboardStats() {
   const isAcademicHead = ['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole);
   const isDomesticHead = ['assistant_headmaster_domestic', 'assistant_head_domestic', 'senior_housemaster', 'senior_housemistress'].includes(activeRole);
   const isAdminHead = ['assistant_headmaster_admin', 'assistant_head_admin'].includes(activeRole);
+  const isFinancialExecutive = ['admin', 'super_admin', 'headmaster', 'headmistress', 'bursar', 'accountant'].includes(activeRole);
 
   const feesCard = document.getElementById('statFeesCard');
   const housesCard = document.getElementById('statHousesCard');
@@ -554,6 +579,11 @@ async function loadDashboardStats() {
   const staffCard = document.getElementById('statStaffCard');
   const usersCard = document.getElementById('statUsersCard');
   const broadcastsCard = document.getElementById('statBroadcastsCard');
+  const vouchersRevenueCard = document.getElementById('statVouchersRevenueCard');
+
+  if (vouchersRevenueCard) {
+    vouchersRevenueCard.style.display = isFinancialExecutive ? 'flex' : 'none';
+  }
 
   if (isAcademicHead) {
     if (feesCard) feesCard.style.display = 'none';
@@ -670,6 +700,7 @@ async function loadDashboardStats() {
     loadAlertsStat(),
     loadFeesStat(),
     loadHousesStat(),
+    isFinancialExecutive ? loadVoucherRevenueStat() : Promise.resolve(),
   ]);
 
   // Remove skeleton loading shimmer from all stat cards

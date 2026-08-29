@@ -52,33 +52,37 @@ def get_current_user_optional(authorization: Optional[str] = Header(None), db: S
         return None
 
 
-def get_school_id(current_user: User, x_school_id: Optional[str] = Header(None, alias="X-School-Id")) -> Optional[int]:
+def get_school_id(
+    current_user: Optional[User] = None,
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
+    request: Optional[Request] = None
+) -> Optional[int]:
     """
     Returns the school_id to scope all database queries for multi-tenancy.
-    - Super-admins: if x_school_id header is present, returns that school_id; else returns None.
-    - All other users: returns their school_id.
+    Priority:
+    1. Direct user session school_id (if not super_admin).
+    2. Request state school_id (resolved from Subdomain Middleware).
+    3. X-School-Id header (for API / super_admin tenant switching).
     """
-    if not isinstance(current_user, User):
-        if isinstance(x_school_id, str) and x_school_id.strip():
-            try:
-                return int(x_school_id.strip())
-            except ValueError:
-                pass
-        elif isinstance(x_school_id, (int, float)):
-            return int(x_school_id)
-        return None
+    if isinstance(current_user, User):
+        role_names = [r.name for r in current_user.roles] if hasattr(current_user, 'roles') else []
+        if "super_admin" not in role_names and current_user.school_id:
+            return current_user.school_id
 
-    role_names = [r.name for r in current_user.roles] if hasattr(current_user, 'roles') else []
-    if "super_admin" in role_names:
-        if isinstance(x_school_id, str) and x_school_id.strip():
-            try:
-                return int(x_school_id.strip())
-            except ValueError:
-                pass
-        elif isinstance(x_school_id, (int, float)):
-            return int(x_school_id)
-        return None
-    return current_user.school_id
+    # Check Subdomain Middleware state
+    if request and hasattr(request, "state") and getattr(request.state, "school_id", None):
+        return request.state.school_id
+
+    # Check Header
+    if isinstance(x_school_id, str) and x_school_id.strip():
+        try:
+            return int(x_school_id.strip())
+        except ValueError:
+            pass
+    elif isinstance(x_school_id, (int, float)):
+        return int(x_school_id)
+
+    return getattr(current_user, "school_id", None) if isinstance(current_user, User) else None
 
 
 # ── In-Memory Rate Limiter (Brute-Force Protection) ──────────────────────────

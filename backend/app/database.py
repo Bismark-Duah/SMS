@@ -86,13 +86,24 @@ def run_migrations():
             ("assistant_house_master_girls_id", "INTEGER REFERENCES users(id)")
         ],
         "schools": [
+            ("slug", "VARCHAR(100)"),
             ("school_mode", "VARCHAR DEFAULT 'COMBINED'"),
             ("boarding_type", "VARCHAR DEFAULT 'BOARDING_AND_DAY'"),
             ("status", "VARCHAR DEFAULT 'ACTIVE'"),
             ("address", "VARCHAR"),
             ("phone", "VARCHAR"),
             ("email", "VARCHAR"),
-            ("logo_url", "VARCHAR")
+            ("logo_url", "VARCHAR"),
+            ("sms_balance", "INTEGER DEFAULT 500"),
+            ("sms_low_threshold", "INTEGER DEFAULT 200"),
+            ("platform_commission_percent", "FLOAT DEFAULT 5.0"),
+            ("subscription_plan", "VARCHAR(50) DEFAULT 'STANDARD'"),
+            ("subscription_status", "VARCHAR(50) DEFAULT 'ACTIVE'")
+        ],
+        "message_logs": [
+            ("school_id", "INTEGER REFERENCES schools(id)"),
+            ("hubtel_message_id", "VARCHAR(100)"),
+            ("cost", "FLOAT DEFAULT 1.0")
         ],
         "subjects": [
             ("category", "VARCHAR DEFAULT 'Core'"),
@@ -181,6 +192,18 @@ def run_migrations():
                     conn.commit()
                 except Exception:
                     conn.rollback()
+
+        # Auto-populate missing slugs for existing schools
+        try:
+            conn.execute(text("""
+                UPDATE schools 
+                SET slug = LOWER(REPLACE(REPLACE(TRIM(code), ' ', '-'), '_', '-'))
+                WHERE slug IS NULL OR slug = ''
+            """))
+            conn.commit()
+        except Exception as slug_err:
+            conn.rollback()
+            print("Notice: Auto-populating school slugs:", slug_err)
 
 def get_db():
     db = SessionLocal()

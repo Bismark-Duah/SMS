@@ -298,7 +298,9 @@ cors_origins_env = os.getenv("CORS_ORIGINS", "*")
 allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] if cors_origins_env != "*" else ["*"]
 
 from .middleware.cloudflare_guard import CloudflareGuardMiddleware
+from .middleware.tenant_subdomain import TenantSubdomainMiddleware
 
+app.add_middleware(TenantSubdomainMiddleware)
 app.add_middleware(CloudflareGuardMiddleware)
 
 app.add_middleware(
@@ -438,6 +440,12 @@ def serve_sw():
 @app.get("/enrollment.html")
 def serve_enrollment():
     return _serve("enrollment.html")
+
+@app.get("/paystack-callback")
+def serve_paystack_callback(reference: str = "", trxref: str = ""):
+    ref = reference or trxref
+    return RedirectResponse(url=f"/enrollment.html?reference={ref}&status=success")
+
 
 # ── App pages (authenticated) ─────────────────────────────────────────────────
 @app.get("/dashboard.html")

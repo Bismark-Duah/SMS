@@ -578,9 +578,6 @@ async def hubtel_webhook(
         fulfillment = fulfill_voucher_order_atomic(order_ref, transaction_id, db)
         return {"status": "success", "fulfillment": fulfillment}
 
-    return {"status": "received", "order_reference": order_ref}
-
-
 class VoucherStatusCheckRequest(BaseModel):
     applicant_phone: str
     order_reference: Optional[str] = None
@@ -638,4 +635,103 @@ def check_or_resend_voucher_status(
         "amount": order.amount,
         "created_at": str(order.created_at)[:16] if order.created_at else ""
     }
+
+
+@router.get("/financial-summary")
+def get_voucher_financial_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Returns the SaaS multi-tenant revenue split breakdown for this school tenant:
+    - Gross Vouchers Sold Revenue (GHS)
+    - School Net Share (95%)
+    - Platform Commission (5%)
+    - Real-time SMS Quota & Balance
+    """
+    from sqlalchemy import func
+    school_id = get_school_id(current_user) or (current_user.school_id if hasattr(current_user, 'school_id') else 1)
+    
+    school = db.query(School).filter(School.id == school_id).first()
+    commission_pct = school.platform_commission_percent if (school and school.platform_commission_percent is not None) else 5.0
+    school_pct = max(0.0, 100.0 - commission_pct)
+
+    # Calculate total sold vouchers and revenue
+    vouchers_query = db.query(AdmissionVoucher).filter(AdmissionVoucher.school_id == school_id)
+    total_generated = vouchers_query.count()
+    sold_count = vouchers_query.filter(
+        (AdmissionVoucher.status.in_(["PURCHASED", "USED"])) | (AdmissionVoucher.purchased_by_phone != None)
+    ).count()
+
+    gross_revenue = db.query(func.sum(AdmissionVoucher.amount_paid)).filter(
+        AdmissionVoucher.school_id == school_id,
+        (AdmissionVoucher.status.in_(["PURCHASED", "USED"])) | (AdmissionVoucher.purchased_by_phone != None)
+    ).scalar() or 0.0
+
+    gross_revenue = float(gross_revenue)
+    school_net = round(gross_revenue * (school_pct / 100.0), 2)
+    platform_fee = round(gross_revenue * (commission_pct / 100.0), 2)
+
+    sms_balance = school.sms_balance if (school and school.sms_balance is not None) else 500
+    sms_threshold = school.sms_low_threshold if (school and school.sms_low_threshold is not None) else 200
+
+    return {
+        "school_id": school_id,
+        "school_name": school.name if school else "School System",
+        "total_generated": total_generated,
+        "total_sold": sold_count,
+        "gross_revenue_ghs": gross_revenue,
+        "school_share_percent": school_pct,
+        "platform_commission_percent": commission_pct,
+        "school_net_share_ghs": school_net,
+        "platform_fee_ghs": platform_fee,
+        "sms_balance": sms_balance,
+        "sms_low_threshold": sms_threshold,
+        "is_low_sms": sms_balance <= sms_threshold
+    }
+
+
+@router.get("/paystack-callback")
+@router.post("/paystack-callback")
+def handle_paystack_callback(
+    request: Request,
+    reference: Optional[str] = Query(None),
+    trxref: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Synchronous / Redirect Callback Handler for Paystack Checkout.
+    Verifies payment status and atomically fulfills the voucher order.
+    """
+    from ..payments.paystack import verify_paystack_transaction
+    
+    order_ref = reference or trxref
+    if not order_ref:
+        raise HTTPException(status_code=400, detail="Missing payment transaction reference.")
+
+    # 1. Verify transaction via Paystack package
+    verify_result = verify_paystack_transaction(order_ref, db=db)
+    if not verify_result.get("verified", False):
+        raise HTTPException(
+            status_code=400,
+            detail=verify_result.get("message", "Paystack transaction verification failed.")
+        )
+
+    # 2. Fulfill voucher order atomically
+    gateway_ref = verify_result.get("reference") or order_ref
+    fulfillment = fulfill_voucher_order_atomic(order_ref, str(gateway_ref), db)
+
+    # If client expects HTML redirect (browser return)
+    accept_header = request.headers.get("accept", "")
+    if "text/html" in accept_header:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=f"/enrollment.html?reference={order_ref}&status=success")
+
+    return {
+        "status": "success",
+        "order_reference": order_ref,
+        "verification": verify_result,
+        "fulfillment": fulfillment
+    }
+
 

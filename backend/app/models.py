@@ -74,6 +74,7 @@ class School(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, index=True)
     code = Column(String, unique=True, index=True, nullable=False)
+    slug = Column(String(100), unique=True, index=True, nullable=True)  # Subdomain routing (e.g. sunyani-shs)
     school_mode = Column(String, default="COMBINED")  # SHS_ONLY, BASIC_ONLY, COMBINED
     boarding_type = Column(String, default="BOARDING_AND_DAY")
     status = Column(String, default="ACTIVE")  # ACTIVE, SUSPENDED
@@ -81,12 +82,18 @@ class School(Base):
     phone = Column(String, nullable=True)
     email = Column(String, nullable=True)
     logo_url = Column(String, nullable=True)
+    sms_balance = Column(Integer, default=500)
+    sms_low_threshold = Column(Integer, default=200)
+    platform_commission_percent = Column(Float, default=5.0)  # Default 5% platform split
+    subscription_plan = Column(String(50), default="STANDARD")  # FREE, BASIC, STANDARD, ENTERPRISE
+    subscription_status = Column(String(50), default="ACTIVE")  # ACTIVE, TRIAL, SUSPENDED
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     users = relationship("User", back_populates="school", cascade="all, delete-orphan")
     students = relationship("Student", back_populates="school", cascade="all, delete-orphan")
     active_subjects = relationship("Subject", secondary=school_subjects, backref="active_schools")
     accredited_programs = relationship("Program", secondary=school_programs, backref="accredited_schools")
+    message_logs = relationship("MessageLog", back_populates="school", cascade="all, delete-orphan")
 
 class User(Base):
     __tablename__ = "users"
@@ -537,6 +544,7 @@ class MessageLog(Base):
     __tablename__ = "message_logs"
 
     id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, index=True)
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     student_id = Column(Integer, ForeignKey("students.id"), nullable=True)
     recipient_name = Column(String, nullable=True)
@@ -546,8 +554,11 @@ class MessageLog(Base):
     message_body = Column(String, nullable=False)
     overall_grade = Column(String, nullable=True)
     status = Column(String, nullable=False, default="SENT")
+    hubtel_message_id = Column(String(100), nullable=True)
+    cost = Column(Float, default=1.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    school = relationship("School", back_populates="message_logs")
     sender = relationship("User", foreign_keys=[sender_id])
     student = relationship("Student", foreign_keys=[student_id])
 

@@ -1457,3 +1457,87 @@ def reject_tenant_sender_id(
     return {"message": f"Sender ID '{cfg.sender_id}' for School #{school_id} rejected.", "status": "REJECTED"}
 
 
+@router.get("/financial-summary")
+def get_super_admin_financial_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Returns system-wide SaaS multi-tenant revenue breakdown across all schools:
+    - Total Admission Vouchers Sold
+    - Gross Platform Revenue (GHS)
+    - Total School Net Share (95%)
+    - Total Platform Commission Share (5%)
+    - Total Hubtel SMS Units Consumed
+    - School-by-School breakdown
+    """
+    from ..models import AdmissionVoucher, MessageLog
+    
+    schools = db.query(School).all()
+    
+    total_gross_rev = 0.0
+    total_school_net = 0.0
+    total_platform_fees = 0.0
+    total_vouchers_sold = 0
+    school_breakdowns = []
+
+    for s in schools:
+        vouchers = db.query(AdmissionVoucher).filter(AdmissionVoucher.school_id == s.id)
+        s_sold = vouchers.filter(
+            (AdmissionVoucher.status.in_(["PURCHASED", "USED"])) | (AdmissionVoucher.purchased_by_phone != None)
+        ).count()
+
+        s_gross = db.query(func.sum(AdmissionVoucher.amount_paid)).filter(
+            AdmissionVoucher.school_id == s.id,
+            (AdmissionVoucher.status.in_(["PURCHASED", "USED"])) | (AdmissionVoucher.purchased_by_phone != None)
+        ).scalar() or 0.0
+
+        s_gross = float(s_gross)
+        comm_pct = s.platform_commission_percent if s.platform_commission_percent is not None else 5.0
+        school_pct = max(0.0, 100.0 - comm_pct)
+
+        s_net = round(s_gross * (school_pct / 100.0), 2)
+        s_fee = round(s_gross * (comm_pct / 100.0), 2)
+
+        s_sms_sent = db.query(MessageLog).filter(
+            MessageLog.school_id == s.id,
+            MessageLog.status == "SENT"
+        ).count()
+
+        total_gross_rev += s_gross
+        total_school_net += s_net
+        total_platform_fees += s_fee
+        total_vouchers_sold += s_sold
+
+        school_breakdowns.append({
+            "school_id": s.id,
+            "name": s.name,
+            "code": s.code,
+            "slug": s.slug or s.code.lower(),
+            "school_mode": s.school_mode,
+            "status": s.status,
+            "subscription_plan": s.subscription_plan or "STANDARD",
+            "subscription_status": s.subscription_status or "ACTIVE",
+            "vouchers_sold": s_sold,
+            "gross_revenue_ghs": s_gross,
+            "school_net_share_ghs": s_net,
+            "platform_fee_ghs": s_fee,
+            "commission_percent": comm_pct,
+            "sms_balance": s.sms_balance if s.sms_balance is not None else 500,
+            "sms_sent_count": s_sms_sent
+        })
+
+    total_sms_sent_global = db.query(MessageLog).filter(MessageLog.status == "SENT").count()
+
+    return {
+        "total_schools_count": len(schools),
+        "total_vouchers_sold": total_vouchers_sold,
+        "gross_platform_revenue_ghs": round(total_gross_rev, 2),
+        "total_school_net_share_ghs": round(total_school_net, 2),
+        "total_platform_commission_ghs": round(total_platform_fees, 2),
+        "total_sms_sent": total_sms_sent_global,
+        "schools": school_breakdowns
+    }
+
+
+

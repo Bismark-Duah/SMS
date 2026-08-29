@@ -297,6 +297,10 @@ app = FastAPI(title="School Management System", version="0.1.0")
 cors_origins_env = os.getenv("CORS_ORIGINS", "*")
 allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] if cors_origins_env != "*" else ["*"]
 
+from .middleware.cloudflare_guard import CloudflareGuardMiddleware
+
+app.add_middleware(CloudflareGuardMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,

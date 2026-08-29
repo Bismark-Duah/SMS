@@ -438,3 +438,201 @@ def get_voucher_stats(
         "available_count": available,
         "total_revenue_ghs": float(total_rev)
     }
+
+
+# ── Enterprise Payment Orchestrator & Webhook Endpoints ──────────────────────
+
+from fastapi import Request, Header
+from ..services.payment_orchestrator import (
+    initialize_voucher_checkout,
+    verify_paystack_webhook_signature,
+    fulfill_voucher_order_atomic
+)
+from ..middleware.cloudflare_guard import verify_turnstile_token
+
+
+@router.get("/public-schools")
+def get_public_schools_for_vouchers(db: Session = Depends(get_db)):
+    """
+    Public directory of schools offering online admission voucher purchases.
+    """
+    schools = db.query(School).filter(School.status != "SUSPENDED").all()
+    price_setting = db.query(Setting).filter(Setting.key == "admission_voucher_price_ghs").first()
+    default_price = float(price_setting.value) if price_setting and price_setting.value else 100.0
+
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "code": s.code,
+            "logo_url": s.logo_url,
+            "school_mode": s.school_mode,
+            "voucher_price_ghs": default_price
+        }
+        for s in schools
+    ]
+
+
+class PublicVoucherCheckoutRequest(BaseModel):
+    school_id: int
+    applicant_name: str
+    applicant_phone: str
+    applicant_email: Optional[str] = None
+    gateway: Optional[str] = "PAYSTACK"
+    turnstile_token: Optional[str] = None
+
+
+@router.post("/checkout/initiate")
+def initiate_public_voucher_checkout(
+    data: PublicVoucherCheckoutRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Public Endpoint: Initiates online admission voucher checkout with subaccount split.
+    Guarded by Cloudflare Turnstile token validation.
+    """
+    # 1. Cloudflare Turnstile bot verification
+    client_ip = getattr(request.state, "client_ip", "127.0.0.1")
+    if not verify_turnstile_token(data.turnstile_token, client_ip):
+        raise HTTPException(status_code=400, detail="Security challenge verification failed. Please refresh.")
+
+    # 2. Resolve voucher price
+    price_setting = db.query(Setting).filter(Setting.key == "admission_voucher_price_ghs").first()
+    voucher_price = float(price_setting.value) if price_setting and price_setting.value else 100.0
+
+    # 3. Initialize order with Paystack subaccount split
+    result = initialize_voucher_checkout(
+        school_id=data.school_id,
+        applicant_name=data.applicant_name,
+        applicant_phone=data.applicant_phone,
+        applicant_email=data.applicant_email or "",
+        amount=voucher_price,
+        gateway=data.gateway or "PAYSTACK",
+        db=db
+    )
+    return result
+
+
+@router.post("/webhook/paystack")
+async def paystack_webhook(
+    request: Request,
+    x_paystack_signature: Optional[str] = Header(None, alias="x-paystack-signature"),
+    db: Session = Depends(get_db)
+):
+    """
+    Enterprise Webhook Handler for Paystack:
+    Cryptographically verifies HMAC SHA-512 signature and triggers ACID atomic voucher fulfillment.
+    """
+    raw_body = await request.body()
+    
+    # Cryptographic HMAC Verification
+    if not verify_paystack_webhook_signature(raw_body, x_paystack_signature or ""):
+        # If test mode or mock key, allow pass
+        import os
+        paystack_key = os.getenv("PAYSTACK_SECRET_KEY", "")
+        if not paystack_key.startswith("sk_test_mock"):
+            raise HTTPException(status_code=400, detail="Invalid cryptographic webhook signature.")
+
+    try:
+        payload = json.loads(raw_body.decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body.")
+
+    event = payload.get("event")
+    if event == "charge.success":
+        data = payload.get("data", {})
+        order_ref = data.get("reference")
+        gateway_ref = data.get("id") or str(data.get("transaction_id", ""))
+
+        if order_ref:
+            fulfillment = fulfill_voucher_order_atomic(order_ref, str(gateway_ref), db)
+            return {"status": "success", "fulfillment": fulfillment}
+
+    return {"status": "ignored", "event": event}
+
+
+@router.post("/webhook/hubtel")
+async def hubtel_webhook(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Enterprise Webhook Handler for Hubtel Mobile Money Checkout Failover.
+    """
+    raw_body = await request.body()
+    try:
+        payload = json.loads(raw_body.decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body.")
+
+    data = payload.get("Data", {}) or payload
+    order_ref = data.get("ClientReference") or data.get("order_reference")
+    transaction_id = str(data.get("TransactionId") or data.get("transaction_id", ""))
+    status_str = str(data.get("Status") or data.get("status", "")).upper()
+
+    if order_ref and status_str in ["SUCCESS", "PAID"]:
+        fulfillment = fulfill_voucher_order_atomic(order_ref, transaction_id, db)
+        return {"status": "success", "fulfillment": fulfillment}
+
+    return {"status": "received", "order_reference": order_ref}
+
+
+class VoucherStatusCheckRequest(BaseModel):
+    applicant_phone: str
+    order_reference: Optional[str] = None
+
+
+@router.post("/verify-status")
+def check_or_resend_voucher_status(
+    data: VoucherStatusCheckRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Self-Healing UX Endpoint:
+    Allows parents to enter their phone number to check payment status, retrieve credentials,
+    or trigger an instant SMS resend.
+    """
+    from ..models import VoucherOrder, Voucher, School
+    from ..services.messaging_service import send_sms_via_hubtel
+
+    clean_phone = "".join(filter(str.isdigit, data.applicant_phone or ""))
+    query = db.query(VoucherOrder).filter(VoucherOrder.applicant_phone.contains(clean_phone[-9:]))
+    if data.order_reference:
+        query = query.filter(VoucherOrder.order_reference == data.order_reference.strip())
+
+    order = query.order_by(VoucherOrder.id.desc()).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="No voucher order found for this phone number.")
+
+    voucher = order.voucher if order.voucher_id else None
+    school = db.query(School).filter(School.id == order.school_id).first()
+    school_name = school.name if school else "School System"
+
+    # Resend SMS if voucher is assigned
+    if voucher:
+        msg = (
+            f"Dear Applicant, your {school_name} Admission Voucher details:\n"
+            f"Serial: {voucher.serial_number}\n"
+            f"PIN: {voucher.pin}\n"
+            f"Status: Confirmed."
+        )
+        send_sms_via_hubtel(
+            recipient_phone=order.applicant_phone,
+            message_body=msg,
+            school_id=order.school_id,
+            db=db
+        )
+
+    return {
+        "order_reference": order.order_reference,
+        "status": order.status,
+        "school_name": school_name,
+        "serial_number": voucher.serial_number if voucher else None,
+        "pin": voucher.pin if voucher else None,
+        "applicant_name": order.applicant_name,
+        "applicant_phone": order.applicant_phone,
+        "amount": order.amount,
+        "created_at": str(order.created_at)[:16] if order.created_at else ""
+    }
+

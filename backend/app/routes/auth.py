@@ -2,10 +2,11 @@ import hashlib
 import secrets
 import os
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from ..middleware.device_session_guard import register_device_session
 try:
     import bcrypt
     if not hasattr(bcrypt, "__about__"):
@@ -151,7 +152,7 @@ def _seed_db(db: Session) -> None:
 
 
 @router.post("/login", dependencies=[Depends(rate_limit_auth)])
-def login(payload: dict, db: Session = Depends(get_db)):
+def login(payload: dict, request: Request, db: Session = Depends(get_db)):
     try:
         username = (payload or {}).get("username", "").strip()
         password = (payload or {}).get("password", "")
@@ -255,6 +256,21 @@ def login(payload: dict, db: Session = Depends(get_db)):
             "school_id": school_id,
             "roles": role_names
         })
+
+        # Register zero-trust multi-device session
+        try:
+            user_agent = request.headers.get("user-agent", "Unknown Device")
+            client_ip = getattr(request.state, "client_ip", request.client.host if request.client else "127.0.0.1")
+            register_device_session(
+                user_id=user.id,
+                user_role=primary_role,
+                user_agent=user_agent,
+                client_ip=client_ip,
+                token=token,
+                db=db
+            )
+        except Exception as sess_err:
+            print("Session registration warning:", sess_err)
         
         return JSONResponse(
             status_code=200,

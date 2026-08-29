@@ -739,4 +739,135 @@ window.saveVoucherSettings = async function(event) {
   }
 };
  
+window.loadSchoolSubaccount = async function() {
+  try {
+    const res = await fetch(`${API_BASE}/settings/subaccount`, { headers: getHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.settlement_bank) document.getElementById('sub_settlement_bank').value = data.settlement_bank;
+      if (data.account_number) document.getElementById('sub_account_number').value = data.account_number;
+      if (data.account_name) document.getElementById('sub_account_name').value = data.account_name;
+      const badge = document.getElementById('subaccountBadge');
+      if (badge && data.paystack_subaccount_code) {
+        badge.textContent = `SUBACCOUNT: ${data.paystack_subaccount_code}`;
+        badge.style.background = 'rgba(16,185,129,0.15)';
+        badge.style.color = '#34d399';
+      }
+    }
+  } catch (_) {}
+};
+
+window.saveSchoolSubaccount = async function(event) {
+  event.preventDefault();
+  const msgEl = document.getElementById('subSaveMsg');
+  if (msgEl) { msgEl.style.color = '#38bdf8'; msgEl.textContent = 'Saving subaccount...'; }
+  const payload = {
+    settlement_bank: document.getElementById('sub_settlement_bank').value,
+    account_number: document.getElementById('sub_account_number').value.trim(),
+    account_name: document.getElementById('sub_account_name').value.trim()
+  };
+  try {
+    const res = await fetch(`${API_BASE}/settings/subaccount`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (msgEl) { msgEl.style.color = '#34d399'; msgEl.textContent = `✔ Saved! (${data.subaccount_code})`; }
+      window.loadSchoolSubaccount();
+    } else {
+      if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ ${data.detail || 'Failed'}`; }
+    }
+  } catch (e) {
+    if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ ${e.message}`; }
+  }
+};
+
+window.loadSchoolSmsConfig = async function() {
+  try {
+    const res = await fetch(`${API_BASE}/settings/sms-config`, { headers: getHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.sender_id) document.getElementById('sms_sender_id').value = data.sender_id;
+    }
+  } catch (_) {}
+};
+
+window.saveSchoolSmsConfig = async function(event) {
+  event.preventDefault();
+  const msgEl = document.getElementById('smsSaveMsg');
+  if (msgEl) { msgEl.style.color = '#38bdf8'; msgEl.textContent = 'Updating Sender ID...'; }
+  const payload = {
+    sender_id: document.getElementById('sms_sender_id').value.trim().toUpperCase()
+  };
+  try {
+    const res = await fetch(`${API_BASE}/settings/sms-config`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (msgEl) { msgEl.style.color = '#34d399'; msgEl.textContent = `✔ Sender ID set to ${data.sender_id}!`; }
+    } else {
+      if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ ${data.detail || 'Failed'}`; }
+    }
+  } catch (e) {
+    if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ ${e.message}`; }
+  }
+};
+
+window.loadActiveSessions = async function() {
+  const tbody = document.getElementById('activeSessionsTableBody');
+  if (!tbody) return;
+  try {
+    const res = await fetch(`${API_BASE}/settings/sessions`, { headers: getHeaders() });
+    if (res.ok) {
+      const list = await res.json();
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; opacity:0.6;">No active sessions found.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(s => `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+          <td style="padding:10px 8px;">
+            <strong>${escapeHtml(s.device_name)}</strong>
+            ${s.is_current ? '<span style="background:rgba(34,197,94,0.15); color:#4ade80; font-size:0.7rem; padding:2px 6px; border-radius:4px; margin-left:6px;">Current Device</span>' : ''}
+          </td>
+          <td style="padding:10px 8px; font-family:monospace; color:#94a3b8;">${escapeHtml(s.ip_address)}</td>
+          <td style="padding:10px 8px; font-size:0.82rem; color:#cbd5e1;">${escapeHtml(s.last_active)}</td>
+          <td style="padding:10px 8px;">
+            <span style="color:${s.is_current ? '#4ade80' : '#818cf8'}; font-weight:bold; font-size:0.8rem;">● ACTIVE</span>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (_) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#f87171;">Failed to load device sessions.</td></tr>';
+  }
+};
+
+window.revokeOtherSessions = async function() {
+  if (!confirm('Are you sure you want to terminate all other logged-in device sessions? You will stay logged in on this device.')) return;
+  try {
+    const res = await fetch(`${API_BASE}/settings/sessions/revoke-others`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    if (res.ok) {
+      alert('✔ Successfully revoked all other active sessions.');
+      window.loadActiveSessions();
+    } else {
+      alert('❌ Failed to revoke sessions.');
+    }
+  } catch (e) {
+    alert(`❌ Error: ${e.message}`);
+  }
+};
+
 loadSettings();
+if (window.loadSchoolSubaccount) window.loadSchoolSubaccount();
+if (window.loadSchoolSmsConfig) window.loadSchoolSmsConfig();
+if (window.loadActiveSessions) window.loadActiveSessions();
+

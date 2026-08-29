@@ -797,4 +797,99 @@ class ActivityAuditLog(Base):
     user = relationship("User")
 
 
+# ── Enterprise Payment Orchestrator & Multi-Tenant Subaccounts ───────────────
+
+class SchoolSubaccount(Base):
+    """
+    Multi-Tenant Paystack & Hubtel Subaccount Configurations.
+    Stores direct settlement bank and MoMo accounts per school for automated split payments.
+    """
+    __tablename__ = "school_subaccounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), unique=True, nullable=False)
+    paystack_subaccount_code = Column(String(100), nullable=True, index=True)  # e.g., "ACCT_xxxx"
+    settlement_bank = Column(String(100), nullable=False)  # Bank code or MTN/Telecel/AT
+    account_number = Column(String(100), nullable=False)   # Account number or Merchant MoMo number
+    account_name = Column(String(150), nullable=True)     # Verified name on account
+    percentage_split = Column(Float, default=98.0)         # % credited to school (default 98%, platform takes 2%)
+    is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    school = relationship("School")
+
+
+class TenantSmsConfig(Base):
+    """
+    Dynamic School-Branded Hubtel Messaging Configuration.
+    Manages custom 11-character approved Sender IDs per school tenant.
+    """
+    __tablename__ = "tenant_sms_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), unique=True, nullable=False)
+    sender_id = Column(String(11), nullable=False, default="EDUMANAGE")  # e.g. "OWASS", "PRESEC"
+    provider = Column(String(50), default="HUBTEL")                      # HUBTEL
+    hubtel_client_id = Column(String(255), nullable=True)               # Tenant-specific or platform credentials
+    hubtel_client_secret = Column(String(255), nullable=True)
+    status = Column(String(50), default="ACTIVE")                       # "ACTIVE", "PENDING_APPROVAL", "FALLBACK"
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    school = relationship("School")
+
+
+class UserDeviceSession(Base):
+    """
+    Zero-Trust Multi-Device Session Guard & Fingerprint Registry.
+    Enforces single active session for staff and logs device fingerprints for fraud/anomaly detection.
+    """
+    __tablename__ = "user_device_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    device_fingerprint = Column(String(255), nullable=False, index=True)
+    device_name = Column(String(150), nullable=True)     # e.g. "Chrome 124 on Windows 11"
+    ip_address = Column(String(45), nullable=True)       # True client IP (from CF-Connecting-IP)
+    user_agent = Column(Text, nullable=True)
+    session_token_hash = Column(String(255), nullable=False, unique=True, index=True)
+    last_active = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    is_active = Column(Boolean, default=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")
+
+
+class VoucherOrder(Base):
+    """
+    ACID Financial Ledger for Online Admission Voucher Purchases.
+    Guarantees atomic payment settlement, voucher assignment, and SMS dispatch.
+    """
+    __tablename__ = "voucher_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_reference = Column(String(100), unique=True, nullable=False, index=True)  # e.g. "VCH-2026-XXXX"
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False)
+    applicant_name = Column(String(150), nullable=True)
+    applicant_phone = Column(String(20), nullable=False, index=True)
+    applicant_email = Column(String(150), nullable=True)
+    amount = Column(Float, nullable=False)  # Gross GHS
+    payment_gateway = Column(String(50), default="PAYSTACK")  # "PAYSTACK" or "HUBTEL"
+    gateway_reference = Column(String(150), nullable=True, index=True)
+    voucher_id = Column(Integer, ForeignKey("admission_vouchers.id"), nullable=True)
+    status = Column(String(50), default="PENDING", index=True)  # "PENDING", "CONFIRMED", "DELIVERED", "FAILED"
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    school = relationship("School")
+    voucher = relationship("AdmissionVoucher")
+
+
+# Model Alias
+Voucher = AdmissionVoucher
+
+
+
+
 

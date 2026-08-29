@@ -324,6 +324,95 @@
         </div>
       </section>
 
+      <!-- SECTION: Enterprise Multi-Tenant Payment Subaccount & Hubtel SMS -->
+      <section class="card" style="margin-top:20px; border-left:4px solid #6366f1;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <div>
+            <h3 style="margin:0; color:#818cf8;">💳 School Payment Subaccount & Hubtel SMS Sender ID</h3>
+            <p style="margin:4px 0 0; opacity:.75; font-size:.85rem;">Configure direct settlement accounts for automated Paystack revenue splits and custom 11-character Hubtel SMS sender branding.</p>
+          </div>
+          <span id="subaccountBadge" style="background:rgba(99,102,241,0.15); color:#818cf8; border:1px solid rgba(99,102,241,0.3); padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;">PAYSTACK SPLIT READY</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
+          <!-- Subaccount Card -->
+          <div style="background:rgba(15,23,42,0.6); padding:16px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+            <h4 style="margin:0 0 12px; color:#4ade80; font-size:0.95rem;">🏦 Paystack Direct Settlement Subaccount</h4>
+            <form id="schoolSubaccountForm" onsubmit="saveSchoolSubaccount(event)">
+              <label style="display:block; margin-bottom:10px; font-size:0.82rem;">Settlement Bank / MoMo Network
+                <select id="sub_settlement_bank" style="width:100%; margin-top:4px;">
+                  <option value="MTN">MTN Mobile Money</option>
+                  <option value="TELECEL">Telecel Cash</option>
+                  <option value="AT">AT Money</option>
+                  <option value="GCB">GCB Bank PLC</option>
+                  <option value="ECOBANK">Ecobank Ghana</option>
+                  <option value="ABSA">Absa Bank Ghana</option>
+                  <option value="CAL">CalBank PLC</option>
+                  <option value="STANBIC">Stanbic Bank Ghana</option>
+                  <option value="FIDELITY">Fidelity Bank Ghana</option>
+                </select>
+              </label>
+              <label style="display:block; margin-bottom:10px; font-size:0.82rem;">Account / Merchant MoMo Number *
+                <input type="text" id="sub_account_number" required placeholder="e.g. 0244123456 or 1002938481" style="width:100%; margin-top:4px;" />
+              </label>
+              <label style="display:block; margin-bottom:10px; font-size:0.82rem;">Account Registered Name
+                <input type="text" id="sub_account_name" placeholder="e.g. Prempeh College PTA" style="width:100%; margin-top:4px;" />
+              </label>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
+                <button type="submit" class="btn primary" style="font-size:0.82rem; padding:6px 14px; background:#10b981; border-color:#059669;">💾 Save Settlement Account</button>
+                <span id="subSaveMsg" style="font-size:0.78rem;"></span>
+              </div>
+            </form>
+          </div>
+
+          <!-- Hubtel SMS Sender ID Card -->
+          <div style="background:rgba(15,23,42,0.6); padding:16px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+            <h4 style="margin:0 0 12px; color:#38bdf8; font-size:0.95rem;">📱 Hubtel School-Branded Sender ID</h4>
+            <form id="schoolSmsConfigForm" onsubmit="saveSchoolSmsConfig(event)">
+              <label style="display:block; margin-bottom:10px; font-size:0.82rem;">Custom Sender ID (Max 11 Alphanumeric) *
+                <input type="text" id="sms_sender_id" maxlength="11" required placeholder="e.g. PRESEC" style="width:100%; margin-top:4px; text-transform:uppercase; font-weight:700; letter-spacing:1px;" />
+              </label>
+              <p style="font-size:0.75rem; opacity:0.7; margin:0 0 14px; line-height:1.4;">
+                This name appears as the SMS header on all parent communications and candidate admission voucher deliveries.
+              </p>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
+                <button type="submit" class="btn primary" style="font-size:0.82rem; padding:6px 14px; background:#0284c7; border-color:#0369a1;">📱 Update Sender ID</button>
+                <span id="smsSaveMsg" style="font-size:0.78rem;"></span>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: Zero-Trust Active Device Sessions -->
+      <section class="card" style="margin-top:20px; border-left:4px solid #ef4444;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <div>
+            <h3 style="margin:0; color:#f87171;">🛡️ Active Logged-in Devices & Security Sessions</h3>
+            <p style="margin:4px 0 0; opacity:.75; font-size:.85rem;">Zero-trust session tracking. Staff accounts enforce a single active device policy.</p>
+          </div>
+          <button type="button" class="btn" onclick="revokeOtherSessions()" style="font-size:0.8rem; padding:6px 12px; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);">
+            🔒 Revoke All Other Devices
+          </button>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table style="width:100%; font-size:0.88rem;">
+            <thead>
+              <tr style="text-align:left; border-bottom:1px solid rgba(255,255,255,0.1);">
+                <th style="padding:8px;">Device / Browser</th>
+                <th style="padding:8px;">IP Address</th>
+                <th style="padding:8px;">Last Activity</th>
+                <th style="padding:8px;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="activeSessionsTableBody">
+              <tr><td colspan="4" style="text-align:center; padding:12px; opacity:0.6;">Loading device sessions...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <!-- SECTION 4: End-of-Term Rollover Wizard -->
       <section class="card" style="margin-top:20px;">
         <h3>End-of-Term Rollover Wizard</h3>

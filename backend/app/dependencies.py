@@ -4,10 +4,12 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from .models import User
 from .services.auth import decode_jwt
+from .middleware.device_session_guard import is_session_active
 
 def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
     """
     Decodes JWT token from Authorization Bearer header to get the current user.
+    Enforces multi-device zero-trust session validation.
     """
     if not authorization:
         raise HTTPException(status_code=401, detail="Authentication required. Please log in.")
@@ -28,6 +30,11 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Multi-Device Zero-Trust Session Active Check
+    if not is_session_active(token, user.id, db):
+        raise HTTPException(status_code=401, detail="Session terminated: your account was logged in on another device.")
+
     return user
 
 

@@ -607,3 +607,169 @@ def get_lan_info(request: Request):
         }
     }
 
+
+# ── Multi-Tenant Subaccounts, Hubtel SMS Config & Session Controls ───────────
+
+from ..models import SchoolSubaccount, TenantSmsConfig, UserDeviceSession
+from ..services.payment_orchestrator import create_or_update_paystack_subaccount
+from ..middleware.device_session_guard import revoke_all_other_sessions, hash_token
+
+
+@router.get("/subaccount")
+def get_school_subaccount(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Returns current school's Paystack settlement subaccount details."""
+    school_id = current_user.school_id or 1
+    sub = db.query(SchoolSubaccount).filter(SchoolSubaccount.school_id == school_id).first()
+    if not sub:
+        return {
+            "school_id": school_id,
+            "has_subaccount": False,
+            "paystack_subaccount_code": None,
+            "settlement_bank": "MTN Mobile Money",
+            "account_number": "",
+            "account_name": "",
+            "percentage_split": 98.0,
+            "is_verified": False
+        }
+
+    return {
+        "school_id": school_id,
+        "has_subaccount": True,
+        "paystack_subaccount_code": sub.paystack_subaccount_code,
+        "settlement_bank": sub.settlement_bank,
+        "account_number": sub.account_number,
+        "account_name": sub.account_name,
+        "percentage_split": sub.percentage_split,
+        "is_verified": sub.is_verified,
+        "updated_at": str(sub.updated_at)[:16] if sub.updated_at else ""
+    }
+
+
+@router.post("/subaccount")
+def save_school_subaccount(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Saves and provisions a Paystack settlement subaccount for this school."""
+    school_id = current_user.school_id or 1
+    school = db.query(School).filter(School.id == school_id).first()
+    business_name = data.get("account_name") or (school.name if school else f"School #{school_id}")
+    settlement_bank = data.get("settlement_bank", "MTN")
+    account_number = data.get("account_number", "").strip()
+    percentage_charge = float(data.get("percentage_split", 98.0))
+
+    if not account_number:
+        raise HTTPException(status_code=400, detail="Account or MoMo number is required.")
+
+    result = create_or_update_paystack_subaccount(
+        school_id=school_id,
+        business_name=business_name,
+        settlement_bank=settlement_bank,
+        account_number=account_number,
+        percentage_charge=percentage_charge,
+        db=db
+    )
+    return result
+
+
+@router.get("/sms-config")
+def get_school_sms_config(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Returns school's Hubtel Dynamic Sender ID configuration."""
+    school_id = current_user.school_id or 1
+    cfg = db.query(TenantSmsConfig).filter(TenantSmsConfig.school_id == school_id).first()
+    if not cfg:
+        school = db.query(School).filter(School.id == school_id).first()
+        default_sender = (school.code if school and school.code else "EDUMANAGE")[:11]
+        return {
+            "school_id": school_id,
+            "sender_id": default_sender,
+            "provider": "HUBTEL",
+            "status": "FALLBACK"
+        }
+
+    return {
+        "school_id": school_id,
+        "sender_id": cfg.sender_id,
+        "provider": cfg.provider or "HUBTEL",
+        "status": cfg.status
+    }
+
+
+@router.post("/sms-config")
+def save_school_sms_config(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Updates school's approved 11-character Hubtel Sender ID."""
+    school_id = current_user.school_id or 1
+    sender_id = data.get("sender_id", "").strip().upper()[:11]
+    if not sender_id:
+        raise HTTPException(status_code=400, detail="Sender ID cannot be empty.")
+
+    cfg = db.query(TenantSmsConfig).filter(TenantSmsConfig.school_id == school_id).first()
+    if not cfg:
+        cfg = TenantSmsConfig(
+            school_id=school_id,
+            sender_id=sender_id,
+            provider="HUBTEL",
+            status="ACTIVE"
+        )
+        db.add(cfg)
+    else:
+        cfg.sender_id = sender_id
+        cfg.status = "ACTIVE"
+
+    db.commit()
+    db.refresh(cfg)
+    return {"status": "success", "sender_id": cfg.sender_id}
+
+
+@router.get("/sessions")
+def get_my_active_sessions(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Returns list of active device sessions for current user."""
+    sessions = db.query(UserDeviceSession).filter(
+        UserDeviceSession.user_id == current_user.id,
+        UserDeviceSession.is_active == True
+    ).order_by(UserDeviceSession.last_active.desc()).all()
+
+    curr_token = authorization.split(" ")[1] if authorization and " " in authorization else ""
+    curr_token_hash = hash_token(curr_token) if curr_token else ""
+
+    return [
+        {
+            "id": s.id,
+            "device_name": s.device_name or "Unknown Device",
+            "ip_address": s.ip_address or "127.0.0.1",
+            "last_active": str(s.last_active)[:16] if s.last_active else "",
+            "is_current": s.session_token_hash == curr_token_hash
+        }
+        for s in sessions
+    ]
+
+
+@router.post("/sessions/revoke-others")
+def revoke_other_device_sessions(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Terminates all other logged-in device sessions for current user."""
+    if not authorization or " " not in authorization:
+        raise HTTPException(status_code=400, detail="Missing auth token.")
+    token = authorization.split(" ")[1]
+    revoked_count = revoke_all_other_sessions(current_user.id, token, db)
+    return {"status": "success", "revoked_sessions": revoked_count}
+
+

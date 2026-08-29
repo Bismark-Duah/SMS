@@ -139,17 +139,19 @@ def broadcast_notification(
 ):
     """Admin: send a notification to specific students or all active students."""
     require_admin(current_user)
+    school_id = get_school_id(current_user)
+
+    query = db.query(Student).filter(Student.is_active == True)
+    if school_id is not None:
+        query = query.filter(Student.school_id == school_id)
 
     if payload.student_ids:
-        students = db.query(Student).filter(
-            Student.id.in_(payload.student_ids),
-            Student.is_active == True
-        ).all()
-    else:
-        students = db.query(Student).filter(Student.is_active == True).all()
+        query = query.filter(Student.id.in_(payload.student_ids))
+
+    students = query.all()
 
     if not students:
-        raise HTTPException(status_code=404, detail="No active students found for the given criteria")
+        raise HTTPException(status_code=404, detail="No active students found in your school for the given criteria")
 
     notifications = [
         Notification(

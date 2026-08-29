@@ -708,11 +708,17 @@ def save_school_sms_config(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Updates school's approved 11-character Hubtel Sender ID."""
+    """
+    Submits or updates school's 11-character Hubtel Sender ID.
+    Super-Admins activate directly; institutional admins submit for regulatory approval.
+    """
     school_id = current_user.school_id or 1
     sender_id = data.get("sender_id", "").strip().upper()[:11]
     if not sender_id:
         raise HTTPException(status_code=400, detail="Sender ID cannot be empty.")
+
+    is_super = any(r.name == "super_admin" for r in getattr(current_user, "roles", [])) or current_user.username.lower() == "superadmin"
+    status_target = "ACTIVE" if is_super else "PENDING_APPROVAL"
 
     cfg = db.query(TenantSmsConfig).filter(TenantSmsConfig.school_id == school_id).first()
     if not cfg:
@@ -720,16 +726,17 @@ def save_school_sms_config(
             school_id=school_id,
             sender_id=sender_id,
             provider="HUBTEL",
-            status="ACTIVE"
+            status=status_target
         )
         db.add(cfg)
     else:
         cfg.sender_id = sender_id
-        cfg.status = "ACTIVE"
+        cfg.status = status_target
 
     db.commit()
     db.refresh(cfg)
-    return {"status": "success", "sender_id": cfg.sender_id}
+    msg = "Sender ID updated and active." if status_target == "ACTIVE" else "Sender ID submitted for Super-Admin & Telco verification."
+    return {"status": "success", "sender_id": cfg.sender_id, "approval_status": cfg.status, "message": msg}
 
 
 @router.get("/sessions")

@@ -1393,5 +1393,67 @@ def sync_from_cloud(
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database synchronization error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database synchronization failed. Please check connection and try again.")
+
+
+# ── Super-Admin SMS Sender ID Regulatory Governance ──────────────────────────
+
+from ..models import TenantSmsConfig
+
+@router.get("/sms-configs")
+def list_all_tenant_sms_configs(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """Lists all tenant SMS Sender ID configurations and pending regulatory approvals."""
+    configs = db.query(TenantSmsConfig).all()
+    results = []
+    for cfg in configs:
+        school = db.query(School).filter(School.id == cfg.school_id).first()
+        results.append({
+            "id": cfg.id,
+            "school_id": cfg.school_id,
+            "school_name": school.name if school else f"School #{cfg.school_id}",
+            "school_code": school.code if school else "—",
+            "sender_id": cfg.sender_id,
+            "provider": cfg.provider or "HUBTEL",
+            "status": cfg.status,
+            "updated_at": str(cfg.updated_at)[:16] if cfg.updated_at else ""
+        })
+    return results
+
+
+@router.put("/sms-configs/{school_id}/approve")
+def approve_tenant_sender_id(
+    school_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """Approves an 11-character SMS Sender ID after verifying NCA/Telco documentation."""
+    cfg = db.query(TenantSmsConfig).filter(TenantSmsConfig.school_id == school_id).first()
+    if not cfg:
+        raise HTTPException(status_code=404, detail="SMS configuration not found for this school.")
+
+    cfg.status = "ACTIVE"
+    db.commit()
+    db.refresh(cfg)
+    return {"message": f"Sender ID '{cfg.sender_id}' for School #{school_id} approved and activated.", "status": "ACTIVE"}
+
+
+@router.put("/sms-configs/{school_id}/reject")
+def reject_tenant_sender_id(
+    school_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """Rejects an unverified or non-compliant SMS Sender ID."""
+    cfg = db.query(TenantSmsConfig).filter(TenantSmsConfig.school_id == school_id).first()
+    if not cfg:
+        raise HTTPException(status_code=404, detail="SMS configuration not found for this school.")
+
+    cfg.status = "REJECTED"
+    db.commit()
+    db.refresh(cfg)
+    return {"message": f"Sender ID '{cfg.sender_id}' for School #{school_id} rejected.", "status": "REJECTED"}
+
 

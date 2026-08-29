@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table, Text, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -796,6 +796,10 @@ class ActivityAuditLog(Base):
     school = relationship("School")
     user = relationship("User")
 
+    __table_args__ = (
+        Index("ix_audit_school_timestamp", "school_id", "timestamp"),
+    )
+
 
 # ── Enterprise Payment Orchestrator & Multi-Tenant Subaccounts ───────────────
 
@@ -884,6 +888,10 @@ class VoucherOrder(Base):
 
     school = relationship("School")
     voucher = relationship("AdmissionVoucher")
+
+    __table_args__ = (
+        Index("ix_vchorder_school_status", "school_id", "status"),
+    )
 
 
 # Model Alias

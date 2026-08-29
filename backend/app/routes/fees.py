@@ -639,9 +639,14 @@ def initialize_paystack_payment(
             "amount_paid": payload.amount_paid
         }
 
+    # Check for school settlement subaccount
+    from ..models import SchoolSubaccount
+    target_school_id = fee.school_id if fee.school_id else (current_user.school_id or 1)
+    subaccount = db.query(SchoolSubaccount).filter(SchoolSubaccount.school_id == target_school_id).first()
+
     # Call Paystack API
     paystack_url = "https://api.paystack.co/transaction/initialize"
-    req_body = json.dumps({
+    pay_data = {
         "email": payload.email or "parent@school.local",
         "amount": int(round(payload.amount_paid * 100)),
         "currency": "GHS",
@@ -651,7 +656,11 @@ def initialize_paystack_payment(
             "student_id": fee.student_id,
             "recorded_by": current_user.id
         }
-    }).encode("utf-8")
+    }
+    if subaccount and subaccount.paystack_subaccount_code:
+        pay_data["subaccount"] = subaccount.paystack_subaccount_code
+
+    req_body = json.dumps(pay_data).encode("utf-8")
 
     req = urllib.request.Request(
         paystack_url,

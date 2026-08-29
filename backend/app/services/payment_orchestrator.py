@@ -13,11 +13,33 @@ import urllib.parse
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from ..models import SchoolSubaccount, VoucherOrder, Voucher, School, TenantSmsConfig
+from ..models import SchoolSubaccount, VoucherOrder, Voucher, School, TenantSmsConfig, Setting
 from .messaging_service import send_sms_via_hubtel
 
-PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "sk_test_mock_paystack_secret_key")
-HUBTEL_SECRET_KEY = os.getenv("HUBTEL_SECRET_KEY", "mock_hubtel_secret_key")
+def get_paystack_secret_key(db: Session = None) -> str:
+    """Dynamically resolves Paystack secret key from DB settings with fallback to environment."""
+    if db:
+        try:
+            s = db.query(Setting).filter(Setting.key == "paystack_secret_key").first()
+            if s and s.value and s.value.strip():
+                return s.value.strip()
+        except Exception:
+            pass
+    return os.getenv("PAYSTACK_SECRET_KEY", "sk_test_mock_paystack_secret_key").strip()
+
+def get_hubtel_secret_key(db: Session = None) -> str:
+    """Dynamically resolves Hubtel secret key from DB settings with fallback to environment."""
+    if db:
+        try:
+            s = db.query(Setting).filter(Setting.key == "hubtel_client_secret").first()
+            if s and s.value and s.value.strip():
+                return s.value.strip()
+        except Exception:
+            pass
+    return os.getenv("HUBTEL_SECRET_KEY", "mock_hubtel_secret_key").strip()
+
+PAYSTACK_SECRET_KEY = get_paystack_secret_key()
+HUBTEL_SECRET_KEY = get_hubtel_secret_key()
 
 def create_or_update_paystack_subaccount(
     school_id: int,
@@ -34,13 +56,14 @@ def create_or_update_paystack_subaccount(
     """
     subaccount_code = None
     is_verified = False
+    secret_key = get_paystack_secret_key(db)
 
     # Attempt live Paystack API call if active secret key is configured
-    if PAYSTACK_SECRET_KEY and not PAYSTACK_SECRET_KEY.startswith("sk_test_mock"):
+    if secret_key and not secret_key.startswith("sk_test_mock"):
         try:
             url = "https://api.paystack.co/subaccount"
             headers = {
-                "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+                "Authorization": f"Bearer {secret_key}",
                 "Content-Type": "application/json"
             }
             body = json.dumps({
@@ -96,19 +119,40 @@ def create_or_update_paystack_subaccount(
     }
 
 
-def verify_paystack_webhook_signature(raw_body: bytes, signature_header: str) -> bool:
+def verify_paystack_webhook_signature(raw_body: bytes, signature_header: str, db: Session = None) -> bool:
     """
     Validates Paystack HMAC SHA-512 webhook signature.
     Prevents unauthorized spoofed transaction confirmations.
     """
-    if not signature_header:
+    if not signature_header or not raw_body:
         return False
+    secret_key = get_paystack_secret_key(db)
     computed_hash = hmac.new(
-        PAYSTACK_SECRET_KEY.encode("utf-8"),
+        secret_key.encode("utf-8"),
         raw_body,
         hashlib.sha512
     ).hexdigest()
-    return hmac.compare_digest(computed_hash, signature_header)
+    return hmac.compare_digest(computed_hash, signature_header.strip())
+
+
+def verify_hubtel_webhook_signature(raw_body: bytes, signature_header: str = None, secret_token: str = None, db: Session = None) -> bool:
+    """
+    Validates Hubtel Webhook request authenticity via HMAC signature or shared secret header.
+    """
+    hubtel_secret = get_hubtel_secret_key(db)
+    
+    # 1. Header/Token match check
+    if secret_token and hmac.compare_digest(secret_token.strip(), hubtel_secret):
+        return True
+        
+    # 2. HMAC-SHA256 signature check if provided
+    if signature_header and raw_body:
+        computed_hash = hmac.new(hubtel_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+        if hmac.compare_digest(computed_hash, signature_header.strip()):
+            return True
+
+    return False
+
 
 
 def initialize_voucher_checkout(
@@ -237,6 +281,8 @@ def fulfill_voucher_order_atomic(order_reference: str, gateway_ref: str, db: Ses
         return {
             "status": "success",
             "order_reference": order.order_reference,
+            "serial_code": voucher.serial_code,
+            "pin_code": voucher.pin_code,
             "serial_number": voucher.serial_code,
             "pin": voucher.pin_code,
             "school_name": school_name,

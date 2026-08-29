@@ -193,11 +193,14 @@ def create_student(
 ):
     _check_admin(current_user)
     school_id = get_school_id(current_user)
-    existing = db.query(Student).filter(Student.student_code == student.student_code).first()
+    existing_q = db.query(Student).filter(Student.student_code == student.student_code)
+    if school_id is not None:
+        existing_q = existing_q.filter(Student.school_id == school_id)
+    existing = existing_q.first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Student code '{student.student_code}' already exists.",
+            detail=f"Student code '{student.student_code}' already exists in your school.",
         )
 
     dob = None
@@ -378,9 +381,13 @@ def auto_link_guardians_endpoint(db: Session = Depends(get_db), current_user: Us
 @router.post("/{student_id}/link-parent")
 def link_parent(student_id: int, payload: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     _check_admin(current_user)
-    student = db.query(Student).filter(Student.id == student_id).first()
+    school_id = get_school_id(current_user)
+    query = db.query(Student).filter(Student.id == student_id)
+    if school_id is not None:
+        query = query.filter(Student.school_id == school_id)
+    student = query.first()
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=404, detail="Student not found in your school.")
     student.parent_id = payload.get("parent_id")
     db.commit()
     return {"message": "Parent linked successfully"}

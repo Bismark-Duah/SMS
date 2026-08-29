@@ -169,9 +169,13 @@ def generate_report_payload(
     if not student_id:
         raise HTTPException(status_code=400, detail="student_id is required")
 
-    student = db.query(Student).filter(Student.id == student_id).first()
+    school_id = get_school_id(current_user)
+    query = db.query(Student).filter(Student.id == student_id)
+    if school_id is not None:
+        query = query.filter(Student.school_id == school_id)
+    student = query.first()
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=404, detail="Student not found in your school.")
 
     guardian_name = student.guardian_name or (student.parent.username if student.parent else "Parent/Guardian")
     phone = student.phone or ""
@@ -708,4 +712,55 @@ def broadcast_class_reports(
         "dispatched_live": dispatched_count,
         "results": results
     }
+
+
+# ── SMS Unit Balance & Low-Balance Alert Telemetry ───────────────────────────
+
+from ..models import TenantSmsConfig, MessageLog
+
+@router.get("/balance")
+def get_sms_balance_and_telemetry(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Returns the school's active SMS units balance, delivery rate, and low-balance alarm.
+    """
+    school_id = get_school_id(current_user) or 1
+    
+    # 1. Resolve SMS balance quota from Setting or default
+    bal_setting = db.query(Setting).filter(Setting.key == f"sms_balance_units_{school_id}").first()
+    if not bal_setting:
+        bal_setting = db.query(Setting).filter(Setting.key == "sms_balance_units").first()
+    sms_units = int(bal_setting.value) if bal_setting and bal_setting.value else 5000
+
+    # 2. Count total sent and delivered messages
+    total_sent = db.query(MessageLog).filter(
+        MessageLog.channel == "SMS"
+    ).count()
+
+    total_delivered = db.query(MessageLog).filter(
+        MessageLog.channel == "SMS",
+        MessageLog.status.in_(["SENT", "DELIVERED", "DELIVERED_SIMULATED"])
+    ).count()
+
+    delivery_rate = round((total_delivered / total_sent * 100), 1) if total_sent > 0 else 100.0
+
+    # 3. Resolve active Sender ID
+    cfg = db.query(TenantSmsConfig).filter(TenantSmsConfig.school_id == school_id).first()
+    sender_id = cfg.sender_id if cfg and cfg.status == "ACTIVE" else "EDUMANAGE"
+    approval_status = cfg.status if cfg else "ACTIVE"
+
+    return {
+        "school_id": school_id,
+        "sms_units": max(0, sms_units),
+        "total_dispatched": total_sent,
+        "delivery_rate": delivery_rate,
+        "is_low_balance": sms_units < 200,
+        "warning_threshold": 200,
+        "sender_id": sender_id,
+        "approval_status": approval_status,
+        "provider": "HUBTEL"
+    }
+
 

@@ -435,7 +435,7 @@ def get_voucher_stats(
         "total_generated": total_vouchers,
         "used_count": used_vouchers,
         "purchased_online_count": purchased_online,
-        "available_count": available,
+            "available_count": available,
         "total_revenue_ghs": float(total_rev)
     }
 
@@ -446,6 +446,7 @@ from fastapi import Request, Header
 from ..services.payment_orchestrator import (
     initialize_voucher_checkout,
     verify_paystack_webhook_signature,
+    verify_hubtel_webhook_signature,
     fulfill_voucher_order_atomic
 )
 from ..middleware.cloudflare_guard import verify_turnstile_token
@@ -490,12 +491,12 @@ def initiate_public_voucher_checkout(
 ):
     """
     Public Endpoint: Initiates online admission voucher checkout with subaccount split.
-    Guarded by Cloudflare Turnstile token validation.
+    Guarded by Cloudflare Turnstile bot verification.
     """
     # 1. Cloudflare Turnstile bot verification
     client_ip = getattr(request.state, "client_ip", "127.0.0.1")
     if not verify_turnstile_token(data.turnstile_token, client_ip):
-        raise HTTPException(status_code=400, detail="Security challenge verification failed. Please refresh.")
+        raise HTTPException(status_code=400, detail="Security challenge verification failed. Please refresh the page.")
 
     # 2. Resolve voucher price
     price_setting = db.query(Setting).filter(Setting.key == "admission_voucher_price_ghs").first()
@@ -526,18 +527,14 @@ async def paystack_webhook(
     """
     raw_body = await request.body()
     
-    # Cryptographic HMAC Verification
-    if not verify_paystack_webhook_signature(raw_body, x_paystack_signature or ""):
-        # If test mode or mock key, allow pass
-        import os
-        paystack_key = os.getenv("PAYSTACK_SECRET_KEY", "")
-        if not paystack_key.startswith("sk_test_mock"):
-            raise HTTPException(status_code=400, detail="Invalid cryptographic webhook signature.")
+    # Strict Cryptographic HMAC Verification
+    if not verify_paystack_webhook_signature(raw_body, x_paystack_signature or "", db=db):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Paystack webhook signature.")
 
     try:
         payload = json.loads(raw_body.decode("utf-8"))
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body.")
+        raise HTTPException(status_code=400, detail="Invalid JSON body format.")
 
     event = payload.get("event")
     if event == "charge.success":
@@ -555,16 +552,22 @@ async def paystack_webhook(
 @router.post("/webhook/hubtel")
 async def hubtel_webhook(
     request: Request,
+    x_hubtel_signature: Optional[str] = Header(None, alias="x-hubtel-signature"),
+    x_hubtel_secret: Optional[str] = Header(None, alias="x-hubtel-secret"),
     db: Session = Depends(get_db)
 ):
     """
     Enterprise Webhook Handler for Hubtel Mobile Money Checkout Failover.
+    Guarded by cryptographic HMAC signature and secret token authentication.
     """
     raw_body = await request.body()
+    if not verify_hubtel_webhook_signature(raw_body, x_hubtel_signature, x_hubtel_secret, db=db):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Hubtel webhook signature or secret.")
+
     try:
         payload = json.loads(raw_body.decode("utf-8"))
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body.")
+        raise HTTPException(status_code=400, detail="Invalid JSON body format.")
 
     data = payload.get("Data", {}) or payload
     order_ref = data.get("ClientReference") or data.get("order_reference")

@@ -1046,6 +1046,26 @@ async function loadExecutiveAnalytics() {
         animateCountUp(broadcastsEl, adm.total_broadcast_messages);
         if (broadcastsSub) broadcastsSub.textContent = 'Sent notices & SMS';
       }
+
+      // Real-time Hubtel SMS balance and Sender ID status fetch
+      try {
+        const smsRes = await fetch(`${API_BASE}/messaging/balance`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (smsRes.ok) {
+          const smsData = await smsRes.json();
+          if (broadcastsEl) {
+            broadcastsEl.textContent = `${smsData.sms_units} Units`;
+          }
+          if (broadcastsSub) {
+            broadcastsSub.textContent = `Sender: ${smsData.sender_id} (${smsData.approval_status})`;
+          }
+          const alertBadge = document.getElementById('statSmsAlertBadge');
+          if (alertBadge) {
+            alertBadge.style.display = smsData.is_low_balance ? 'block' : 'none';
+          }
+        }
+      } catch (_) {}
     }
 
     let cardsHtml = '';

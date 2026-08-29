@@ -9,7 +9,7 @@ import unittest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from backend.app.database import SessionLocal, engine, Base
-from backend.app.models import Setting, ClassSection, Student, Program, House
+from backend.app.models import Setting, ClassSection, Student, Program, House, School
 from backend.app.routes.settings import get_settings
 
 
@@ -32,11 +32,14 @@ class TestSchoolModesScoping(unittest.TestCase):
         cls.db.close()
 
     def set_mode(self, mode_val: str):
-        s = self.db.query(Setting).filter(Setting.key == "school_mode").first()
-        if s:
-            s.value = mode_val
+        settings = self.db.query(Setting).filter(Setting.key == "school_mode").all()
+        if settings:
+            for s in settings:
+                s.value = mode_val
         else:
             self.db.add(Setting(key="school_mode", value=mode_val))
+        for sc in self.db.query(School).all():
+            sc.school_mode = mode_val
         self.db.commit()
 
     def test_01_shs_only_mode_scoping(self):

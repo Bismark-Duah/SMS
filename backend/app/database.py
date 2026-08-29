@@ -21,19 +21,32 @@ if DATABASE_URL.startswith("postgres://"):
 is_sqlite = DATABASE_URL.startswith("sqlite")
 is_postgres = DATABASE_URL.startswith("postgresql")
 
-engine_kwargs = {}
-if is_sqlite:
-    engine_kwargs["connect_args"] = {"check_same_thread": False, "timeout": 30}
-elif is_postgres:
-    engine_kwargs["pool_size"] = 20
-    engine_kwargs["max_overflow"] = 10
-    engine_kwargs["pool_pre_ping"] = True
-    engine_kwargs["pool_recycle"] = 300
+def _init_resilient_engine():
+    global DATABASE_URL, is_sqlite, is_postgres
+    if is_postgres:
+        try:
+            pg_engine = create_engine(
+                DATABASE_URL,
+                pool_size=25,
+                max_overflow=15,
+                pool_pre_ping=True,
+                pool_recycle=300
+            )
+            # Test connectivity immediately
+            with pg_engine.connect() as conn:
+                pass
+            return pg_engine
+        except Exception as e:
+            print(f"[DATABASE WARNING] PostgreSQL connection failed ({e}). Falling back gracefully to local SQLite ({DEFAULT_DB_PATH}).")
+            DATABASE_URL = f"sqlite:///{DEFAULT_DB_PATH}"
+            is_sqlite = True
+            is_postgres = False
 
-engine = create_engine(DATABASE_URL, **engine_kwargs)
-
-if is_sqlite:
-    @event.listens_for(engine, "connect")
+    sqlite_engine = create_engine(
+        f"sqlite:///{DEFAULT_DB_PATH}",
+        connect_args={"check_same_thread": False, "timeout": 30}
+    )
+    @event.listens_for(sqlite_engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
         try:
@@ -43,7 +56,9 @@ if is_sqlite:
             pass
         finally:
             cursor.close()
+    return sqlite_engine
 
+engine = _init_resilient_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

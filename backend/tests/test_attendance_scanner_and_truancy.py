@@ -178,7 +178,7 @@ class TestAttendanceScannerAndTruancy(unittest.TestCase):
     def test_02_scan_checkin_late_status(self):
         """Verify scanning a student after cutoff time records 'Late' status."""
         s = self.db.query(Setting).filter(Setting.key == "morning_attendance_cutoff").first()
-        s.value = "00:01"  # Cutoff at midnight so current time is definitely Late
+        s.value = "00:00"  # Cutoff at 00:00 so current time is definitely >= cutoff (Late)
         self.db.commit()
 
         payload = ScanCheckinPayload(

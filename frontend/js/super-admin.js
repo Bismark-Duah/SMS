@@ -1142,6 +1142,8 @@ window.handleConfirmDeleteSchool = async function(event) {
     confirmBtn.disabled = false;
     confirmBtn.innerHTML = 'Purge School';
   }
+};
+
 // ── Enterprise Edit School Profile Modal Handlers ───────────────────────────
 
 window.updateEditModeNotice = function() {

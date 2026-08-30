@@ -1,9 +1,10 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import AcademicYear, Semester, User
 from ..schemas import AcademicYearCreate, SemesterCreate, AcademicYearUpdate, SemesterUpdate
-from ..dependencies import get_current_user
+from ..dependencies import get_current_user, get_school_id
 
 router = APIRouter()
 
@@ -192,22 +193,28 @@ def promote_students(stage_id: int = None, db: Session = Depends(get_db)):
 @router.get("/executive-analytics")
 def get_executive_analytics(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id)
 ):
     from ..models import (
         Student, ClassSection, Subject, Department, User, ExeatRecord, 
         DisciplineRecord, House, Score, ClassSubjectScoreStatus, 
         ClassSectionReportStatus, Setting, School, TeacherAssignment
     )
-    from ..dependencies import get_school_id
     from datetime import datetime
     from sqlalchemy import func
 
-    school_id = get_school_id(current_user)
+    target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
+    if target_sch_id is None and isinstance(current_user, User) and current_user.school_id:
+        target_sch_id = current_user.school_id
 
     # School Mode check
-    setting = db.query(Setting).filter(Setting.key == "school_mode").first()
-    school_mode = setting.value if setting and setting.value else "COMBINED"
+    if target_sch_id:
+        sch_obj = db.query(School).filter(School.id == target_sch_id).first()
+        school_mode = sch_obj.school_mode if sch_obj and sch_obj.school_mode else "COMBINED"
+    else:
+        setting = db.query(Setting).filter(Setting.key == "school_mode").first()
+        school_mode = setting.value if setting and setting.value else "COMBINED"
 
     # Base queries scoped to school tenant
     user_query = db.query(User)
@@ -216,12 +223,12 @@ def get_executive_analytics(
     dept_query = db.query(Department)
     house_query = db.query(House)
 
-    if school_id is not None:
-        user_query = user_query.filter(User.school_id == school_id)
-        student_query = student_query.filter(Student.school_id == school_id)
-        class_query = class_query.filter(ClassSection.school_id == school_id) if hasattr(ClassSection, 'school_id') else class_query
-        dept_query = dept_query.filter(Department.school_id == school_id)
-        house_query = house_query.filter(House.school_id == school_id)
+    if target_sch_id is not None:
+        user_query = user_query.filter(User.school_id == target_sch_id)
+        student_query = student_query.filter(Student.school_id == target_sch_id)
+        class_query = class_query.filter(ClassSection.school_id == target_sch_id) if hasattr(ClassSection, 'school_id') else class_query
+        dept_query = dept_query.filter(Department.school_id == target_sch_id)
+        house_query = house_query.filter(House.school_id == target_sch_id)
 
     teachers_count = user_query.join(User.roles).filter(User.roles.any(name="teacher")).count()
     depts_count = dept_query.count() if school_mode != "BASIC_ONLY" else 0

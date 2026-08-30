@@ -57,7 +57,7 @@
       <!-- Search & Filters -->
       <section class="card" style="margin-bottom: 20px;">
         <div style="display:flex; gap:12px; flex-wrap:wrap;">
-          <input type="text" id="clearanceSearchInput" placeholder="Search student name, code, class..." style="flex:1; min-width:220px;" onkeyup="filterTable()" />
+          <input type="text" id="clearanceSearchInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search student name, code, class..." style="flex:1; min-width:220px;" onkeyup="filterTable()" />
           <select id="clearanceFilterStatus" onchange="filterTable()" style="width:180px;">
             <option value="">All Statuses</option>
             <option value="Fully Cleared">Fully Cleared</option>

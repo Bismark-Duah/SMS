@@ -141,7 +141,8 @@ def run_all():
         "backend/tests/test_attendance_scanner_and_truancy.py",
         "backend/tests/test_transcripts_and_promotions.py",
         "backend/tests/test_timetable_engine_and_pdf.py",
-        "backend/tests/test_state_bus_and_live_reactivity.py"
+        "backend/tests/test_state_bus_and_live_reactivity.py",
+        "backend/tests/test_multi_tenant_scoping_and_view.py"
     ]
 
     server_proc = ensure_server()

@@ -1,5 +1,12 @@
 const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
 
+function getDashboardHeaders(extra = {}) {
+  return window.getAuthHeaders ? window.getAuthHeaders(extra) : {
+    'Authorization': `Bearer ${sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken')}`,
+    ...extra
+  };
+}
+
 const roleLabels = {
   admin:   'Administrator',
   teacher: 'Teacher',
@@ -326,10 +333,9 @@ function renderDailyShortcuts(activeRole) {
 
 // ── Current term banner ──────────────────────────────────────────────────────
 async function loadCurrentTerm() {
-  const token = localStorage.getItem('accessToken');
   try {
     const res = await fetch(`${API_BASE}/academic/years`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: getDashboardHeaders(),
     });
     if (!res.ok) return;
     const years = await res.json();
@@ -339,7 +345,7 @@ async function loadCurrentTerm() {
     // Current semester within the current year
     const currentSem = (currentYear.semesters || []).find(s => s.is_current);
 
-    const schoolMode = localStorage.getItem('school_mode') || 'COMBINED';
+    const schoolMode = sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode') || 'COMBINED';
     let displayTermName = currentSem?.name || '—';
     if (schoolMode === 'BASIC_ONLY') {
       displayTermName = displayTermName.replace(/Semester/i, 'Term');
@@ -356,10 +362,9 @@ async function loadCurrentTerm() {
 
 // ── Stats: active students ────────────────────────────────────────────────────
 async function loadStudentsStat() {
-  const token = localStorage.getItem('accessToken');
   try {
     const res = await fetch(`${API_BASE}/students/`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: getDashboardHeaders(),
     });
     const students = await res.json();
     const active = Array.isArray(students) ? students.filter(s => s.is_active !== false).length : 0;
@@ -377,10 +382,9 @@ async function loadStudentsStat() {
 
 // ── Stats: attendance today ───────────────────────────────────────────────────
 async function loadAttendanceStat() {
-  const token = localStorage.getItem('accessToken');
   try {
     const res = await fetch(`${API_BASE}/attendance/today-stats`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: getDashboardHeaders(),
     });
     if (!res.ok) return;
     const data = await res.json();
@@ -404,10 +408,9 @@ async function loadAttendanceStat() {
 
 // ── Stats: classes count ──────────────────────────────────────────────────────
 async function loadClassesStat() {
-  const token = localStorage.getItem('accessToken');
   try {
     const res = await fetch(`${API_BASE}/classes/my-classes`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: getDashboardHeaders(),
     });
     const classes = await res.json();
     const el    = document.getElementById('statClasses');
@@ -419,10 +422,9 @@ async function loadClassesStat() {
 
 // ── Stats: unread alerts ──────────────────────────────────────────────────────
 async function loadAlertsStat() {
-  const token = localStorage.getItem('accessToken');
   try {
     const res = await fetch(`${API_BASE}/notifications/unread-count`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: getDashboardHeaders(),
     });
     if (!res.ok) return;
     const data = await res.json();
@@ -451,10 +453,9 @@ async function loadFeesStat() {
     return;
   }
 
-  const token = localStorage.getItem('accessToken');
   try {
     const res = await fetch(`${API_BASE}/reports/financial-summary`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: getDashboardHeaders(),
     });
     if (!res.ok) return;
     const data = await res.json();
@@ -482,10 +483,9 @@ async function loadFeesStat() {
 
 // ── Stats: voucher revenue split ─────────────────────────────────────────────
 async function loadVoucherRevenueStat() {
-  const token = localStorage.getItem('accessToken');
   try {
     const res = await fetch(`${API_BASE}/vouchers/financial-summary`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: getDashboardHeaders(),
     });
     if (!res.ok) return;
     const data = await res.json();
@@ -506,13 +506,12 @@ async function loadVoucherRevenueStat() {
 
 // ── Stats: boarding houses ───────────────────────────────────────────────────
 async function loadHousesStat() {
-  const token = localStorage.getItem('accessToken');
   const cardEl = document.getElementById('statHousesCard');
   const F = (window.SchoolFeatures && window.SchoolFeatures.version)
     ? window.SchoolFeatures
     : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
 
-  const isBoarding = F ? F.showBoardingKpi : ((localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
+  const isBoarding = F ? F.showBoardingKpi : ((sessionStorage.getItem('boarding_status') || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || '').toLowerCase();
 
   if (!isBoarding || ['assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_admin', 'assistant_head_admin'].includes(activeRole)) {
@@ -522,7 +521,7 @@ async function loadHousesStat() {
 
   try {
     const res = await fetch(`${API_BASE}/houses/`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: getDashboardHeaders(),
     });
     if (!res.ok) return;
     const houses = await res.json();
@@ -716,7 +715,7 @@ async function loadClassPerformance(classId, className) {
   chartBox.textContent = 'Loading…';
   try {
     const res = await fetch(`${API_BASE}/results/analytics/class-averages/${classId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+      headers: getDashboardHeaders(),
     });
     const averages = await res.json();
     if (!res.ok) throw new Error(averages.detail || 'Failed');
@@ -743,7 +742,7 @@ async function loadAnalytics() {
   // Attendance chart
   try {
     const res = await fetch(`${API_BASE}/attendance/analytics`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+      headers: getDashboardHeaders(),
     });
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
@@ -762,7 +761,7 @@ async function loadAnalytics() {
   // Class performance chart
   try {
     const res = await fetch(`${API_BASE}/classes/my-classes`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+      headers: getDashboardHeaders(),
     });
     const classes = await res.json();
     const select = document.getElementById('classAnalyticsSelect');
@@ -809,7 +808,7 @@ async function loadExecutiveAnalytics() {
 
   try {
     const res = await fetch(`${API_BASE}/academic/executive-analytics`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+      headers: getDashboardHeaders()
     });
     if (!res.ok) return;
 
@@ -1081,7 +1080,7 @@ async function loadExecutiveAnalytics() {
       // Real-time Hubtel SMS balance and Sender ID status fetch
       try {
         const smsRes = await fetch(`${API_BASE}/messaging/balance`, {
-          headers: { 'Authorization': 'Bearer ' + token }
+          headers: getDashboardHeaders()
         });
         if (smsRes.ok) {
           const smsData = await smsRes.json();
@@ -2912,12 +2911,10 @@ async function loadComparativeDashboardWidget() {
   const container = document.getElementById('executiveAnalyticsContainer') || document.querySelector('.analytics-section');
   if (!container) return;
 
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('accessToken');
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
   try {
-    const res = await fetch(`${API_BASE}/results/comparative-rankings`, { headers });
+    const res = await fetch(`${API_BASE}/results/comparative-rankings`, {
+      headers: getDashboardHeaders({ 'Content-Type': 'application/json' })
+    });
     if (!res.ok) return;
     const data = await res.json();
 

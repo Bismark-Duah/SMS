@@ -691,6 +691,16 @@ window.handleConfirmDeleteSchool = async function(event) {
 };
 
 window.enterSchoolView = function(schoolId, schoolName, schoolMode, schoolCode) {
+  // 1. Strict Tab-Isolated Scope (sessionStorage)
+  sessionStorage.setItem('school_id', String(schoolId));
+  sessionStorage.setItem('school_name', schoolName);
+  sessionStorage.setItem('school_mode', schoolMode);
+  if (schoolCode) {
+    sessionStorage.setItem('school_abbreviation', schoolCode);
+  }
+  sessionStorage.setItem('is_super_admin_viewing', 'true');
+
+  // 2. Global Storage Scope (localStorage fallback)
   localStorage.setItem('school_id', String(schoolId));
   localStorage.setItem('school_name', schoolName);
   localStorage.setItem('school_mode', schoolMode);
@@ -698,7 +708,24 @@ window.enterSchoolView = function(schoolId, schoolName, schoolMode, schoolCode) 
     localStorage.setItem('school_abbreviation', schoolCode);
   }
   localStorage.setItem('is_super_admin_viewing', 'true');
+
   window.location.href = 'dashboard.html';
+};
+
+window.exitSchoolView = function() {
+  sessionStorage.removeItem('school_id');
+  sessionStorage.removeItem('school_name');
+  sessionStorage.removeItem('school_mode');
+  sessionStorage.removeItem('school_abbreviation');
+  sessionStorage.removeItem('is_super_admin_viewing');
+
+  localStorage.removeItem('school_id');
+  localStorage.removeItem('school_name');
+  localStorage.removeItem('school_mode');
+  localStorage.removeItem('school_abbreviation');
+  localStorage.removeItem('is_super_admin_viewing');
+
+  window.location.href = 'super-admin.html';
 };
 
 window.toggleSchoolStatus = async function(schoolId, currentStatus) {

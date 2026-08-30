@@ -8,15 +8,16 @@ window.applyBranding = async function(overrideSettings) {
     let s = overrideSettings;
     if (!s) {
       const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
-      const token = localStorage.getItem('accessToken');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const headers = window.getAuthHeaders ? window.getAuthHeaders() : { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` };
       const res = await fetch(`${API_BASE}/settings/`, { headers });
-      if (!res.ok) return;
-      s = await res.json();
+      if (res.ok) {
+        s = await res.json();
+      }
     }
+    s = s || {};
 
-    const isSuperAdmin = (localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('userRole') === 'super_admin') && localStorage.getItem('userRole') !== 'admin' && !localStorage.getItem('is_super_admin_viewing');
-    const isViewing = localStorage.getItem('is_super_admin_viewing') === 'true';
+    const isViewing = (sessionStorage.getItem('is_super_admin_viewing') || localStorage.getItem('is_super_admin_viewing')) === 'true';
+    const isSuperAdmin = ((sessionStorage.getItem('userRole') || localStorage.getItem('userRole')) === 'super_admin' || localStorage.getItem('is_super_admin') === 'true') && (sessionStorage.getItem('userRole') || localStorage.getItem('userRole')) !== 'admin' && !isViewing;
 
     let currentSchoolName = '';
     let currentSchoolAbbr = '';
@@ -24,16 +25,20 @@ window.applyBranding = async function(overrideSettings) {
     if (isSuperAdmin && !isViewing) {
       currentSchoolName = 'Master System Portal';
       currentSchoolAbbr = 'SUPER ADMIN';
+      sessionStorage.setItem('school_name', currentSchoolName);
+      sessionStorage.setItem('school_abbreviation', currentSchoolAbbr);
       localStorage.setItem('school_name', currentSchoolName);
       localStorage.setItem('school_abbreviation', currentSchoolAbbr);
     } else {
-      currentSchoolName = (isViewing ? localStorage.getItem('school_name') : null) || s.school_name || localStorage.getItem('school_name') || 'School Management';
-      currentSchoolAbbr = (isViewing ? localStorage.getItem('school_abbreviation') : null) || s.school_code || s.school_abbreviation || localStorage.getItem('school_abbreviation') || currentSchoolName;
+      currentSchoolName = sessionStorage.getItem('school_name') || s.school_name || localStorage.getItem('school_name') || 'School Management';
+      currentSchoolAbbr = sessionStorage.getItem('school_abbreviation') || s.school_code || s.school_abbreviation || localStorage.getItem('school_abbreviation') || currentSchoolName;
 
       if (currentSchoolName && currentSchoolName !== 'Master System Portal') {
+        sessionStorage.setItem('school_name', currentSchoolName);
         localStorage.setItem('school_name', currentSchoolName);
       }
       if (currentSchoolAbbr && currentSchoolAbbr !== 'SUPER ADMIN') {
+        sessionStorage.setItem('school_abbreviation', currentSchoolAbbr);
         localStorage.setItem('school_abbreviation', currentSchoolAbbr);
       }
     }
@@ -82,6 +87,18 @@ window.applyBranding = async function(overrideSettings) {
           logoContainer.innerHTML = window.createDefaultCrestSvg(currentSchoolAbbr, 34);
         }
       }
+
+      // Topbar Viewing Mode Banner Pill
+      const existingViewingBanner = document.getElementById('topbarViewingModeBanner');
+      if (existingViewingBanner) existingViewingBanner.remove();
+
+      if (isViewing) {
+        const vBanner = document.createElement('div');
+        vBanner.id = 'topbarViewingModeBanner';
+        vBanner.style.cssText = 'display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg, rgba(245,158,11,0.2), rgba(217,119,6,0.15)); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; margin-left:12px;';
+        vBanner.innerHTML = `<span>👁️ Viewing: <strong>${currentSchoolName}</strong></span> <button onclick="window.exitSchoolView ? window.exitSchoolView() : (sessionStorage.clear(), localStorage.removeItem('is_super_admin_viewing'), window.location.href='super-admin.html')" style="background:#d97706; color:#fff; border:none; border-radius:12px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer; margin-left:4px;" title="Return to Super Admin Master Portal">Exit ⬅️</button>`;
+        topbar.appendChild(vBanner);
+      }
     }
 
     const sidebarNameEl = document.getElementById('sidebarSchoolName');
@@ -113,21 +130,16 @@ window.applyBranding = async function(overrideSettings) {
     }
 
     if (s.school_logo && (!isSuperAdmin || isViewing)) {
+      sessionStorage.setItem('school_logo', s.school_logo);
       localStorage.setItem('school_logo', s.school_logo);
     } else if (isSuperAdmin && !isViewing) {
+      sessionStorage.removeItem('school_logo');
       localStorage.removeItem('school_logo');
     }
 
-    // ── Page <title> ──────────────────────────────────────────────────
-    if (s.school_name) {
-      const currentTitle = document.title;
-      // Append school name if not already in title
-      if (!currentTitle.includes(s.school_name)) {
-        const suffix = currentTitle.replace(/\s*[–—-]\s*School Management System\s*/i, '').trim();
-        document.title = suffix
-          ? `${suffix} – ${s.school_name}`
-          : s.school_name;
-      }
+    // ── Page <title> Disambiguation ──────────────────────────────────
+    if (window.SMSStateBus && window.SMSStateBus.updateTabTitle) {
+      window.SMSStateBus.updateTabTitle();
     }
 
     // ── Global Server Theme ───────────────────────────────────────────

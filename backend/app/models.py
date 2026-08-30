@@ -367,6 +367,11 @@ class Student(Base):
     guardians = relationship("StudentGuardian", back_populates="student", cascade="all, delete-orphan")
     health_profile = relationship("StudentHealth", back_populates="student", uselist=False, cascade="all, delete-orphan")
 
+    __table_args__ = (
+        Index("ix_students_school_active", "school_id", "is_active"),
+        Index("ix_students_school_class", "school_id", "class_section_id"),
+    )
+
 class TeacherAssignment(Base):
     __tablename__ = "teacher_assignments"
 
@@ -447,6 +452,10 @@ class Setting(Base):
     school_id = Column(Integer, ForeignKey("schools.id"), nullable=True)
     key = Column(String, index=True, nullable=False)
     value = Column(String, nullable=False)
+
+    __table_args__ = (
+        Index("ix_settings_school_key", "school_id", "key"),
+    )
 
 # ── Fee & Finance ─────────────────────────────────────────────────────────────
 

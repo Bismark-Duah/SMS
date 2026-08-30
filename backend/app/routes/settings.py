@@ -10,7 +10,7 @@ import mimetypes
 from ..database import get_db
 from typing import Optional
 from ..models import Setting, User, AcademicYear, Semester, School
-from ..dependencies import get_current_user, get_current_user_optional
+from ..dependencies import get_current_user, get_current_user_optional, get_school_id
 
 try:
     from PIL import Image
@@ -34,49 +34,52 @@ def _process_image_to_base64(file_bytes: bytes, filename: str, max_size=(360, 36
             img = Image.open(io.BytesIO(file_bytes))
             # Preserve transparency if available
             if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
-                resample = getattr(Image, "Resampling", None)
-                filter_mode = resample.LANCZOS if resample else Image.ANTIALIAS
-                img.thumbnail(max_size, filter_mode)
-                out_io = io.BytesIO()
-                img.save(out_io, format="PNG", optimize=True)
-                b64_str = base64.b64encode(out_io.getvalue()).decode("utf-8")
-                return f"data:image/png;base64,{b64_str}"
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                buffered = io.BytesIO()
+                img.save(buffered, format="PNG", optimize=True)
+                encoded = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                return f"data:image/png;base64,{encoded}"
             else:
                 img = img.convert("RGB")
-                resample = getattr(Image, "Resampling", None)
-                filter_mode = resample.LANCZOS if resample else Image.ANTIALIAS
-                img.thumbnail(max_size, filter_mode)
-                out_io = io.BytesIO()
-                img.save(out_io, format="JPEG", quality=quality, optimize=True)
-                b64_str = base64.b64encode(out_io.getvalue()).decode("utf-8")
-                return f"data:image/jpeg;base64,{b64_str}"
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                buffered = io.BytesIO()
+                img.save(buffered, format="JPEG", quality=quality, optimize=True)
+                encoded = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                return f"data:image/jpeg;base64,{encoded}"
         except Exception as e:
-            print(f"PIL processing warning: {e}")
+            print(f"[LogoProcessor] Image compression error: {e}")
+            pass
 
-    # Fallback direct base64 encoding
-    b64_str = base64.b64encode(file_bytes).decode("utf-8")
-    return f"data:{mime_type};base64,{b64_str}"
+    # Fallback to direct raw Base64 Data URI
+    encoded = base64.b64encode(file_bytes).decode("utf-8")
+    return f"data:{mime_type};base64,{encoded}"
 
 @router.get("/public-branding")
 def get_public_branding(
     db: Session = Depends(get_db),
     x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
-    school_id: Optional[int] = None,
+    school_id: Optional[int] = Depends(get_school_id),
     mode: Optional[str] = None
 ):
     """
     Public lightweight endpoint returning school name, logo, and mode
     for public-facing portals (Candidate Admission, Result Checking, Parent Portal).
     """
-    settings_list = db.query(Setting).all()
-    res = {s.key: s.value for s in settings_list}
-
-    target_school_id = school_id
+    target_school_id = int(school_id) if isinstance(school_id, (int, float)) else None
     if not target_school_id and isinstance(x_school_id, str) and x_school_id.strip():
         try:
             target_school_id = int(x_school_id.strip())
         except ValueError:
             pass
+
+    if target_school_id:
+        settings_list = db.query(Setting).filter(
+            (Setting.school_id == target_school_id) | (Setting.school_id == None)
+        ).all()
+    else:
+        settings_list = db.query(Setting).all()
+
+    res = {s.key: s.value for s in settings_list}
 
     school = None
     if target_school_id:
@@ -115,20 +118,29 @@ def get_public_branding(
     }
 
 @router.get("/")
-def get_settings(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user_optional), x_school_id: Optional[str] = Header(None, alias="X-School-Id")):
-    settings_list = db.query(Setting).all()
-    res = {s.key: s.value for s in settings_list}
-
-    target_school_id = None
-    if isinstance(x_school_id, str) and x_school_id.strip():
+def get_settings(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    school_id: Optional[int] = Depends(get_school_id),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id")
+):
+    target_school_id = int(school_id) if isinstance(school_id, (int, float)) else None
+    if target_school_id is None and isinstance(x_school_id, str) and x_school_id.strip():
         try:
             target_school_id = int(x_school_id.strip())
         except ValueError:
             pass
-    elif isinstance(x_school_id, (int, float)):
-        target_school_id = int(x_school_id)
-    elif isinstance(current_user, User) and current_user.school_id:
+    elif target_school_id is None and isinstance(current_user, User) and current_user.school_id:
         target_school_id = current_user.school_id
+
+    if target_school_id:
+        settings_list = db.query(Setting).filter(
+            (Setting.school_id == target_school_id) | (Setting.school_id == None)
+        ).all()
+    else:
+        settings_list = db.query(Setting).all()
+
+    res = {s.key: s.value for s in settings_list}
 
     if target_school_id:
         school = db.query(School).filter(School.id == target_school_id).first()
@@ -140,6 +152,8 @@ def get_settings(db: Session = Depends(get_db), current_user: Optional[User] = D
                 res["school_logo"] = school.logo_url
             if school.school_mode:
                 res["school_mode"] = school.school_mode
+            if school.boarding_type:
+                res["boarding_status"] = school.boarding_type
     elif isinstance(current_user, User) and current_user.school:
         res["school_name"] = current_user.school.name
         res["school_code"] = current_user.school.code
@@ -148,6 +162,8 @@ def get_settings(db: Session = Depends(get_db), current_user: Optional[User] = D
             res["school_logo"] = current_user.school.logo_url
         if current_user.school.school_mode:
             res["school_mode"] = current_user.school.school_mode
+        if current_user.school.boarding_type:
+            res["boarding_status"] = current_user.school.boarding_type
 
     curr_year = db.query(AcademicYear).filter(AcademicYear.is_current == True).first()
     curr_sem = db.query(Semester).filter(Semester.is_current == True).first()
@@ -257,12 +273,23 @@ def update_settings(payload: dict, db: Session = Depends(get_db), current_user: 
         else:
             val_str = str(value)
             
-        setting = db.query(Setting).filter(Setting.key == key).first()
-        if setting:
-            setting.value = val_str
+        if target_sch_id:
+            setting = db.query(Setting).filter(
+                Setting.key == key,
+                Setting.school_id == target_sch_id
+            ).first()
+            if setting:
+                setting.value = val_str
+            else:
+                new_setting = Setting(school_id=target_sch_id, key=key, value=val_str)
+                db.add(new_setting)
         else:
-            new_setting = Setting(key=key, value=val_str)
-            db.add(new_setting)
+            setting = db.query(Setting).filter(Setting.key == key).first()
+            if setting:
+                setting.value = val_str
+            else:
+                new_setting = Setting(key=key, value=val_str)
+                db.add(new_setting)
     
     db.commit()
     return {"status": "success"}

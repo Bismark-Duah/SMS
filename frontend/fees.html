@@ -234,7 +234,7 @@
             <select id="filterClass" onchange="applyFilter()" style="flex:1; min-width:110px;">
               <option value="">All Classes</option>
             </select>
-            <input id="filterSearch" placeholder="Search student name..." oninput="applyFilter()" style="flex:2; min-width:160px;" />
+            <input type="text" id="filterSearch" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search student name..." oninput="applyFilter()" style="flex:2; min-width:160px;" />
             <button class="btn" onclick="exportFeesCSV()" style="background:#10b981; border-color:#059669; color:white; font-size:0.85rem; font-weight:600; white-space:nowrap;">📊 Export CSV</button>
           </div>
 

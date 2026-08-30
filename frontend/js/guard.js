@@ -640,37 +640,66 @@
   }
 
   async function syncSystemSettings() {
-    const token = localStorage.getItem('accessToken');
+    const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
     if (!token) return;
     try {
-      const headers = { 'Authorization': `Bearer ${token}` };
-      const activeSchoolId = localStorage.getItem('school_id');
-      if (activeSchoolId) headers['X-School-Id'] = activeSchoolId;
+      const headers = window.getAuthHeaders ? window.getAuthHeaders() : { 'Authorization': `Bearer ${token}` };
 
       const res = await fetch(`${API_BASE}/settings/`, { headers });
       if (res.ok) {
         const data = await res.json();
-        const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true';
-        const isViewing = localStorage.getItem('is_super_admin_viewing') === 'true';
+        const isViewing = (sessionStorage.getItem('is_super_admin_viewing') || localStorage.getItem('is_super_admin_viewing')) === 'true';
+        const isSuperAdmin = ((sessionStorage.getItem('userRole') || localStorage.getItem('userRole')) === 'super_admin' || localStorage.getItem('is_super_admin') === 'true') && (sessionStorage.getItem('userRole') || localStorage.getItem('userRole')) !== 'admin' && !isViewing;
 
-        if (data.boarding_status) localStorage.setItem('boarding_status', data.boarding_status);
-        if (data.school_logo) localStorage.setItem('school_logo', data.school_logo);
-        if (data.system_theme) localStorage.setItem('system_theme', data.system_theme);
-        if (data.class_score_weight) localStorage.setItem('class_score_weight', String(data.class_score_weight));
-        if (data.exam_score_weight) localStorage.setItem('exam_score_weight', String(data.exam_score_weight));
+        if (data.boarding_status) {
+          sessionStorage.setItem('boarding_status', data.boarding_status);
+          localStorage.setItem('boarding_status', data.boarding_status);
+        }
+        if (data.school_logo) {
+          sessionStorage.setItem('school_logo', data.school_logo);
+          localStorage.setItem('school_logo', data.school_logo);
+        }
+        if (data.system_theme) {
+          sessionStorage.setItem('system_theme', data.system_theme);
+          localStorage.setItem('system_theme', data.system_theme);
+        }
+        if (data.class_score_weight) {
+          sessionStorage.setItem('class_score_weight', String(data.class_score_weight));
+          localStorage.setItem('class_score_weight', String(data.class_score_weight));
+        }
+        if (data.exam_score_weight) {
+          sessionStorage.setItem('exam_score_weight', String(data.exam_score_weight));
+          localStorage.setItem('exam_score_weight', String(data.exam_score_weight));
+        }
 
         if (isSuperAdmin && !isViewing) {
+          sessionStorage.setItem('school_name', 'Master System Portal');
+          sessionStorage.setItem('school_abbreviation', 'SUPER ADMIN');
+          sessionStorage.setItem('school_mode', 'COMBINED');
           localStorage.setItem('school_name', 'Master System Portal');
           localStorage.setItem('school_abbreviation', 'SUPER ADMIN');
           localStorage.setItem('school_mode', 'COMBINED');
         } else if (!isSuperAdmin || isViewing) {
-          if (data.school_mode) localStorage.setItem('school_mode', data.school_mode);
-          if (data.school_name) localStorage.setItem('school_name', data.school_name);
+          if (data.school_mode) {
+            sessionStorage.setItem('school_mode', data.school_mode);
+            localStorage.setItem('school_mode', data.school_mode);
+          }
+          if (data.school_name) {
+            sessionStorage.setItem('school_name', data.school_name);
+            localStorage.setItem('school_name', data.school_name);
+          }
           if (data.school_abbreviation || data.school_code) {
-            localStorage.setItem('school_abbreviation', data.school_abbreviation || data.school_code);
+            const abb = data.school_abbreviation || data.school_code;
+            sessionStorage.setItem('school_abbreviation', abb);
+            localStorage.setItem('school_abbreviation', abb);
           } else if (localStorage.getItem('school_abbreviation') === 'SUPER ADMIN') {
+            sessionStorage.removeItem('school_abbreviation');
             localStorage.removeItem('school_abbreviation');
           }
+        }
+
+        if (window.SMSStateBus && window.SMSStateBus.updateTabTitle) {
+          window.SMSStateBus.updateTabTitle();
         }
       }
 

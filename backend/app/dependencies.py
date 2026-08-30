@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import Header, HTTPException, Depends
+from fastapi import Header, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from .database import get_db
 from .models import User
@@ -53,27 +53,27 @@ def get_current_user_optional(authorization: Optional[str] = Header(None), db: S
 
 
 def get_school_id(
-    current_user: Optional[User] = None,
+    current_user: Optional[User] = Depends(get_current_user_optional),
     x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
-    request: Optional[Request] = None
+    request: Request = None
 ) -> Optional[int]:
     """
     Returns the school_id to scope all database queries for multi-tenancy.
-    Priority:
-    1. Direct user session school_id (if not super_admin).
-    2. Request state school_id (resolved from Subdomain Middleware).
-    3. X-School-Id header (for API / super_admin tenant switching).
+    Zero-Trust Security Enforcement:
+    1. If user is NOT a super_admin, STRICTLY lock queries to current_user.school_id (rejects spoofed X-School-Id).
+    2. If user IS a super_admin, permit tenant switching via X-School-Id or Subdomain State.
+    3. If unauthenticated (e.g. public branding/portal), allow X-School-Id or Subdomain State.
     """
-    if isinstance(current_user, User):
-        role_names = [r.name for r in current_user.roles] if hasattr(current_user, 'roles') else []
-        if "super_admin" not in role_names and current_user.school_id:
-            return current_user.school_id
+    user = current_user if isinstance(current_user, User) else None
+    if user:
+        role_names = [r.name for r in user.roles] if hasattr(user, 'roles') else []
+        is_super = "super_admin" in role_names
 
-    # Check Subdomain Middleware state
-    if request and hasattr(request, "state") and getattr(request.state, "school_id", None):
-        return request.state.school_id
+        # 1. Non-super admin is locked strictly to their school (BOLA / IDOR Defense)
+        if not is_super:
+            return user.school_id
 
-    # Check Header
+    # 2. Super Admin or unauthenticated public requests: Check X-School-Id Header first
     if isinstance(x_school_id, str) and x_school_id.strip():
         try:
             return int(x_school_id.strip())
@@ -82,7 +82,12 @@ def get_school_id(
     elif isinstance(x_school_id, (int, float)):
         return int(x_school_id)
 
-    return getattr(current_user, "school_id", None) if isinstance(current_user, User) else None
+    # 3. Check Subdomain Middleware state
+    req = request if hasattr(request, "state") else (current_user if hasattr(current_user, "state") else None)
+    if req and hasattr(req, "state") and getattr(req.state, "school_id", None):
+        return req.state.school_id
+
+    return getattr(user, "school_id", None) if user else None
 
 
 # ── In-Memory Rate Limiter (Brute-Force Protection) ──────────────────────────

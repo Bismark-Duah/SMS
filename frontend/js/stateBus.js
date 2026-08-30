@@ -395,6 +395,59 @@
   window.SMSStateBus = SMSState;
   window.SMSState = SMSState;
 
+  /**
+   * Enterprise Global Authenticated Header Generator.
+   * Scopes requests with X-School-Id from tab-isolated sessionStorage first, then localStorage.
+   */
+  window.getAuthHeaders = function (extra = {}) {
+    const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+    const headers = { ...extra };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const isViewing = (sessionStorage.getItem('is_super_admin_viewing') || localStorage.getItem('is_super_admin_viewing')) === 'true';
+    const role = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || sessionStorage.getItem('userRole') || localStorage.getItem('userRole') || '').toLowerCase();
+    const schoolId = sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+
+    if (schoolId && (isViewing || role !== 'super_admin')) {
+      headers['X-School-Id'] = String(schoolId);
+    }
+    return headers;
+  };
+
+  /**
+   * Helper methods for tab-isolated multi-tenancy & UX title synchronization
+   */
+  SMSState.getSchoolId = function () {
+    return sessionStorage.getItem('school_id') || localStorage.getItem('school_id') || null;
+  };
+
+  SMSState.getSchoolName = function () {
+    const isViewing = (sessionStorage.getItem('is_super_admin_viewing') || localStorage.getItem('is_super_admin_viewing')) === 'true';
+    const isSuperAdmin = (sessionStorage.getItem('userRole') || localStorage.getItem('userRole')) === 'super_admin' || localStorage.getItem('is_super_admin') === 'true';
+    if (isSuperAdmin && !isViewing) {
+      return 'Master System Portal';
+    }
+    return sessionStorage.getItem('school_name') || localStorage.getItem('school_name') || 'School Management';
+  };
+
+  SMSState.updateTabTitle = function (pageTitle) {
+    try {
+      const isViewing = (sessionStorage.getItem('is_super_admin_viewing') || localStorage.getItem('is_super_admin_viewing')) === 'true';
+      const isSuperAdmin = (sessionStorage.getItem('userRole') || localStorage.getItem('userRole')) === 'super_admin' || localStorage.getItem('is_super_admin') === 'true';
+      const abbr = sessionStorage.getItem('school_abbreviation') || localStorage.getItem('school_abbreviation') || '';
+      const schName = sessionStorage.getItem('school_name') || localStorage.getItem('school_name') || '';
+
+      const pName = pageTitle || (document.title ? document.title.split('—')[0].replace(/^[^\w\s]+/, '').trim() : 'Portal');
+
+      if (isSuperAdmin && !isViewing) {
+        document.title = `👑 ${pName} — Master Portal`;
+      } else if (abbr || schName) {
+        const prefix = abbr ? `[${abbr}]` : schName;
+        document.title = `🏛️ ${prefix} ${pName} — ${schName || 'SMS'}`;
+      }
+    } catch (_) {}
+  };
+
   // Unify and alias setTheme & applyTheme globally
   window.setTheme = function (themeName, customColors) {
     return SMSState.setTheme(themeName, customColors);

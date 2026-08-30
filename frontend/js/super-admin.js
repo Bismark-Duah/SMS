@@ -335,6 +335,7 @@ window.renderSchoolsDirectory = function(schoolsList) {
         <!-- 6. Command Actions Toolbar -->
         <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
           <div style="display:inline-flex; gap:5px; align-items:center; justify-content:flex-end;">
+            <button class="btn" style="padding:5px 9px; font-size:0.78rem; font-weight:600; background:rgba(99,102,241,0.25); border-color:#818cf8; color:#e0e7ff;" onclick="window.openEditSchoolModal(${s.id})" title="Edit School Registration &amp; Profile">✏️ Edit</button>
             <button class="btn primary" style="padding:5px 10px; font-size:0.78rem; font-weight:600;" onclick="window.enterSchoolView(${s.id}, '${window.escapeJsQuotes(s.name)}', '${s.school_mode}', '${window.escapeJsQuotes(s.code || '')}')" title="Enter live school view">👁 Enter</button>
             <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:rgba(99,102,241,0.2); border-color:#6366f1; color:#a5b4fc;" onclick="window.openAccreditationModal(${s.id}, '${window.escapeJsQuotes(s.name)}', '${s.school_mode}')" title="Configure accredited tracks and active subjects">⚙️ Accredit</button>
             <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:#0284c7; border-color:#0369a1; color:#fff;" onclick="window.downloadSchoolBackup(${s.id}, '${s.code}')" title="Download school backup snapshot">📥 Backup</button>
@@ -1103,7 +1104,210 @@ window.handleConfirmDeleteSchool = async function(event) {
     confirmBtn.disabled = false;
     confirmBtn.innerHTML = 'Purge School';
   }
+// ── Enterprise Edit School Profile Modal Handlers ───────────────────────────
+
+window.updateEditModeNotice = function() {
+  const mode = document.getElementById('editSchoolMode')?.value;
+  const noticeEl = document.getElementById('editSchoolModeNotice');
+  if (!noticeEl) return;
+
+  if (mode === 'BASIC_ONLY') {
+    noticeEl.style.background = 'rgba(16, 185, 129, 0.12)';
+    noticeEl.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+    noticeEl.style.color = '#a7f3d0';
+    noticeEl.innerHTML = `<strong>🎯 Basic School Profile Activated:</strong> Uses <em>BECE Standard Grading (Grades 1–9)</em> and Cumulative Record Folder. SHS Electives, CSSPS &amp; Transcripts will be hidden. Existing students, staff, and past academic records are 100% preserved.`;
+  } else if (mode === 'SHS_ONLY') {
+    noticeEl.style.background = 'rgba(99, 102, 241, 0.12)';
+    noticeEl.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+    noticeEl.style.color = '#c7d2fe';
+    noticeEl.innerHTML = `<strong>🏛️ Senior High School Profile Activated:</strong> Uses <em>WAEC/WASSCE Standard Grading (A1–F9)</em>, CSSPS Placement, Programs, and Departments. Cumulative Record Folder will be hidden.`;
+  } else {
+    noticeEl.style.background = 'rgba(14, 165, 233, 0.12)';
+    noticeEl.style.borderColor = 'rgba(14, 165, 233, 0.3)';
+    noticeEl.style.color = '#bae6fd';
+    noticeEl.innerHTML = `<strong>🌐 Combined Profile Activated:</strong> Full multi-tier access enabled for both Basic and Senior High School levels.`;
+  }
+};
+
+window.openEditSchoolModal = async function(schoolId) {
+  const modal = document.getElementById('editSchoolModal');
+  const statusMsg = document.getElementById('editSchoolStatusMsg');
+  if (statusMsg) statusMsg.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      alert('Failed to load school details.');
+      return;
+    }
+    const school = await res.json();
+
+    document.getElementById('editSchoolId').value = school.id;
+    document.getElementById('editSchoolIdLabel').textContent = `${school.id} (${school.code})`;
+    document.getElementById('editSchoolName').value = school.name || '';
+    document.getElementById('editSchoolCode').value = school.code || '';
+    document.getElementById('editSchoolMode').value = school.school_mode || 'COMBINED';
+    document.getElementById('editSchoolBoarding').value = school.boarding_type || 'BOARDING_AND_DAY';
+    document.getElementById('editSchoolPhone').value = school.phone || '';
+    document.getElementById('editSchoolEmail').value = school.email || '';
+    document.getElementById('editSchoolAddress').value = school.address || '';
+    document.getElementById('editSchoolSubdomain').value = school.subdomain || '';
+    document.getElementById('editSchoolLogoUrl').value = school.logo_url || '';
+
+    // Update Crest Preview
+    const imgEl = document.getElementById('editSchoolLogoImg');
+    const defaultEl = document.getElementById('editSchoolDefaultCrest');
+    const removeBtn = document.getElementById('btnRemoveEditLogo');
+
+    if (school.logo_url) {
+      if (imgEl) { imgEl.src = school.logo_url; imgEl.style.display = 'block'; }
+      if (defaultEl) defaultEl.style.display = 'none';
+      if (removeBtn) removeBtn.style.display = 'inline-block';
+    } else {
+      if (imgEl) { imgEl.src = ''; imgEl.style.display = 'none'; }
+      if (defaultEl) defaultEl.style.display = 'block';
+      if (removeBtn) removeBtn.style.display = 'none';
+    }
+
+    window.updateEditModeNotice();
+    if (modal) modal.style.display = 'flex';
+
+  } catch (err) {
+    alert(`Network Error: ${err.message}`);
+  }
+};
+
+window.closeEditSchoolModal = function() {
+  const modal = document.getElementById('editSchoolModal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.handleEditLogoFileSelect = function(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUri = e.target.result;
+    document.getElementById('editSchoolLogoUrl').value = dataUri;
+    const imgEl = document.getElementById('editSchoolLogoImg');
+    const defaultEl = document.getElementById('editSchoolDefaultCrest');
+    const removeBtn = document.getElementById('btnRemoveEditLogo');
+    if (imgEl) { imgEl.src = dataUri; imgEl.style.display = 'block'; }
+    if (defaultEl) defaultEl.style.display = 'none';
+    if (removeBtn) removeBtn.style.display = 'inline-block';
+  };
+  reader.readAsDataURL(file);
+};
+
+window.handleRemoveEditLogo = function() {
+  document.getElementById('editSchoolLogoUrl').value = '';
+  document.getElementById('editSchoolLogoFile').value = '';
+  const imgEl = document.getElementById('editSchoolLogoImg');
+  const defaultEl = document.getElementById('editSchoolDefaultCrest');
+  const removeBtn = document.getElementById('btnRemoveEditLogo');
+  if (imgEl) { imgEl.src = ''; imgEl.style.display = 'none'; }
+  if (defaultEl) defaultEl.style.display = 'block';
+  if (removeBtn) removeBtn.style.display = 'none';
+};
+
+window.handleEditLogoUrlInput = function(val) {
+  const imgEl = document.getElementById('editSchoolLogoImg');
+  const defaultEl = document.getElementById('editSchoolDefaultCrest');
+  const removeBtn = document.getElementById('btnRemoveEditLogo');
+  const trimmed = (val || '').trim();
+
+  if (trimmed) {
+    if (imgEl) { imgEl.src = trimmed; imgEl.style.display = 'block'; }
+    if (defaultEl) defaultEl.style.display = 'none';
+    if (removeBtn) removeBtn.style.display = 'inline-block';
+  } else {
+    if (imgEl) { imgEl.src = ''; imgEl.style.display = 'none'; }
+    if (defaultEl) defaultEl.style.display = 'block';
+    if (removeBtn) removeBtn.style.display = 'none';
+  }
+};
+
+window.handleSaveEditSchool = async function(event) {
+  event.preventDefault();
+  const schoolId = document.getElementById('editSchoolId')?.value;
+  const btn = document.getElementById('btnSaveEditSchool');
+  const statusMsg = document.getElementById('editSchoolStatusMsg');
+  if (!schoolId) return;
+
+  const payload = {
+    name: document.getElementById('editSchoolName')?.value?.trim(),
+    code: document.getElementById('editSchoolCode')?.value?.trim()?.toUpperCase(),
+    school_mode: document.getElementById('editSchoolMode')?.value,
+    boarding_type: document.getElementById('editSchoolBoarding')?.value,
+    phone: document.getElementById('editSchoolPhone')?.value?.trim() || null,
+    email: document.getElementById('editSchoolEmail')?.value?.trim() || null,
+    address: document.getElementById('editSchoolAddress')?.value?.trim() || null,
+    subdomain: document.getElementById('editSchoolSubdomain')?.value?.trim()?.toLowerCase() || null,
+    logo_url: document.getElementById('editSchoolLogoUrl')?.value?.trim() || null
+  };
+
+  if (!payload.name || !payload.code) {
+    alert('Please fill in both the School Name and Code.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Saving Changes...';
+  if (statusMsg) statusMsg.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}`, {
+      method: 'PUT',
+      headers: {
+        ...getHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (statusMsg) {
+        statusMsg.style.display = 'block';
+        statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+        statusMsg.style.border = '1px solid #ef4444';
+        statusMsg.style.color = '#f87171';
+        statusMsg.innerHTML = `<strong>Update Failed:</strong> ${data.detail || 'Could not update school profile.'}`;
+      }
+      return;
+    }
+
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(16, 185, 129, 0.15)';
+      statusMsg.style.border = '1px solid #10b981';
+      statusMsg.style.color = '#34d399';
+      statusMsg.innerHTML = `<strong>Success!</strong> ${data.message || 'School profile updated successfully.'}`;
+    }
+
+    setTimeout(() => {
+      closeEditSchoolModal();
+      loadSuperAdminDashboard();
+    }, 1000);
+
+  } catch (err) {
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+      statusMsg.style.border = '1px solid #ef4444';
+      statusMsg.style.color = '#f87171';
+      statusMsg.innerHTML = `<strong>Network Error:</strong> ${err.message}`;
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '💾 Save Profile Changes';
+  }
 };
 
 loadSuperAdminDashboard();
+
 

@@ -43,6 +43,17 @@ class SchoolCreateSchema(BaseModel):
 class SchoolStatusSchema(BaseModel):
     status: str  # ACTIVE, SUSPENDED
 
+class SchoolUpdateSchema(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    school_mode: Optional[str] = None  # SHS_ONLY, BASIC_ONLY, COMBINED
+    boarding_type: Optional[str] = None  # DAY_ONLY, BOARDING_AND_DAY, BOARDING_ONLY
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    logo_url: Optional[str] = None
+    subdomain: Optional[str] = None
+
 class SchoolAccreditationUpdateSchema(BaseModel):
     program_ids: Optional[List[int]] = None
     subject_ids: Optional[List[int]] = None
@@ -346,6 +357,176 @@ def create_new_school(
             "school_mode": new_school.school_mode,
             "status": new_school.status,
             "admin_username": school_admin.username
+        }
+    }
+
+@router.get("/schools/{school_id}")
+def get_school_details(
+    school_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Returns complete profile details for a specific school for editing.
+    """
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+    
+    return {
+        "id": school.id,
+        "name": school.name,
+        "code": school.code,
+        "school_mode": school.school_mode,
+        "boarding_type": school.boarding_type or "BOARDING_AND_DAY",
+        "address": school.address,
+        "phone": school.phone,
+        "email": school.email,
+        "logo_url": school.logo_url,
+        "subdomain": getattr(school, "slug", None),
+        "status": school.status,
+        "student_count": db.query(Student).filter(Student.school_id == school.id).count(),
+        "user_count": db.query(User).filter(User.school_id == school.id).count()
+    }
+
+@router.put("/schools/{school_id}")
+def update_school_profile(
+    school_id: int,
+    payload: SchoolUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Atomically updates a school's profile, academic mode, boarding type, contact info, and branding.
+    Safely preserves all existing students, staff, and past academic records.
+    """
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+
+    changes = {}
+
+    # 1. Update Name
+    if payload.name is not None and payload.name.strip():
+        new_name = payload.name.strip()
+        if school.name != new_name:
+            changes["name"] = {"old": school.name, "new": new_name}
+            school.name = new_name
+            setting = db.query(Setting).filter(Setting.school_id == school.id, Setting.key == "school_name").first()
+            if setting:
+                setting.value = new_name
+            else:
+                db.add(Setting(school_id=school.id, key="school_name", value=new_name))
+
+    # 2. Update Code / Abbreviation
+    if payload.code is not None and payload.code.strip():
+        new_code = payload.code.upper().strip()
+        if school.code != new_code:
+            existing = db.query(School).filter(School.code == new_code, School.id != school.id).first()
+            if existing:
+                raise HTTPException(status_code=400, detail=f"School code '{new_code}' is already assigned to '{existing.name}'.")
+            changes["code"] = {"old": school.code, "new": new_code}
+            school.code = new_code
+            setting = db.query(Setting).filter(Setting.school_id == school.id, Setting.key == "school_abbreviation").first()
+            if setting:
+                setting.value = new_code
+            else:
+                db.add(Setting(school_id=school.id, key="school_abbreviation", value=new_code))
+
+    # 3. Update School Mode
+    if payload.school_mode is not None and payload.school_mode.strip():
+        new_mode = payload.school_mode.upper().strip()
+        if new_mode in ["BASIC_ONLY", "SHS_ONLY", "COMBINED"] and school.school_mode != new_mode:
+            changes["school_mode"] = {"old": school.school_mode, "new": new_mode}
+            school.school_mode = new_mode
+            
+            # Sync mode setting
+            mode_setting = db.query(Setting).filter(Setting.school_id == school.id, Setting.key == "school_mode").first()
+            if mode_setting:
+                mode_setting.value = new_mode
+            else:
+                db.add(Setting(school_id=school.id, key="school_mode", value=new_mode))
+
+            # Auto-sync boarding hierarchy and grading standard
+            auto_hierarchy = "BASIC_TWO_TIER" if new_mode == "BASIC_ONLY" else "SHS_THREE_TIER"
+            hier_setting = db.query(Setting).filter(Setting.school_id == school.id, Setting.key == "boarding_hierarchy_mode").first()
+            if hier_setting:
+                hier_setting.value = auto_hierarchy
+            else:
+                db.add(Setting(school_id=school.id, key="boarding_hierarchy_mode", value=auto_hierarchy))
+
+            grading_std = "BECE" if new_mode == "BASIC_ONLY" else "WAEC"
+            grad_setting = db.query(Setting).filter(Setting.school_id == school.id, Setting.key == "grading_standard").first()
+            if grad_setting:
+                grad_setting.value = grading_std
+            else:
+                db.add(Setting(school_id=school.id, key="grading_standard", value=grading_std))
+
+    # 4. Update Boarding Type
+    if payload.boarding_type is not None and payload.boarding_type.strip():
+        new_boarding = payload.boarding_type.upper().strip()
+        if new_boarding in ["DAY_ONLY", "BOARDING_AND_DAY", "BOARDING_ONLY"] and school.boarding_type != new_boarding:
+            changes["boarding_type"] = {"old": school.boarding_type, "new": new_boarding}
+            school.boarding_type = new_boarding
+            b_setting = db.query(Setting).filter(Setting.school_id == school.id, Setting.key == "boarding_status").first()
+            if b_setting:
+                b_setting.value = new_boarding
+            else:
+                db.add(Setting(school_id=school.id, key="boarding_status", value=new_boarding))
+
+    # 5. Update Contact Information & Subdomain
+    if payload.address is not None:
+        school.address = payload.address.strip() if payload.address else None
+    if payload.phone is not None:
+        school.phone = payload.phone.strip() if payload.phone else None
+    if payload.email is not None:
+        school.email = payload.email.strip() if payload.email else None
+    if payload.subdomain is not None:
+        school.slug = payload.subdomain.strip().lower() if payload.subdomain else None
+
+    # 6. Update Logo URL
+    if payload.logo_url is not None:
+        new_logo = payload.logo_url.strip() if payload.logo_url else None
+        changes["logo_url"] = {"old": "present" if school.logo_url else "none", "new": "present" if new_logo else "none"}
+        school.logo_url = new_logo
+
+    # 7. Audit Log
+    try:
+        import json
+        audit = ActivityAuditLog(
+            school_id=school.id,
+            user_name=current_user.username,
+            user_role="super_admin",
+            action="SCHOOL_PROFILE_UPDATE",
+            entity_type="School",
+            entity_id=str(school.id),
+            details=json.dumps(changes) if changes else f"Updated profile metadata for {school.name}",
+            timestamp=datetime.utcnow()
+        )
+        db.add(audit)
+    except Exception as audit_err:
+        print(f"[AuditLogError] {audit_err}")
+
+    try:
+        db.commit()
+        db.refresh(school)
+    except Exception as commit_err:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to update school profile: {str(commit_err)}")
+
+    return {
+        "message": f"School '{school.name}' ({school.code}) updated successfully!",
+        "school": {
+            "id": school.id,
+            "name": school.name,
+            "code": school.code,
+            "school_mode": school.school_mode,
+            "boarding_type": school.boarding_type,
+            "address": school.address,
+            "phone": school.phone,
+            "email": school.email,
+            "logo_url": school.logo_url,
+            "status": school.status
         }
     }
 

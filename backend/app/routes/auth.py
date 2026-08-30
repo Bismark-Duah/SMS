@@ -1,8 +1,8 @@
 import hashlib
 import secrets
 import os
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from fastapi.responses import JSONResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -53,7 +53,7 @@ from ..models import User, Role, School, ClassSection, House, Department
 from ..services.auth import create_jwt
 from .. import schemas
 from ..services.guardian_service import link_students_for_parent_user
-from ..dependencies import rate_limit_auth, get_current_user
+from ..dependencies import rate_limit_auth, get_current_user, get_school_id
 
 router = APIRouter()
 
@@ -388,22 +388,34 @@ def impersonate_user(
     }
 
 @router.get("/users", response_model=List[schemas.User])
-def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    from ..dependencies import get_user_assigned_scope, get_school_id
+def list_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id")
+):
+    from ..dependencies import get_user_assigned_scope
     from ..models import TeacherAssignment, Department, Role
-    school_id = get_school_id(current_user)
+
+    target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
+    if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
+        try:
+            target_sch_id = int(x_school_id.strip())
+        except ValueError:
+            pass
+    elif target_sch_id is None and hasattr(current_user, "school_id") and current_user.school_id:
+        target_sch_id = current_user.school_id
     
     current_roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, "roles") and current_user.roles else []
     is_super_admin = "super_admin" in current_roles
 
     query = db.query(User)
-
     super_role = db.query(Role).filter(Role.name == "super_admin").first()
 
     if is_super_admin:
-        if school_id is not None:
-            # Viewing a specific school tenant: filter to that school's users
-            query = query.filter(User.school_id == school_id)
+        if target_sch_id is not None:
+            # Viewing a specific school tenant: filter strictly to that school's users
+            query = query.filter(User.school_id == target_sch_id)
         else:
             # Default super_admin view: return system accounts (super_admin role or unassigned school_id)
             if super_role:
@@ -415,8 +427,8 @@ def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_c
         if super_role:
             query = query.filter(~User.roles.contains(super_role))
         
-        target_school_id = school_id if school_id is not None else (current_user.school_id if current_user.school_id is not None else 1)
-        query = query.filter(User.school_id == target_school_id)
+        final_sch_id = target_sch_id if target_sch_id is not None else 1
+        query = query.filter(User.school_id == final_sch_id)
 
     scope = get_user_assigned_scope(current_user, db)
     if not scope["is_admin"]:
@@ -531,10 +543,27 @@ def _resolve_or_create_role(db: Session, r_name: str) -> Optional[Role]:
 def create_user(
     payload: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id")
 ):
-    from ..dependencies import get_school_id
-    school_id = get_school_id(current_user)
+    target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
+    if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
+        try:
+            target_sch_id = int(x_school_id.strip())
+        except ValueError:
+            pass
+    elif target_sch_id is None and hasattr(current_user, "school_id") and current_user.school_id:
+        target_sch_id = current_user.school_id
+
+    # If payload explicitly provides school_id and caller is super_admin, honor it
+    caller_roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, "roles") and current_user.roles else []
+    if "super_admin" in caller_roles and payload.get("school_id"):
+        try:
+            target_sch_id = int(payload.get("school_id"))
+        except (ValueError, TypeError):
+            pass
+
     username = payload.get("username")
     email = payload.get("email")
     password = payload.get("password")
@@ -542,7 +571,6 @@ def create_user(
     role_names = payload.get("roles", ["teacher"])
 
     # Enforce security: non-super_admin callers cannot assign super_admin, admin, headmaster, headmistress
-    caller_roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, "roles") and current_user.roles else []
     if "super_admin" not in caller_roles:
         role_names = [r for r in role_names if r not in ["super_admin", "admin", "headmaster", "headmistress"]]
 
@@ -566,7 +594,7 @@ def create_user(
         password_hash=_hash_password(password),
         gender=gender,
         is_active=True,
-        school_id=school_id
+        school_id=target_sch_id
     )
     
     seen_canonical = set()

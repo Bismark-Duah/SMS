@@ -88,16 +88,12 @@ window.applyBranding = async function(overrideSettings) {
         }
       }
 
-      // Topbar Viewing Mode Banner Pill
+      // Clean up duplicate legacy topbar pill and ensure single master banner
       const existingViewingBanner = document.getElementById('topbarViewingModeBanner');
       if (existingViewingBanner) existingViewingBanner.remove();
 
-      if (isViewing) {
-        const vBanner = document.createElement('div');
-        vBanner.id = 'topbarViewingModeBanner';
-        vBanner.style.cssText = 'display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg, rgba(245,158,11,0.2), rgba(217,119,6,0.15)); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; margin-left:12px;';
-        vBanner.innerHTML = `<span>👁️ Viewing: <strong>${currentSchoolName}</strong></span> <button onclick="window.exitSchoolView ? window.exitSchoolView() : (sessionStorage.clear(), localStorage.removeItem('is_super_admin_viewing'), window.location.href='super-admin.html')" style="background:#d97706; color:#fff; border:none; border-radius:12px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer; margin-left:4px;" title="Return to Super Admin Master Portal">Exit ⬅️</button>`;
-        topbar.appendChild(vBanner);
+      if (window.updateSuperAdminBanner) {
+        window.updateSuperAdminBanner();
       }
     }
 

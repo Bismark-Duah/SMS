@@ -567,18 +567,19 @@
   }
 
   function injectSuperAdminBanner() {
-    if (localStorage.getItem('is_super_admin_viewing') === 'true') {
-      const schoolName = localStorage.getItem('school_name') || 'School View';
+    const isViewing = (sessionStorage.getItem('is_super_admin_viewing') || localStorage.getItem('is_super_admin_viewing')) === 'true';
+    if (isViewing) {
+      const schoolName = sessionStorage.getItem('school_name') || localStorage.getItem('school_name') || 'School View';
       let banner = document.getElementById('superAdminBanner');
       if (!banner) {
         banner = document.createElement('div');
         banner.id = 'superAdminBanner';
         document.body.prepend(banner);
       }
-      banner.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; width: 100vw !important; height: 38px !important; background: #6366f1; color: #ffffff; text-align: center; padding: 6px 16px; font-size: 0.85rem; font-weight: 600; z-index: 999999 !important; display: flex; justify-content: center; align-items: center; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.3); box-sizing: border-box !important;';
+      banner.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; width: 100vw !important; height: 38px !important; background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: #ffffff; text-align: center; padding: 6px 16px; font-size: 0.85rem; font-weight: 600; z-index: 999999 !important; display: flex; justify-content: center; align-items: center; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.3); box-sizing: border-box !important;';
       banner.innerHTML = `
-        <span>👁 Viewing <strong>${escapeHtml(schoolName)}</strong> as Overall System Super-Admin</span>
-        <a href="super-admin.html" onclick="localStorage.removeItem('is_super_admin_viewing'); localStorage.setItem('school_name','Master System Portal'); localStorage.setItem('school_abbreviation','SUPER ADMIN'); localStorage.removeItem('school_id');" style="background: rgba(255,255,255,0.25); color: #fff; padding: 3px 10px; border-radius: 4px; text-decoration: none; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.4);">← Return to Master Portal</a>
+        <span>👁️ Viewing <strong>${escapeHtml(schoolName)}</strong> as Platform Super-Admin</span>
+        <button onclick="window.exitSchoolView ? window.exitSchoolView() : (sessionStorage.removeItem('is_super_admin_viewing'), sessionStorage.removeItem('school_id'), localStorage.removeItem('is_super_admin_viewing'), localStorage.removeItem('school_id'), localStorage.setItem('school_name','Master System Portal'), localStorage.setItem('school_abbreviation','SUPER ADMIN'), window.location.href='super-admin.html')" style="background: rgba(255,255,255,0.25); color: #fff; padding: 3px 12px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.4); font-size: 0.8rem; font-weight: 700; cursor: pointer;">← Return to Master Portal</button>
       `;
       document.body.classList.add('has-superadmin-banner');
     } else {
@@ -587,6 +588,7 @@
       document.body.classList.remove('has-superadmin-banner');
     }
   }
+  window.updateSuperAdminBanner = injectSuperAdminBanner;
 
   // ── Main guard function ─────────────────────────────────────────
   function guard(options = {}) {

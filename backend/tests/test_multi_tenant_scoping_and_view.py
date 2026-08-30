@@ -197,6 +197,25 @@ class TestMultiTenantScopingAndView(unittest.TestCase):
         # Latency should be well under 500ms
         self.assertLess(duration_ms, 500, f"Executive analytics took too long: {duration_ms:.2f}ms")
 
+    def test_06_super_admin_update_settings_scoping(self):
+        """Verify Super Admin updating settings for School 2 does not affect School 1."""
+        update_settings(
+            payload={"school_name": f"Renamed Basic School {self.u_suffix}", "school_mode": "BASIC_ONLY"},
+            db=self.db,
+            current_user=self.sa_user,
+            school_id=self.sch2.id,
+            x_school_id=str(self.sch2.id)
+        )
+        
+        # Verify School 2 was updated
+        res2 = get_settings(db=self.db, current_user=self.sa_user, school_id=self.sch2.id, x_school_id=str(self.sch2.id))
+        self.assertEqual(res2.get("school_name"), f"Renamed Basic School {self.u_suffix}")
+
+        # Verify School 1 was NOT altered
+        res1 = get_settings(db=self.db, current_user=self.sa_user, school_id=self.sch1.id, x_school_id=str(self.sch1.id))
+        self.assertEqual(res1.get("school_name"), self.sch1.name)
+
 
 if __name__ == "__main__":
     unittest.main()
+

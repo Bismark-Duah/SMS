@@ -200,7 +200,13 @@ def get_settings(
     return res
 
 @router.put("/")
-def update_settings(payload: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_settings(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id")
+):
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     role_names = [r.name for r in current_user.roles]
@@ -234,7 +240,15 @@ def update_settings(payload: dict, db: Session = Depends(get_db), current_user: 
             if locked_key in payload:
                 del payload[locked_key]
 
-    target_sch_id = getattr(current_user, 'school_id', None) or 1
+    target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
+    if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
+        try:
+            target_sch_id = int(x_school_id.strip())
+        except ValueError:
+            pass
+    elif target_sch_id is None and isinstance(current_user, User) and current_user.school_id:
+        target_sch_id = current_user.school_id
+
     if target_sch_id:
         sch = db.query(School).filter(School.id == target_sch_id).first()
         if sch:
@@ -258,12 +272,13 @@ def update_settings(payload: dict, db: Session = Depends(get_db), current_user: 
                 # Auto-derive and persist boarding_hierarchy_mode whenever school_mode changes
                 auto_hierarchy = "BASIC_TWO_TIER" if new_mode == "BASIC_ONLY" else "SHS_THREE_TIER"
                 hierarchy_setting = db.query(Setting).filter(
-                    Setting.key == "boarding_hierarchy_mode"
+                    Setting.key == "boarding_hierarchy_mode",
+                    Setting.school_id == target_sch_id
                 ).first()
                 if hierarchy_setting:
                     hierarchy_setting.value = auto_hierarchy
                 else:
-                    db.add(Setting(key="boarding_hierarchy_mode", value=auto_hierarchy))
+                    db.add(Setting(school_id=target_sch_id, key="boarding_hierarchy_mode", value=auto_hierarchy))
             if "boarding_status" in payload and payload["boarding_status"]:
                 sch.boarding_type = str(payload["boarding_status"]).upper()
 

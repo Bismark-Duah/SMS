@@ -6,8 +6,12 @@ if (!token) {
 }
 
 function getHeaders(headers = {}) {
+  if (window.getAuthHeaders) return window.getAuthHeaders(headers);
   const h = { ...headers };
-  if (token) h['Authorization'] = `Bearer ${token}`;
+  const t = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+  if (t) h['Authorization'] = `Bearer ${t}`;
+  const schId = sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+  if (schId) h['X-School-Id'] = String(schId);
   return h;
 }
 

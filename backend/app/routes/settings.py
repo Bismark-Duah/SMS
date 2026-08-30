@@ -133,14 +133,22 @@ def get_settings(
     elif target_school_id is None and isinstance(current_user, User) and current_user.school_id:
         target_school_id = current_user.school_id
 
-    if target_school_id:
-        settings_list = db.query(Setting).filter(
-            (Setting.school_id == target_school_id) | (Setting.school_id == None)
-        ).all()
-    else:
-        settings_list = db.query(Setting).all()
+    res = {}
+    # 1. Global settings (fallback defaults)
+    global_settings = db.query(Setting).filter(Setting.school_id == None).all()
+    for s in global_settings:
+        res[s.key] = s.value
 
-    res = {s.key: s.value for s in settings_list}
+    # 2. Tenant-specific settings override global defaults
+    if target_school_id:
+        tenant_settings = db.query(Setting).filter(Setting.school_id == target_school_id).all()
+        for s in tenant_settings:
+            res[s.key] = s.value
+    elif not current_user:
+        # For public unauthenticated queries without school_id, load all as available
+        all_settings = db.query(Setting).all()
+        for s in all_settings:
+            res[s.key] = s.value
 
     if target_school_id:
         school = db.query(School).filter(School.id == target_school_id).first()
@@ -148,22 +156,16 @@ def get_settings(
             res["school_name"] = school.name
             res["school_code"] = school.code
             res["school_abbreviation"] = school.code
-            if school.logo_url:
-                res["school_logo"] = school.logo_url
-            if school.school_mode:
-                res["school_mode"] = school.school_mode
-            if school.boarding_type:
-                res["boarding_status"] = school.boarding_type
+            res["school_logo"] = school.logo_url or ""
+            res["school_mode"] = school.school_mode or "COMBINED"
+            res["boarding_status"] = school.boarding_type or "BOARDING_AND_DAY"
     elif isinstance(current_user, User) and current_user.school:
         res["school_name"] = current_user.school.name
         res["school_code"] = current_user.school.code
         res["school_abbreviation"] = current_user.school.code
-        if current_user.school.logo_url:
-            res["school_logo"] = current_user.school.logo_url
-        if current_user.school.school_mode:
-            res["school_mode"] = current_user.school.school_mode
-        if current_user.school.boarding_type:
-            res["boarding_status"] = current_user.school.boarding_type
+        res["school_logo"] = current_user.school.logo_url or ""
+        res["school_mode"] = current_user.school.school_mode or "COMBINED"
+        res["boarding_status"] = current_user.school.boarding_type or "BOARDING_AND_DAY"
 
     curr_year = db.query(AcademicYear).filter(AcademicYear.is_current == True).first()
     curr_sem = db.query(Semester).filter(Semester.is_current == True).first()

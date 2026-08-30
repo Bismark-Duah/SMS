@@ -23,13 +23,13 @@
   // Bump this whenever feature flag logic changes to force client refresh.
   const FEATURE_GATE_VERSION = '1.0.0';
 
-  // ── Read tenant configuration from localStorage ───────────────────────────
-  // Graceful defaults: if localStorage is not yet populated (pre-login),
+  // ── Read tenant configuration from sessionStorage (tab-isolated) & localStorage ──
+  // Graceful defaults: if storage is not yet populated (pre-login),
   // default to COMBINED + BOARDING_AND_DAY (show everything) — never crash.
   function getConfig() {
     try {
-      const mode    = (localStorage.getItem('school_mode')    || 'COMBINED').toUpperCase().trim();
-      const boarding = (localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase().trim();
+      const mode    = (sessionStorage.getItem('school_mode')    || localStorage.getItem('school_mode')    || 'COMBINED').toUpperCase().trim();
+      const boarding = (sessionStorage.getItem('boarding_status') || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase().trim();
       // Validate values — if unexpected string, fall back safely
       const validModes    = ['SHS_ONLY', 'BASIC_ONLY', 'COMBINED'];
       const validBoarding = ['DAY_ONLY', 'BOARDING_AND_DAY'];
@@ -184,12 +184,29 @@
 
   // ── Refresh Hook ──────────────────────────────────────────────────────────
   /**
-   * Call this after updating localStorage (e.g., when settings are saved).
+   * Call this after updating storage or fetching tenant settings.
    * Recomputes features and re-applies to DOM.
    */
-  function refreshFeatures() {
-    window.SchoolFeatures = computeFeatures();
+  function refreshFeatures(overrideMode, overrideBoarding) {
+    if (overrideMode) {
+      sessionStorage.setItem('school_mode', overrideMode);
+      localStorage.setItem('school_mode', overrideMode);
+    }
+    if (overrideBoarding) {
+      sessionStorage.setItem('boarding_status', overrideBoarding);
+      localStorage.setItem('boarding_status', overrideBoarding);
+    }
+    window.SchoolFeatures = computeFeatures(overrideMode, overrideBoarding);
     applyToDOM(window.SchoolFeatures);
+    if (window.applySchoolModeVisibility) {
+      window.applySchoolModeVisibility(window.SchoolFeatures.schoolMode, window.SchoolFeatures.boardingStatus);
+    }
+    if (window.renderDashboardNavCards) {
+      window.renderDashboardNavCards();
+    }
+    if (window.mountSidebarNav) {
+      window.mountSidebarNav();
+    }
     // Dispatch event so modules can react without polling
     window.dispatchEvent(new CustomEvent('schoolFeaturesRefreshed', {
       detail: window.SchoolFeatures,

@@ -161,6 +161,11 @@ function renderCards(role) {
   `).join('');
 }
 
+window.renderDashboardNavCards = renderCards;
+window.addEventListener('schoolFeaturesRefreshed', function() {
+  renderCards();
+});
+
 // ── Initialise page (auth guard + user info) ─────────────────────────────────
 function initDashboard() {
   const username = localStorage.getItem('username');

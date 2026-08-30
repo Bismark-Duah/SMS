@@ -311,6 +311,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+def sanitize_multi_tenant_state():
+    """
+    Ensures multi-tenant database state is 100% clean and isolated:
+    1. Purges legacy global 'school_name', 'school_logo', 'school_mode', 'school_abbreviation', 'school_code' from Setting table where school_id is NULL.
+    2. Ensures School 1 (Atwima Koforidua Basic) has its correct identity and BASIC_ONLY mode.
+    3. Ensures School 2 (J.A. Kufuor STEM) has its correct identity and SHS_ONLY mode.
+    """
+    try:
+        from .database import SessionLocal
+        from .models import School, Setting
+        db = SessionLocal()
+        
+        # 1. Purge leaking global branding settings that belong to specific tenants
+        db.query(Setting).filter(
+            Setting.school_id == None,
+            Setting.key.in_(["school_name", "school_logo", "school_mode", "school_abbreviation", "school_code", "boarding_status"])
+        ).delete(synchronize_session=False)
+
+        # 2. Rectify School 1 if present
+        sch1 = db.query(School).filter(School.id == 1).first()
+        if sch1:
+            if "basic" in sch1.name.lower() or "atwima" in sch1.name.lower() or "islamic" in sch1.name.lower():
+                sch1.name = "Atwima Koforidua Islamic Basic School"
+                sch1.code = "AKIBS"
+                sch1.school_mode = "BASIC_ONLY"
+            elif "kufuor" in sch1.name.lower() or "stem" in sch1.name.lower():
+                sch1.name = "J.A. Kufuor STEM Technical School"
+                sch1.code = "JAK STEM"
+                sch1.school_mode = "SHS_ONLY"
+
+        # 3. Rectify School 2 if present
+        sch2 = db.query(School).filter(School.id == 2).first()
+        if sch2:
+            if "kufuor" in sch2.name.lower() or "stem" in sch2.name.lower():
+                sch2.name = "J.A. Kufuor STEM Technical School"
+                sch2.code = "JAK STEM"
+                sch2.school_mode = "SHS_ONLY"
+            elif "basic" in sch2.name.lower() or "atwima" in sch2.name.lower() or "islamic" in sch2.name.lower():
+                sch2.name = "Atwima Koforidua Islamic Basic School"
+                sch2.code = "AKIBS"
+                sch2.school_mode = "BASIC_ONLY"
+
+        db.commit()
+        db.close()
+    except Exception as e:
+        print(f"[StartupSanitization] Error: {e}")
+
 @app.get("/health", tags=["system"])
 @app.get("/api/health", tags=["system"])
 def get_system_health(db: Session = Depends(get_db)):

@@ -698,6 +698,13 @@
             sessionStorage.removeItem('school_abbreviation');
             localStorage.removeItem('school_abbreviation');
           }
+
+          if (window.FeatureGate && window.FeatureGate.refresh) {
+            window.FeatureGate.refresh(data.school_mode, data.boarding_status);
+          }
+          if (window.applyBranding) {
+            window.applyBranding(data);
+          }
         }
 
         if (window.SMSStateBus && window.SMSStateBus.updateTabTitle) {

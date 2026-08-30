@@ -139,7 +139,7 @@ function renderCards(role) {
     const href = (item.href || '').toLowerCase();
     
     // SHS-only features (hide in Basic Only)
-    if (isBasicOnly && (href.includes('programs.html') || href.includes('departments.html') || href.includes('enrollment.html') || href.includes('transcript') || href.includes('clearance.html'))) {
+    if (isBasicOnly && (href.includes('programs.html') || href.includes('departments.html') || href.includes('enrollment.html') || href.includes('transcript') || href.includes('clearance.html') || href.includes('houses.html') || href.includes('exeat.html'))) {
       return false;
     }
     // Basic-only features (hide in SHS Only)
@@ -152,6 +152,10 @@ function renderCards(role) {
     }
     return true;
   });
+
+  if (isBasicOnly && !items.some(i => (i.href || '').includes('cumulative-record.html'))) {
+    items.splice(3, 0, { label: 'Cumulative Record Folder', icon: '📂', href: 'cumulative-record.html' });
+  }
 
   container.innerHTML = items.map(item => `
     <a class="nav-card" href="${item.href}">
@@ -327,6 +331,33 @@ function renderDailyShortcuts(activeRole) {
       { label: '💳 Log Student Payment', href: 'fees.html' },
       { label: '💬 Broadcast Parent SMS', href: 'messaging.html' }
     ];
+  }
+
+  // Filter shortcuts by SchoolFeatures
+  const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+    ? window.SchoolFeatures
+    : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+  const isBasicOnly = F ? F.isBasicOnly : (localStorage.getItem('school_mode') === 'BASIC_ONLY');
+  const isShsOnly   = F ? F.isShsOnly   : (localStorage.getItem('school_mode') === 'SHS_ONLY');
+  const isBoarding  = F ? F.isBoarding  : (localStorage.getItem('boarding_status') !== 'DAY_ONLY');
+
+  shortcuts = shortcuts.filter(s => {
+    const href = (s.href || '').toLowerCase();
+    if (isBasicOnly && (href.includes('programs.html') || href.includes('departments.html') || href.includes('clearance.html') || href.includes('houses.html') || href.includes('exeat.html') || href.includes('enrollment.html') || href.includes('transcripts'))) {
+      return false;
+    }
+    if (isShsOnly && href.includes('cumulative-record.html')) {
+      return false;
+    }
+    if (!isBoarding && (href.includes('houses.html') || href.includes('exeat.html'))) {
+      return false;
+    }
+    return true;
+  });
+
+  if (isBasicOnly && !shortcuts.some(s => (s.href || '').includes('cumulative-record.html'))) {
+    shortcuts.splice(1, 0, { label: '📂 Cumulative Record Folder', href: 'cumulative-record.html' });
   }
 
   container.innerHTML = shortcuts.map(s => `
@@ -692,7 +723,8 @@ async function loadDashboardStats() {
     if (staffCard) staffCard.style.display = 'none';
     if (usersCard) usersCard.style.display = 'none';
     if (broadcastsCard) broadcastsCard.style.display = 'none';
-    if (housesCard) housesCard.style.display = 'flex';
+    const isBoardingSchool = ((sessionStorage.getItem('boarding_status') || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY') && (sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode')) !== 'BASIC_ONLY';
+    if (housesCard) housesCard.style.display = isBoardingSchool ? 'flex' : 'none';
   }
 
   // All load in parallel — each handles its own errors

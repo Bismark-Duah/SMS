@@ -3,12 +3,19 @@ Multi-Tenant Subdomain Routing Middleware for SaaS School Management System.
 Resolves school tenant dynamically from incoming Host headers (e.g. sunyani-shs.sms.edu.gh -> School.id)
 or custom headers (X-School-Id, X-School-Slug), injecting tenant context into request.state.
 """
+from contextvars import ContextVar
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 from typing import Optional
 from ..database import SessionLocal
 from ..models import School
+
+_active_tenant_school_id: ContextVar[Optional[int]] = ContextVar("active_tenant_school_id", default=None)
+
+def get_current_request_school_id() -> Optional[int]:
+    """Returns the tenant school_id resolved for the current active request thread/task."""
+    return _active_tenant_school_id.get()
 
 def extract_subdomain_from_host(host: str, root_domains=None) -> Optional[str]:
     """
@@ -54,7 +61,6 @@ class TenantSubdomainMiddleware(BaseHTTPMiddleware):
         host = request.headers.get("host", "")
         subdomain = extract_subdomain_from_host(host, self.root_domains)
 
-
         # 2. Check Fallback Headers (X-School-Slug / X-School-Id)
         x_slug = request.headers.get("x-school-slug", "").strip()
         x_id_str = request.headers.get("x-school-id", "").strip()
@@ -91,7 +97,12 @@ class TenantSubdomainMiddleware(BaseHTTPMiddleware):
             finally:
                 db.close()
 
-        response = await call_next(request)
+        # Set request-scoped ContextVar
+        token = _active_tenant_school_id.set(request.state.school_id)
+        try:
+            response = await call_next(request)
+        finally:
+            _active_tenant_school_id.reset(token)
         
         # Inject tenant headers into response for client telemetry
         if request.state.school_id:

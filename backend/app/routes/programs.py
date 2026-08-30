@@ -61,6 +61,11 @@ def list_programs(
     current_user: User = Depends(get_current_user),
 ):
     school_id = get_school_id(current_user)
+    if school_id:
+        sch = db.query(School).filter(School.id == school_id).first()
+        if sch and sch.school_mode == "BASIC_ONLY":
+            return []
+
     query = db.query(Program)
     if school_id is not None and hasattr(Program, "school_id"):
         query = query.filter(Program.school_id == school_id)

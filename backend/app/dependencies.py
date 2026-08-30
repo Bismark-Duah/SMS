@@ -52,6 +52,8 @@ def get_current_user_optional(authorization: Optional[str] = Header(None), db: S
         return None
 
 
+from .middleware.tenant_subdomain import get_current_request_school_id
+
 def get_school_id(
     current_user: Optional[User] = Depends(get_current_user_optional),
     x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
@@ -82,7 +84,12 @@ def get_school_id(
     elif isinstance(x_school_id, (int, float)):
         return int(x_school_id)
 
-    # 3. Check Subdomain Middleware state
+    # 3. Check ContextVar set by TenantSubdomainMiddleware
+    ctx_id = get_current_request_school_id()
+    if ctx_id is not None:
+        return ctx_id
+
+    # 4. Check Subdomain Middleware state
     req = request if hasattr(request, "state") else (current_user if hasattr(current_user, "state") else None)
     if req and hasattr(req, "state") and getattr(req.state, "school_id", None):
         return req.state.school_id

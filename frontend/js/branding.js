@@ -65,7 +65,44 @@ window.applyBranding = async function(overrideSettings) {
       let nameEl = document.getElementById('schoolNameHeader');
       let logoContainer = document.getElementById('topbarLogoContainer');
 
-      if (nameEl) nameEl.textContent = currentSchoolName;
+      if (nameEl) {
+        nameEl.textContent = currentSchoolName;
+
+        // Add or update institutional mode badge
+        let modeBadge = document.getElementById('topbarSchoolModeBadge');
+        if (!modeBadge && nameEl.parentElement) {
+          modeBadge = document.createElement('span');
+          modeBadge.id = 'topbarSchoolModeBadge';
+          modeBadge.className = 'school-mode-badge';
+          nameEl.parentElement.appendChild(modeBadge);
+        }
+        if (modeBadge) {
+          if (isSuperAdmin && !isViewing) {
+            modeBadge.style.display = 'none';
+          } else {
+            const rawMode = (s.school_mode || sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
+            let badgeText = '🌐 Combined';
+            let badgeBg = 'rgba(99, 102, 241, 0.15)';
+            let badgeColor = '#818cf8';
+            let badgeBorder = 'rgba(99, 102, 241, 0.3)';
+
+            if (rawMode === 'BASIC_ONLY') {
+              badgeText = '🎯 Basic School (KG–JHS)';
+              badgeBg = 'rgba(16, 185, 129, 0.15)';
+              badgeColor = '#34d399';
+              badgeBorder = 'rgba(16, 185, 129, 0.3)';
+            } else if (rawMode === 'SHS_ONLY') {
+              badgeText = '🏛️ SHS Profile (SHS 1–3)';
+              badgeBg = 'rgba(59, 130, 246, 0.15)';
+              badgeColor = '#60a5fa';
+              badgeBorder = 'rgba(59, 130, 246, 0.3)';
+            }
+
+            modeBadge.textContent = badgeText;
+            modeBadge.style.cssText = `display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:999px; background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; margin-left:8px; vertical-align:middle;`;
+          }
+        }
+      }
 
       // Clean up any legacy or duplicate .topbar-logo elements
       topbar.querySelectorAll('.topbar-logo').forEach(el => el.remove());

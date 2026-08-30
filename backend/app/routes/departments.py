@@ -45,6 +45,9 @@ def list_departments(db: Session = Depends(get_db), current_user: User = Depends
         mode_setting = db.query(Setting).filter(Setting.key == "school_mode").first()
         school_mode = mode_setting.value if mode_setting else "COMBINED"
 
+    if school_mode == "BASIC_ONLY":
+        return []
+
     departments = query.all()
     results = []
     for d in departments:

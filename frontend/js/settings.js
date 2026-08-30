@@ -207,21 +207,23 @@ async function loadSettings() {
         window.updateGradingStandardDropdown(mode);
 
         // Strict Super Admin check — locks school registration parameters from school admin override
-        const isSuperAdmin = (localStorage.getItem('userRole') === 'super_admin' || localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin');
+        const isSuperAdmin = (sessionStorage.getItem('userRole') || localStorage.getItem('userRole')) === 'super_admin' || localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin';
         const superOnlyFields = ['school_name', 'school_abbreviation', 'school_mode', 'boarding_status', 'boarding_hierarchy_mode'];
         superOnlyFields.forEach(fieldId => {
             const el = document.getElementById(fieldId);
             if (el) {
                 if (!isSuperAdmin) {
                     el.disabled = true;
-                    el.title = "This parameter is provisioned and managed by the Platform Super-Admin.";
-                    el.style.opacity = '0.7';
+                    el.title = "This parameter is provisioned and governed by the Platform Super-Admin.";
+                    el.style.opacity = '0.65';
                     el.style.cursor = 'not-allowed';
+                    el.style.background = 'rgba(15, 23, 42, 0.7)';
                 } else {
                     if (fieldId !== 'boarding_hierarchy_mode') {
                         el.disabled = false;
                         el.style.opacity = '1';
                         el.style.cursor = 'default';
+                        el.style.background = '';
                     }
                 }
             }

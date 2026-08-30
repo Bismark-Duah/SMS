@@ -170,5 +170,38 @@ class TestSuperAdminSchoolEdit(unittest.TestCase):
         self.assertEqual(details["code"], self.school1.code)
         self.assertEqual(details["student_count"], 1)
 
+    def test_04_regular_admin_cannot_override_locked_school_fields(self):
+        """Verify regular school admin cannot change school_name, school_mode, or boarding_status via settings endpoint."""
+        from backend.app.routes.settings import update_settings
+
+        initial_name = self.school1.name
+        initial_mode = self.school1.school_mode
+
+        payload = {
+            "school_name": "Malicious Admin Changed School Name",
+            "school_mode": "SHS_ONLY",
+            "report_motto": "Discipline and Hard Work"
+        }
+
+        res = update_settings(
+            payload=payload,
+            db=self.db,
+            current_user=self.regular_admin,
+            school_id=self.school1.id
+        )
+
+        # Reload school from database
+        self.db.refresh(self.school1)
+
+        # School name and mode must remain strictly unchanged
+        self.assertEqual(self.school1.name, initial_name)
+        self.assertEqual(self.school1.school_mode, initial_mode)
+
+        # Legitimate school settings like motto SHOULD be updated
+        motto_setting = self.db.query(Setting).filter(Setting.school_id == self.school1.id, Setting.key == "report_motto").first()
+        self.assertIsNotNone(motto_setting)
+        self.assertEqual(motto_setting.value, "Discipline and Hard Work")
+
 if __name__ == "__main__":
     unittest.main()
+

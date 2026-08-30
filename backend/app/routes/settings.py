@@ -236,8 +236,8 @@ def update_settings(
             pass
 
     is_super_admin = "super_admin" in role_names
-    is_admin = "admin" in role_names or is_super_admin
-    if not is_admin:
+    # If not a platform super-admin, strictly strip governance-level parameters so school admins cannot override them
+    if not is_super_admin:
         for locked_key in ["school_name", "school_code", "school_abbreviation", "school_mode", "boarding_status", "boarding_hierarchy_mode"]:
             if locked_key in payload:
                 del payload[locked_key]

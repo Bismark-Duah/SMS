@@ -38,6 +38,12 @@ class TestStateBusAndLiveReactivity(unittest.TestCase):
             cls.db.add(cls.admin_role)
             cls.db.commit()
 
+        cls.super_role = cls.db.query(Role).filter(Role.name == "super_admin").first()
+        if not cls.super_role:
+            cls.super_role = Role(name="super_admin")
+            cls.db.add(cls.super_role)
+            cls.db.commit()
+
         cls.admin_user = User(
             username=f"admin_state_{cls.u_suffix}",
             email=f"admin_state_{cls.u_suffix}@example.com",
@@ -46,8 +52,18 @@ class TestStateBusAndLiveReactivity(unittest.TestCase):
             roles=[cls.admin_role]
         )
         cls.db.add(cls.admin_user)
+
+        cls.super_user = User(
+            username=f"super_state_{cls.u_suffix}",
+            email=f"super_state_{cls.u_suffix}@example.com",
+            password_hash="mockhash",
+            school_id=cls.school.id,
+            roles=[cls.super_role]
+        )
+        cls.db.add(cls.super_user)
         cls.db.commit()
         cls.db.refresh(cls.admin_user)
+        cls.db.refresh(cls.super_user)
 
     @classmethod
     def tearDownClass(cls):
@@ -95,9 +111,9 @@ class TestStateBusAndLiveReactivity(unittest.TestCase):
             "school_mode": "SHS_ONLY",
             "boarding_status": "BOARDING_AND_DAY"
         }
-        update_settings(payload, db=self.db, current_user=self.admin_user)
+        update_settings(payload, db=self.db, current_user=self.super_user)
 
-        res = get_settings(db=self.db, current_user=self.admin_user)
+        res = get_settings(db=self.db, current_user=self.super_user)
         self.assertEqual(res.get("school_name"), new_name)
         self.assertEqual(res.get("school_abbreviation"), new_abbr)
         self.assertEqual(res.get("report_motto"), "Knowledge is Light")

@@ -456,8 +456,83 @@
     return SMSState.setTheme(themeName, customColors);
   };
 
+  // ── Global Anti-Autofill Scrubber & Browser Decoy Enforcement ──────────────
+  SMSState.neutralizeAutofill = function () {
+    try {
+      // 1. Search inputs & filter bars across all screens
+      const searchSelectors = [
+        'input[type="search"]',
+        'input[id*="Search"]',
+        'input[id*="search"]',
+        'input[id*="filter"]',
+        'input[name*="search"]',
+        '#userSearchInput',
+        '#schoolSearchInput',
+        '#studentSearch',
+        '#clearanceSearchInput',
+        '#filterSearch',
+        '#fSearch',
+        '#searchInput',
+        '#classSearchInput'
+      ];
+      
+      const searchInputs = document.querySelectorAll(searchSelectors.join(','));
+      searchInputs.forEach(input => {
+        input.setAttribute('autocomplete', 'off');
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('autocapitalize', 'off');
+        input.setAttribute('spellcheck', 'false');
+        input.setAttribute('data-lpignore', 'true');
+        input.setAttribute('data-form-type', 'other');
+        
+        // If user hasn't typed in it yet, ensure value is clean if injected by browser
+        if (!input.dataset.userTyped) {
+          const val = (input.value || '').toLowerCase();
+          if (val === 'superadmin' || val === 'admin' || val.includes('@') || (val.length > 20 && !val.includes(' '))) {
+            input.value = '';
+          }
+        }
+        input.addEventListener('input', () => { input.dataset.userTyped = 'true'; }, { once: true });
+      });
+
+      // 2. Staff & School Creation Form Inputs (prevent saved credentials auto-fill)
+      const creationSelectors = [
+        '#username',
+        '#adminUsername',
+        '#adminPassword',
+        '#newResetPassword',
+        '#cloudSyncPassword'
+      ];
+      creationSelectors.forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el) {
+          el.setAttribute('autocomplete', 'new-password');
+          el.setAttribute('data-lpignore', 'true');
+          el.setAttribute('data-form-type', 'other');
+          if (!el.dataset.userTyped && el.form && el.form.id !== 'loginForm') {
+            if (el.value === 'superadmin' || el.value === 'admin') {
+              el.value = '';
+            }
+          }
+          el.addEventListener('input', () => { el.dataset.userTyped = 'true'; }, { once: true });
+        }
+      });
+    } catch (_) {}
+  };
+
+  // Run on DOM events and staggered timer intervals
+  if (typeof window !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', SMSState.neutralizeAutofill);
+    window.addEventListener('pageshow', SMSState.neutralizeAutofill);
+    setTimeout(SMSState.neutralizeAutofill, 50);
+    setTimeout(SMSState.neutralizeAutofill, 250);
+    setTimeout(SMSState.neutralizeAutofill, 800);
+    setTimeout(SMSState.neutralizeAutofill, 1500);
+  }
+
   // Initial theme hydration (zero layout flash)
   const initialTheme = SMSState.get('system_theme', 'midnight');
   SMSState.setTheme(initialTheme);
 
 })();
+

@@ -863,6 +863,26 @@ async function impersonateUser(userId, username) {
 
 window.impersonateUser = impersonateUser;
 
+// Clean any aggressive browser autofill from creation inputs on initialization
+function resetUserCreationForm() {
+  try {
+    const uForm = document.getElementById('userForm');
+    if (uForm) uForm.reset();
+    const uSearch = document.getElementById('userSearchInput');
+    if (uSearch && !uSearch.dataset.userTyped) uSearch.value = '';
+    const uUser = document.getElementById('username');
+    if (uUser && !uUser.dataset.userTyped) uUser.value = '';
+    const uPass = document.getElementById('password');
+    if (uPass && !uPass.dataset.userTyped) uPass.value = '';
+    const uEmail = document.getElementById('email');
+    if (uEmail && !uEmail.dataset.userTyped) uEmail.value = '';
+  } catch (_) {}
+}
+
+resetUserCreationForm();
+setTimeout(resetUserCreationForm, 100);
+setTimeout(resetUserCreationForm, 400);
+
 initSuperAdminTenantFilter();
 loadRoles();
 loadData();

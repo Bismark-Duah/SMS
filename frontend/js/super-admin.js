@@ -20,6 +20,11 @@ const modal = document.getElementById('newSchoolModal');
 const form = document.getElementById('newSchoolForm');
 
 window.openNewSchoolModal = function() {
+  if (form) form.reset();
+  const uInput = document.getElementById('adminUsername');
+  if (uInput && !uInput.dataset.userTyped) uInput.value = '';
+  const pInput = document.getElementById('adminPassword');
+  if (pInput && !pInput.dataset.userTyped) pInput.value = '';
   if (modal) modal.classList.add('active');
 };
 
@@ -27,6 +32,17 @@ window.closeNewSchoolModal = function() {
   if (modal) modal.classList.remove('active');
   if (form) form.reset();
 };
+
+function resetSuperAdminAutofills() {
+  try {
+    const sSearch = document.getElementById('schoolSearchInput');
+    if (sSearch && !sSearch.dataset.userTyped) sSearch.value = '';
+    if (form) form.reset();
+  } catch (_) {}
+}
+resetSuperAdminAutofills();
+setTimeout(resetSuperAdminAutofills, 100);
+setTimeout(resetSuperAdminAutofills, 500);
 
 window.toggleRegisterPasswordVisibility = function() {
   const input = document.getElementById('adminPassword');

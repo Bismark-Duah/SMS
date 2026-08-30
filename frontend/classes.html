@@ -27,7 +27,7 @@
             <p style="margin:2px 0 0; opacity:0.75; font-size:0.83rem;">Manage classroom streams, form masters, and subject allocations.</p>
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <input type="search" id="classSearchInput" placeholder="🔍 Search class, stage, program..." style="padding:7px 12px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary); width:230px;" oninput="filterClasses(this.value)" />
+            <input type="text" id="classSearchInput" name="no_autofill_class_search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="🔍 Search class, stage, program..." style="padding:7px 12px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary); width:230px;" oninput="filterClasses(this.value)" />
             <button type="button" id="openSmartGenBtn" class="btn primary" style="font-size:0.85rem; background:linear-gradient(135deg, #6366f1, #06b6d4); border:none; box-shadow:0 2px 8px rgba(99,102,241,0.35);">⚡ Smart Class Generator</button>
             <a href="#classFormCard" class="btn" style="font-size:0.85rem;">+ Add Single Class</a>
           </div>

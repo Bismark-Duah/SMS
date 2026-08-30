@@ -30,7 +30,7 @@
           </div>
           
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <input type="text" id="userSearchInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Search staff by name, email, role..." 
+            <input type="text" id="userSearchInput" name="no_autofill_staff_search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="🔍 Search staff by name, email, role..." 
                    oninput="filterUserDirectory()"
                    style="padding:7px 12px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary); width:240px;" />
             
@@ -76,20 +76,24 @@
         </div>
 
         <form id="userForm" autocomplete="off">
+          <!-- Chromium & Safari Autofill Honeypot Decoys -->
+          <input type="text" name="fake_username_trap" style="position:absolute; top:-9999px; left:-9999px; width:0; height:0; opacity:0;" tabindex="-1" autocomplete="off" />
+          <input type="password" name="fake_password_trap" style="position:absolute; top:-9999px; left:-9999px; width:0; height:0; opacity:0;" tabindex="-1" autocomplete="new-password" />
+
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:14px;">
             <label style="font-size:0.83rem; font-weight:600; margin:0;">
               Username *
-              <input id="username" required autocomplete="new-password" data-lpignore="true" placeholder="e.g. kwame.mensah" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+              <input id="username" name="no_autofill_new_username" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="e.g. kwame.mensah" style="margin-top:4px; width:100%; box-sizing:border-box;" />
             </label>
 
             <label style="font-size:0.83rem; font-weight:600; margin:0;">
               Email Address (Optional)
-              <input id="email" type="email" autocomplete="off" placeholder="e.g. kmensah@school.edu.gh" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+              <input id="email" name="no_autofill_new_email" type="email" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="e.g. kmensah@school.edu.gh" style="margin-top:4px; width:100%; box-sizing:border-box;" />
             </label>
 
             <label style="font-size:0.83rem; font-weight:600; margin:0;">
               Initial Password *
-              <input id="password" type="password" required autocomplete="new-password" data-lpignore="true" placeholder="Enter strong password" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+              <input id="password" name="no_autofill_new_password" type="password" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="Enter strong password" style="margin-top:4px; width:100%; box-sizing:border-box;" />
             </label>
 
             <label style="font-size:0.83rem; font-weight:600; margin:0;">
@@ -174,7 +178,7 @@
           
           <label style="font-size:0.83rem; font-weight:600; display:block; margin-bottom:14px;">
             New Password
-            <input id="newResetPassword" type="password" required autocomplete="new-password" data-lpignore="true" placeholder="Enter new password" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+            <input id="newResetPassword" name="no_autofill_reset_pass" type="password" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="Enter new password" style="margin-top:4px; width:100%; box-sizing:border-box;" />
           </label>
           
           <div style="display:flex; gap:10px; justify-content:flex-end;">

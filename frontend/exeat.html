@@ -261,7 +261,7 @@
         <!-- TAB 1: EXEAT LOG TABLE -->
         <div id="tabContentLog">
           <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
-            <input type="text" id="searchInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search student name, code, destination..." style="flex:1; min-width:220px;" onkeyup="loadExeatRecords()" />
+            <input type="text" id="searchInput" name="no_autofill_exeat_search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="Search student name, code, destination..." style="flex:1; min-width:220px;" onkeyup="loadExeatRecords()" />
             
             <select id="filterStatus" style="width:160px;" onchange="loadExeatRecords()">
               <option value="">All Statuses</option>

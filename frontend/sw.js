@@ -1,16 +1,25 @@
 // eduManage360 Offline-First Service Worker
-const CACHE_NAME = 'edumanage360-v8.0';
+const CACHE_NAME = 'edumanage360-v9.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/auth.html',
   '/dashboard.html',
+  '/students.html',
+  '/classes.html',
+  '/fees.html',
+  '/attendance.html',
+  '/exeat.html',
+  '/discipline.html',
+  '/clearance.html',
   '/bulk-entry.html',
   '/programs.html',
   '/users.html',
   '/assignments.html',
   '/report-card.html',
   '/super-admin.html',
+  '/settings.html',
+  '/parent-view.html',
   '/css/styles.css',
   '/js/stateBus.js',
   '/js/theme.js',

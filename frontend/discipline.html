@@ -291,7 +291,7 @@
             </select>
             <input id="fDateFrom" type="date" onchange="applyFilter()" style="flex:1; min-width:120px;" placeholder="From date" />
             <input id="fDateTo" type="date" onchange="applyFilter()" style="flex:1; min-width:120px;" placeholder="To date" />
-            <input type="text" id="fSearch" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search student name..." oninput="applyFilter()" style="flex:2; min-width:160px;" />
+            <input type="text" id="fSearch" name="no_autofill_disc_search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="Search student name..." oninput="applyFilter()" style="flex:2; min-width:160px;" />
           </div>
 
           <!-- Incidents Feed cards list -->

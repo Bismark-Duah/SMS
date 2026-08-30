@@ -121,7 +121,7 @@
 
           <!-- Live Search & Profile Filters Toolbar -->
           <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-            <input type="text" id="schoolSearchInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Search name or code..." oninput="window.filterSchoolsDirectory()"
+            <input type="text" id="schoolSearchInput" name="no_autofill_school_search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="🔍 Search name or code..." oninput="window.filterSchoolsDirectory()"
                    style="padding:6px 12px; font-size:0.85rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#fff; width:180px;" />
             <select id="schoolModeFilter" onchange="window.filterSchoolsDirectory()"
                     style="padding:6px 10px; font-size:0.82rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#fff; cursor:pointer;">
@@ -194,12 +194,16 @@
       <div class="modal-content">
         <h3 style="margin-top:0;">🏫 Onboard New School</h3>
         <form id="newSchoolForm" autocomplete="off">
+          <!-- Chromium & Safari Autofill Honeypot Decoys -->
+          <input type="text" name="fake_username_trap" style="position:absolute; top:-9999px; left:-9999px; width:0; height:0; opacity:0;" tabindex="-1" autocomplete="off" />
+          <input type="password" name="fake_password_trap" style="position:absolute; top:-9999px; left:-9999px; width:0; height:0; opacity:0;" tabindex="-1" autocomplete="new-password" />
+
           <label>School Name
-            <input id="schoolName" placeholder="e.g. Antoa Senior High School" required autocomplete="off" />
+            <input id="schoolName" name="no_autofill_sch_name" placeholder="e.g. Antoa Senior High School" required autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
           </label>
 
           <label>School Code (Unique)
-            <input id="schoolCode" placeholder="e.g. ANTOA-SHS" required style="text-transform:uppercase;" autocomplete="off" />
+            <input id="schoolCode" name="no_autofill_sch_code" placeholder="e.g. ANTOA-SHS" required style="text-transform:uppercase;" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
           </label>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -221,33 +225,33 @@
           </div>
 
           <label>Address / Location
-            <input id="schoolAddress" placeholder="e.g. Antoa, Ashanti Region" autocomplete="off" />
+            <input id="schoolAddress" name="no_autofill_sch_addr" placeholder="e.g. Antoa, Ashanti Region" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
           </label>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <label>Phone Contact
-              <input id="schoolPhone" placeholder="+233 24 000 0000" autocomplete="off" />
+              <input id="schoolPhone" name="no_autofill_sch_phone" placeholder="+233 24 000 0000" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
             </label>
 
             <label>School Email
-              <input id="schoolEmail" type="email" placeholder="info@antoashs.edu.gh" autocomplete="off" />
+              <input id="schoolEmail" name="no_autofill_sch_email" type="email" placeholder="info@antoashs.edu.gh" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
             </label>
           </div>
 
           <h4 style="margin-bottom:8px; margin-top:16px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">🔑 Initial School Admin Account</h4>
 
           <label>Admin Username
-            <input id="adminUsername" placeholder="e.g. antoa_admin" required autocomplete="new-password" data-lpignore="true" />
+            <input id="adminUsername" name="no_autofill_admin_user" placeholder="e.g. antoa_admin" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
           </label>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <label>Admin Email
-              <input id="adminEmail" type="email" placeholder="admin@antoashs.edu.gh" required autocomplete="off" />
+              <input id="adminEmail" name="no_autofill_admin_email" type="email" placeholder="admin@antoashs.edu.gh" required autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
             </label>
 
             <label>Admin Password
               <div style="position:relative; display:flex; align-items:center;">
-                <input id="adminPassword" type="password" placeholder="••••••••" required autocomplete="new-password" data-lpignore="true" style="padding-right:38px; width:100%;" />
+                <input id="adminPassword" name="no_autofill_admin_pass" type="password" placeholder="••••••••" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" style="padding-right:38px; width:100%;" />
                 <button type="button" onclick="toggleRegisterPasswordVisibility()" style="position:absolute; right:8px; background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:1.05rem; padding:4px;" title="Toggle Password Visibility" id="toggleAdminPassBtn">👁️</button>
               </div>
             </label>
@@ -375,7 +379,7 @@
 
           <div style="margin-bottom:14px;">
             <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Super-Admin Password</label>
-            <input id="cloudSyncPassword" type="password" required autocomplete="new-password" data-lpignore="true" placeholder="Enter superadmin password"
+            <input id="cloudSyncPassword" name="no_autofill_sync_pass" type="password" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="Enter superadmin password"
                    style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:0.9rem; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#fff;" />
           </div>
 

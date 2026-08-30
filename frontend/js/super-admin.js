@@ -1,13 +1,10 @@
 const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
 
-const token = localStorage.getItem('accessToken');
-if (!token) {
-  window.location.href = 'auth.html';
-}
-
 function getHeaders(headers = {}) {
+  if (window.getAuthHeaders) return window.getAuthHeaders(headers);
   const h = { ...headers };
-  if (token) h['Authorization'] = `Bearer ${token}`;
+  const t = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+  if (t) h['Authorization'] = `Bearer ${t}`;
   return h;
 }
 
@@ -60,33 +57,47 @@ window.toggleRegisterPasswordVisibility = function() {
 window.allRegisteredSchools = [];
 
 window.loadSuperAdminDashboard = async function() {
+  const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+  if (!token) {
+    window.location.href = 'auth.html';
+    return;
+  }
+
+  const tbody = document.getElementById('schoolsTableBody');
+
   try {
     const res = await fetch(`${API_BASE}/super-admin/dashboard`, { headers: getHeaders() });
     if (!res.ok) {
+      if (res.status === 401) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="padding:24px; text-align:center; color:#f87171;">⚠️ Session expired. <a href="auth.html" style="color:#60a5fa; text-decoration:underline; font-weight:700;">Click here to log in again</a></td></tr>';
+        setTimeout(() => { window.location.href = 'auth.html?msg=Session+expired'; }, 1500);
+        return;
+      }
       if (res.status === 403) {
         alert('Super-Admin privileges required.');
         window.location.href = 'dashboard.html';
         return;
       }
-      throw new Error('Failed to load Super-Admin dashboard');
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Server returned HTTP ${res.status}`);
     }
 
     const data = await res.json();
     window.allRegisteredSchools = data.schools || [];
 
     // Populate KPIs
-    document.getElementById('kpiTotalSchools').textContent = data.total_schools || 0;
+    if (document.getElementById('kpiTotalSchools')) document.getElementById('kpiTotalSchools').textContent = data.total_schools || 0;
     const activeBadge = document.getElementById('kpiActiveSchoolsBadge');
     if (activeBadge) activeBadge.textContent = `${data.active_schools || 0} Active / ${data.total_schools || 0} Total`;
 
-    document.getElementById('kpiTotalStudents').textContent = (data.total_students || 0).toLocaleString();
+    if (document.getElementById('kpiTotalStudents')) document.getElementById('kpiTotalStudents').textContent = (data.total_students || 0).toLocaleString();
     const demoSplit = document.getElementById('kpiStudentsDemographics');
     if (demoSplit) {
       demoSplit.textContent = `Boys: ${data.total_boys || 0} | Girls: ${data.total_girls || 0} | Brdg: ${data.total_boarding || 0}`;
     }
 
-    document.getElementById('kpiTotalUsers').textContent = (data.total_users || 0).toLocaleString();
-    document.getElementById('kpiTotalFees').textContent = `GH₵ ${data.total_fees_collected ? data.total_fees_collected.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}`;
+    if (document.getElementById('kpiTotalUsers')) document.getElementById('kpiTotalUsers').textContent = (data.total_users || 0).toLocaleString();
+    if (document.getElementById('kpiTotalFees')) document.getElementById('kpiTotalFees').textContent = `GH₵ ${data.total_fees_collected ? data.total_fees_collected.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}`;
     
     const recRate = document.getElementById('kpiFeeRecoveryRate');
     if (recRate) {
@@ -94,8 +105,8 @@ window.loadSuperAdminDashboard = async function() {
     }
 
     const diag = data.diagnostics || {};
-    document.getElementById('kpiDbSize').textContent = `${diag.db_size_mb || 0} MB`;
-    document.getElementById('kpiBackupStatus').textContent = `Backups: ${diag.backups_count || 0} | Last: ${diag.last_backup_time || 'None'}`;
+    if (document.getElementById('kpiDbSize')) document.getElementById('kpiDbSize').textContent = `${diag.db_size_mb || 0} MB`;
+    if (document.getElementById('kpiBackupStatus')) document.getElementById('kpiBackupStatus').textContent = `Backups: ${diag.backups_count || 0} | Last: ${diag.last_backup_time || 'None'}`;
 
     // Render Comparative Visual Analytics
     window.renderComparativeAnalytics(data);
@@ -108,6 +119,17 @@ window.loadSuperAdminDashboard = async function() {
 
   } catch (error) {
     console.error('Super-Admin dashboard error:', error);
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="padding:28px; text-align:center; background:rgba(239, 68, 68, 0.08); border-radius:8px;">
+            <div style="font-size:1.1rem; color:#f87171; font-weight:700; margin-bottom:8px;">⚠️ Could not load registered schools</div>
+            <p style="margin:0 0 12px; font-size:0.85rem; opacity:0.8;">${error.message}</p>
+            <button class="btn primary" onclick="window.loadSuperAdminDashboard()" style="padding:6px 14px; font-size:0.82rem;">🔄 Retry Connection</button>
+          </td>
+        </tr>
+      `;
+    }
   }
 };
 

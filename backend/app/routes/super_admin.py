@@ -140,7 +140,7 @@ def get_super_admin_dashboard(
             "fees_billed": float(billed),
             "fees_collected": float(collected),
             "collection_rate": rate,
-            "created_at": s.created_at.isoformat() if s.created_at else None
+            "created_at": s.created_at.isoformat() if hasattr(s.created_at, 'isoformat') else (str(s.created_at) if s.created_at else None)
         }
         school_summary.append(school_data)
         comparative_analytics.append({

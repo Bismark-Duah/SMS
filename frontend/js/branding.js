@@ -140,8 +140,15 @@ window.applyBranding = async function(overrideSettings) {
 
     // ── Global Server Theme ───────────────────────────────────────────
     if (s.system_theme) {
-      localStorage.setItem('system_theme', s.system_theme);
-      if (window.applyTheme) window.applyTheme(s.system_theme);
+      if (isSuperAdmin && !isViewing) {
+        localStorage.setItem('system_theme', 'midnight');
+        sessionStorage.setItem('system_theme', 'midnight');
+        if (window.applyTheme) window.applyTheme('midnight');
+      } else {
+        localStorage.setItem('system_theme', s.system_theme);
+        sessionStorage.setItem('system_theme', s.system_theme);
+        if (window.applyTheme) window.applyTheme(s.system_theme);
+      }
     }
 
     // ── Active Period Badge in Topbar ─────────────────────────────────

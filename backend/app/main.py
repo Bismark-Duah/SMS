@@ -327,7 +327,7 @@ def sanitize_multi_tenant_state():
         # 1. Purge leaking global branding settings that belong to specific tenants
         db.query(Setting).filter(
             Setting.school_id == None,
-            Setting.key.in_(["school_name", "school_logo", "school_mode", "school_abbreviation", "school_code", "boarding_status"])
+            Setting.key.in_(["school_name", "school_logo", "school_mode", "school_abbreviation", "school_code", "boarding_status", "system_theme"])
         ).delete(synchronize_session=False)
 
         # 2. Rectify School 1 if present

@@ -59,6 +59,15 @@
   };
 
   // ── Helpers ─────────────────────────────────────────────────────
+  window.getAuthHeaders = function(customHeaders = {}) {
+    const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+    const headers = { ...customHeaders };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const schId = sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+    if (schId) headers['X-School-Id'] = String(schId);
+    return headers;
+  };
+
   function getPageName() {
     return window.location.pathname.split('/').pop() || 'index.html';
   }
@@ -662,8 +671,13 @@
           localStorage.setItem('school_logo', data.school_logo);
         }
         if (data.system_theme) {
-          sessionStorage.setItem('system_theme', data.system_theme);
-          localStorage.setItem('system_theme', data.system_theme);
+          if (isSuperAdmin && !isViewing) {
+            sessionStorage.setItem('system_theme', 'midnight');
+            localStorage.setItem('system_theme', 'midnight');
+          } else {
+            sessionStorage.setItem('system_theme', data.system_theme);
+            localStorage.setItem('system_theme', data.system_theme);
+          }
         }
         if (data.class_score_weight) {
           sessionStorage.setItem('class_score_weight', String(data.class_score_weight));

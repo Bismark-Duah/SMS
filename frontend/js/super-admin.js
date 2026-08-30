@@ -1330,6 +1330,10 @@ window.handleSaveEditSchool = async function(event) {
   }
 };
 
-loadSuperAdminDashboard();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => window.loadSuperAdminDashboard());
+} else {
+  window.loadSuperAdminDashboard();
+}
 
 

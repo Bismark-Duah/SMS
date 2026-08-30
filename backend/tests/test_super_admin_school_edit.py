@@ -202,6 +202,24 @@ class TestSuperAdminSchoolEdit(unittest.TestCase):
         self.assertIsNotNone(motto_setting)
         self.assertEqual(motto_setting.value, "Discipline and Hard Work")
 
+    def test_05_dashboard_metrics_serialization(self):
+        """Verify GET /super-admin/dashboard returns valid JSON-serializable numbers and lists."""
+        import json
+        from backend.app.routes.super_admin import get_super_admin_dashboard
+
+        data = get_super_admin_dashboard(db=self.db, current_user=self.super_user)
+        self.assertIn("total_schools", data)
+        self.assertIn("schools", data)
+        self.assertIn("comparative_analytics", data)
+        self.assertIsInstance(data["total_fees_billed"], float)
+        self.assertIsInstance(data["total_fees_collected"], float)
+        self.assertIsInstance(data["overall_collection_rate"], float)
+
+        # Must cleanly serialize to JSON without Decimal or date errors
+        serialized = json.dumps(data)
+        self.assertIsInstance(serialized, str)
+
 if __name__ == "__main__":
     unittest.main()
+
 

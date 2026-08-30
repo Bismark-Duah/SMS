@@ -118,7 +118,23 @@ window.loadSuperAdminDashboard = async function() {
     window.loadMasterAuditStream();
 
   } catch (error) {
-    console.error('Super-Admin dashboard error:', error);
+    console.error('Super-Admin dashboard error, attempting fallback to /schools:', error);
+    try {
+      const fallbackRes = await fetch(`${API_BASE}/super-admin/schools`, { headers: getHeaders() });
+      if (fallbackRes.ok) {
+        const schoolsData = await fallbackRes.json();
+        window.allRegisteredSchools = schoolsData || [];
+        if (document.getElementById('kpiTotalSchools')) {
+          document.getElementById('kpiTotalSchools').textContent = window.allRegisteredSchools.length;
+        }
+        window.filterSchoolsDirectory();
+        window.loadMasterAuditStream();
+        return;
+      }
+    } catch (fallbackErr) {
+      console.error('Fallback /schools failed:', fallbackErr);
+    }
+
     if (tbody) {
       tbody.innerHTML = `
         <tr>

@@ -72,9 +72,9 @@ def get_super_admin_dashboard(
     total_students = db.query(Student).count()
     total_users = db.query(User).filter(User.username != "superadmin", User.school_id.isnot(None)).count()
     
-    total_fees_collected = db.query(func.sum(Fee.amount_paid)).scalar() or 0.0
-    total_fees_billed = db.query(func.sum(Fee.amount)).scalar() or 0.0
-    overall_collection_rate = round((total_fees_collected / total_fees_billed * 100), 1) if total_fees_billed > 0 else 0.0
+    total_fees_collected = float(db.query(func.sum(Fee.amount_paid)).scalar() or 0.0)
+    total_fees_billed = float(db.query(func.sum(Fee.amount)).scalar() or 0.0)
+    overall_collection_rate = float(round((total_fees_collected / total_fees_billed * 100), 1)) if total_fees_billed > 0 else 0.0
 
     # System diagnostics & storage health
     db_size_bytes = os.path.getsize("school.db") if os.path.exists("school.db") else 0
@@ -120,9 +120,9 @@ def get_super_admin_dashboard(
         user_cnt = db.query(User).filter(User.school_id == s.id).count()
         
         # Financials for this school
-        billed = db.query(func.sum(Fee.amount)).join(Student, Fee.student_id == Student.id).filter(Student.school_id == s.id).scalar() or 0.0
-        collected = db.query(func.sum(Fee.amount_paid)).join(Student, Fee.student_id == Student.id).filter(Student.school_id == s.id).scalar() or 0.0
-        rate = round((collected / billed * 100), 1) if billed > 0 else 0.0
+        billed = float(db.query(func.sum(Fee.amount)).join(Student, Fee.student_id == Student.id).filter(Student.school_id == s.id).scalar() or 0.0)
+        collected = float(db.query(func.sum(Fee.amount_paid)).join(Student, Fee.student_id == Student.id).filter(Student.school_id == s.id).scalar() or 0.0)
+        rate = float(round((collected / billed * 100), 1)) if billed > 0 else 0.0
 
         school_data = {
             "id": s.id,
@@ -137,8 +137,8 @@ def get_super_admin_dashboard(
             "boarding_count": brd_cnt,
             "day_count": day_cnt,
             "user_count": user_cnt,
-            "fees_billed": float(billed),
-            "fees_collected": float(collected),
+            "fees_billed": billed,
+            "fees_collected": collected,
             "collection_rate": rate,
             "created_at": s.created_at.isoformat() if hasattr(s.created_at, 'isoformat') else (str(s.created_at) if s.created_at else None)
         }
@@ -152,8 +152,8 @@ def get_super_admin_dashboard(
             "girls": girls_cnt,
             "boarding": brd_cnt,
             "day": day_cnt,
-            "billed": float(billed),
-            "collected": float(collected),
+            "billed": billed,
+            "collected": collected,
             "rate": rate
         })
 
@@ -166,15 +166,15 @@ def get_super_admin_dashboard(
         "total_boarding": total_boarding,
         "total_day": total_day,
         "total_users": total_users,
-        "total_fees_billed": float(total_fees_billed),
-        "total_fees_collected": float(total_fees_collected),
+        "total_fees_billed": total_fees_billed,
+        "total_fees_collected": total_fees_collected,
         "overall_collection_rate": overall_collection_rate,
         "mode_distribution": mode_distribution,
         "boarding_distribution": boarding_distribution,
         "diagnostics": {
-            "db_size_mb": db_size_mb,
-            "backups_count": backups_count,
-            "last_backup_time": last_backup_time or "No backup yet"
+            "db_size_mb": float(db_size_mb),
+            "backups_count": int(backups_count),
+            "last_backup_time": str(last_backup_time or "No backup yet")
         },
         "schools": school_summary,
         "comparative_analytics": comparative_analytics
@@ -216,7 +216,7 @@ def get_super_admin_audit_stream(
                 "entity_id": log.entity_id,
                 "details": log.details,
                 "ip_address": log.ip_address,
-                "timestamp": log.timestamp.isoformat() if log.timestamp else None
+                "timestamp": log.timestamp.isoformat() if hasattr(log.timestamp, 'isoformat') else (str(log.timestamp) if log.timestamp else None)
             }
             for log in logs
         ]
@@ -245,7 +245,7 @@ def list_all_schools(
             "email": s.email,
             "student_count": db.query(Student).filter(Student.school_id == s.id).count(),
             "user_count": db.query(User).filter(User.school_id == s.id).count(),
-            "created_at": s.created_at.isoformat() if s.created_at else None
+            "created_at": s.created_at.isoformat() if hasattr(s.created_at, 'isoformat') else (str(s.created_at) if s.created_at else None)
         })
     return res
 

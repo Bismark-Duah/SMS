@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status, Response
 from sqlalchemy.orm import Session
 from typing import Optional
 import csv
@@ -10,6 +10,7 @@ from ..schemas import StudentCreate
 from ..dependencies import get_current_user, get_school_id, get_user_assigned_scope
 from ..services.guardian_service import auto_link_guardian_for_student, auto_link_all_guardians
 from ..services.allocation import allocate_student_house_and_dorm
+from ..services.admission_package import AdmissionPackageService
 
 router = APIRouter()
 
@@ -434,4 +435,54 @@ async def import_students_csv(
 
     db.commit()
     return {"status": "success", "imported": imported_count, "errors": errors}
+
+
+@router.get("/{student_id}/admission-package-pdf")
+def download_student_admission_package_pdf(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Allows school staff, administrators, and verified parents to generate and download the official 
+    Admission Package and Prospectus PDF for a student.
+    """
+    school_id = get_school_id(current_user)
+    query = db.query(Student).filter(Student.id == student_id)
+    if school_id is not None:
+        query = query.filter(Student.school_id == school_id)
+    student = query.first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student record not found in your school.")
+
+    roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, 'roles') and current_user.roles else []
+    admin_or_staff = {
+        "admin", "super_admin", "headmaster", "headmistress",
+        "assistant_headmaster_academic", "assistant_head_academic",
+        "assistant_headmaster_admin", "assistant_head_admin", "teacher"
+    }
+    if not any(r in admin_or_staff for r in roles):
+        if "parent" in roles:
+            if student.parent_id != current_user.id:
+                raise HTTPException(status_code=403, detail="You can only access your linked child's admission package.")
+        elif "student" in roles:
+            if current_user.username != student.student_code:
+                raise HTTPException(status_code=403, detail="You can only access your own admission package.")
+        else:
+            raise HTTPException(status_code=403, detail="Not authorized to access admission package.")
+
+    pdf_bytes = AdmissionPackageService.generate_admission_letter_pdf(student_id, db)
+    if not pdf_bytes:
+        raise HTTPException(status_code=500, detail="Failed to generate admission package PDF.")
+
+    filename = f"Admission_Package_{student.student_code or student.bece_index_number or student.id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )
+
+
 

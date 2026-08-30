@@ -92,16 +92,57 @@ window.downloadSelectedChildReportCard = function() {
   window.open(`report-card.html?student_id=${currentChildId}`, '_blank');
 };
 
+window.downloadSelectedChildAdmissionPackage = async function() {
+  if (!currentChildId) {
+    alert('Please select a child first.');
+    return;
+  }
+
+  const btn1 = document.getElementById('downloadProspectusBtn');
+  const btn2 = document.getElementById('btnCardDownloadProspectus');
+  const orig1 = btn1 ? btn1.innerHTML : '';
+  const orig2 = btn2 ? btn2.innerHTML : '';
+
+  if (btn1) { btn1.innerHTML = '⏳ Generating PDF...'; btn1.disabled = true; }
+  if (btn2) { btn2.innerHTML = '⏳ Generating Package...'; btn2.disabled = true; }
+
+  try {
+    const res = await fetch(`${API_BASE}/students/${currentChildId}/admission-package-pdf`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to download admission package.');
+    }
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `Admission_Package_Child_${currentChildId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+  } catch (err) {
+    alert(`Download Error: ${err.message}`);
+  } finally {
+    if (btn1) { btn1.innerHTML = orig1; btn1.disabled = false; }
+    if (btn2) { btn2.innerHTML = orig2; btn2.disabled = false; }
+  }
+};
+
 // ── Main dashboard loader ─────────────────────────────────────
 async function loadChildDashboard() {
   const childId = document.getElementById('child_id').value;
   if (!childId) return;
   currentChildId = childId;
 
-  // Show dashboard container & report card action
+  // Show dashboard container & action buttons
   document.getElementById('childDashboard').style.display = 'block';
   const downloadBtn = document.getElementById('downloadReportCardBtn');
   if (downloadBtn) downloadBtn.style.display = 'inline-flex';
+  const downloadProsBtn = document.getElementById('downloadProspectusBtn');
+  if (downloadProsBtn) downloadProsBtn.style.display = 'inline-flex';
 
   // Update hero subtitle
   const child = allChildren.find(c => String(c.id) === String(childId));
@@ -206,13 +247,18 @@ async function loadAttendanceHeatmap(childId) {
 }
 
 // ── FEE BALANCE ───────────────────────────────────────────────
+let currentChildFees = [];
+let currentChildBalance = 0;
+
 async function loadFees(childId) {
   try {
     const res  = await fetch(`${API_BASE}/fees/student/${childId}/summary`, { headers: getHeaders() });
     const data = await res.json();
+    currentChildFees = data.fees || [];
 
     // KPI card
     const balance = data.total_balance || 0;
+    currentChildBalance = balance;
     document.getElementById('kpiBalance').textContent = `GHS ${fmt(balance)}`;
     document.getElementById('kpiBalanceSub').textContent =
       `of GHS ${fmt(data.total_billed)} billed`;
@@ -221,6 +267,12 @@ async function loadFees(childId) {
 
     document.getElementById('feesBadge').textContent =
       `Balance: GHS ${fmt(balance)}`;
+
+    // Show or hide "Pay Outstanding Balance" button
+    const btnPayAll = document.getElementById('btnPayAllFees');
+    if (btnPayAll) {
+      btnPayAll.style.display = balance > 0 ? 'inline-block' : 'none';
+    }
 
     // Summary pills
     document.getElementById('feeSummaryBar').innerHTML = `
@@ -238,10 +290,23 @@ async function loadFees(childId) {
     // Table rows
     const tbody = document.getElementById('feesTableBody');
     if (!data.fees || data.fees.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">No fee records found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted);">No fee records found.</td></tr>';
       return;
     }
-    tbody.innerHTML = data.fees.map(f => `
+    tbody.innerHTML = data.fees.map(f => {
+      let actionHtml = '';
+      if (f.balance > 0) {
+        const safeType = (f.fee_type || 'Fee').replace(/'/g, "\\'");
+        actionHtml += `<button class="fee-btn-action fee-btn-pay" onclick="openPayFeeModal(${f.id}, ${f.balance}, '${safeType}')">💳 Pay</button> `;
+      }
+      if (f.latest_payment_id) {
+        actionHtml += `<button class="fee-btn-action fee-btn-receipt" onclick="downloadPaymentReceipt(${f.latest_payment_id})">📄 Receipt</button>`;
+      }
+      if (!actionHtml) {
+        actionHtml = `<span style="color:var(--text-muted);font-size:0.75rem;">—</span>`;
+      }
+
+      return `
       <tr>
         <td><strong>${f.fee_type}</strong></td>
         <td>${f.description || '—'}</td>
@@ -252,8 +317,10 @@ async function loadFees(childId) {
         </td>
         <td><span class="fee-row-status ${f.status}">${f.status}</span></td>
         <td>${f.due_date ? fmtDate(f.due_date) : '—'}</td>
+        <td>${actionHtml}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
   } catch (err) {
     console.error('Fees error:', err);
@@ -527,11 +594,185 @@ function viewInteractiveReportCard() {
   window.location.href = `report-card.html?student_id=${currentChildId}&semester_id=${semId}`;
 }
 
-// ── Download terminal report ──────────────────────────────────
-function downloadReport() {
-  if (!currentChildId) return;
-  const semId = document.getElementById('reportSemesterSelect')?.value || 1;
-  window.location.href = `${API_BASE}/reports/terminal-report/${currentChildId}?semester_id=${semId}`;
+// ── ONLINE FEE PAYMENT & RECEIPTS ─────────────────────────────
+function selectMoMoNetwork(netName) {
+  document.getElementById('payModalNetwork').value = netName;
+  document.querySelectorAll('.momo-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.includes(netName));
+  });
+}
+
+function openPayFeeModal(feeId, defaultAmount, feeType) {
+  if (!currentChildId) {
+    alert("Please select a child first.");
+    return;
+  }
+  const child = allChildren.find(c => String(c.id) === String(currentChildId));
+  const childName = child ? child.full_name : "Student";
+
+  document.getElementById('payModalFeeId').value = feeId || '';
+  document.getElementById('payModalStudentName').textContent = `${childName} (${child?.student_code || ''})`;
+  document.getElementById('payModalFeeType').textContent = feeType ? `${feeType} Fee Bill` : "All Outstanding Fees";
+
+  const amt = defaultAmount !== undefined ? defaultAmount : (currentChildBalance || 10.0);
+  document.getElementById('payModalAmount').value = Number(amt).toFixed(2);
+  document.getElementById('payModalAmount').max = Number(amt).toFixed(2);
+  document.getElementById('payModalBalanceHint').textContent = `Max outstanding balance: GHS ${fmt(amt)}`;
+
+  // Default phone number from child record if available
+  const phoneInput = document.getElementById('payModalPhone');
+  if (phoneInput && !phoneInput.value && child?.phone) {
+    phoneInput.value = child.phone;
+  }
+
+  const statusBox = document.getElementById('payModalStatusBox');
+  if (statusBox) statusBox.style.display = 'none';
+
+  const modal = document.getElementById('modalPayFee');
+  if (modal) modal.classList.add('open');
+}
+
+function closePayFeeModal() {
+  const modal = document.getElementById('modalPayFee');
+  if (modal) modal.classList.remove('open');
+}
+
+async function processOnlineFeePayment(event) {
+  event.preventDefault();
+  const feeIdVal = document.getElementById('payModalFeeId').value;
+  const amount = parseFloat(document.getElementById('payModalAmount').value);
+  const phone = document.getElementById('payModalPhone').value.trim();
+  const network = document.getElementById('payModalNetwork').value;
+
+  if (isNaN(amount) || amount < 1.0) {
+    alert("Payment amount must be at least GHS 1.00");
+    return;
+  }
+
+  // If feeId is not specified, resolve first unpaid fee for the child
+  let feeId = feeIdVal ? parseInt(feeIdVal) : null;
+  if (!feeId && currentChildFees.length > 0) {
+    const unpaid = currentChildFees.find(f => f.balance > 0);
+    if (unpaid) feeId = unpaid.id;
+  }
+
+  if (!feeId) {
+    alert("No outstanding fee bill found to apply payment towards.");
+    return;
+  }
+
+  const submitBtn = document.getElementById('btnSubmitPayment');
+  const statusBox = document.getElementById('payModalStatusBox');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '⏳ Processing Gateway Request…';
+
+  statusBox.style.display = 'block';
+  statusBox.style.background = 'rgba(56, 189, 248, 0.15)';
+  statusBox.style.color = '#38bdf8';
+  statusBox.style.border = '1px solid #0284c7';
+  statusBox.innerHTML = `📡 Connecting to <strong>${network}</strong> gateway... Please check your phone for the authorization prompt.`;
+
+  try {
+    const res = await fetch(`${API_BASE}/fees/paystack/initialize`, {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify({
+        fee_id: feeId,
+        amount_paid: amount,
+        mobile_number: phone,
+        network: network
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || 'Payment initialization failed.');
+    }
+
+    if (data.status === 'offline_fallback') {
+      statusBox.style.background = 'rgba(234, 179, 8, 0.15)';
+      statusBox.style.color = '#eab308';
+      statusBox.style.border = '1px solid #ca8a04';
+      statusBox.innerHTML = `⚠️ <strong>Offline Mode / Unconfigured Gateway</strong>: ${data.message}`;
+      submitBtn.disabled = false;
+      submitBtn.textContent = '🚀 Authorize MoMo Payment';
+      return;
+    }
+
+    if (data.authorization_url && !data.authorization_url.startsWith('/paystack-callback')) {
+      // Open Paystack popup/window
+      statusBox.innerHTML = `✅ Payment initiated! Redirecting to Paystack secure checkout…`;
+      window.open(data.authorization_url, '_blank');
+    }
+
+    // Begin automatic verification poll
+    const ref = data.reference;
+    statusBox.innerHTML = `⏳ <strong>Waiting for ${network} PIN approval on ${phone}…</strong><br/><small>Ref: ${ref}</small>`;
+
+    let attempts = 0;
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      try {
+        const vRes = await fetch(`${API_BASE}/fees/paystack/verify/${ref}`, { headers: getHeaders() });
+        const vData = await vRes.json();
+        if (vRes.ok && vData.status === 'success') {
+          clearInterval(pollInterval);
+          statusBox.style.background = 'rgba(34, 197, 94, 0.15)';
+          statusBox.style.color = '#22c55e';
+          statusBox.style.border = '1px solid #16a34a';
+          statusBox.innerHTML = `
+            🎉 <strong>Payment Successful!</strong> GHS ${fmt(amount)} received.<br/>
+            An official SMS receipt has been sent to your phone.
+            <div style="margin-top:10px;">
+              <button type="button" class="fee-btn-action fee-btn-receipt" onclick="downloadPaymentReceipt(${vData.payment_id})">📥 Download Official PDF Receipt</button>
+            </div>
+          `;
+          submitBtn.textContent = '✅ Payment Complete';
+          // Reload child fees
+          if (currentChildId) loadFees(currentChildId);
+        } else if (attempts >= 15) {
+          clearInterval(pollInterval);
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🚀 Authorize MoMo Payment';
+          statusBox.innerHTML = `⚠️ Transaction pending or timed out. If you authorized the MoMo prompt, it will reflect momentarily.`;
+        }
+      } catch (err) {
+        if (attempts >= 15) clearInterval(pollInterval);
+      }
+    }, 3000);
+
+  } catch (err) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '🚀 Authorize MoMo Payment';
+    statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+    statusBox.style.color = '#ef4444';
+    statusBox.style.border = '1px solid #dc2626';
+    statusBox.innerHTML = `❌ <strong>Error</strong>: ${err.message}`;
+  }
+}
+
+async function downloadPaymentReceipt(paymentId) {
+  if (!paymentId) return alert("Receipt ID not found.");
+  try {
+    const res = await fetch(`${API_BASE}/fees/receipt/${paymentId}/pdf`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server returned ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Official_Fee_Receipt_${paymentId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    alert(`Could not download payment receipt: ${err.message}`);
+  }
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────

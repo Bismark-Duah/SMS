@@ -349,6 +349,67 @@ window.clearClassTimetable = async function() {
   }
 };
 
+window.downloadClassTimetablePDF = async function() {
+  const classId = document.getElementById('viewClassSelect')?.value || document.getElementById('fClass')?.value;
+  if (!classId) {
+    alert('Please select a Class Section first.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/timetable/class/${classId}/pdf`, { headers: H() });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to generate class timetable PDF' }));
+      alert(`⚠️ Error: ${err.detail || 'Failed to download PDF'}`);
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Class_Timetable_${classId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Failed to download class timetable PDF:', err);
+    alert('Network error while downloading class timetable PDF.');
+  }
+};
+
+window.downloadTeacherTimetablePDF = async function() {
+  const teacherId = document.getElementById('viewTeacherSelect')?.value || document.getElementById('fTeacher')?.value;
+  if (!teacherId) {
+    alert('Please select a Teacher first.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/timetable/teacher/${teacherId}/pdf`, { headers: H() });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to generate teacher schedule PDF' }));
+      alert(`⚠️ Error: ${err.detail || 'Failed to download PDF'}`);
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Teacher_Schedule_${teacherId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Failed to download teacher schedule PDF:', err);
+    alert('Network error while downloading teacher schedule PDF.');
+  }
+};
+
+
 // ── Conflict Detection ────────────────────────────────────────────────────────
 async function checkConflicts() {
   try {

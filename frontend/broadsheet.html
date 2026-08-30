@@ -70,8 +70,10 @@
           <p style="margin:4px 0 0 0;opacity:.75;font-size:.85rem;">Review class broadsheets, inter-class league standings, departmental benchmarks, and academic trajectory curves.</p>
         </div>
         <div style="display:flex; gap:10px; align-items:center; margin-left:auto; flex-wrap:wrap;">
+          <button id="btnBatchPDF" class="btn" style="background:#7c3aed; color:white; font-weight:700;" onclick="downloadBatchTerminalReports()">📥 Batch Reports (PDF)</button>
+          <button id="btnBroadsheetPDF" class="btn" style="background:#4338ca; color:white; font-weight:700;" onclick="downloadBroadsheetPDF()">📄 Broadsheet Ledger (PDF)</button>
           <button id="btnExportCSV" class="btn" style="background:#0284c7; color:white; font-weight:700;" onclick="exportBroadsheetCSV()">📊 Export CSV / Excel</button>
-          <button id="btnPrintReport" class="btn-print no-print" title="Print Report" onclick="handlePrintAction()">🖨️ Print Report</button>
+          <button id="btnPrintReport" class="btn-print no-print" title="Print Report" onclick="handlePrintAction()">🖨️ Print View</button>
           <a class="btn" href="results.html">📝 Results & Scores</a>
           <a class="btn" href="departments.html">🏢 Departments</a>
           <a class="btn" href="dashboard.html">← Dashboard</a>
@@ -126,9 +128,12 @@
 
         <!-- Broadsheet Matrix Container -->
         <section class="card printable-content" style="max-width:100%; overflow-x:auto;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
             <h3 style="margin:0;" id="broadsheetTitle">Class Section Broadsheet</h3>
-            <button class="btn" style="background:#10b981; color:white; font-weight:600;" onclick="saveBroadsheetRemarks()">💾 Save Remarks</button>
+            <div style="display:flex; gap:8px;">
+              <button class="btn" style="background:#8b5cf6; color:white; font-weight:600;" onclick="autoGenerateRemarks()">⚡ Auto-Generate Remarks</button>
+              <button class="btn" style="background:#10b981; color:white; font-weight:600;" onclick="saveBroadsheetRemarks()">💾 Save Remarks</button>
+            </div>
           </div>
 
           <form id="remarksForm" onsubmit="event.preventDefault(); saveBroadsheetRemarks();">

@@ -86,6 +86,7 @@ async function buildTabNav(formClassIds) {
   if (isAdmin() || isSubjectTeacher() || isFormMaster()) {
     tabs.push({ id: 'period', label: '🚨 Period Absence Log' });
   }
+  tabs.push({ id: 'scanner', label: '📷 Barcode / QR Scanner' });
   tabs.push({ id: 'records', label: '📊 Attendance Records' });
 
   nav.innerHTML = tabs.map(t =>
@@ -810,9 +811,270 @@ async function loadReconciliationAudit() {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PANEL 6: Barcode & QR Real-Time Scanner Check-In & Truancy SMS Dispatch
+// ─────────────────────────────────────────────────────────────────────────────
+
+let scanHistory = [];
+let audioCtx = null;
+
+function getAudioContext() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function playAudioCue(type) {
+  const toggle = document.getElementById('scanAudioToggle');
+  if (toggle && !toggle.checked) return;
+
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+
+    if (type === 'success') {
+      // Pleasant high-pitch success chime
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, now); // D5
+      osc.frequency.exponentialRampToValueAtTime(880.00, now + 0.15); // A5
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } else if (type === 'late') {
+      // Distinct double warning tone
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.setValueAtTime(349.23, now + 0.1);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } else if (type === 'already_scanned') {
+      // Gentle double blip
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } else {
+      // Error buzzer
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, now);
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    }
+  } catch (e) {
+    console.warn('Audio cue failed:', e);
+  }
+}
+
+async function handleScannerSubmit() {
+  const inputEl = document.getElementById('scanner_input');
+  if (!inputEl) return;
+  const rawCode = inputEl.value.trim();
+  if (!rawCode) return;
+
+  const modeEl = document.getElementById('scanner_mode');
+  const scanType = modeEl ? modeEl.value : 'Morning Roll Call';
+
+  try {
+    const res = await fetch(`${API_BASE}/attendance/scan-checkin`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        student_code: rawCode,
+        scan_type: scanType
+      })
+    });
+
+    if (!res.ok) {
+      playAudioCue('error');
+      const err = await res.json().catch(() => ({ detail: 'Student verification failed' }));
+      alert(`⚠️ Scan Error: ${err.detail || 'Student not found in registry'}`);
+      inputEl.value = '';
+      inputEl.focus();
+      return;
+    }
+
+    const data = await res.json();
+    playAudioCue(data.audio_cue || 'success');
+
+    // Render result card
+    renderScanCard(data);
+
+    // Add to history list
+    scanHistory.unshift(data);
+    renderScanHistory();
+
+    // Reset input for next laser scan
+    inputEl.value = '';
+    inputEl.focus();
+
+  } catch (err) {
+    console.error('Scan check-in network error:', err);
+    playAudioCue('error');
+    alert('Network error while processing scan check-in.');
+  }
+}
+
+function renderScanCard(data) {
+  const card = document.getElementById('scanResultCard');
+  if (!card) return;
+
+  document.getElementById('scanCardName').textContent = data.full_name;
+  document.getElementById('scanCardCode').textContent = data.student_code;
+  document.getElementById('scanCardClass').textContent = data.class_name;
+  document.getElementById('scanCardHouse').textContent = data.house_name;
+  document.getElementById('scanCardTime').textContent = `${data.timestamp_str} (${data.scan_type})`;
+
+  const badge = document.getElementById('scanCardBadge');
+  if (data.status === 'Late') {
+    badge.style.background = 'rgba(245,158,11,0.2)';
+    badge.style.borderColor = '#f59e0b';
+    badge.style.color = '#fbbf24';
+    badge.textContent = '⏰ LATE ARRIVAL';
+  } else {
+    badge.style.background = 'rgba(16,185,129,0.2)';
+    badge.style.borderColor = '#10b981';
+    badge.style.color = '#34d399';
+    badge.textContent = '✅ PRESENT (ON TIME)';
+  }
+
+  if (data.is_duplicate) {
+    badge.textContent += ' [REPEAT SCAN]';
+  }
+
+  card.style.display = 'block';
+}
+
+function renderScanHistory() {
+  const tbody = document.getElementById('scanHistoryBody');
+  const countEl = document.getElementById('scanCount');
+  if (countEl) countEl.textContent = scanHistory.length;
+  if (!tbody) return;
+
+  if (scanHistory.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; opacity:.6;">No scans recorded yet in this session.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = scanHistory.map((item, idx) => {
+    const statusClass = item.status === 'Late' ? 'warning' : 'success';
+    return `
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+        <td style="text-align:center; opacity:0.6;">${idx + 1}</td>
+        <td style="font-size:0.8rem; opacity:0.8;">${item.timestamp_str}</td>
+        <td style="font-family:monospace; color:#38bdf8; font-weight:700;">${item.student_code}</td>
+        <td style="font-weight:600;">${item.full_name}</td>
+        <td>${item.class_name}</td>
+        <td><span style="font-size:0.75rem; opacity:0.75;">${item.scan_type}</span></td>
+        <td><span class="chip ${statusClass}">${item.status}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function clearScanHistory() {
+  scanHistory = [];
+  renderScanHistory();
+  const card = document.getElementById('scanResultCard');
+  if (card) card.style.display = 'none';
+  const inputEl = document.getElementById('scanner_input');
+  if (inputEl) {
+    inputEl.value = '';
+    inputEl.focus();
+  }
+}
+
+async function dispatchTruancyAlerts() {
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '📢 Dispatch Absence / Truancy SMS Alerts',
+    'Are you sure you want to scan all unexcused absences recorded today and queue/dispatch personalized Hubtel SMS alerts to their parents/guardians?',
+    'Dispatch Alerts',
+    'Cancel'
+  ) : Promise.resolve(confirm('Are you sure you want to dispatch SMS alerts to parents of absent students?')));
+
+  if (!ok) return;
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const res = await fetch(`${API_BASE}/attendance/dispatch-truancy-alerts`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ date_str: today })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      alert(`✅ ${data.message}`);
+    } else {
+      const err = await res.json().catch(() => ({ detail: 'Failed to dispatch alerts' }));
+      alert(`⚠️ Error: ${err.detail || 'Could not send alerts'}`);
+    }
+  } catch (err) {
+    console.error('Failed to dispatch truancy alerts:', err);
+    alert('Network error while dispatching truancy SMS alerts.');
+  }
+}
+
+async function downloadAttendanceLedgerPDF() {
+  const classId = document.getElementById('mark_class_id')?.value || document.getElementById('rec_class_id')?.value;
+  if (!classId) {
+    alert('Please select a Class Section under "Daily Register" or "Attendance Records" first.');
+    return;
+  }
+
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+
+  try {
+    const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    const res = await fetch(`${API_BASE}/attendance/ledger-pdf/${classId}?month=${month}&year=${year}`, {
+      headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to generate attendance ledger PDF' }));
+      alert(`⚠️ Error: ${err.detail || 'Failed to download PDF ledger'}`);
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Attendance_Register_Class_${classId}_${month}_${year}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Failed to download attendance ledger:', err);
+    alert('Network error while generating attendance ledger PDF.');
+  }
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────────
 async function initPage() {
-  // Fetch form-master classes to determine tab visibility
   let formClasses = [];
   try {
     const res = await fetch(`${API_BASE}/classes/my-form-classes`, { headers: getHeaders() });
@@ -828,3 +1090,4 @@ async function initPage() {
 }
 
 initPage();
+

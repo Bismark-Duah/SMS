@@ -294,17 +294,218 @@ async function publishClassReports() {
   }
 }
 
-function exportBroadsheetCSV() {
+async function downloadBatchTerminalReports() {
+  const classId = document.getElementById("selectClassSection").value;
+  const semId = document.getElementById("selectSemester").value;
+
+  if (!classId) {
+    alert("Please select a class section first.");
+    return;
+  }
+
+  const btn = document.getElementById("btnBatchPDF");
+  const originalText = btn ? btn.innerHTML : "📥 Batch Reports (PDF)";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = "⏳ Compiling Batch PDF...";
+  }
+
+  try {
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+    let url = `/api/reports/batch-terminal-reports/${classId}`;
+    if (semId) {
+      url += `?semester_id=${semId}`;
+    } else if (currentBroadsheetData && currentBroadsheetData.semester_id) {
+      url += `?semester_id=${currentBroadsheetData.semester_id}`;
+    }
+
+    const res = await fetch(url, {
+      headers: { "Authorization": token ? `Bearer ${token}` : "" }
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Failed to compile batch report cards." }));
+      alert(`Error: ${err.detail || "Failed to generate batch reports PDF"}`);
+      return;
+    }
+
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    const clsName = (currentBroadsheetData?.class_name || `Class_${classId}`).replace(/\s+/g, "_");
+    link.download = `Batch_Terminal_Reports_${clsName}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    console.error("Batch PDF generation error:", err);
+    alert("Network error while downloading batch report cards.");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  }
+}
+
+async function downloadBroadsheetPDF() {
+  const classId = document.getElementById("selectClassSection").value;
+  const semId = document.getElementById("selectSemester").value;
+
+  if (!classId) {
+    alert("Please select a class section first.");
+    return;
+  }
+
+  const btn = document.getElementById("btnBroadsheetPDF");
+  const originalText = btn ? btn.innerHTML : "📄 Broadsheet Ledger (PDF)";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = "⏳ Generating Ledger PDF...";
+  }
+
+  try {
+    const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+    let url = `/api/reports/broadsheet-pdf/${classId}`;
+    if (semId) {
+      url += `?semester_id=${semId}`;
+    } else if (currentBroadsheetData && currentBroadsheetData.semester_id) {
+      url += `?semester_id=${currentBroadsheetData.semester_id}`;
+    }
+
+    const res = await fetch(url, {
+      headers: { "Authorization": token ? `Bearer ${token}` : "" }
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Failed to compile broadsheet ledger PDF." }));
+      alert(`Error: ${err.detail || "Failed to generate broadsheet PDF"}`);
+      return;
+    }
+
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    const clsName = (currentBroadsheetData?.class_name || `Class_${classId}`).replace(/\s+/g, "_");
+    link.download = `Broadsheet_Ledger_${clsName}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    console.error("Broadsheet PDF generation error:", err);
+    alert("Network error while downloading broadsheet ledger.");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  }
+}
+
+function autoGenerateRemarks() {
+  if (!currentBroadsheetData || !currentBroadsheetData.students || currentBroadsheetData.students.length === 0) {
+    alert("Please select and load a class broadsheet first.");
+    return;
+  }
+
+  const rows = document.querySelectorAll("#broadsheetBody tr[data-student-id]");
+  let populatedCount = 0;
+
+  rows.forEach(r => {
+    const studentId = parseInt(r.getAttribute("data-student-id"));
+    const studentData = currentBroadsheetData.students.find(s => s.student_id === studentId);
+    if (!studentData) return;
+
+    const avg = studentData.average_mark || 0;
+    let attitude = "Satisfactory";
+    let conduct = "Good";
+    let interest = "General Studies";
+    let remarks = "Satisfactory work done this semester. Can improve with more consistency.";
+
+    if (avg >= 80) {
+      attitude = "Excellent";
+      conduct = "Exemplary";
+      interest = "Leadership & Academics";
+      remarks = "An outstanding performance. Consistently shows high diligence, discipline, and intellectual excellence.";
+    } else if (avg >= 70) {
+      attitude = "Very Good";
+      conduct = "Courteous";
+      interest = "Science & Research";
+      remarks = "Very good result. Demonstrates strong potential and active class participation.";
+    } else if (avg >= 60) {
+      attitude = "Good";
+      conduct = "Well-behaved";
+      interest = "Applied Studies";
+      remarks = "Good performance. Capable of even higher grades with more dedicated study time.";
+    } else if (avg >= 50) {
+      attitude = "Satisfactory";
+      conduct = "Respectful";
+      interest = "General Revision";
+      remarks = "Fair effort. Needs to put in extra revision in weaker subject areas.";
+    } else {
+      attitude = "Needs Attention";
+      conduct = "Fair";
+      interest = "Remedial Assistance";
+      remarks = "Weak academic performance this term. Urgently requires close monitoring and extra academic support.";
+    }
+
+    const inputAttitude = r.querySelector(".input-attitude");
+    const inputConduct = r.querySelector(".input-conduct");
+    const inputInterest = r.querySelector(".input-interest");
+    const inputRemarks = r.querySelector(".input-remarks");
+
+    if (inputAttitude) inputAttitude.value = attitude;
+    if (inputConduct) inputConduct.value = conduct;
+    if (inputInterest) inputInterest.value = interest;
+    if (inputRemarks) inputRemarks.value = remarks;
+
+    populatedCount++;
+  });
+
+  alert(`⚡ Auto-generated standardized GES remarks for ${populatedCount} student(s) based on class performance. Click '💾 Save Remarks' to save them to the database.`);
+}
+
+async function exportBroadsheetCSV() {
   if (!currentBroadsheetData || !currentBroadsheetData.students || currentBroadsheetData.students.length === 0) {
     alert("Please select a class and load broadsheet data before exporting.");
     return;
   }
 
+  const classId = currentBroadsheetData.class_section_id;
+  const semId = currentBroadsheetData.semester_id;
+  const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+
+  // Attempt backend high-fidelity CSV stream first
+  try {
+    const res = await fetch(`/api/reports/broadsheet-csv/${classId}?semester_id=${semId}`, {
+      headers: { "Authorization": token ? `Bearer ${token}` : "" }
+    });
+    if (res.ok) {
+      const csvBlob = await res.blob();
+      const blobUrl = URL.createObjectURL(csvBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      const clsName = (currentBroadsheetData.class_name || "Class").replace(/[^a-zA-Z0-9_-]/g, "_");
+      link.download = `Broadsheet_${clsName}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      return;
+    }
+  } catch (err) {
+    console.warn("Backend CSV export fallback to client-side:", err);
+  }
+
+  // Client-side fallback
   const data = currentBroadsheetData;
   const subjects = data.subjects || [];
   const students = data.students || [];
 
-  // 1. Build CSV Header
   const headers = [
     "Student ID",
     "Student Code",
@@ -323,7 +524,6 @@ function exportBroadsheetCSV() {
   const rows = [];
   rows.push(headers.join(","));
 
-  // 2. Build Student Data Rows
   students.forEach(st => {
     const subjValues = subjects.map(s => {
       const v = st.subject_scores[s.name];
@@ -353,16 +553,16 @@ function exportBroadsheetCSV() {
     rows.push(row.join(","));
   });
 
-  // 3. Trigger Download
-  const csvContent = "\uFEFF" + rows.join("\r\n"); // UTF-8 BOM for Excel compatibility
+  const csvContent = "\uFEFF" + rows.join("\r\n");
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  
   const classNameClean = (data.class_name || "Class").replace(/[^a-zA-Z0-9_-]/g, "_");
-  const semNameClean = (data.semester_name || "Term").replace(/[^a-zA-Z0-9_-]/g, "_");
   link.setAttribute("href", url);
-    document.body.removeChild(link);
+  link.setAttribute("download", `Broadsheet_${classNameClean}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
 

@@ -149,3 +149,36 @@ def update_cumulative_record(student_id: int, data: CumulativeRecordUpdate, db: 
 
     db.commit()
     return {"message": "Student Cumulative Record updated successfully!"}
+
+
+@router.get("/pdf/{student_id}")
+def get_cumulative_record_pdf(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Generates and streams the official GES/NaCCA Basic School Cumulative Record Folder PDF.
+    """
+    from fastapi.responses import Response
+    from ..services.reports import ReportService
+
+    school_id = get_school_id(current_user)
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student or (school_id is not None and student.school_id != school_id):
+        raise HTTPException(status_code=404, detail="Student not found.")
+
+    try:
+        pdf_bytes = ReportService.generate_basic_cumulative_folder_pdf(db, student_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate cumulative record folder PDF: {str(e)}")
+
+    code_clean = (student.student_code or str(student.id)).replace(" ", "_")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="Cumulative_Record_Folder_{code_clean}.pdf"'
+        }
+    )
+

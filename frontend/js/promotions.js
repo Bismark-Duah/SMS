@@ -197,25 +197,29 @@ async function loadStudentsForPromotion(classId) {
         }
 
         listContainer.innerHTML = currentCandidates.map(s => {
-            const isRecPromote = s.recommendation === "Promoted" || s.recommendation === "Pending";
-            const isRepeated = s.recommendation === "Repeated";
-
+            const rec = s.recommendation || "Promoted";
             let badgeHtml = "";
-            if (isRepeated) {
-                badgeHtml = '<span style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid #ef4444; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">⚠️ Repeat Recommended</span>';
-            } else if (s.recommendation === "Promoted") {
-                badgeHtml = '<span style="background:rgba(34,197,94,0.2); color:#22c55e; border:1px solid #22c55e; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">🟢 Recommended</span>';
+            if (rec === "Repeat") {
+                badgeHtml = '<span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid #ef4444; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">🔴 Repeat Recommended</span>';
+            } else if (rec === "Probation") {
+                badgeHtml = '<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">🟡 On Probation</span>';
+            } else if (rec === "Graduated") {
+                badgeHtml = '<span style="background:rgba(14,165,233,0.2); color:#38bdf8; border:1px solid #0284c7; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">🎓 Ready to Graduate</span>';
             } else {
-                badgeHtml = '<span style="background:rgba(148,163,184,0.2); color:#94a3b8; border:1px solid #94a3b8; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">Pending</span>';
+                badgeHtml = '<span style="background:rgba(34,197,94,0.2); color:#34d399; border:1px solid #10b981; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">🟢 Promoted</span>';
             }
 
+            const isRecPromote = rec === "Promoted" || rec === "Probation";
+            const avgStr = s.average_score !== undefined ? `${s.average_score}%` : "-";
+            const attStr = s.attendance_rate !== undefined ? `${s.attendance_rate}%` : "-";
+
             return `
-                <div class="student-checkbox-item" data-rec="${s.recommendation}">
+                <div class="student-checkbox-item" data-rec="${rec}">
                     <input type="checkbox" id="promote_s_${s.id}" value="${s.id}" ${isRecPromote ? 'checked' : ''} />
                     <label for="promote_s_${s.id}" style="flex:1; display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin:0;">
                         <div>
                             <strong>${escapeHtml(s.full_name)}</strong>
-                            <div style="font-size:0.78rem; opacity:0.7;">Code: ${s.student_code} · Form ${s.form}</div>
+                            <div style="font-size:0.78rem; opacity:0.7;">Code: ${s.student_code} · Form ${s.form} · Avg: <strong>${avgStr}</strong> · Att: <strong>${attStr}</strong></div>
                         </div>
                         <div>${badgeHtml}</div>
                     </label>
@@ -284,4 +288,38 @@ function escapeHtml(str) {
     return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : '';
 }
 
+async function downloadPromotionDocketPDF() {
+    const classId = document.getElementById('promote_source_class')?.value || document.getElementById('graduate_source_class')?.value;
+    if (!classId) {
+        alert('Please select a source Class Section first.');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/promotions/docket-pdf/${classId}`, {
+            headers: getHeaders()
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ detail: 'Failed to generate promotion docket PDF' }));
+            alert(`⚠️ Error: ${err.detail || 'Failed to download docket'}`);
+            return;
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Promotion_Docket_Class_${classId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        console.error('Failed to download promotion docket:', err);
+        alert('Network error downloading promotion docket PDF.');
+    }
+}
+
 init();
+

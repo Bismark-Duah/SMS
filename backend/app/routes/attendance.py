@@ -1,13 +1,34 @@
+import io
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
+from sqlalchemy import func, or_
 from datetime import datetime, date
 from typing import List, Optional
+from pydantic import BaseModel
+from xhtml2pdf import pisa
+
 from ..database import get_db
-from ..models import Attendance, Notification, Student, MessageLog, User, Subject, TeacherAssignment, ClassSection
+from ..models import (
+    Attendance, Notification, Student, MessageLog, User, Subject, TeacherAssignment, ClassSection,
+    Setting, School
+)
 from ..schemas import AttendanceCreate
 from ..dependencies import get_current_user, get_school_id, get_user_assigned_scope, get_form_master_class_ids, ATTENDANCE_ADMIN_ROLES
+from ..services.communication_service import CommunicationService
 
 router = APIRouter()
+
+
+class ScanCheckinPayload(BaseModel):
+    student_code: str
+    scan_type: str = "Morning Roll Call"
+    timestamp: Optional[str] = None
+
+
+class TruancyAlertDispatchPayload(BaseModel):
+    date_str: Optional[str] = None
+    class_section_id: Optional[int] = None
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -635,3 +656,347 @@ def get_reconciliation_audit(
         "reconciled_clean_count": reconciled_clean_count,
         "discrepancies": discrepancies
     }
+
+
+@router.post("/scan-checkin")
+def scan_checkin_student(
+    payload: ScanCheckinPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Rapid Barcode / QR Scanner Check-in Endpoint.
+    Instantly verifies student identity, calculates lateness vs cutoff time,
+    updates attendance ledger, and returns audio-visual cue metrics.
+    """
+    school_id = get_school_id(current_user)
+    raw_code = payload.student_code.strip()
+    if not raw_code:
+        raise HTTPException(status_code=400, detail="Student code cannot be empty")
+
+    query = db.query(Student).filter(
+        or_(
+            Student.student_code == raw_code,
+            Student.student_code == raw_code.upper(),
+            Student.bece_index_number == raw_code,
+            Student.enrolment_code == raw_code
+        )
+    )
+    if school_id is not None:
+        query = query.filter(Student.school_id == school_id)
+
+    student = query.first()
+    if not student:
+        raise HTTPException(status_code=404, detail=f"No student found with ID/Barcode '{raw_code}'")
+
+    now = datetime.now()
+    today = now.date()
+    time_str = now.strftime("%I:%M %p")
+    today_str = today.strftime("%Y-%m-%d")
+
+    # Read cutoff time from setting or default to 08:00
+    cutoff_setting = db.query(Setting).filter(Setting.key == "morning_attendance_cutoff").first()
+    cutoff_str = cutoff_setting.value if cutoff_setting and cutoff_setting.value else "08:00"
+
+    status = "Present"
+    try:
+        c_parts = cutoff_str.split(":")
+        cutoff_dt = now.replace(hour=int(c_parts[0]), minute=int(c_parts[1]), second=0, microsecond=0)
+        if now > cutoff_dt and "Morning" in payload.scan_type:
+            status = "Late"
+    except Exception:
+        pass
+
+    # Check if attendance record exists for today
+    att = db.query(Attendance).filter(
+        Attendance.student_id == student.id,
+        Attendance.date == today
+    ).first()
+
+    is_duplicate = False
+    if att:
+        if att.status in ["Present", "Late"]:
+            is_duplicate = True
+        att.status = status
+        att.period_label = f"Scanned at {time_str} [{payload.scan_type}]"
+    else:
+        att = Attendance(
+            student_id=student.id,
+            date=today,
+            status=status,
+            attendance_type="daily",
+            period_label=f"Scanned at {time_str} [{payload.scan_type}]"
+        )
+        db.add(att)
+
+    db.commit()
+
+    audio_cue = "already_scanned" if is_duplicate else ("late" if status == "Late" else "success")
+    class_name = student.class_section.name if student.class_section else "Unassigned"
+    house_name = student.house.name if student.house else "Day Student"
+
+    return {
+        "success": True,
+        "is_duplicate": is_duplicate,
+        "audio_cue": audio_cue,
+        "student_id": student.id,
+        "student_code": student.student_code,
+        "full_name": student.full_name,
+        "class_name": class_name,
+        "house_name": house_name,
+        "residential_status": student.residential_status or "Day",
+        "status": status,
+        "scan_type": payload.scan_type,
+        "timestamp_str": time_str,
+        "date_str": today_str,
+        "message": f"{student.full_name} ({student.student_code}) verified as {status.upper()} [{payload.scan_type} at {time_str}]"
+    }
+
+
+@router.post("/dispatch-truancy-alerts")
+def dispatch_truancy_alerts(
+    payload: TruancyAlertDispatchPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Scans unexcused absences for a target date and dispatches personalized Hubtel SMS alerts to parents.
+    """
+    school_id = get_school_id(current_user)
+    target_date = _parse_date(payload.date_str) if payload.date_str else datetime.now().date()
+
+    query = db.query(Attendance).join(Student).filter(
+        Attendance.date == target_date,
+        Attendance.status == "Absent"
+    )
+    if school_id is not None:
+        query = query.filter(Student.school_id == school_id)
+    if payload.class_section_id:
+        query = query.filter(Student.class_section_id == payload.class_section_id)
+
+    absent_records = query.all()
+    dispatched_count = 0
+    date_formatted = target_date.strftime("%d %b %Y")
+
+    for att in absent_records:
+        st = att.student
+        if not st or not st.phone:
+            continue
+
+        guardian_name = st.guardian_name or (st.parent.username if st.parent else "Parent/Guardian")
+        msg = f"Attendance Alert: Dear {guardian_name}, your ward {st.full_name} was marked ABSENT from school on {date_formatted}. Please contact school administration if this is an error."
+
+        CommunicationService.send_sms(
+            db=db,
+            to_phone=st.phone,
+            message=msg,
+            student_id=st.id,
+            recipient_name=guardian_name,
+            message_type="ABSENCE_ALERT"
+        )
+        dispatched_count += 1
+
+    return {
+        "success": True,
+        "date": target_date.strftime("%Y-%m-%d"),
+        "dispatched_count": dispatched_count,
+        "message": f"Successfully queued/dispatched {dispatched_count} absence SMS notification(s)."
+    }
+
+
+@router.get("/ledger-pdf/{class_section_id}")
+def get_attendance_ledger_pdf(
+    class_section_id: int,
+    month: Optional[int] = Query(None),
+    year: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Generates and returns an official GES Attendance Register PDF Ledger.
+    """
+    school_id = get_school_id(current_user)
+    cs = db.query(ClassSection).filter(ClassSection.id == class_section_id).first()
+    if not cs or (school_id is not None and hasattr(cs, "school_id") and cs.school_id and cs.school_id != school_id):
+        raise HTTPException(status_code=404, detail="Class section not found")
+
+    now = datetime.now()
+    target_month = month or now.month
+    target_year = year or now.year
+
+    # Query students in class
+    students = db.query(Student).filter(
+        Student.class_section_id == cs.id,
+        Student.is_active == True
+    ).order_by(Student.full_name).all()
+
+    if not students:
+        raise HTTPException(status_code=404, detail="No active students found in this class section")
+
+    # Get attendance totals for this month/year
+    student_stats = []
+    class_present_total = 0
+    class_records_total = 0
+    chronic_absent_count = 0
+    perfect_count = 0
+
+    for idx, st in enumerate(students):
+        records = db.query(Attendance).filter(
+            Attendance.student_id == st.id,
+            func.extract('year', Attendance.date) == target_year,
+            func.extract('month', Attendance.date) == target_month
+        ).all()
+
+        present_cnt = sum(1 for r in records if r.status in ["Present", "Late"])
+        absent_cnt = sum(1 for r in records if r.status == "Absent")
+        late_cnt = sum(1 for r in records if r.status == "Late")
+        total_days = len(records)
+
+        rate = round((present_cnt / total_days * 100), 1) if total_days > 0 else 100.0
+        if rate == 100.0 and total_days > 0:
+            perfect_count += 1
+        elif rate < 80.0 and total_days > 0:
+            chronic_absent_count += 1
+
+        class_present_total += present_cnt
+        class_records_total += total_days
+
+        student_stats.append({
+            "index": idx + 1,
+            "code": st.student_code,
+            "name": st.full_name,
+            "gender": st.gender or "-",
+            "present": present_cnt,
+            "absent": absent_cnt,
+            "late": late_cnt,
+            "total": total_days,
+            "rate": rate
+        })
+
+    overall_rate = round((class_present_total / class_records_total * 100), 1) if class_records_total > 0 else 100.0
+
+    school_name_setting = db.query(Setting).filter(Setting.key == "school_name").first()
+    school_name = school_name_setting.value if school_name_setting and school_name_setting.value else "SENIOR HIGH SCHOOL"
+    month_name = datetime(target_year, target_month, 1).strftime("%B %Y")
+
+    # HTML compilation
+    rows_html = ""
+    for s in student_stats:
+        status_color = "#059669" if s["rate"] >= 90 else ("#d97706" if s["rate"] >= 80 else "#dc2626")
+        rows_html += f"""
+        <tr>
+            <td style="text-align:center;">{s['index']}</td>
+            <td style="font-family:monospace; font-size:8px;">{s['code']}</td>
+            <td style="text-align:left; font-weight:bold;">{s['name']}</td>
+            <td style="text-align:center;">{s['gender']}</td>
+            <td style="text-align:center; font-weight:bold; color:#059669;">{s['present']}</td>
+            <td style="text-align:center; font-weight:bold; color:#dc2626;">{s['absent']}</td>
+            <td style="text-align:center; color:#d97706;">{s['late']}</td>
+            <td style="text-align:center;">{s['total']}</td>
+            <td style="text-align:right; font-weight:bold; color:{status_color};">{s['rate']}%</td>
+        </tr>
+        """
+
+    html_content = f"""
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            @page {{ size: a4 portrait; margin: 0.8cm; }}
+            body {{ font-family: Helvetica, Arial, sans-serif; font-size: 8.5px; color: #0f172a; }}
+            .header-table {{ width: 100%; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 8px; }}
+            .matrix-table {{ width: 100%; border-collapse: collapse; margin-top: 6px; }}
+            .matrix-table th, .matrix-table td {{ border: 1px solid #94a3b8; padding: 4px 6px; }}
+            .matrix-table th {{ background: #f1f5f9; font-weight: bold; text-align: center; }}
+            .kpi-table {{ width: 100%; margin-top: 8px; margin-bottom: 8px; }}
+            .kpi-box {{ background: #f8fafc; border: 1px solid #cbd5e1; padding: 6px; text-align: center; }}
+        </style>
+    </head>
+    <body>
+        <table class="header-table">
+            <tr>
+                <td style="width:70%;">
+                    <div style="font-size:14px; font-weight:bold; text-transform:uppercase;">{school_name}</div>
+                    <div style="font-size:9px; color:#475569;">Official Monthly Attendance Register &amp; Truancy Audit Ledger</div>
+                </td>
+                <td style="width:30%; text-align:right; vertical-align:top;">
+                    <div style="font-size:10px; font-weight:bold; color:#0369a1;">Class: {cs.name}</div>
+                    <div style="font-size:8.5px; color:#64748b;">Month: {month_name}</div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="kpi-table">
+            <tr>
+                <td class="kpi-box" style="width:25%;">
+                    <div style="font-size:7.5px; color:#64748b;">Total Students</div>
+                    <div style="font-size:12px; font-weight:bold; color:#0f172a;">{len(students)}</div>
+                </td>
+                <td class="kpi-box" style="width:25%;">
+                    <div style="font-size:7.5px; color:#64748b;">Overall Attendance Rate</div>
+                    <div style="font-size:12px; font-weight:bold; color:#059669;">{overall_rate}%</div>
+                </td>
+                <td class="kpi-box" style="width:25%;">
+                    <div style="font-size:7.5px; color:#64748b;">100% Perfect Attendance</div>
+                    <div style="font-size:12px; font-weight:bold; color:#0284c7;">{perfect_count}</div>
+                </td>
+                <td class="kpi-box" style="width:25%;">
+                    <div style="font-size:7.5px; color:#64748b;">Chronic Absenteeism (&lt;80%)</div>
+                    <div style="font-size:12px; font-weight:bold; color:#dc2626;">{chronic_absent_count}</div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="matrix-table">
+            <thead>
+                <tr>
+                    <th style="width:20px;">#</th>
+                    <th style="width:65px;">Student ID</th>
+                    <th style="text-align:left;">Full Name</th>
+                    <th style="width:30px;">Sex</th>
+                    <th style="width:45px;">Present</th>
+                    <th style="width:45px;">Absent</th>
+                    <th style="width:40px;">Late</th>
+                    <th style="width:40px;">Total</th>
+                    <th style="width:50px; text-align:right;">Rate (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {rows_html}
+            </tbody>
+        </table>
+
+        <table style="width:100%; margin-top:20px; border:none; font-size:8.5px;">
+            <tr>
+                <td style="width:33%; text-align:center;">
+                    <div style="border-bottom:1px solid #000; width:130px; margin:0 auto 4px;"></div>
+                    <strong>Form Master / Mistress</strong>
+                </td>
+                <td style="width:33%; text-align:center;">
+                    <div style="border-bottom:1px solid #000; width:130px; margin:0 auto 4px;"></div>
+                    <strong>Senior Housemaster / Mistress</strong>
+                </td>
+                <td style="width:34%; text-align:center;">
+                    <div style="border-bottom:1px solid #000; width:130px; margin:0 auto 4px;"></div>
+                    <strong>Headmaster / Principal</strong>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+
+    pdf_buffer = io.BytesIO()
+    pisa_status = pisa.CreatePDF(io.StringIO(html_content), dest=pdf_buffer)
+    if pisa_status.err:
+        raise HTTPException(status_code=500, detail="Failed to compile attendance ledger PDF")
+
+    clean_cls_name = (cs.name or f"Class_{class_section_id}").replace(" ", "_")
+    return Response(
+        content=pdf_buffer.getvalue(),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="Attendance_Register_{clean_cls_name}_{target_month}_{target_year}.pdf"'
+        }
+    )
+

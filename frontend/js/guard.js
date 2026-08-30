@@ -521,8 +521,13 @@
     const themeSelect = document.getElementById('guardThemeSelect');
     if (themeSelect) {
       themeSelect.addEventListener('change', (e) => {
-        if (window.setTheme) window.setTheme(e.target.value);
-        localStorage.setItem('system_theme', e.target.value);
+        if (window.SMSStateBus && window.SMSStateBus.setTheme) {
+          window.SMSStateBus.setTheme(e.target.value);
+        } else if (window.setTheme) {
+          window.setTheme(e.target.value);
+        } else if (window.applyTheme) {
+          window.applyTheme(e.target.value);
+        }
       });
     }
 
@@ -546,14 +551,19 @@
       }
     });
 
-    // Logout handler
+    // Logout handler (Cross-Tab sync)
     document.getElementById('guardLogoutBtn')?.addEventListener('click', () => {
-      clearSession();
-      window.location.href = 'auth.html';
+      if (window.SMSStateBus && window.SMSStateBus.broadcastLogout) {
+        window.SMSStateBus.broadcastLogout();
+      } else {
+        clearSession();
+        window.location.href = 'auth.html';
+      }
     });
     } catch (err) {
       console.error('Error in injectUserPill:', err);
     }
+
   }
 
   function injectSuperAdminBanner() {

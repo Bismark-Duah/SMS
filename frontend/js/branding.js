@@ -3,14 +3,17 @@
  * Injected on every page that has a .topbar element.
  * Works without authentication (settings endpoint is public).
  */
-(async function applyBranding() {
+window.applyBranding = async function(overrideSettings) {
   try {
-    const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
-    const token = localStorage.getItem('accessToken');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    const res = await fetch(`${API_BASE}/settings/`, { headers });
-    if (!res.ok) return;
-    const s = await res.json();
+    let s = overrideSettings;
+    if (!s) {
+      const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
+      const token = localStorage.getItem('accessToken');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE}/settings/`, { headers });
+      if (!res.ok) return;
+      s = await res.json();
+    }
 
     const isSuperAdmin = (localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('userRole') === 'super_admin') && localStorage.getItem('userRole') !== 'admin' && !localStorage.getItem('is_super_admin_viewing');
     const isViewing = localStorage.getItem('is_super_admin_viewing') === 'true';
@@ -203,7 +206,11 @@
   } catch (_) {
     // Non-critical — fail silently
   }
-})();
+};
+
+// Initial invocation on script load
+window.applyBranding();
+
 
 window.applySchoolModeVisibility = function(mode, bStatus) {
   const F = (window.SchoolFeatures && window.SchoolFeatures.version)

@@ -16,8 +16,10 @@
           <h1 style="margin:0;font-size:1.2rem;">Attendance</h1>
           <p style="margin:0;opacity:.7;font-size:.85rem;">Daily register & subject period absence log</p>
         </div>
-        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
-          <button class="btn-print no-print" title="Print attendance register (landscape)" onclick="(function(){var s=document.createElement('style');s.id='_landscapeHint';s.textContent='@page{size:A4 landscape;}';document.head.appendChild(s);window.print();setTimeout(function(){var el=document.getElementById('_landscapeHint');if(el)el.parentNode.removeChild(el);},1000);})()">🖨️ Print Register</button>
+        <div style="display:flex; gap:10px; align-items:center; margin-left:auto; flex-wrap:wrap;">
+          <button class="btn" style="background:#7c3aed; color:white; font-weight:700;" onclick="dispatchTruancyAlerts()">📢 Dispatch Truancy SMS</button>
+          <button class="btn" style="background:#0284c7; color:white; font-weight:700;" onclick="downloadAttendanceLedgerPDF()">📄 Download PDF Ledger</button>
+          <button class="btn-print no-print" title="Print attendance register (landscape)" onclick="(function(){var s=document.createElement('style');s.id='_landscapeHint';s.textContent='@page{size:A4 landscape;}';document.head.appendChild(s);window.print();setTimeout(function(){var el=document.getElementById('_landscapeHint');if(el)el.parentNode.removeChild(el);},1000);})()">🖨️ Print View</button>
           <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
@@ -317,6 +319,83 @@
               </thead>
               <tbody id="auditBody">
                 <tr><td colspan="8" style="text-align:center; padding:20px; opacity:.6;">Click "Run Reconciliation Audit" to inspect discrepancies.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- PANEL 6: Barcode & QR Real-Time Scanner Check-In -->
+      <div id="panelScanner" class="tab-panel" style="display:none;">
+        <section class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+            <div>
+              <h3 style="margin:0; color:#38bdf8;">📷 Barcode &amp; QR Real-Time Scanner Check-In</h3>
+              <p style="margin:4px 0 0; font-size:.85rem; opacity:.75;">Instant identity verification, automated lateness calculation, and audio cue feedback.</p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <label style="font-size:0.85rem; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                <input type="checkbox" id="scanAudioToggle" checked /> 🔊 Sound Effects
+              </label>
+              <button class="btn" style="background:#0284c7; color:white; font-size:0.8rem;" onclick="clearScanHistory()">🗑️ Clear History</button>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:16px; align-items:end;">
+            <label>Scan Station / Mode
+              <select id="scanner_mode">
+                <option value="Morning Roll Call">🌅 Morning Class / Gate In</option>
+                <option value="Gatehouse In">🚪 Gatehouse Entry</option>
+                <option value="Gatehouse Out">🚶 Gatehouse Exit</option>
+                <option value="Evening Prep">🌙 Evening Prep Roll Call</option>
+              </select>
+            </label>
+            <label style="flex:2;">Scan Barcode or Type Student ID &amp; Press Enter
+              <input type="text" id="scanner_input" placeholder="Scan barcode or enter Student Code (e.g. ST1-001)..." autofocus autocomplete="off" onkeydown="if(event.key==='Enter'){handleScannerSubmit();}" />
+            </label>
+            <div>
+              <button class="btn primary" style="width:100%; height:40px; background:#0284c7; font-weight:700;" onclick="handleScannerSubmit()">⚡ Verify &amp; Check In</button>
+            </div>
+          </div>
+
+          <!-- Active Scanned Student Result Card -->
+          <div id="scanResultCard" style="display:none; margin-bottom:20px; padding:16px; border-radius:12px; background:rgba(255,255,255,0.04); border:2px solid #38bdf8;">
+            <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+              <div style="width:55px; height:55px; border-radius:50%; background:#0284c7; color:white; display:flex; align-items:center; justify-content:center; font-size:1.6rem; font-weight:bold;" id="scanCardAvatar">
+                🎓
+              </div>
+              <div style="flex:1; min-width:200px;">
+                <div style="font-size:1.15rem; font-weight:800; color:#f8fafc;" id="scanCardName">Kwame Mensah</div>
+                <div style="font-size:0.85rem; opacity:0.8; margin-top:2px;">
+                  Code: <strong style="font-family:monospace;" id="scanCardCode">ST1-001</strong> &bull; Class: <span id="scanCardClass">Science 2A</span> &bull; House: <span id="scanCardHouse">House 1</span>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div id="scanCardBadge" style="display:inline-block; padding:6px 14px; border-radius:20px; font-weight:800; font-size:0.95rem; background:rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981;">
+                  ✅ PRESENT (ON TIME)
+                </div>
+                <div style="font-size:0.8rem; opacity:0.7; margin-top:4px;" id="scanCardTime">07:45 AM</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Check-In Feed -->
+          <h4 style="margin:16px 0 8px 0; font-size:0.95rem;">📋 Today's Live Check-In Feed (<span id="scanCount">0</span> Scanned)</h4>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; font-size:0.88rem;">
+              <thead>
+                <tr>
+                  <th style="width:30px;">#</th>
+                  <th style="width:75px;">Time</th>
+                  <th>Student Code</th>
+                  <th>Student Name</th>
+                  <th>Class</th>
+                  <th>Station</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="scanHistoryBody">
+                <tr><td colspan="7" style="text-align:center; padding:20px; opacity:.6;">No scans recorded yet in this session. Scan an ID card or enter a student code above.</td></tr>
               </tbody>
             </table>
           </div>

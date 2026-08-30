@@ -99,71 +99,161 @@
     img.src = imgSrc;
   };
 
-  // ── 3. Theme Application ──────────────────────────────────────────────────
-  window.applyTheme = function (themeName, customColors) {
-    const root = document.documentElement;
-    const selectedTheme = themeName || localStorage.getItem("system_theme") || "midnight";
-    localStorage.setItem("system_theme", selectedTheme);
+  // ── 3. Theme Application & Enterprise State Bus ───────────────────────────
+  if (!window.SMSStateBus) {
+    const CHANNEL_NAME = 'sms_enterprise_bus';
+    let broadcastChannel = null;
+    try {
+      if (typeof window.BroadcastChannel === 'function') {
+        broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
+      }
+    } catch (_) {}
 
-    if (selectedTheme === "auto") {
-      let colors = customColors;
-      if (!colors) {
+    const _store = new Map();
+    const _subscribers = new Map();
+
+    window.SMSStateBus = {
+      version: '2.0.0',
+      get(key, defaultValue = null) {
+        if (_store.has(key)) return _store.get(key);
         try {
-          colors = JSON.parse(localStorage.getItem("logo_theme_colors"));
+          const stored = localStorage.getItem(key);
+          if (stored !== null) {
+            try {
+              const parsed = JSON.parse(stored);
+              _store.set(key, parsed);
+              return parsed;
+            } catch (_) {
+              _store.set(key, stored);
+              return stored;
+            }
+          }
         } catch (_) {}
-      }
-
-      if (colors && colors.primary) {
-        root.setAttribute("data-theme", "auto");
-        root.style.setProperty("--primary", colors.primary);
-        root.style.setProperty("--primary-hover", colors.primaryHover || adjustBrightness(colors.primary, -15));
-        root.style.setProperty("--primary-light", colors.primary + "26");
-        root.style.setProperty("--secondary", colors.secondary || "#06b6d4");
-
-        // Calculate luminance of primary color to adapt background & text contrast
-        const hex = colors.primary.replace("#", "");
-        const r = parseInt(hex.substring(0, 2), 16) || 0;
-        const g = parseInt(hex.substring(2, 4), 16) || 0;
-        const b = parseInt(hex.substring(4, 6), 16) || 0;
-        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-        if (lum > 0.7) {
-          // Dark background for bright primary logo colors
-          root.style.setProperty("--bg", "#0f172a");
-          root.style.setProperty("--bg-gradient", `radial-gradient(circle at top right, ${colors.primary}22, #0f172a 70%)`);
-          root.style.setProperty("--card-bg", "rgba(30, 41, 59, 0.85)");
-          root.style.setProperty("--border-color", `${colors.primary}33`);
-          root.style.setProperty("--text-primary", "#f8fafc");
-          root.style.setProperty("--text-secondary", "#94a3b8");
-          root.style.setProperty("--input-bg", "rgba(15, 23, 42, 0.7)");
-        } else {
-          // Clean modern light background tinted with primary logo accent
-          root.style.setProperty("--bg", "#f8fafc");
-          root.style.setProperty("--bg-gradient", `linear-gradient(135deg, ${colors.primary}12 0%, #f1f5f9 100%)`);
-          root.style.setProperty("--card-bg", "#ffffff");
-          root.style.setProperty("--border-color", `${colors.primary}30`);
-          root.style.setProperty("--text-primary", "#0f172a");
-          root.style.setProperty("--text-secondary", "#475569");
-          root.style.setProperty("--input-bg", "#ffffff");
+        return defaultValue;
+      },
+      set(key, value, options = {}) {
+        _store.set(key, value);
+        try {
+          if (typeof value === 'object' && value !== null) {
+            localStorage.setItem(key, JSON.stringify(value));
+          } else if (value === null || value === undefined) {
+            localStorage.removeItem(key);
+          } else {
+            localStorage.setItem(key, String(value));
+          }
+        } catch (_) {}
+        if (_subscribers.has(key)) {
+          _subscribers.get(key).forEach(cb => { try { cb(value); } catch (_) {} });
         }
-        return;
+        window.dispatchEvent(new CustomEvent(`sms:${key}`, { detail: { key, value } }));
+        if (!options.skipBroadcast && broadcastChannel) {
+          try { broadcastChannel.postMessage({ type: 'STATE_CHANGE', key, value, timestamp: Date.now() }); } catch (_) {}
+        }
+        return value;
+      },
+      subscribe(key, cb) {
+        if (!_subscribers.has(key)) _subscribers.set(key, new Set());
+        _subscribers.get(key).add(cb);
+        const cur = this.get(key);
+        if (cur !== null && cur !== undefined) { try { cb(cur); } catch (_) {} }
+        return () => { if (_subscribers.has(key)) _subscribers.get(key).delete(cb); };
+      },
+      setTheme(themeName, customColors) {
+        const selectedTheme = themeName || this.get('system_theme', 'midnight');
+        this.set('system_theme', selectedTheme);
+        const root = document.documentElement;
+        if (selectedTheme === 'auto') {
+          let colors = customColors;
+          if (!colors) { try { colors = JSON.parse(localStorage.getItem('logo_theme_colors')); } catch (_) {} }
+          if (colors && colors.primary) {
+            root.setAttribute('data-theme', 'auto');
+            root.style.setProperty('--primary', colors.primary);
+            root.style.setProperty('--primary-hover', colors.primaryHover || adjustBrightness(colors.primary, -15));
+            root.style.setProperty('--primary-light', colors.primary + '26');
+            root.style.setProperty('--secondary', colors.secondary || '#06b6d4');
+            const hex = colors.primary.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16) || 0;
+            const g = parseInt(hex.substring(2, 4), 16) || 0;
+            const b = parseInt(hex.substring(4, 6), 16) || 0;
+            const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            if (lum > 0.7) {
+              root.style.setProperty('--bg', '#0f172a');
+              root.style.setProperty('--bg-gradient', `radial-gradient(circle at top right, ${colors.primary}22, #0f172a 70%)`);
+              root.style.setProperty('--card-bg', 'rgba(30, 41, 59, 0.85)');
+              root.style.setProperty('--border-color', `${colors.primary}33`);
+              root.style.setProperty('--text-primary', '#f8fafc');
+              root.style.setProperty('--text-secondary', '#94a3b8');
+              root.style.setProperty('--input-bg', 'rgba(15, 23, 42, 0.7)');
+            } else {
+              root.style.setProperty('--bg', '#f8fafc');
+              root.style.setProperty('--bg-gradient', `linear-gradient(135deg, ${colors.primary}12 0%, #f1f5f9 100%)`);
+              root.style.setProperty('--card-bg', '#ffffff');
+              root.style.setProperty('--border-color', `${colors.primary}30`);
+              root.style.setProperty('--text-primary', '#0f172a');
+              root.style.setProperty('--text-secondary', '#475569');
+              root.style.setProperty('--input-bg', '#ffffff');
+            }
+          }
+        } else {
+          root.style.removeProperty('--primary');
+          root.style.removeProperty('--primary-hover');
+          root.style.removeProperty('--primary-light');
+          root.style.removeProperty('--secondary');
+          root.style.removeProperty('--bg');
+          root.style.removeProperty('--bg-gradient');
+          root.style.removeProperty('--card-bg');
+          root.style.removeProperty('--border-color');
+          root.style.removeProperty('--text-primary');
+          root.style.removeProperty('--text-secondary');
+          root.style.removeProperty('--input-bg');
+          root.setAttribute('data-theme', selectedTheme);
+        }
+        document.querySelectorAll('#guardThemeSelect, #system_theme, select[name="theme"]').forEach(sel => {
+          if (sel && sel.value !== selectedTheme) sel.value = selectedTheme;
+        });
+        window.dispatchEvent(new CustomEvent('themechange', { detail: { theme: selectedTheme } }));
+        return selectedTheme;
+      },
+      updateBranding(payload = {}) {
+        if (window.applyBranding) window.applyBranding(payload);
+      },
+      broadcastLogout() {
+        try {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('token');
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('activeRole');
+        } catch (_) {}
+        if (broadcastChannel) {
+          try { broadcastChannel.postMessage({ type: 'AUTH_LOGOUT', timestamp: Date.now() }); } catch (_) {}
+        }
+        window.location.href = 'auth.html';
       }
-    }
+    };
+    window.SMSState = window.SMSStateBus;
 
-    // Reset element-level overrides for named presets
-    root.style.removeProperty("--primary");
-    root.style.removeProperty("--primary-hover");
-    root.style.removeProperty("--primary-light");
-    root.style.removeProperty("--secondary");
-    root.style.removeProperty("--bg");
-    root.style.removeProperty("--bg-gradient");
-    root.style.removeProperty("--card-bg");
-    root.style.removeProperty("--border-color");
-    root.style.removeProperty("--text-primary");
-    root.style.removeProperty("--text-secondary");
-    root.style.removeProperty("--input-bg");
-    root.setAttribute("data-theme", selectedTheme);
+    if (broadcastChannel) {
+      broadcastChannel.onmessage = function (ev) {
+        const msg = ev.data;
+        if (!msg || typeof msg !== 'object') return;
+        if (msg.type === 'STATE_CHANGE' && msg.key === 'system_theme') {
+          window.SMSStateBus.setTheme(msg.value);
+        } else if (msg.type === 'AUTH_LOGOUT') {
+          const publicPages = ['index.html', 'auth.html', 'login.html', 'enrollment.html', 'parent-view.html', ''];
+          const curPage = (window.location.pathname.split('/').pop() || '').toLowerCase();
+          if (!publicPages.includes(curPage)) window.location.href = 'auth.html';
+        }
+      };
+    }
+  }
+
+  window.applyTheme = function (themeName, customColors) {
+    if (window.SMSStateBus && window.SMSStateBus.setTheme) {
+      return window.SMSStateBus.setTheme(themeName, customColors);
+    }
   };
+  window.setTheme = window.applyTheme;
+
 
   // ── 4. Sidebar View Layout Controller & Navigation ────────────────────
   window.applyLayout = function (layoutMode) {

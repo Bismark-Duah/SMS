@@ -90,3 +90,38 @@ async function loadCumulativeRecord() {
 function printRecord() {
     window.print();
 }
+
+async function downloadCumulativeFolderPDF() {
+    const studentId = document.getElementById('student_select')?.value;
+    if (!studentId) {
+        alert('Please select a Pupil / Student first.');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+        const res = await fetch(`${API_BASE}/cumulative-records/pdf/${studentId}`, {
+            headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ detail: 'Failed to generate cumulative record folder PDF' }));
+            alert(`⚠️ Error: ${err.detail || 'Failed to download PDF folder'}`);
+            return;
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Cumulative_Record_Folder_Student_${studentId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        console.error('Failed to download cumulative folder:', err);
+        alert('Network error while generating cumulative record folder PDF.');
+    }
+}
+

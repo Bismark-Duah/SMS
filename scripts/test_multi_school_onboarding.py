@@ -141,7 +141,11 @@ def run_multi_school_tests():
     test_codes = ["ANTOA-SHS", "ACHIMOTA-ALL", "NOTREDAME-PREP"]
     test_schools = db.query(School).filter(School.code.in_(test_codes)).all()
     for ts in test_schools:
-        db.query(User).filter(User.school_id == ts.id).delete(synchronize_session=False)
+        u_ids = [u.id for u in db.query(User.id).filter(User.school_id == ts.id).all()]
+        if u_ids:
+            from backend.app.models import user_roles
+            db.execute(user_roles.delete().where(user_roles.c.user_id.in_(u_ids)))
+            db.query(User).filter(User.id.in_(u_ids)).delete(synchronize_session=False)
         db.delete(ts)
     db.commit()
 

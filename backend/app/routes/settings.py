@@ -222,6 +222,20 @@ def update_settings(payload: dict, db: Session = Depends(get_db), current_user: 
     if target_sch_id:
         sch = db.query(School).filter(School.id == target_sch_id).first()
         if sch:
+            if "school_name" in payload and payload["school_name"]:
+                sch.name = str(payload["school_name"]).strip()
+            if "school_abbreviation" in payload and payload["school_abbreviation"]:
+                new_code = str(payload["school_abbreviation"]).strip()
+                existing_code = db.query(School).filter(School.code == new_code, School.id != sch.id).first()
+                if not existing_code:
+                    sch.code = new_code
+            elif "school_code" in payload and payload["school_code"]:
+                new_code = str(payload["school_code"]).strip()
+                existing_code = db.query(School).filter(School.code == new_code, School.id != sch.id).first()
+                if not existing_code:
+                    sch.code = new_code
+            if "school_logo" in payload and payload["school_logo"]:
+                sch.logo_url = str(payload["school_logo"]).strip()
             if "school_mode" in payload and payload["school_mode"]:
                 new_mode = str(payload["school_mode"]).upper()
                 sch.school_mode = new_mode

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import List, Optional
@@ -8,11 +8,15 @@ import urllib.request
 import json
 import hmac
 import hashlib
+import io
+from xhtml2pdf import pisa
 
 from ..database import get_db
-from ..models import Fee, Payment, Student, User, ClassSection, Notification, MessageLog, Setting
+from ..models import Fee, Payment, Student, User, ClassSection, Notification, MessageLog, Setting, School
 from ..dependencies import get_current_user, get_school_id
 from ..services.communication_service import CommunicationService
+from ..payments.paystack import initialize_paystack_transaction, verify_paystack_transaction, verify_paystack_signature
+from ..sms.hubtel import send_sms_hubtel
 
 router = APIRouter()
 
@@ -586,6 +590,7 @@ def get_student_fee_summary(
             "due_date": str(f.due_date) if f.due_date else None,
             "academic_year": f.academic_year,
             "term": f.term,
+            "latest_payment_id": f.payments[-1].id if f.payments else None
         })
 
     return {
@@ -614,78 +619,74 @@ def initialize_paystack_payment(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Initializes a Paystack Mobile Money transaction for fee payment.
-    Falls back gracefully if server is 100% offline or unconfigured.
+    Initializes a Paystack Mobile Money transaction for fee payment with subaccount split.
+    Enforces parent authorization, fee amount validation, and minimum >= GHS 1.00.
     """
     fee = db.query(Fee).filter(Fee.id == payload.fee_id).first()
     if not fee:
         raise HTTPException(status_code=404, detail="Fee bill record not found.")
 
-    def _setting_val(key, default=""):
-        s = db.query(Setting).filter(Setting.key == key).first()
-        return s.value if s else default
+    student = fee.student
+    if not student:
+        raise HTTPException(status_code=404, detail="Student associated with fee not found.")
 
-    secret_key = _setting_val("paystack_secret_key", "").strip()
-    is_enabled = _setting_val("paystack_enabled", "false").lower() == "true"
-
-    timestamp = int(datetime.utcnow().timestamp())
-    reference = f"PSTK-SMS-{fee.id}-{timestamp}"
-
-    if not secret_key or not is_enabled:
-        return {
-            "status": "offline_fallback",
-            "message": "Paystack online gateway is unconfigured or operating in 100% Offline Mode. Switched to local USSD or Bursar entry.",
-            "reference": reference,
-            "amount_paid": payload.amount_paid
-        }
-
-    # Check for school settlement subaccount
-    from ..models import SchoolSubaccount
-    target_school_id = fee.school_id if fee.school_id else (current_user.school_id or 1)
-    subaccount = db.query(SchoolSubaccount).filter(SchoolSubaccount.school_id == target_school_id).first()
-
-    # Call Paystack API
-    paystack_url = "https://api.paystack.co/transaction/initialize"
-    pay_data = {
-        "email": payload.email or "parent@school.local",
-        "amount": int(round(payload.amount_paid * 100)),
-        "currency": "GHS",
-        "reference": reference,
-        "metadata": {
-            "fee_id": fee.id,
-            "student_id": fee.student_id,
-            "recorded_by": current_user.id
-        }
+    # Role Scoping: If user is parent, ensure this is their child
+    roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, 'roles') and current_user.roles else []
+    admin_or_staff = {
+        "admin", "super_admin", "headmaster", "headmistress",
+        "assistant_headmaster_academic", "assistant_head_academic",
+        "assistant_headmaster_admin", "assistant_head_admin", "teacher"
     }
-    if subaccount and subaccount.paystack_subaccount_code:
-        pay_data["subaccount"] = subaccount.paystack_subaccount_code
+    if not any(r in admin_or_staff for r in roles):
+        if "parent" in roles:
+            if student.parent_id != current_user.id:
+                raise HTTPException(status_code=403, detail="You can only make fee payments for your linked child.")
+        elif "student" in roles:
+            if current_user.username != student.student_code:
+                raise HTTPException(status_code=403, detail="You can only make payments for your own account.")
+        else:
+            raise HTTPException(status_code=403, detail="Not authorized to initiate fee payment.")
 
-    req_body = json.dumps(pay_data).encode("utf-8")
+    # Validation: Amount must be >= GHS 1.00
+    if payload.amount_paid < 1.0:
+        raise HTTPException(status_code=400, detail="Payment amount must be at least GHS 1.00 (100 pesewas).")
 
-    req = urllib.request.Request(
-        paystack_url,
-        data=req_body,
-        headers={
-            "Authorization": f"Bearer {secret_key}",
-            "Content-Type": "application/json"
-        },
-        method="POST"
-    )
+    # Validation: Amount cannot exceed remaining balance + small tolerance
+    remaining_balance = max(0.0, fee.amount - fee.amount_paid)
+    if remaining_balance <= 0:
+        raise HTTPException(status_code=400, detail="This fee bill has already been fully paid.")
+    if payload.amount_paid > remaining_balance + 0.01:
+        raise HTTPException(status_code=400, detail=f"Payment amount GHS {payload.amount_paid:.2f} exceeds outstanding balance of GHS {remaining_balance:.2f}.")
+
+    target_school_id = student.school_id or (current_user.school_id or 1)
+    timestamp = int(datetime.utcnow().timestamp())
+    reference = f"PSTK-FEE-{fee.id}-{student.id}-{timestamp}"
+    amount_pesewas = int(round(payload.amount_paid * 100))
 
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            if data.get("status"):
-                return {
-                    "status": "success",
-                    "authorization_url": data["data"]["authorization_url"],
-                    "access_code": data["data"]["access_code"],
-                    "reference": reference
-                }
+        init_res = initialize_paystack_transaction(
+            email=payload.email or current_user.email or "parent@school.local",
+            amount_pesewas=amount_pesewas,
+            school_id=target_school_id,
+            reference=reference,
+            callback_url="/parent-view.html?payment_status=callback",
+            db=db,
+            custom_metadata={
+                "fee_id": fee.id,
+                "student_id": student.id,
+                "student_code": student.student_code,
+                "fee_type": fee.fee_type,
+                "payer_user_id": current_user.id,
+                "mobile_number": payload.mobile_number,
+                "network": payload.network
+            }
+        )
+        return init_res
     except Exception as e:
+        # Graceful fallback for offline mode
         return {
             "status": "offline_fallback",
-            "message": f"Online gateway connection unavailable ({str(e)}). Switched to 100% Offline Bursar Entry Mode.",
+            "message": f"Online gateway unavailable ({str(e)}). You can record manual Bursar payments offline.",
             "reference": reference,
             "amount_paid": payload.amount_paid
         }
@@ -698,56 +699,85 @@ def verify_paystack_payment(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Verifies a Paystack transaction status and completes fee payment recording.
+    Verifies a Paystack transaction status, atomically logs Payment record,
+    updates Fee balance, and dispatches Hubtel SMS confirmation to parent.
     """
-    def _setting_val(key, default=""):
-        s = db.query(Setting).filter(Setting.key == key).first()
-        return s.value if s else default
+    existing_pay = db.query(Payment).filter(Payment.reference_no == reference).first()
+    if existing_pay:
+        fee = existing_pay.fee
+        return {
+            "status": "success",
+            "message": "Payment already verified and recorded.",
+            "payment_id": existing_pay.id,
+            "fee": _enrich(fee) if fee else None
+        }
 
-    secret_key = _setting_val("paystack_secret_key", "").strip()
-    if not secret_key:
-        raise HTTPException(status_code=400, detail="Paystack API secret key is not configured.")
+    verification = verify_paystack_transaction(reference, db)
+    if not verification.get("verified"):
+        raise HTTPException(status_code=400, detail=verification.get("message", "Paystack transaction verification failed or unconfirmed."))
 
-    paystack_url = f"https://api.paystack.co/transaction/verify/{reference}"
-    req = urllib.request.Request(
-        paystack_url,
-        headers={"Authorization": f"Bearer {secret_key}"},
-        method="GET"
+    # Extract meta
+    meta = verification.get("metadata", {})
+    fee_id = meta.get("fee_id")
+    if not fee_id:
+        # Parse from reference if available: PSTK-FEE-<fee_id>-<student_id>-<timestamp>
+        parts = reference.split("-")
+        if len(parts) >= 3 and parts[2].isdigit():
+            fee_id = int(parts[2])
+
+    fee = db.query(Fee).filter(Fee.id == fee_id).first() if fee_id else None
+    if not fee:
+        raise HTTPException(status_code=404, detail="Associated fee bill could not be resolved.")
+
+    amount_paid = float(verification.get("amount", fee.amount - fee.amount_paid))
+
+    # Create Payment record atomically
+    pay_record = Payment(
+        fee_id=fee.id,
+        amount_paid=amount_paid,
+        payment_date=datetime.utcnow(),
+        payment_method="Paystack MoMo",
+        reference_no=reference,
+        notes=f"Paystack Online MoMo Verification ({verification.get('channel', 'mobile_money')})",
+        recorded_by=current_user.id
     )
+    db.add(pay_record)
+    fee.amount_paid = round(fee.amount_paid + amount_paid, 2)
+    fee.status = recalculate_fee_status(fee)
+    db.commit()
+    db.refresh(pay_record)
+    db.refresh(fee)
 
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            if data.get("status") and data["data"]["status"] == "success":
-                pstk_data = data["data"]
-                meta = pstk_data.get("metadata", {})
-                fee_id = meta.get("fee_id")
-                amount_paid = float(pstk_data["amount"]) / 100.0
+    # Dispatch SMS Payment Receipt via Hubtel / CommunicationService
+    student = fee.student
+    if student and student.phone:
+        school = student.school
+        sch_name = school.name if school else "School"
+        receipt_no = f"REC-{pay_record.id:06d}"
+        bal_now = max(0.0, fee.amount - fee.amount_paid)
+        sms_text = (
+            f"PAYMENT RECEIPT [{receipt_no}]: GHS {amount_paid:.2f} received for {student.full_name} "
+            f"({fee.fee_type}). Outstanding balance: GHS {bal_now:.2f}. Thank you! - {sch_name}"
+        )
+        try:
+            CommunicationService.send_sms(
+                db=db,
+                recipient_phone=student.phone,
+                message=sms_text,
+                student_id=student.id,
+                recipient_name=student.guardian_name or current_user.username,
+                message_type="FEE_RECEIPT"
+            )
+        except Exception:
+            pass
 
-                fee = db.query(Fee).filter(Fee.id == fee_id).first()
-                if fee:
-                    existing_pay = db.query(Payment).filter(Payment.reference_no == reference).first()
-                    if not existing_pay:
-                        pay_record = Payment(
-                            fee_id=fee.id,
-                            amount_paid=amount_paid,
-                            payment_date=datetime.utcnow(),
-                            payment_method="Paystack MoMo",
-                            reference_no=reference,
-                            notes="Paystack Online Gateway Verification",
-                            recorded_by=current_user.id
-                        )
-                        db.add(pay_record)
-                        fee.amount_paid = round(fee.amount_paid + amount_paid, 2)
-                        fee.status = recalculate_fee_status(fee)
-                        db.commit()
-                        db.refresh(fee)
-
-                    return _enrich(fee)
-
-            raise HTTPException(status_code=400, detail="Paystack transaction verification failed or pending.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Paystack verification error: {str(e)}")
+    return {
+        "status": "success",
+        "message": "Payment verified and recorded successfully.",
+        "payment_id": pay_record.id,
+        "amount_paid": amount_paid,
+        "fee": _enrich(fee)
+    }
 
 
 @router.post("/paystack/webhook")
@@ -765,7 +795,7 @@ async def paystack_webhook(
     secret_key = s.value.strip() if s and s.value else ""
     if secret_key and x_paystack_signature:
         computed_sig = hmac.new(secret_key.encode("utf-8"), body_bytes, hashlib.sha512).hexdigest()
-        if computed_sig.lower() != x_paystack_signature.lower():
+        if not hmac.compare_digest(computed_sig.lower(), x_paystack_signature.lower()):
             raise HTTPException(status_code=400, detail="Invalid Paystack Webhook Signature.")
 
     event_data = json.loads(body_bytes.decode("utf-8"))
@@ -796,4 +826,204 @@ async def paystack_webhook(
                     db.commit()
 
     return {"status": "success"}
+
+
+@router.get("/receipt/{payment_id}/pdf")
+def download_payment_receipt_pdf(
+    payment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Generates and returns an official printable/downloadable School Fee Payment Receipt PDF.
+    """
+    payment = db.query(Payment).filter(Payment.id == payment_id).first()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment record not found.")
+
+    fee = payment.fee
+    if not fee or not fee.student:
+        raise HTTPException(status_code=404, detail="Associated fee or student record not found.")
+
+    student = fee.student
+    school = student.school
+    school_name = school.name if school else "SENIOR HIGH SCHOOL"
+
+    # Role Scoping
+    roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, 'roles') and current_user.roles else []
+    admin_or_staff = {
+        "admin", "super_admin", "headmaster", "headmistress",
+        "assistant_headmaster_academic", "assistant_head_academic",
+        "assistant_headmaster_admin", "assistant_head_admin", "teacher"
+    }
+    if not any(r in admin_or_staff for r in roles):
+        if "parent" in roles:
+            if student.parent_id != current_user.id:
+                raise HTTPException(status_code=403, detail="You can only access receipts for your linked child.")
+        elif "student" in roles:
+            if current_user.username != student.student_code:
+                raise HTTPException(status_code=403, detail="You can only access your own receipts.")
+        else:
+            raise HTTPException(status_code=403, detail="Not authorized to access payment receipt.")
+
+    def _setting(key: str, default: str = "") -> str:
+        s = db.query(Setting).filter(Setting.key == key).first()
+        return s.value if s else default
+
+    school_address = _setting("school_address", "Ghana, West Africa")
+    school_phone = _setting("school_phone", "")
+    school_email = _setting("school_email", "")
+    bursar_name = _setting("school_bursar", "Head of Accounts / Bursar")
+
+    receipt_no = f"REC-{payment.id:06d}"
+    token_code = f"FEE-{student.student_code}-{payment.id}-{payment.reference_no or 'LOCAL'}"
+    date_str = payment.payment_date.strftime("%d %B, %Y %I:%M %p") if payment.payment_date else datetime.utcnow().strftime("%d %B, %Y")
+    rem_bal = max(0.0, fee.amount - fee.amount_paid)
+
+    html_content = f"""
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            @page {{
+                size: a5 landscape;
+                margin: 0.8cm 1cm 0.8cm 1cm;
+            }}
+            body {{
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 9px;
+                color: #0f172a;
+                line-height: 1.4;
+            }}
+            .header-table {{
+                width: 100%;
+                border-bottom: 2px solid #0f172a;
+                padding-bottom: 6px;
+                margin-bottom: 8px;
+            }}
+            .school-name {{
+                font-size: 14px;
+                font-weight: bold;
+                text-transform: uppercase;
+                color: #0f172a;
+            }}
+            .receipt-title {{
+                font-size: 11px;
+                font-weight: bold;
+                color: #0369a1;
+                text-transform: uppercase;
+                margin-top: 4px;
+            }}
+            .info-table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin: 8px 0;
+            }}
+            .info-table td {{
+                padding: 4px 6px;
+                font-size: 9px;
+                border: 1px solid #cbd5e1;
+            }}
+            .fee-table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin: 8px 0;
+            }}
+            .fee-table th {{
+                background: #f1f5f9;
+                font-size: 9px;
+                font-weight: bold;
+                padding: 5px;
+                border: 1px solid #94a3b8;
+                text-align: left;
+            }}
+            .fee-table td {{
+                padding: 5px;
+                border: 1px solid #cbd5e1;
+                font-size: 9px;
+            }}
+        </style>
+    </head>
+    <body>
+        <table class="header-table">
+            <tr>
+                <td style="width:70%;">
+                    <div class="school-name">{school_name}</div>
+                    <div style="font-size:8px; color:#475569;">{school_address} &bull; Tel: {school_phone or 'General Office'} &bull; {school_email}</div>
+                    <div class="receipt-title">OFFICIAL STUDENT FEE PAYMENT RECEIPT</div>
+                </td>
+                <td style="width:30%; text-align:right; vertical-align:top;">
+                    <div style="font-size:10px; font-weight:bold; color:#dc2626;">No: {receipt_no}</div>
+                    <div style="font-size:8px; color:#64748b;">Date: {date_str}</div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="info-table">
+            <tr>
+                <td style="width:50%;"><strong>Student Name:</strong> {student.full_name}</td>
+                <td style="width:50%;"><strong>Student ID / Code:</strong> {student.student_code}</td>
+            </tr>
+            <tr>
+                <td><strong>Class / Stream:</strong> {student.class_section.name if student.class_section else 'Form 1'}</td>
+                <td><strong>Academic Term:</strong> {fee.academic_year or '2025/2026'} ({fee.term or 'Term 1'})</td>
+            </tr>
+            <tr>
+                <td><strong>Payment Method:</strong> {payment.payment_method}</td>
+                <td><strong>Transaction Ref:</strong> <span style="font-family:monospace;">{payment.reference_no or 'CASH-MANUAL'}</span></td>
+            </tr>
+        </table>
+
+        <table class="fee-table">
+            <thead>
+                <tr>
+                    <th>Fee Description / Category</th>
+                    <th style="text-align:right;">Total Billed</th>
+                    <th style="text-align:right;">Amount Paid Now</th>
+                    <th style="text-align:right;">Outstanding Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>{fee.fee_type} Fee</strong> - {fee.description or 'Academic Term Billing'}</td>
+                    <td style="text-align:right;">GHS {fee.amount:.2f}</td>
+                    <td style="text-align:right; font-weight:bold; color:#059669;">GHS {payment.amount_paid:.2f}</td>
+                    <td style="text-align:right; font-weight:bold; color:{'#059669' if rem_bal <= 0 else '#dc2626'};">GHS {rem_bal:.2f}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table style="width:100%; margin-top:14px; border:none;">
+            <tr>
+                <td style="width:60%; vertical-align:bottom;">
+                    <div style="font-size:8px; color:#64748b;">
+                        <strong>Verification Token:</strong> <span style="font-family:monospace; color:#0369a1;">{token_code}</span><br/>
+                        <em>This official electronic receipt is generated by the School Management System.</em>
+                    </div>
+                </td>
+                <td style="width:40%; text-align:right; vertical-align:bottom;">
+                    <div style="border-bottom:1px solid #000; width:140px; height:18px; margin-bottom:2px; margin-left:auto;"></div>
+                    <div style="font-size:8.5px; font-weight:bold;">{bursar_name}</div>
+                    <div style="font-size:7.5px; color:#64748b;">Authorized Accounts Secretariat</div>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+
+    pdf_buffer = io.BytesIO()
+    pisa_status = pisa.CreatePDF(io.StringIO(html_content), dest=pdf_buffer)
+    if pisa_status.err:
+        raise HTTPException(status_code=500, detail="Failed to compile PDF receipt.")
+
+    filename = f"Receipt_{receipt_no}_{student.student_code}.pdf"
+    return Response(
+        content=pdf_buffer.getvalue(),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )
+
 

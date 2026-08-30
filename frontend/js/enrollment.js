@@ -5,6 +5,7 @@
 const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
 
 let currentVerifiedStudent = null;
+let currentLoadedStudentId = null;
 let currentActiveSchoolId = null;
 let currentVoucherPrice = 0.10;
 let currentRecipientNumber = "0508929456";
@@ -314,6 +315,7 @@ window.handleRetrieveAdmission = handleRetrieveAdmission;
 
 async function loadProspectusPackage(studentId) {
   try {
+    currentLoadedStudentId = studentId;
     const res = await fetch(`${API_BASE}/cssps/prospectus-package/${studentId}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Failed to load prospectus');
@@ -370,6 +372,45 @@ async function loadProspectusPackage(studentId) {
 
   } catch (err) {
     alert(`Prospectus Error: ${err.message}`);
+  }
+}
+
+async function downloadAdmissionPackagePDF(studentId = null) {
+  const targetId = studentId || currentLoadedStudentId || (currentVerifiedStudent ? currentVerifiedStudent.student_id : null);
+  if (!targetId) {
+    alert('No active student placement record found to generate PDF.');
+    return;
+  }
+
+  const btn = document.getElementById('downloadPdfBtn');
+  const originalText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = '⏳ Generating PDF Package...';
+    btn.disabled = true;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/cssps/admission-package-pdf/${targetId}`);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'Failed to download admission package PDF.');
+    }
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `Official_Admission_Package_${targetId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+  } catch (err) {
+    alert(`PDF Download Error: ${err.message}`);
+  } finally {
+    if (btn) {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
   }
 }
 

@@ -403,6 +403,36 @@ def get_official_transcript(
     return transcript
 
 
+@router.get("/official-transcript-pdf/{student_id}")
+def get_official_transcript_pdf(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Generates and streams the official 3-Year SHS Academic Transcript PDF.
+    """
+    school_id = get_school_id(current_user)
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student or (school_id is not None and student.school_id != school_id):
+        raise HTTPException(status_code=404, detail="Student transcript records not found.")
+
+    try:
+        pdf_bytes = ReportService.generate_official_transcript_pdf(db, student_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to compile transcript PDF: {str(e)}")
+
+    code_clean = (student.student_code or str(student.id)).replace(" ", "_")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="Official_Transcript_{code_clean}.pdf"'
+        }
+    )
+
+
+
 @router.get("/waec-transcript-by-index/{index_number}")
 def get_waec_transcript_by_index(
     index_number: str,
@@ -637,5 +667,174 @@ def get_class_broadsheet(
         "subjects": [{"id": sub.id, "name": sub.name, "code": sub.code or sub.name} for sub in subjects_objs],
         "rows": student_rows
     }
+
+
+@router.get("/batch-terminal-reports/{class_section_id}")
+def get_batch_terminal_reports(
+    class_section_id: int,
+    semester_id: int = Query(...),
+    token: str = Query(None),
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Compiles all student terminal report cards in a class into a single multi-page PDF document.
+    """
+    auth_token = None
+    if authorization and authorization.startswith("Bearer "):
+        auth_token = authorization.split(" ")[1]
+    elif token:
+        auth_token = token
+
+    if not auth_token:
+        raise HTTPException(status_code=401, detail="Authentication token required")
+
+    try:
+        payload = decode_jwt(auth_token)
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid or expired token: {str(e)}")
+
+    school_id = payload.get("school_id")
+    user_id = payload.get("user_id")
+    roles = [r.lower() for r in payload.get("roles", [])]
+
+    cs = db.query(ClassSection).filter(ClassSection.id == class_section_id).first()
+    if not cs or (school_id is not None and hasattr(cs, "school_id") and cs.school_id and cs.school_id != school_id):
+        raise HTTPException(status_code=404, detail="Class section not found.")
+
+    admin_or_academic_head = {"admin", "super_admin", "headmaster", "headmistress", "assistant_head_academic", "assistant_headmaster_academic"}
+    if not any(r in admin_or_academic_head for r in roles):
+        if "teacher" in roles:
+            is_form_master = cs.form_master_id == user_id
+            if not is_form_master:
+                raise HTTPException(status_code=403, detail="Only assigned Form Masters or Academic Heads can generate batch report cards.")
+        else:
+            raise HTTPException(status_code=403, detail="Not authorized to generate batch report cards.")
+
+    pdf_bytes = ReportService.generate_batch_terminal_reports_pdf(db, class_section_id, semester_id)
+    if not pdf_bytes:
+        raise HTTPException(status_code=404, detail="No student report records found to compile for this class.")
+
+    clean_cls_name = (cs.name or f"Class_{class_section_id}").replace(" ", "_").replace("/", "-")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="Batch_Report_Cards_{clean_cls_name}_Sem_{semester_id}.pdf"'
+        }
+    )
+
+
+@router.get("/broadsheet-pdf/{class_section_id}")
+def get_broadsheet_pdf(
+    class_section_id: int,
+    semester_id: int = Query(...),
+    token: str = Query(None),
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Generates and returns an official GES/WAEC continuous assessment Broadsheet Ledger matrix PDF in Landscape.
+    """
+    auth_token = None
+    if authorization and authorization.startswith("Bearer "):
+        auth_token = authorization.split(" ")[1]
+    elif token:
+        auth_token = token
+
+    if not auth_token:
+        raise HTTPException(status_code=401, detail="Authentication token required")
+
+    try:
+        payload = decode_jwt(auth_token)
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid or expired token: {str(e)}")
+
+    school_id = payload.get("school_id")
+    user_id = payload.get("user_id")
+    roles = [r.lower() for r in payload.get("roles", [])]
+
+    cs = db.query(ClassSection).filter(ClassSection.id == class_section_id).first()
+    if not cs or (school_id is not None and hasattr(cs, "school_id") and cs.school_id and cs.school_id != school_id):
+        raise HTTPException(status_code=404, detail="Class section not found.")
+
+    admin_or_academic_head = {"admin", "super_admin", "headmaster", "headmistress", "assistant_head_academic", "assistant_headmaster_academic"}
+    if not any(r in admin_or_academic_head for r in roles):
+        if "teacher" in roles:
+            is_form_master = cs.form_master_id == user_id
+            if not is_form_master:
+                raise HTTPException(status_code=403, detail="Only assigned Form Masters or Academic Heads can generate broadsheet ledgers.")
+        else:
+            raise HTTPException(status_code=403, detail="Not authorized to generate broadsheet ledgers.")
+
+    pdf_bytes = ReportService.generate_broadsheet_pdf(db, class_section_id, semester_id)
+    if not pdf_bytes:
+        raise HTTPException(status_code=404, detail="No broadsheet records found to compile for this class.")
+
+    clean_cls_name = (cs.name or f"Class_{class_section_id}").replace(" ", "_").replace("/", "-")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="Broadsheet_Ledger_{clean_cls_name}_Sem_{semester_id}.pdf"'
+        }
+    )
+
+
+@router.get("/broadsheet-csv/{class_section_id}")
+def get_broadsheet_csv(
+    class_section_id: int,
+    semester_id: int = Query(...),
+    token: str = Query(None),
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Generates and returns an RFC 4180 CSV export of the class broadsheet matrix and statistical summary.
+    """
+    auth_token = None
+    if authorization and authorization.startswith("Bearer "):
+        auth_token = authorization.split(" ")[1]
+    elif token:
+        auth_token = token
+
+    if not auth_token:
+        raise HTTPException(status_code=401, detail="Authentication token required")
+
+    try:
+        payload = decode_jwt(auth_token)
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid or expired token: {str(e)}")
+
+    school_id = payload.get("school_id")
+    user_id = payload.get("user_id")
+    roles = [r.lower() for r in payload.get("roles", [])]
+
+    cs = db.query(ClassSection).filter(ClassSection.id == class_section_id).first()
+    if not cs or (school_id is not None and hasattr(cs, "school_id") and cs.school_id and cs.school_id != school_id):
+        raise HTTPException(status_code=404, detail="Class section not found.")
+
+    admin_or_academic_head = {"admin", "super_admin", "headmaster", "headmistress", "assistant_head_academic", "assistant_headmaster_academic"}
+    if not any(r in admin_or_academic_head for r in roles):
+        if "teacher" in roles:
+            is_form_master = cs.form_master_id == user_id
+            if not is_form_master:
+                raise HTTPException(status_code=403, detail="Only assigned Form Masters or Academic Heads can export class broadsheets.")
+        else:
+            raise HTTPException(status_code=403, detail="Not authorized to export class broadsheets.")
+
+    csv_content = ReportService.generate_broadsheet_csv(db, class_section_id, semester_id)
+    if not csv_content:
+        raise HTTPException(status_code=404, detail="No broadsheet data found for this class section.")
+
+    clean_cls_name = (cs.name or f"Class_{class_section_id}").replace(" ", "_").replace("/", "-")
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="Broadsheet_{clean_cls_name}_Sem_{semester_id}.csv"'
+        }
+    )
+
 
 

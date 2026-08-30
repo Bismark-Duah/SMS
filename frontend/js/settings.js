@@ -283,8 +283,14 @@ async function loadSettings() {
 
         const savedTheme = settings.system_theme || localStorage.getItem('system_theme') || 'midnight';
         setVal('system_theme', savedTheme);
-        localStorage.setItem('system_theme', savedTheme);
-        if (window.applyTheme) window.applyTheme(savedTheme);
+        if (window.SMSStateBus && window.SMSStateBus.setTheme) {
+            window.SMSStateBus.setTheme(savedTheme);
+        } else if (window.applyTheme) {
+            window.applyTheme(savedTheme);
+        }
+        if (window.SMSStateBus && window.SMSStateBus.updateBranding) {
+            window.SMSStateBus.updateBranding(settings);
+        }
 
         if (settings.grading_standard) {
             setVal('grading_standard', settings.grading_standard);
@@ -417,10 +423,19 @@ if (settingsForm) {
             grading_rules:            JSON.stringify(gradingRules)
         };
 
-        localStorage.setItem('system_theme', themeVal);
-        localStorage.setItem('school_mode', schoolMode);
-        localStorage.setItem('boarding_status', boardingStatus);
-        if (window.applyTheme) window.applyTheme(themeVal);
+        if (window.SMSStateBus) {
+            window.SMSStateBus.setTheme(themeVal);
+            window.SMSStateBus.set('school_mode', schoolMode);
+            window.SMSStateBus.set('boarding_status', boardingStatus);
+            window.SMSStateBus.updateBranding(payload);
+        } else {
+            localStorage.setItem('system_theme', themeVal);
+            localStorage.setItem('school_mode', schoolMode);
+            localStorage.setItem('boarding_status', boardingStatus);
+            if (window.applyTheme) window.applyTheme(themeVal);
+        }
+
+        if (window.applyBranding) window.applyBranding(payload);
         if (window.applySchoolModeVisibility) window.applySchoolModeVisibility(schoolMode, boardingStatus);
 
         const res = await fetch(`${API_BASE}/settings/`, {
@@ -436,8 +451,9 @@ if (settingsForm) {
             if (window.FeatureGate && window.FeatureGate.refresh) {
                 window.FeatureGate.refresh();
             }
-            if (window.applyBranding) window.applyBranding();
+            if (window.applyBranding) window.applyBranding(payload);
             if (window.applySchoolModeVisibility) window.applySchoolModeVisibility(schoolMode, boardingStatus);
+            if (window.mountSidebarNav) window.mountSidebarNav();
         } else {
             msgEl.innerHTML = '<span style="color:var(--error-color)">❌ Failed to save settings.</span>';
         }

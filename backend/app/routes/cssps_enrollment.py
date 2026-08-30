@@ -3,7 +3,7 @@ import io
 import re
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Response
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -11,6 +11,7 @@ from ..database import get_db
 from ..models import Student, StudentGuardian, StudentHealth, Program, House, ClassSection, User, ElectiveCombination, Subject
 from ..schemas import CSSPSEnrollmentCreate
 from ..services.allocation import allocate_student_house_and_dorm
+from ..services.admission_package import AdmissionPackageService
 from ..dependencies import get_current_user, get_school_id
 
 router = APIRouter(prefix="/api/cssps", tags=["CSSPS Enrollment"])
@@ -778,3 +779,27 @@ def final_admission_clearance(
         "message": f"Student {student.full_name} is now FULLY ADMITTED to {student.class_section.name if student.class_section else 'Form 1'}!",
         "enrollment_status": "FULLY_ADMITTED"
     }
+
+
+@router.get("/admission-package-pdf/{student_id}")
+def download_admission_package_pdf(student_id: int, db: Session = Depends(get_db)):
+    """
+    Generates and returns the official GES Form 1 Admission Letter & Prospectus Package as a downloadable PDF.
+    """
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student placement record not found.")
+
+    pdf_bytes = AdmissionPackageService.generate_admission_letter_pdf(student_id, db)
+    if not pdf_bytes:
+        raise HTTPException(status_code=500, detail="Failed to generate admission package PDF.")
+
+    filename = f"Admission_Package_{student.student_code or student.bece_index_number or student.id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )
+

@@ -476,6 +476,7 @@ function renderTable(students) {
         <td>
           ${showTranscripts ? `<a class="btn" style="padding:4px 8px; font-size:0.8rem; background:#4338ca; border-color:#3730a3; color:#ffffff; text-decoration:none; margin-right:4px; display:inline-block;" href="report-card.html?mode=transcript&student_id=${s.id}" target="_blank">📜 Transcript</a>` : ''}
           <button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#059669; border-color:#047857; color:#ffffff; margin-right:4px;" onclick="openIdCardModal(${s.id})">🪪 ID Card</button>
+          ${!isBasicMode ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#0284c7; border-color:#0369a1; color:#ffffff; margin-right:4px;" onclick="downloadAdmissionPackage(${s.id})" title="Download Official Admission Letter & Prospectus PDF">📄 Prospectus</button>` : ''}
           ${canEdit ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem;" onclick="openEditForm(${s.id})">✏ Edit</button>` : ''}
           ${canDeactivate && !isInactive ? `<button class="btn danger" style="padding:4px 8px; font-size:0.8rem; margin-left:4px;" onclick="deactivateStudent(${s.id}, '${escapeHtml(s.full_name)}')">🗑 Deactivate</button>` : ''}
         </td>
@@ -911,7 +912,10 @@ window.generateOfflineSvgQrCode = function(text) {
   return '';
 };
 
+let selectedStudentForIdCardId = null;
+
 window.openIdCardModal = function(id) {
+  selectedStudentForIdCardId = id;
   const student = allStudents.find(s => s.id === id);
   if (!student) return;
 
@@ -938,6 +942,38 @@ window.openIdCardModal = function(id) {
 window.closeIdCardModal = function() {
   const modal = document.getElementById('idCardModal');
   if (modal) modal.style.display = 'none';
+  selectedStudentForIdCardId = null;
+};
+
+window.downloadAdmissionPackage = async function(id) {
+  try {
+    const res = await fetch(`${API_BASE}/students/${id}/admission-package-pdf`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to download admission package.');
+    }
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `Admission_Package_Student_${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+  } catch (err) {
+    alert(`Download Error: ${err.message}`);
+  }
+};
+
+window.downloadSelectedStudentAdmissionPackage = function() {
+  if (!selectedStudentForIdCardId) {
+    alert('No student selected.');
+    return;
+  }
+  window.downloadAdmissionPackage(selectedStudentForIdCardId);
 };
 
 window.printStudentIdCard = function() {

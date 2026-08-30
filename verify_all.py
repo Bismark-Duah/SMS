@@ -133,7 +133,15 @@ def run_all():
         "tests/verify_house_auto_allocation.py",
         "tests/verify_school_modes.py",
         "tests/test_subject_level_filtering.py",
-        "scripts/test_multi_school_onboarding.py"
+        "scripts/test_multi_school_onboarding.py",
+        "backend/tests/test_saas_multi_tenant_financials.py",
+        "backend/tests/test_admission_package_pdf.py",
+        "backend/tests/test_fees_online_payments.py",
+        "backend/tests/test_broadsheet_and_batch_reports.py",
+        "backend/tests/test_attendance_scanner_and_truancy.py",
+        "backend/tests/test_transcripts_and_promotions.py",
+        "backend/tests/test_timetable_engine_and_pdf.py",
+        "backend/tests/test_state_bus_and_live_reactivity.py"
     ]
 
     server_proc = ensure_server()

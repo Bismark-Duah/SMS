@@ -123,7 +123,7 @@
             </div>
           </label>
           <label>System Theme
-            <select id="system_theme" onchange="if(window.applyTheme) window.applyTheme(this.value)">
+            <select id="system_theme" onchange="if(window.SMSStateBus) window.SMSStateBus.setTheme(this.value); else if(window.setTheme) window.setTheme(this.value);">
               <option value="midnight">🌙 Midnight Dark (Default)</option>
               <option value="light">☀️ Light Executive</option>
               <option value="emerald">🌲 Emerald Oasis</option>

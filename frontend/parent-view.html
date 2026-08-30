@@ -42,6 +42,125 @@
       .child-bar select { flex: 1; min-width: 200px; }
       .child-bar .btn  { flex-shrink: 0; }
 
+      .fee-summary-bar {
+        display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+      }
+      .fee-pill {
+        flex: 1; min-width: 120px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 16px;
+        font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted);
+      }
+      .fee-pill span { display: block; font-size: 1.3rem; font-weight: 800; margin-bottom: 2px; }
+      .fee-pill.billed  span { color: var(--text); }
+      .fee-pill.paid    span { color: #27ae60; }
+      .fee-pill.balance span { color: #e74c3c; }
+
+      .fee-row-status {
+        display: inline-block; padding: 2px 8px; border-radius: 20px;
+        font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      }
+      .fee-row-status.Paid    { background: rgba(39,174,96,.15);  color: #27ae60; }
+      .fee-row-status.Partial { background: rgba(230,126,34,.15); color: #e67e22; }
+      .fee-row-status.Pending { background: rgba(231,76,60,.15);  color: #e74c3c; }
+      .fee-row-status.Overdue { background: rgba(192,57,43,.25);  color: #c0392b; font-weight: 800; }
+
+      /* Modal & MoMo Checkout Styles */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        backdrop-filter: blur(6px);
+        padding: 16px;
+      }
+      .modal.open { display: flex; }
+      .modal-card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        padding: 24px;
+        width: 100%;
+        max-width: 480px;
+        position: relative;
+        color: #f8fafc;
+        animation: fadeIn 0.25s ease-out;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #334155;
+        padding-bottom: 12px;
+        margin-bottom: 16px;
+      }
+      .modal-header h3 { margin: 0; font-size: 1.15rem; color: #f8fafc; }
+      .modal-close {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 1.4rem;
+        cursor: pointer;
+        line-height: 1;
+      }
+      .modal-close:hover { color: #fff; }
+      .momo-option-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin: 12px 0 16px;
+      }
+      .momo-btn {
+        background: rgba(255,255,255,0.05);
+        border: 2px solid #334155;
+        border-radius: 10px;
+        padding: 10px 6px;
+        text-align: center;
+        cursor: pointer;
+        color: #cbd5e1;
+        font-size: 0.8rem;
+        font-weight: 700;
+        transition: all 0.15s ease;
+      }
+      .momo-btn:hover { border-color: #38bdf8; color: #fff; }
+      .momo-btn.active {
+        border-color: #38bdf8;
+        background: rgba(56, 189, 248, 0.15);
+        color: #38bdf8;
+      }
+      .fee-btn-action {
+        padding: 4px 10px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: none;
+      }
+      .fee-btn-pay {
+        background: #059669;
+        color: white;
+      }
+      .fee-btn-pay:hover {
+        background: #047857;
+      }
+      .fee-btn-receipt {
+        background: #0284c7;
+        color: white;
+      }
+      .fee-btn-receipt:hover {
+        background: #0369a1;
+      }
+
       .stat-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -169,6 +288,7 @@
         </select>
         <button class="btn primary" id="viewBtn" onclick="loadChildDashboard()" disabled>View Dashboard</button>
         <button class="btn" id="downloadReportCardBtn" style="background:#2563eb; border-color:#1d4ed8; color:white; font-weight:700; display:none;" onclick="downloadSelectedChildReportCard()">📄 Official Report Card</button>
+        <button class="btn" id="downloadProspectusBtn" style="background:#0284c7; border-color:#0369a1; color:white; font-weight:700; display:none;" onclick="downloadSelectedChildAdmissionPackage()">📜 Admission & Prospectus</button>
       </div>
 
       <div id="childDashboard" style="display:none;">
@@ -238,19 +358,24 @@
 
           <!-- Fees tab -->
           <div class="tab-panel" id="tab-fees">
-            <div class="section-header">
-              <h3>Fee Balance</h3>
-              <span class="badge" id="feesBadge">Loading…</span>
+            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <h3>Fee Balance &amp; Collections</h3>
+                <span class="badge" id="feesBadge">Loading…</span>
+              </div>
+              <button class="btn primary" id="btnPayAllFees" style="font-weight:700; font-size:0.85rem; padding:6px 14px; display:none;" onclick="openPayFeeModal(null)">💳 Pay Outstanding Balance (MoMo)</button>
             </div>
             <div class="fee-summary-bar" id="feeSummaryBar"></div>
-            <table class="table">
-              <thead>
-                <tr><th>Type</th><th>Description</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th><th>Due</th></tr>
-              </thead>
-              <tbody id="feesTableBody">
-                <tr><td colspan="7" style="text-align:center;padding:24px;">Loading fees…</td></tr>
-              </tbody>
-            </table>
+            <div style="overflow-x:auto;">
+              <table class="table">
+                <thead>
+                  <tr><th>Type</th><th>Description</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th><th>Due</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="feesTableBody">
+                  <tr><td colspan="8" style="text-align:center;padding:24px;">Loading fees…</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <!-- Results tab -->
@@ -330,8 +455,67 @@
             <button class="btn" onclick="downloadReport()">📥 Download PDF</button>
           </div>
         </div>
+
+        <div class="card" style="margin-top:16px;padding:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;border-left:4px solid #0284c7;">
+          <div>
+            <h3 style="margin:0 0 4px; color:#0284c7;">📜 Official Admission Letter & Prospectus Package</h3>
+            <p style="margin:0;font-size:.85rem;color:var(--text-muted);">Download the official GES/WAEC-standard admission letter, itemized prospectus checklist, and medical examination certificate.</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button class="btn" id="btnCardDownloadProspectus" style="background:#0284c7; border-color:#0369a1; color:white; font-weight:700;" onclick="downloadSelectedChildAdmissionPackage()">📥 Download Prospectus (PDF)</button>
+          </div>
+        </div>
       </div>
     </main>
+
+    <!-- Online Fee Payment Modal -->
+    <div class="modal" id="modalPayFee">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>💳 Pay School Fees Online</h3>
+          <button class="modal-close" onclick="closePayFeeModal()">&times;</button>
+        </div>
+
+        <form id="formPayFee" onsubmit="processOnlineFeePayment(event)">
+          <input type="hidden" id="payModalFeeId" value="" />
+
+          <div style="background:rgba(255,255,255,0.04); border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:14px;">
+            <div style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Student Details</div>
+            <div style="font-size:1rem; font-weight:bold; color:#f8fafc;" id="payModalStudentName">—</div>
+            <div style="font-size:0.85rem; color:#38bdf8;" id="payModalFeeType">All Outstanding Fees</div>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:0.8rem; font-weight:700; color:#94a3b8; margin-bottom:6px; text-transform:uppercase;">Select Payment Gateway / Network</label>
+            <div class="momo-option-grid">
+              <div class="momo-btn active" id="netMTN" onclick="selectMoMoNetwork('MTN MoMo')">💛 MTN MoMo</div>
+              <div class="momo-btn" id="netTelecel" onclick="selectMoMoNetwork('Telecel Cash')">❤️ Telecel Cash</div>
+              <div class="momo-btn" id="netAT" onclick="selectMoMoNetwork('AT Money')">💙 AT Money</div>
+            </div>
+            <input type="hidden" id="payModalNetwork" value="MTN MoMo" />
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label for="payModalAmount" style="display:block; font-size:0.8rem; font-weight:700; color:#94a3b8; margin-bottom:6px; text-transform:uppercase;">Amount to Pay (GHS)</label>
+            <input type="number" id="payModalAmount" step="0.01" min="1.00" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #475569; background:#0f172a; color:#fff; font-size:1.1rem; font-weight:bold;" />
+            <div style="font-size:0.75rem; color:#64748b; margin-top:4px;" id="payModalBalanceHint">Max outstanding: GHS 0.00</div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label for="payModalPhone" style="display:block; font-size:0.8rem; font-weight:700; color:#94a3b8; margin-bottom:6px; text-transform:uppercase;">Mobile Money Phone Number</label>
+            <input type="tel" id="payModalPhone" placeholder="024XXXXXXX or 050XXXXXXX" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #475569; background:#0f172a; color:#fff; font-size:0.95rem;" />
+            <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">You will receive an automated prompt on this phone to enter your MoMo PIN.</div>
+          </div>
+
+          <div id="payModalStatusBox" style="display:none; padding:10px; border-radius:8px; margin-bottom:14px; font-size:0.85rem;"></div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn" onclick="closePayFeeModal()" style="background:#334155; color:#fff;">Cancel</button>
+            <button type="submit" class="btn" id="btnSubmitPayment" style="background:#059669; color:#fff; font-weight:bold;">🚀 Authorize MoMo Payment</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script src="js/guard.js"></script>
     <script src="js/charts.js"></script>

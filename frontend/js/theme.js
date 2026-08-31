@@ -311,7 +311,7 @@
       childItems.forEach(item => {
         const href = (item.getAttribute('href') || '').toLowerCase();
         if (isBasicOnly) {
-          if (href.includes('programs.html') || href.includes('departments.html') || href.includes('transcript') || href.includes('houses.html')) {
+          if (href.includes('programs.html') || href.includes('departments.html') || href.includes('transcript') || href.includes('houses.html') || href.includes('exeat.html') || href.includes('enrollment.html') || href.includes('clearance.html')) {
             item.style.display = 'none';
             return;
           }
@@ -320,7 +320,7 @@
           item.style.display = 'none';
           return;
         }
-        if (boardingStatus === 'DAY_ONLY' && (href.includes('houses.html') || href.includes('exeat.html'))) {
+        if ((boardingStatus === 'DAY_ONLY' || isBasicOnly) && (href.includes('houses.html') || href.includes('exeat.html'))) {
           item.style.display = 'none';
           return;
         }
@@ -366,12 +366,12 @@
       ? window.SchoolFeatures
       : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
 
-    const schoolMode     = F ? F.schoolMode     : (localStorage.getItem('school_mode')     || 'COMBINED').toUpperCase();
-    const boardingStatus = F ? F.boardingStatus : (localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase();
-    const isBasicOnly    = F ? F.isBasicOnly    : (schoolMode === 'BASIC_ONLY');
-    const isShsOnly      = F ? F.isShsOnly      : (schoolMode === 'SHS_ONLY');
-    const isCombined     = F ? F.isCombined     : (schoolMode === 'COMBINED');
-    const isBoarding     = F ? F.isBoarding     : (boardingStatus === 'BOARDING_AND_DAY');
+    const schoolMode     = (sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode') || (F ? F.schoolMode : 'COMBINED')).toUpperCase();
+    const boardingStatus = (sessionStorage.getItem('boarding_status') || localStorage.getItem('boarding_status') || (F ? F.boardingStatus : 'BOARDING_AND_DAY')).toUpperCase();
+    const isBasicOnly    = (schoolMode === 'BASIC_ONLY');
+    const isShsOnly      = (schoolMode === 'SHS_ONLY');
+    const isCombined     = (schoolMode === 'COMBINED');
+    const isBoarding     = (boardingStatus === 'BOARDING_AND_DAY') && !isBasicOnly;
 
     // Enterprise Taxonomy Definition
     let academicItems = [
@@ -387,7 +387,7 @@
       { href: 'students.html', icon: '👥', label: 'Students' },
       { href: 'attendance.html', icon: '📋', label: 'Attendance' },
       { href: 'houses.html', icon: '🏠', label: 'Houses & Dorms', shsOnly: true, boardingOnly: true },
-      { href: 'exeat.html', icon: '🎟️', label: 'Exeat Management', boardingOnly: true },
+      { href: 'exeat.html', icon: '🎟️', label: 'Exeat Management', shsOnly: true, boardingOnly: true },
       { href: 'enrollment.html', icon: '📝', label: 'CSSPS Enrollment', shsOnly: true, csspsOnly: true },
       { href: 'discipline.html', icon: '⚖️', label: 'Discipline Records' },
       { href: 'cumulative-record.html', icon: '📁', label: 'Cumulative Record Folder', basicOnly: true },

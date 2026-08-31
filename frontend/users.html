@@ -80,20 +80,25 @@
           <input type="text" name="fake_username_trap" style="position:absolute; top:-9999px; left:-9999px; width:0; height:0; opacity:0;" tabindex="-1" autocomplete="off" />
           <input type="password" name="fake_password_trap" style="position:absolute; top:-9999px; left:-9999px; width:0; height:0; opacity:0;" tabindex="-1" autocomplete="new-password" />
 
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:14px;">
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:14px;">
             <label style="font-size:0.83rem; font-weight:600; margin:0;">
               Username *
               <input id="username" name="no_autofill_new_username" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="e.g. kwame.mensah" style="margin-top:4px; width:100%; box-sizing:border-box;" />
             </label>
 
             <label style="font-size:0.83rem; font-weight:600; margin:0;">
-              Email Address (Optional)
-              <input id="email" name="no_autofill_new_email" type="email" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="e.g. kmensah@school.edu.gh" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+              Ghana Phone Number <span style="font-weight:400; opacity:0.7;">(Optional)</span>
+              <input id="phoneNumber" name="no_autofill_new_phone" type="tel" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="e.g. 0244123456" style="margin-top:4px; width:100%; box-sizing:border-box;" />
             </label>
 
             <label style="font-size:0.83rem; font-weight:600; margin:0;">
-              Initial Password *
-              <input id="password" name="no_autofill_new_password" type="password" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="Enter strong password" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+              Email Address <span style="font-weight:400; opacity:0.7;">(Optional)</span>
+              <input id="email" name="no_autofill_new_email" type="email" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="Optional (e.g. teacher@gmail.com)" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+            </label>
+
+            <label style="font-size:0.83rem; font-weight:600; margin:0;">
+              Starter Password *
+              <input id="password" name="no_autofill_new_password" type="password" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" value="Staff@123" placeholder="Temporary Starter Password" style="margin-top:4px; width:100%; box-sizing:border-box;" />
             </label>
 
             <label style="font-size:0.83rem; font-weight:600; margin:0;">

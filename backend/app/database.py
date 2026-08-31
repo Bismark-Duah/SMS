@@ -156,7 +156,10 @@ def run_migrations():
         "users": [
             ("gender", "VARCHAR"),
             ("department_id", "INTEGER REFERENCES departments(id)"),
-            ("school_id", "INTEGER REFERENCES schools(id)")
+            ("school_id", "INTEGER REFERENCES schools(id)"),
+            ("phone_number", "VARCHAR"),
+            ("is_first_login", "BOOLEAN DEFAULT TRUE"),
+            ("contact_verified", "BOOLEAN DEFAULT FALSE")
         ],
         "scores": [
             ("approval_status", "VARCHAR DEFAULT 'DRAFT'")
@@ -188,7 +191,7 @@ def run_migrations():
             except Exception as table_err:
                 print(f"Notice: Migration inspection for table {table_name}: {table_err}")
 
-        # Expand column lengths for PostgreSQL on Render
+        # Expand column lengths & make email nullable for PostgreSQL on Render
         if not is_sqlite:
             for col in ["bece_index_number", "enrolment_code", "student_code"]:
                 try:
@@ -196,6 +199,34 @@ def run_migrations():
                     conn.commit()
                 except Exception:
                     conn.rollback()
+            try:
+                conn.execute(text("ALTER TABLE users ALTER COLUMN email DROP NOT NULL"))
+                conn.commit()
+            except Exception:
+                conn.rollback()
+        else:
+            # Safe SQLite migration to ensure users.email is nullable
+            try:
+                user_cols = inspector.get_columns("users")
+                email_col = next((c for c in user_cols if c["name"].lower() == "email"), None)
+                if email_col and not email_col.get("nullable", True):
+                    conn.execute(text("PRAGMA foreign_keys=OFF;"))
+                    conn.execute(text("CREATE TABLE IF NOT EXISTS users_migration_backup AS SELECT * FROM users;"))
+                    conn.execute(text("DROP TABLE users;"))
+                    conn.commit()
+                    Base.metadata.tables["users"].create(conn)
+                    conn.commit()
+                    fresh_insp = inspect(conn)
+                    b_cols = {c["name"].lower() for c in fresh_insp.get_columns("users_migration_backup")}
+                    target_cols = [c["name"] for c in fresh_insp.get_columns("users") if c["name"].lower() in b_cols]
+                    cols_str = ", ".join(target_cols)
+                    conn.execute(text(f"INSERT INTO users ({cols_str}) SELECT {cols_str} FROM users_migration_backup;"))
+                    conn.execute(text("DROP TABLE users_migration_backup;"))
+                    conn.execute(text("PRAGMA foreign_keys=ON;"))
+                    conn.commit()
+            except Exception as sqlite_user_err:
+                conn.rollback()
+                print("Notice: SQLite users email migration:", sqlite_user_err)
 
         # Auto-populate missing slugs for existing schools
         try:

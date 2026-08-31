@@ -1,6 +1,7 @@
 import hashlib
 import secrets
 import os
+import re
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from fastapi.responses import JSONResponse
@@ -45,6 +46,9 @@ except ImportError:
                 except Exception:
                     pass
             return hashlib.sha256(secret.encode("utf-8")).hexdigest() == hash_str
+
+        def needs_update(self, hash_str: str) -> bool:
+            return False
 
     pwd_context = _FallbackPwdContext()
 
@@ -259,13 +263,19 @@ def login(payload: dict, request: Request, db: Session = Depends(get_db)):
 
         # Register zero-trust multi-device session
         try:
-            user_agent = request.headers.get("user-agent", "Unknown Device")
-            client_ip = getattr(request.state, "client_ip", request.client.host if request.client else "127.0.0.1")
+            user_agent = request.headers.get("user-agent", "Unknown Device") if hasattr(request, "headers") else "Unknown Device"
+            state_ip = getattr(getattr(request, "state", None), "client_ip", None)
+            if isinstance(state_ip, str):
+                client_ip = state_ip
+            elif hasattr(request, "client") and hasattr(request.client, "host") and isinstance(request.client.host, str):
+                client_ip = request.client.host
+            else:
+                client_ip = "127.0.0.1"
             register_device_session(
                 user_id=user.id,
                 user_role=primary_role,
-                user_agent=user_agent,
-                client_ip=client_ip,
+                user_agent=str(user_agent),
+                client_ip=str(client_ip),
                 token=token,
                 db=db
             )
@@ -285,6 +295,10 @@ def login(payload: dict, request: Request, db: Session = Depends(get_db)):
                 "school_code": school.code if (not is_super_admin and school) else None,
                 "school_mode": school_mode,
                 "is_super_admin": is_super_admin,
+                "is_first_login": bool(getattr(user, "is_first_login", False)),
+                "phone_number": user.phone_number or "",
+                "email": user.email or "",
+                "contact_verified": bool(getattr(user, "contact_verified", False)),
                 "access_token": token,
                 "token_type": "bearer"
             },
@@ -313,7 +327,10 @@ def get_current_user_profile(current_user: User = Depends(get_current_user), db:
     return {
         "id": current_user.id,
         "username": current_user.username,
-        "email": current_user.email,
+        "email": current_user.email or "",
+        "phone_number": current_user.phone_number or "",
+        "is_first_login": bool(getattr(current_user, "is_first_login", False)),
+        "contact_verified": bool(getattr(current_user, "contact_verified", False)),
         "primary_role": primary_role,
         "roles": role_names,
         "is_super_admin": "super_admin" in role_names,
@@ -564,9 +581,12 @@ def create_user(
         except (ValueError, TypeError):
             pass
 
-    username = payload.get("username")
-    email = payload.get("email")
-    password = payload.get("password")
+    username = (payload.get("username") or "").strip()
+    raw_email = (payload.get("email") or "").strip()
+    email = raw_email if raw_email else None
+    raw_phone = (payload.get("phone_number") or "").strip()
+    phone_number = raw_phone if raw_phone else None
+    password = payload.get("password") or "Staff@123"
     gender = payload.get("gender")
     role_names = payload.get("roles", ["teacher"])
 
@@ -585,15 +605,24 @@ def create_user(
     if not role_names:
         role_names = ["teacher"]
 
+    if not username:
+        raise HTTPException(status_code=400, detail="Username is required")
+
+    if email and db.query(User).filter(User.email == email).first():
+        raise HTTPException(status_code=400, detail="Email already exists")
+
     if db.query(User).filter(User.username == username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
 
     new_user = User(
         username=username,
         email=email,
+        phone_number=phone_number,
         password_hash=_hash_password(password),
         gender=gender,
         is_active=True,
+        is_first_login=True,
+        contact_verified=bool(phone_number or email),
         school_id=target_sch_id
     )
     
@@ -853,8 +882,66 @@ def change_password(
         raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
 
     current_user.password_hash = _hash_password(new_password)
+    current_user.is_first_login = False
     db.commit()
     return {"status": "success", "message": "Password changed successfully"}
+
+
+# ── Complete Onboarding (First-Time Login Staff Setup) ──────────────────────
+
+@router.post("/complete-onboarding")
+def complete_onboarding(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Called on initial login to allow teachers to register their real phone number,
+    optional real email, and set their private permanent password.
+    """
+    phone = (payload.get("phone_number") or "").strip()
+    raw_email = (payload.get("email") or "").strip()
+    email = raw_email if raw_email else None
+    new_password = (payload.get("new_password") or "").strip()
+
+    if not phone:
+        raise HTTPException(status_code=400, detail="Ghana Mobile Phone Number is required to secure your account.")
+
+    # Validate phone format: digits, plus, length 9-15
+    cleaned_phone = re.sub(r"[^\d+]", "", phone)
+    if len(cleaned_phone) < 9 or len(cleaned_phone) > 15:
+        raise HTTPException(status_code=400, detail="Please enter a valid mobile phone number (e.g. 0244123456).")
+
+    if email:
+        if "@" not in email or "." not in email:
+            raise HTTPException(status_code=400, detail="Please enter a valid email address format.")
+        existing_email_user = db.query(User).filter(User.email == email, User.id != current_user.id).first()
+        if existing_email_user:
+            raise HTTPException(status_code=400, detail="This email address is already in use by another account.")
+        current_user.email = email
+
+    if new_password:
+        if len(new_password) < 6:
+            raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
+        current_user.password_hash = _hash_password(new_password)
+
+    current_user.phone_number = phone
+    current_user.is_first_login = False
+    current_user.contact_verified = True
+    db.commit()
+    db.refresh(current_user)
+
+    return {
+        "status": "success",
+        "message": "Staff profile and security credentials successfully configured!",
+        "user": {
+            "username": current_user.username,
+            "email": current_user.email or "",
+            "phone_number": current_user.phone_number or "",
+            "is_first_login": False,
+            "contact_verified": True
+        }
+    }
 
 
 # ── Admin: Reset another user's password ─────────────────────────────────────
@@ -880,6 +967,7 @@ def admin_reset_password(
         raise HTTPException(status_code=404, detail="User not found")
 
     target.password_hash = _hash_password(new_password)
+    target.is_first_login = True
     db.commit()
     return {"status": "success", "message": f"Password reset for {target.username}"}
 

@@ -87,6 +87,10 @@ if (form) {
         else localStorage.removeItem('school_abbreviation');
         if (data.school_mode) localStorage.setItem('school_mode', data.school_mode);
       }
+      localStorage.setItem('is_first_login', data.is_first_login ? 'true' : 'false');
+      localStorage.setItem('phone_number', data.phone_number || '');
+      localStorage.setItem('email', data.email || '');
+      localStorage.setItem('contact_verified', data.contact_verified ? 'true' : 'false');
       localStorage.setItem('_lastActivity', Date.now().toString());
 
       if (msgEl) {

@@ -407,7 +407,8 @@ function renderUserTable(users) {
           </div>
         </td>
         <td>
-          <div style="font-size:0.83rem; color:var(--text-secondary);">${u.email ? escapeHtml(u.email) : '<em>No email</em>'}</div>
+          <div style="font-size:0.83rem; color:var(--text-primary); font-weight:600;">${u.phone_number ? '📱 ' + escapeHtml(u.phone_number) : '<span style="opacity:0.5; font-weight:400;">No phone</span>'}</div>
+          <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:2px;">${u.email ? '📧 ' + escapeHtml(u.email) : '<span style="opacity:0.5;">No email</span>'}</div>
         </td>
         <td>
           <div style="display:flex; flex-wrap:wrap; align-items:center;">${rolePills}</div>
@@ -484,9 +485,13 @@ if (userForm) {
       return;
     }
 
+    const phoneInput = document.getElementById('phoneNumber');
+    const emailInput = document.getElementById('email');
+
     const payload = {
       username: document.getElementById('username').value.trim(),
-      email: document.getElementById('email').value.trim() || null,
+      phone_number: phoneInput && phoneInput.value.trim() ? phoneInput.value.trim() : null,
+      email: emailInput && emailInput.value.trim() ? emailInput.value.trim() : null,
       password: document.getElementById('password').value,
       gender: document.getElementById('userGender') ? document.getElementById('userGender').value : 'Male',
       roles: checkedRoles

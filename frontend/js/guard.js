@@ -249,6 +249,156 @@
     }
   }
 
+  // ── First-Time Login Staff Profile Setup Modal ───────────────────
+  function checkAndPromptFirstLoginOnboarding() {
+    const isFirst = (getStored('is_first_login') === 'true');
+    const isSuper = (getStored('is_super_admin') === 'true');
+    const isImpersonating = (sessionStorage.getItem('is_impersonating') === 'true' || localStorage.getItem('is_impersonating') === 'true');
+    const page = getPageName();
+    if (!isFirst || isSuper || isImpersonating || page === 'auth.html') return;
+
+    if (document.getElementById('firstLoginOnboardingModal')) return;
+
+    const username = getStored('username') || 'Staff Member';
+    const schoolName = getStored('school_name') || 'School Management System';
+    const savedPhone = getStored('phone_number') || '';
+    const savedEmail = getStored('email') || '';
+
+    const modal = document.createElement('div');
+    modal.id = 'firstLoginOnboardingModal';
+    modal.style.cssText = `
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      z-index: 100000; display: flex; align-items: center; justify-content: center;
+      padding: 16px; font-family: inherit;
+    `;
+
+    modal.innerHTML = `
+      <div style="
+        background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 16px; max-width: 480px; width: 100%; box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+        padding: 28px; color: #f8fafc; box-sizing: border-box;
+      ">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+          <div style="font-size: 2rem; background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 12px; padding: 6px 10px;">
+            🎉
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.25rem; color: #818cf8;">Welcome, ${escapeHtml(username)}!</h3>
+            <div style="font-size: 0.78rem; opacity: 0.75; margin-top: 2px;">${escapeHtml(schoolName)} • Account Activation</div>
+          </div>
+        </div>
+
+        <p style="font-size: 0.85rem; line-height: 1.45; color: #94a3b8; margin-top: 0; margin-bottom: 18px;">
+          Please complete your staff profile by providing your Ghana mobile phone number and creating your new private permanent password.
+        </p>
+
+        <form id="firstLoginForm" onsubmit="window.handleFirstLoginOnboardingSubmit(event)">
+          <label style="display: block; font-size: 0.83rem; font-weight: 600; margin-bottom: 12px;">
+            📱 Ghana Mobile Phone Number <span style="color: #f87171;">*</span>
+            <input type="tel" id="onboardPhone" required value="${escapeHtml(savedPhone)}" placeholder="e.g. 0244123456" 
+              style="width: 100%; margin-top: 4px; padding: 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; box-sizing: border-box;" />
+            <span style="font-size: 0.73rem; opacity: 0.65; display: block; margin-top: 3px;">Used for instant SMS password resets &amp; emergency school alerts.</span>
+          </label>
+
+          <label style="display: block; font-size: 0.83rem; font-weight: 600; margin-bottom: 12px;">
+            📧 Personal Email Address <span style="font-weight: 400; opacity: 0.65;">(Optional)</span>
+            <input type="email" id="onboardEmail" value="${escapeHtml(savedEmail)}" placeholder="Optional (e.g. yourname@gmail.com)" 
+              style="width: 100%; margin-top: 4px; padding: 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; box-sizing: border-box;" />
+          </label>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px;">
+            <label style="display: block; font-size: 0.83rem; font-weight: 600;">
+              🔒 Private Password <span style="color: #f87171;">*</span>
+              <input type="password" id="onboardNewPass" required minlength="6" placeholder="Min 6 characters" 
+                style="width: 100%; margin-top: 4px; padding: 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; box-sizing: border-box;" />
+            </label>
+            <label style="display: block; font-size: 0.83rem; font-weight: 600;">
+              🔒 Confirm Password <span style="color: #f87171;">*</span>
+              <input type="password" id="onboardConfirmPass" required minlength="6" placeholder="Re-enter password" 
+                style="width: 100%; margin-top: 4px; padding: 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; box-sizing: border-box;" />
+            </label>
+          </div>
+
+          <div id="onboardMsg" style="font-size: 0.83rem; margin-bottom: 14px;"></div>
+
+          <button type="submit" id="btnOnboardSubmit" style="
+            width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: 700;
+            background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; cursor: pointer;
+            font-size: 0.92rem; box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+          ">
+            🚀 Activate Account &amp; Enter Dashboard
+          </button>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+  }
+
+  window.handleFirstLoginOnboardingSubmit = async function(e) {
+    e.preventDefault();
+    const phone = document.getElementById('onboardPhone').value.trim();
+    const email = document.getElementById('onboardEmail').value.trim();
+    const newPass = document.getElementById('onboardNewPass').value;
+    const confirmPass = document.getElementById('onboardConfirmPass').value;
+    const msgEl = document.getElementById('onboardMsg');
+    const submitBtn = document.getElementById('btnOnboardSubmit');
+
+    if (!phone) {
+      if (msgEl) { msgEl.textContent = '❌ Please enter your mobile phone number.'; msgEl.style.color = '#f87171'; }
+      return;
+    }
+
+    if (newPass.length < 6) {
+      if (msgEl) { msgEl.textContent = '❌ Password must be at least 6 characters.'; msgEl.style.color = '#f87171'; }
+      return;
+    }
+
+    if (newPass !== confirmPass) {
+      if (msgEl) { msgEl.textContent = '❌ Passwords do not match.'; msgEl.style.color = '#f87171'; }
+      return;
+    }
+
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Activating account…'; }
+    if (msgEl) { msgEl.textContent = 'Saving contact details and securing password…'; msgEl.style.color = '#818cf8'; }
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/complete-onboarding`, {
+        method: 'POST',
+        headers: window.getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          phone_number: phone,
+          email: email || null,
+          new_password: newPass
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('is_first_login', 'false');
+        localStorage.setItem('phone_number', phone);
+        if (email) localStorage.setItem('email', email);
+        localStorage.setItem('contact_verified', 'true');
+
+        const modal = document.getElementById('firstLoginOnboardingModal');
+        if (modal) modal.remove();
+
+        if (window.showAlertDialog) {
+          await window.showAlertDialog('🎉 Account Activated Successfully! Welcome to your dashboard.');
+        } else {
+          alert('🎉 Account Activated Successfully!');
+        }
+      } else {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🚀 Activate Account & Enter Dashboard'; }
+        if (msgEl) { msgEl.textContent = `❌ ${data.detail || 'Could not complete onboarding.'}`; msgEl.style.color = '#f87171'; }
+      }
+    } catch (err) {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🚀 Activate Account & Enter Dashboard'; }
+      if (msgEl) { msgEl.textContent = `❌ Network error: ${err.message}`; msgEl.style.color = '#f87171'; }
+    }
+  };
+
   function getStored(key) {
     return sessionStorage.getItem(key) || localStorage.getItem(key);
   }
@@ -639,6 +789,7 @@
       injectPasswordModal();
       injectUserPill();
       injectSuperAdminBanner();
+      checkAndPromptFirstLoginOnboarding();
     }
 
     if (document.readyState === 'loading') {

@@ -100,9 +100,12 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=True)
+    phone_number = Column(String, nullable=True, index=True, default=None)
     password_hash = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+    is_first_login = Column(Boolean, default=True)
+    contact_verified = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     gender = Column(String, nullable=True)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)

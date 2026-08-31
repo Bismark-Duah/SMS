@@ -14,6 +14,7 @@ class Role(RoleBase):
 class UserBase(BaseModel):
     username: str
     email: Optional[str] = None
+    phone_number: Optional[str] = None
     gender: Optional[str] = None
 
 class UserCreate(UserBase):
@@ -23,6 +24,8 @@ class UserCreate(UserBase):
 class User(UserBase):
     id: int
     is_active: bool
+    is_first_login: Optional[bool] = False
+    contact_verified: Optional[bool] = False
     roles: List[Role] = []
     department_id: Optional[int] = None
     children: List[int] = [] # List of student IDs

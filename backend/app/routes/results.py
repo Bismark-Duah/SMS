@@ -835,3 +835,81 @@ def get_comparative_rankings(
         }
     }
 
+
+from pydantic import BaseModel
+from typing import List
+
+class ClassMatrixScoreItem(BaseModel):
+    student_id: int
+    subject_id: int
+    class_score: Optional[float] = 0.0
+    exam_score: Optional[float] = 0.0
+    remarks: Optional[str] = None
+
+class BatchClassMatrixRequest(BaseModel):
+    class_section_id: int
+    semester_id: int
+    records: List[ClassMatrixScoreItem]
+
+
+@router.post("/batch-class-matrix")
+def save_batch_class_matrix(
+    payload: BatchClassMatrixRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    All-in-One Class Score Matrix Batch Persistence:
+    Updates or inserts scores for an entire class roster across multiple subjects
+    in a single atomic database transaction.
+    """
+    _check_score_lock(db, payload.semester_id, current_user)
+    school_id = getattr(current_user, 'school_id', None)
+    is_super = any(r.name in ["super_admin", "admin"] for r in current_user.roles) if hasattr(current_user, 'roles') else False
+
+    cls_sec = db.query(ClassSection).filter(ClassSection.id == payload.class_section_id).first()
+    if not cls_sec or (not is_super and school_id is not None and hasattr(ClassSection, "school_id") and cls_sec.school_id is not None and cls_sec.school_id != school_id):
+        raise HTTPException(status_code=404, detail="Class section not found")
+
+    saved_count = 0
+    for item in payload.records:
+        total = round((item.class_score or 0.0) + (item.exam_score or 0.0), 2)
+        grading = GradingService.get_grade(total, db)
+
+        existing = db.query(Score).filter(
+            Score.student_id == item.student_id,
+            Score.subject_id == item.subject_id,
+            Score.semester_id == payload.semester_id
+        ).first()
+
+        if existing:
+            existing.class_score = item.class_score
+            existing.exam_score = item.exam_score
+            existing.total_score = total
+            existing.grade = grading["grade"]
+            existing.remark = item.remarks or grading["remark"]
+            saved_count += 1
+        else:
+            new_sc = Score(
+                student_id=item.student_id,
+                subject_id=item.subject_id,
+                semester_id=payload.semester_id,
+                class_score=item.class_score,
+                exam_score=item.exam_score,
+                total_score=total,
+                grade=grading["grade"],
+                remark=item.remarks or grading["remark"]
+            )
+            db.add(new_sc)
+            saved_count += 1
+
+    db.commit()
+    return {
+        "status": "success",
+        "saved_count": saved_count,
+        "class_id": payload.class_section_id,
+        "class_name": cls_sec.name,
+        "message": f"Successfully persisted {saved_count} marks record(s) for {cls_sec.name}."
+    }
+
+

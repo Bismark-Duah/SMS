@@ -1555,11 +1555,137 @@ window.submitAddWorkloadInModal = submitAddWorkloadInModal;
 window.closeEditAssignmentModal = closeEditAssignmentModal;
 window.deleteSingleAssignment = deleteSingleAssignment;
 
+// ── 1-Click Primary Class Allocation Handlers ─────────────────────────────
+const primaryFastAssignModal = document.getElementById('primaryFastAssignModal');
+const btnOpenPrimaryFastAssign = document.getElementById('btnOpenPrimaryFastAssign');
+
+function initPrimaryFastAssignButton() {
+  const mode = (localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
+  if (btnOpenPrimaryFastAssign) {
+    if (_userIsAdmin() && (mode === 'BASIC_ONLY' || mode === 'COMBINED')) {
+      btnOpenPrimaryFastAssign.style.display = 'inline-flex';
+      btnOpenPrimaryFastAssign.style.alignItems = 'center';
+      btnOpenPrimaryFastAssign.style.gap = '6px';
+    } else {
+      btnOpenPrimaryFastAssign.style.display = 'none';
+    }
+  }
+}
+
+async function openPrimaryFastAssignModal() {
+  if (!primaryFastAssignModal) return;
+  primaryFastAssignModal.style.display = 'flex';
+  const msg = document.getElementById('fastAssignMsg');
+  if (msg) msg.innerHTML = '';
+
+  const teacherSel = document.getElementById('fastTeacherSelect');
+  const classSel = document.getElementById('fastClassSelect');
+  const semSel = document.getElementById('fastSemesterSelect');
+
+  // Copy options from main dropdowns
+  const mainTeacher = document.getElementById('teacherSelect');
+  const mainSem = document.getElementById('semesterSelect');
+
+  if (teacherSel && mainTeacher) {
+    teacherSel.innerHTML = mainTeacher.innerHTML;
+  }
+  if (semSel && mainSem) {
+    semSel.innerHTML = mainSem.innerHTML;
+  }
+
+  // Load and populate basic classes
+  if (classSel) {
+    try {
+      const res = await fetch(`${API_BASE}/classes/`, { headers: getHeaders() });
+      const classes = await res.json();
+      const basicClasses = classes.filter(c => {
+        const n = (c.name || '').toUpperCase();
+        const st = (c.stage_name || '').toUpperCase();
+        if (st.includes('SHS') || n.includes('FORM ') || n.includes('SHS')) return false;
+        return true;
+      });
+
+      classSel.innerHTML = '<option value="">Select Primary / Early Childhood Class...</option>' +
+        basicClasses.map(c => `<option value="${c.id}">🏫 ${c.name} (${c.stage_name || 'Basic'})</option>`).join('');
+    } catch (e) {
+      classSel.innerHTML = '<option value="">Error loading classes</option>';
+    }
+  }
+}
+
+function closePrimaryFastAssignModal() {
+  if (primaryFastAssignModal) primaryFastAssignModal.style.display = 'none';
+}
+
+async function submitPrimaryFastAssign(event) {
+  event.preventDefault();
+  const btn = document.getElementById('btnRunFastAssign');
+  const msg = document.getElementById('fastAssignMsg');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Allocating Class Subjects...'; }
+  if (msg) msg.innerHTML = '';
+
+  const teacherId = parseInt(document.getElementById('fastTeacherSelect')?.value);
+  const classId = parseInt(document.getElementById('fastClassSelect')?.value);
+  const semId = parseInt(document.getElementById('fastSemesterSelect')?.value);
+
+  if (!teacherId || !classId || !semId) {
+    if (msg) msg.innerHTML = '<div style="color:#f87171;">Please select a teacher, class, and semester.</div>';
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Assign to All Subjects'; }
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/teacher-assignments/assign-primary-class`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        teacher_id: teacherId,
+        class_section_id: classId,
+        semester_id: semId
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Allocation failed');
+
+    if (msg) {
+      msg.innerHTML = `
+        <div style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:10px 14px; border-radius:8px;">
+          ✓ <strong>Success:</strong> ${data.message}
+        </div>
+      `;
+    }
+
+    if (window.showToast) window.showToast(data.message || 'Class Teacher successfully assigned!', 'success');
+    await loadAssignments();
+    await loadPrivileges();
+
+    setTimeout(() => {
+      closePrimaryFastAssignModal();
+    }, 1800);
+  } catch (err) {
+    if (msg) {
+      msg.innerHTML = `
+        <div style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:10px 14px; border-radius:8px;">
+          ❌ <strong>Error:</strong> ${err.message}
+        </div>
+      `;
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Assign to All Subjects'; }
+  }
+}
+
+window.openPrimaryFastAssignModal = openPrimaryFastAssignModal;
+window.closePrimaryFastAssignModal = closePrimaryFastAssignModal;
+window.submitPrimaryFastAssign = submitPrimaryFastAssign;
+
 async function initAssignmentsPage() {
   await loadDropdowns();
   await loadAssignments();
   await loadPrivileges();
   filterTeachingAssignments();
+  initPrimaryFastAssignButton();
 
   if (!_userIsAdmin()) {
     // Hide Copy to Next Term button for non-admins (HODs)
@@ -1586,4 +1712,5 @@ const filterInput = document.getElementById('filterAssignmentSearch');
 if (filterInput) {
   filterInput.value = '';
 }
+
 

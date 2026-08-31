@@ -28,6 +28,7 @@
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <input type="text" id="classSearchInput" name="no_autofill_class_search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="🔍 Search class, stage, program..." style="padding:7px 12px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary); width:230px;" oninput="filterClasses(this.value)" />
+            <button type="button" id="openGesBasicGenBtn" class="btn" style="font-size:0.85rem; background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; box-shadow:0 2px 8px rgba(16,185,129,0.35); font-weight:600;">🇬🇭 Auto-Provision GES Basic Streams</button>
             <button type="button" id="openSmartGenBtn" class="btn primary" style="font-size:0.85rem; background:linear-gradient(135deg, #6366f1, #06b6d4); border:none; box-shadow:0 2px 8px rgba(99,102,241,0.35);">⚡ Smart Class Generator</button>
             <a href="#classFormCard" class="btn" style="font-size:0.85rem;">+ Add Single Class</a>
           </div>
@@ -57,6 +58,97 @@
           </div>
         </form>
       </section>
+
+      <!-- ── GES Basic School Stream Auto-Provisioner Modal ────────────────── -->
+      <div id="gesBasicGenModal" style="display:none; position:fixed; z-index:10000; inset:0; background-color:rgba(0,0,0,0.75); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
+        <div style="width:94%; max-width:640px; max-height:90vh; overflow-y:auto; background:var(--card-bg, #1e293b); padding:24px; border-radius:14px; border:1px solid rgba(16,185,129,0.3); box-shadow:0 16px 40px rgba(0,0,0,0.5); position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.6rem;">🇬🇭</span>
+              <div>
+                <h3 style="margin:0; font-size:1.15rem; color:#34d399;">GES Standard Basic Streams Provisioner</h3>
+                <p style="margin:2px 0 0; font-size:0.8rem; color:var(--text-secondary);">One-click setup for Early Childhood, Primary & JHS with NaCCA curriculum subjects.</p>
+              </div>
+            </div>
+            <button type="button" onclick="closeGesBasicGenModal()" style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer; padding:0 6px;">&times;</button>
+          </div>
+
+          <form id="gesBasicProvisionForm" onsubmit="executeGesBasicProvision(event)">
+            <div style="margin-bottom:16px;">
+              <label style="font-weight:700; font-size:0.88rem; color:var(--text-primary); display:block; margin-bottom:6px;">
+                🏫 How many streams / arms does your school operate per class level?
+              </label>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-top:8px;">
+                <label style="padding:10px 12px; border:1px solid var(--border-color); border-radius:8px; display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.02);">
+                  <input type="radio" name="gesStreamMode" value="SINGLE" checked onchange="toggleCustomArmsInput(false)" />
+                  <div>
+                    <strong style="font-size:0.85rem; display:block;">Single Stream</strong>
+                    <span style="font-size:0.75rem; opacity:0.7;">e.g. Class 1, Class 2, JHS 1</span>
+                  </div>
+                </label>
+                <label style="padding:10px 12px; border:1px solid var(--border-color); border-radius:8px; display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.02);">
+                  <input type="radio" name="gesStreamMode" value="TWO_ARMS_AB" onchange="toggleCustomArmsInput(false)" />
+                  <div>
+                    <strong style="font-size:0.85rem; display:block;">2 Streams (A & B)</strong>
+                    <span style="font-size:0.75rem; opacity:0.7;">e.g. Class 1A, Class 1B</span>
+                  </div>
+                </label>
+                <label style="padding:10px 12px; border:1px solid var(--border-color); border-radius:8px; display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.02);">
+                  <input type="radio" name="gesStreamMode" value="THREE_ARMS_ABC" onchange="toggleCustomArmsInput(false)" />
+                  <div>
+                    <strong style="font-size:0.85rem; display:block;">3 Streams (A, B, C)</strong>
+                    <span style="font-size:0.75rem; opacity:0.7;">e.g. Class 1A, 1B, 1C</span>
+                  </div>
+                </label>
+                <label style="padding:10px 12px; border:1px solid var(--border-color); border-radius:8px; display:flex; align-items:center; gap:8px; cursor:pointer; background:rgba(255,255,255,0.02);">
+                  <input type="radio" name="gesStreamMode" value="FOUR_ARMS_ABCD" onchange="toggleCustomArmsInput(false)" />
+                  <div>
+                    <strong style="font-size:0.85rem; display:block;">4 Streams (A, B, C, D)</strong>
+                    <span style="font-size:0.75rem; opacity:0.7;">e.g. Class 1A, 1B, 1C, 1D</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div id="customArmsBox" style="display:none; margin-bottom:14px;">
+              <label style="font-size:0.82rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">Custom Stream Suffixes (Comma Separated)</label>
+              <input type="text" id="customArmsInput" placeholder="e.g. Gold, Silver, Diamond" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary);" />
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <label style="font-weight:700; font-size:0.88rem; color:var(--text-primary); display:block; margin-bottom:8px;">
+                📚 Select Levels to Include:
+              </label>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; cursor:pointer;">
+                  <input type="checkbox" id="chkCreche" checked /> Creche
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; cursor:pointer;">
+                  <input type="checkbox" id="chkNursery" checked /> Nursery 1 & 2
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; cursor:pointer;">
+                  <input type="checkbox" id="chkKg" checked /> KG 1 & 2
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; cursor:pointer;">
+                  <input type="checkbox" id="chkPrimary" checked /> Primary (Class 1–6)
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; cursor:pointer;">
+                  <input type="checkbox" id="chkJhs" checked /> JHS (1–3)
+                </label>
+              </div>
+            </div>
+
+            <div id="gesProvisionMsg" style="margin-bottom:14px; font-size:0.85rem;"></div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+              <button type="button" onclick="closeGesBasicGenModal()" class="btn secondary">Cancel</button>
+              <button type="submit" id="btnRunGesProvision" class="btn primary" style="background:linear-gradient(135deg, #10b981, #059669); border:none; font-weight:700; padding:8px 20px;">
+                🚀 Provision All GES Streams
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
 
       <!-- ── Enterprise Smart Class Generator Modal ───────────────────────── -->
       <div id="smartGenModal" style="display:none; position:fixed; z-index:10000; inset:0; background-color:rgba(0,0,0,0.7); backdrop-filter:blur(6px); align-items:center; justify-content:center;">

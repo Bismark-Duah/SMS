@@ -623,3 +623,181 @@ def delete_privilege(
 
     db.commit()
     return {"status": "success", "message": "Privilege removed"}
+
+
+from pydantic import BaseModel
+
+class AssignPrimaryClassRequest(BaseModel):
+    teacher_id: int
+    class_section_id: int
+    semester_id: int
+
+class BatchJHSMatrixRequest(BaseModel):
+    teacher_id: int
+    subject_ids: List[int]
+    class_section_ids: List[int]
+    semester_id: int
+
+
+@router.post("/assign-primary-class")
+def assign_primary_class_teacher(
+    payload: AssignPrimaryClassRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    1-Click Class Teacher Allocation for Ghanaian Basic Schools:
+    Binds the assigned teacher to ALL active subjects of the class section
+    and designates them as the official Class Teacher (form_master_id).
+    """
+    _check_admin(current_user)
+    school_id = getattr(current_user, 'school_id', None)
+    is_super = any(r.name in ["super_admin", "admin"] for r in current_user.roles) if hasattr(current_user, 'roles') else False
+
+    sec_q = db.query(ClassSection).filter(ClassSection.id == payload.class_section_id)
+    if not is_super and school_id is not None and hasattr(ClassSection, "school_id"):
+        sec_q = sec_q.filter(ClassSection.school_id == school_id)
+    class_sec = sec_q.first()
+    if not class_sec:
+        raise HTTPException(status_code=404, detail="Class section not found")
+
+    teacher_q = db.query(User).filter(User.id == payload.teacher_id)
+    if not is_super and class_sec.school_id is not None:
+        teacher_q = teacher_q.filter((User.school_id == class_sec.school_id) | (User.school_id == None))
+    elif not is_super and school_id is not None:
+        teacher_q = teacher_q.filter((User.school_id == school_id) | (User.school_id == None))
+    teacher = teacher_q.first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+
+    is_teacher = any(r.name == "teacher" for r in teacher.roles)
+    if not is_teacher:
+        raise HTTPException(status_code=400, detail="Assigned user must have the 'teacher' role")
+
+    sem = db.query(Semester).filter(Semester.id == payload.semester_id).first()
+    if not sem:
+        raise HTTPException(status_code=404, detail="Semester not found")
+
+    # Set as official Class Teacher (form_master_id)
+    class_sec.form_master_id = teacher.id
+
+    # Retrieve all active subjects for this class section (or all basic subjects)
+    assigned_subjects = list(class_sec.subjects) if class_sec.subjects else []
+    if not assigned_subjects:
+        assigned_subjects = db.query(Subject).filter(
+            (Subject.school_level.ilike("Basic%")) | (Subject.school_level == None)
+        ).all()
+        class_sec.subjects = assigned_subjects
+
+    created_count = 0
+    updated_count = 0
+    for sub in assigned_subjects:
+        existing = db.query(TeacherAssignment).filter(
+            TeacherAssignment.class_section_id == class_sec.id,
+            TeacherAssignment.subject_id == sub.id,
+            TeacherAssignment.semester_id == sem.id
+        ).first()
+
+        if existing:
+            existing.teacher_id = teacher.id
+            updated_count += 1
+        else:
+            new_asgn = TeacherAssignment(
+                teacher_id=teacher.id,
+                class_section_id=class_sec.id,
+                subject_id=sub.id,
+                semester_id=sem.id
+            )
+            db.add(new_asgn)
+            created_count += 1
+
+    # Ensure form_master role is assigned to the teacher
+    fm_role = db.query(Role).filter(Role.name == "form_master").first()
+    if fm_role and fm_role not in teacher.roles:
+        teacher.roles.append(fm_role)
+
+    db.commit()
+    return {
+        "status": "success",
+        "message": f"Successfully assigned {getattr(teacher, 'full_name', None) or teacher.username} as Class Teacher for {class_sec.name} across all {len(assigned_subjects)} subjects.",
+        "class_id": class_sec.id,
+        "class_name": class_sec.name,
+        "teacher_id": teacher.id,
+        "teacher_name": getattr(teacher, 'full_name', None) or teacher.username,
+        "subjects_assigned_count": len(assigned_subjects),
+        "subjects": [s.name for s in assigned_subjects]
+    }
+
+
+@router.post("/batch-jhs-matrix")
+def batch_jhs_matrix_assignment(
+    payload: BatchJHSMatrixRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Multi-Subject & Multi-Class Workload Matrix Allocator for Junior High Schools:
+    Assigns a teacher to multiple subjects across multiple JHS streams in one request.
+    """
+    _check_admin(current_user)
+    school_id = getattr(current_user, 'school_id', None)
+    is_super = any(r.name in ["super_admin", "admin"] for r in current_user.roles) if hasattr(current_user, 'roles') else False
+
+    teacher_q = db.query(User).filter(User.id == payload.teacher_id)
+    if not is_super and school_id is not None:
+        teacher_q = teacher_q.filter(User.school_id == school_id)
+    teacher = teacher_q.first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+
+    is_teacher = any(r.name == "teacher" for r in teacher.roles)
+    if not is_teacher:
+        raise HTTPException(status_code=400, detail="Assigned user must have the 'teacher' role")
+
+    sem = db.query(Semester).filter(Semester.id == payload.semester_id).first()
+    if not sem:
+        raise HTTPException(status_code=404, detail="Semester not found")
+
+    assigned_count = 0
+    for cls_id in payload.class_section_ids:
+        # verify class exists
+        cls_q = db.query(ClassSection).filter(ClassSection.id == cls_id)
+        if not is_super and school_id is not None and hasattr(ClassSection, "school_id"):
+            cls_q = cls_q.filter(ClassSection.school_id == school_id)
+        cls_sec = cls_q.first()
+        if not cls_sec:
+            continue
+
+        for sub_id in payload.subject_ids:
+            sub_obj = db.query(Subject).filter(Subject.id == sub_id).first()
+            if not sub_obj:
+                continue
+
+            existing = db.query(TeacherAssignment).filter(
+                TeacherAssignment.class_section_id == cls_id,
+                TeacherAssignment.subject_id == sub_id,
+                TeacherAssignment.semester_id == sem.id
+            ).first()
+
+            if existing:
+                existing.teacher_id = teacher.id
+                assigned_count += 1
+            else:
+                new_asgn = TeacherAssignment(
+                    teacher_id=teacher.id,
+                    class_section_id=cls_id,
+                    subject_id=sub_id,
+                    semester_id=sem.id
+                )
+                db.add(new_asgn)
+                assigned_count += 1
+
+    db.commit()
+    t_name = getattr(teacher, 'full_name', None) or teacher.username
+    return {
+        "status": "success",
+        "assigned_count": assigned_count,
+        "teacher_name": t_name,
+        "message": f"Successfully allocated {assigned_count} teaching assignment(s) for {t_name}."
+    }
+

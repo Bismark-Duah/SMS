@@ -778,6 +778,150 @@ def seed_presets(db: Session = Depends(get_db)):
     return {"message": f"Successfully loaded preset stages and created {added_count} standard classes"}
 
 
+from pydantic import BaseModel
+from typing import List
+
+class ProvisionBasicStreamsRequest(BaseModel):
+    stream_mode: str = "SINGLE" # "SINGLE", "TWO_ARMS_AB", "THREE_ARMS_ABC", "FOUR_ARMS_ABCD", "CUSTOM"
+    custom_arms: Optional[List[str]] = None
+    include_creche: bool = True
+    include_nursery: bool = True
+    include_kg: bool = True
+    include_primary: bool = True
+    include_jhs: bool = True
+    school_id: Optional[int] = None
+
+
+@router.post("/provision-ges-basic-streams")
+def provision_ges_basic_streams(
+    payload: ProvisionBasicStreamsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Auto-provisions standard GES Basic School stages (Creche, Nursery, KG, Primary, JHS),
+    creates stream sections (Single stream vs. Arms A, B, C, D), and automatically binds
+    standard NaCCA curriculum core subjects.
+    """
+    target_sch_id = payload.school_id or get_school_id(current_user)
+
+    # 1. Resolve or create Standard GES Basic stages for this school
+    stages_to_ensure = [
+        {"name": "Creche & Nursery", "school_type": "Basic"},
+        {"name": "Kindergarten (KG 1 - KG 2)", "school_type": "Basic"},
+        {"name": "Primary School (Class 1 - Class 6)", "school_type": "Basic"},
+        {"name": "Junior High School (JHS 1 - JHS 3)", "school_type": "Basic"},
+    ]
+    created_stages = {}
+    for st_info in stages_to_ensure:
+        st_query = db.query(SchoolStage).filter(SchoolStage.name == st_info["name"])
+        if target_sch_id is not None and hasattr(SchoolStage, "school_id"):
+            st_query = st_query.filter(SchoolStage.school_id == target_sch_id)
+        stage_obj = st_query.first()
+        if not stage_obj:
+            stage_kwargs = {"name": st_info["name"], "school_type": st_info["school_type"]}
+            if target_sch_id is not None and hasattr(SchoolStage, "school_id"):
+                stage_kwargs["school_id"] = target_sch_id
+            stage_obj = SchoolStage(**stage_kwargs)
+            db.add(stage_obj)
+            db.flush()
+        created_stages[st_info["name"]] = stage_obj
+
+    # 2. Determine Arm Suffixes
+    sm = (payload.stream_mode or "SINGLE").upper().strip()
+    if sm == "TWO_ARMS_AB":
+        arms = ["A", "B"]
+    elif sm == "THREE_ARMS_ABC":
+        arms = ["A", "B", "C"]
+    elif sm == "FOUR_ARMS_ABCD":
+        arms = ["A", "B", "C", "D"]
+    elif sm == "CUSTOM" and payload.custom_arms:
+        arms = [a.strip() for a in payload.custom_arms if a.strip()]
+        if not arms:
+            arms = [""]
+    else:  # SINGLE
+        arms = [""]
+
+    # 3. Build Base Classes List
+    grade_blueprints = []
+    if payload.include_creche:
+        grade_blueprints.append(("Creche & Nursery", "Creche", "Early_Years"))
+    if payload.include_nursery:
+        grade_blueprints.append(("Creche & Nursery", "Nursery 1", "Early_Years"))
+        grade_blueprints.append(("Creche & Nursery", "Nursery 2", "Early_Years"))
+    if payload.include_kg:
+        grade_blueprints.append(("Kindergarten (KG 1 - KG 2)", "KG 1", "Early_Years"))
+        grade_blueprints.append(("Kindergarten (KG 1 - KG 2)", "KG 2", "Early_Years"))
+    if payload.include_primary:
+        for i in range(1, 7):
+            grade_blueprints.append(("Primary School (Class 1 - Class 6)", f"Class {i}", "Primary"))
+    if payload.include_jhs:
+        for i in range(1, 4):
+            grade_blueprints.append(("Junior High School (JHS 1 - JHS 3)", f"JHS {i}", "JHS"))
+
+    # Fetch active NaCCA basic subjects
+    all_basic_subs = db.query(Subject).filter(
+        (Subject.school_level.ilike("Basic%")) | (Subject.school_level == None)
+    ).all()
+    early_subs = [s for s in all_basic_subs if any(k in (s.name or "").lower() for k in ["rhymes", "numeracy", "sensory", "play", "motor", "literacy", "language", "people", "physical"])]
+    primary_subs = [s for s in all_basic_subs if not any(k in (s.name or "").lower() for k in ["sensory", "play", "motor"])]
+    jhs_subs = [s for s in all_basic_subs if not any(k in (s.name or "").lower() for k in ["sensory", "play", "motor"])]
+
+    created_classes = []
+    skipped_classes = []
+
+    for stage_key, base_name, category in grade_blueprints:
+        stage_obj = created_stages.get(stage_key)
+        if not stage_obj:
+            continue
+
+        for arm in arms:
+            class_name = f"{base_name} {arm}".strip() if arm else base_name
+            # Check existing
+            chk_q = db.query(ClassSection).filter(ClassSection.name == class_name)
+            if target_sch_id is not None and hasattr(ClassSection, "school_id"):
+                chk_q = chk_q.filter(ClassSection.school_id == target_sch_id)
+            existing = chk_q.first()
+            if existing:
+                skipped_classes.append(class_name)
+                continue
+
+            sec_kwargs = {
+                "name": class_name,
+                "stage_id": stage_obj.id
+            }
+            if target_sch_id is not None and hasattr(ClassSection, "school_id"):
+                sec_kwargs["school_id"] = target_sch_id
+
+            new_sec = ClassSection(**sec_kwargs)
+            db.add(new_sec)
+            db.flush()
+
+            # Attach relevant NaCCA subjects
+            if category == "Early_Years" and early_subs:
+                new_sec.subjects = list(early_subs)
+            elif category == "Primary" and primary_subs:
+                new_sec.subjects = list(primary_subs)
+            elif category == "JHS" and jhs_subs:
+                new_sec.subjects = list(jhs_subs)
+
+            created_classes.append({
+                "id": new_sec.id,
+                "name": new_sec.name,
+                "stage_name": stage_obj.name,
+                "subjects_linked": len(new_sec.subjects) if new_sec.subjects else 0
+            })
+
+    db.commit()
+    return {
+        "status": "success",
+        "created_count": len(created_classes),
+        "created_classes": created_classes,
+        "skipped_existing": skipped_classes,
+        "message": f"Successfully provisioned {len(created_classes)} GES Basic class stream(s)."
+    }
+
+
 def seed_default_stages(db: Session):
     defaults = [
         {"name": "Creche", "school_type": "Basic"},
@@ -791,4 +935,5 @@ def seed_default_stages(db: Session):
         if not db.query(SchoolStage).filter(SchoolStage.name == stage["name"]).first():
             db.add(SchoolStage(name=stage["name"], school_type=stage["school_type"]))
     db.commit()
+
 

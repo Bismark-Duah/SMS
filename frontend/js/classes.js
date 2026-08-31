@@ -802,3 +802,109 @@ if (loadPresetsBtn) {
     });
   }
 }
+
+// ── GES Basic Streams Auto-Provisioner UI Handlers ────────────────────────
+const openGesBasicGenBtn = document.getElementById('openGesBasicGenBtn');
+const gesBasicGenModal = document.getElementById('gesBasicGenModal');
+
+function initGesBasicButton() {
+  const mode = (localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
+  if (openGesBasicGenBtn) {
+    if (_userIsAdmin() && (mode === 'BASIC_ONLY' || mode === 'COMBINED')) {
+      openGesBasicGenBtn.style.display = 'inline-flex';
+      openGesBasicGenBtn.style.alignItems = 'center';
+      openGesBasicGenBtn.style.gap = '6px';
+    } else {
+      openGesBasicGenBtn.style.display = 'none';
+    }
+  }
+}
+
+if (openGesBasicGenBtn) {
+  openGesBasicGenBtn.addEventListener('click', () => {
+    if (gesBasicGenModal) {
+      gesBasicGenModal.style.display = 'flex';
+      const msg = document.getElementById('gesProvisionMsg');
+      if (msg) msg.innerHTML = '';
+    }
+  });
+}
+
+function closeGesBasicGenModal() {
+  if (gesBasicGenModal) gesBasicGenModal.style.display = 'none';
+}
+
+function toggleCustomArmsInput(show) {
+  const box = document.getElementById('customArmsBox');
+  if (box) box.style.display = show ? 'block' : 'none';
+}
+
+async function executeGesBasicProvision(event) {
+  event.preventDefault();
+  const btn = document.getElementById('btnRunGesProvision');
+  const msg = document.getElementById('gesProvisionMsg');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Provisioning Streams...'; }
+  if (msg) msg.innerHTML = '';
+
+  const streamMode = document.querySelector('input[name="gesStreamMode"]:checked')?.value || 'SINGLE';
+  const customArmsStr = document.getElementById('customArmsInput')?.value || '';
+  const customArms = customArmsStr.split(',').map(s => s.trim()).filter(Boolean);
+
+  const payload = {
+    stream_mode: streamMode,
+    custom_arms: customArms.length > 0 ? customArms : null,
+    include_creche: document.getElementById('chkCreche')?.checked ?? true,
+    include_nursery: document.getElementById('chkNursery')?.checked ?? true,
+    include_kg: document.getElementById('chkKg')?.checked ?? true,
+    include_primary: document.getElementById('chkPrimary')?.checked ?? true,
+    include_jhs: document.getElementById('chkJhs')?.checked ?? true
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/classes/provision-ges-basic-streams`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.message || 'Provisioning failed');
+
+    if (msg) {
+      msg.innerHTML = `
+        <div style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:10px 14px; border-radius:8px;">
+          ✓ <strong>Success:</strong> Provisioned ${data.created_count} class stream(s) with NaCCA curriculum subjects!
+          ${data.skipped_existing && data.skipped_existing.length > 0 ? `<br><small style="opacity:0.8;">(${data.skipped_existing.length} streams already existed and were preserved)</small>` : ''}
+        </div>
+      `;
+    }
+
+    if (window.showToast) window.showToast(`Successfully created ${data.created_count} GES Basic streams!`, 'success');
+    await loadStages();
+    await loadClasses();
+
+    setTimeout(() => {
+      closeGesBasicGenModal();
+    }, 1800);
+  } catch (err) {
+    if (msg) {
+      msg.innerHTML = `
+        <div style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:10px 14px; border-radius:8px;">
+          ❌ <strong>Error:</strong> ${err.message}
+        </div>
+      `;
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🚀 Provision All GES Streams'; }
+  }
+}
+
+window.openGesBasicGenModal = () => { if (gesBasicGenModal) gesBasicGenModal.style.display = 'flex'; };
+window.closeGesBasicGenModal = closeGesBasicGenModal;
+window.toggleCustomArmsInput = toggleCustomArmsInput;
+window.executeGesBasicProvision = executeGesBasicProvision;
+
+document.addEventListener('DOMContentLoaded', () => {
+  initGesBasicButton();
+});
+

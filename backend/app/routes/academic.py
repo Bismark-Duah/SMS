@@ -188,6 +188,30 @@ def promote_students(stage_id: int = None, db: Session = Depends(get_db)):
     return LifecycleService.promote_students(db, stage_id)
 
 
+def _is_basic_school_class(name: str, stage_name: str = "", stage_type: str = "", program_id = None) -> bool:
+    if program_id is not None:
+        return False
+    st_type = (stage_type or "").upper().strip()
+    st_name = (stage_name or "").upper().strip()
+    c_name = (name or "").upper().strip()
+
+    if "SHS" in st_type or "SENIOR" in st_type or "SECONDARY" in st_type:
+        return False
+    if "SHS" in st_name or "FORM " in st_name or "SENIOR" in st_name or "STEM" in st_name:
+        return False
+
+    shs_signatures = [
+        "SHS", "FORM 1", "FORM 2", "FORM 3", "FORM 4", "STEM",
+        "HOME ECON", "HOME SCIENCE", "GENERAL ART", "VISUAL ART",
+        "BUSINESS", "GENERAL AGRIC", "TECHNICAL", "ELECTIVE",
+        "SCIENCE 1", "SCIENCE 2", "SCIENCE 3", "SCIENCE 4"
+    ]
+    if any(sig in c_name for sig in shs_signatures):
+        return False
+
+    return True
+
+
 # ── Executive Analytics Widgets ──────────────────────────────────────────
 
 @router.get("/executive-analytics")
@@ -231,7 +255,7 @@ def get_executive_analytics(
         dept_query = dept_query.filter(Department.school_id == target_sch_id)
         house_query = house_query.filter(House.school_id == target_sch_id)
         if hasattr(ClassSection, 'school_id'):
-            class_query = class_query.filter((ClassSection.school_id == target_sch_id) | (ClassSection.school_id == None))
+            class_query = class_query.filter(ClassSection.school_id == target_sch_id)
 
     if school_mode == "BASIC_ONLY":
         class_query = class_query.filter(
@@ -239,11 +263,13 @@ def get_executive_analytics(
             (SchoolStage.school_type.ilike("Basic%")) | (SchoolStage.school_type == None),
             ~SchoolStage.name.ilike("%SHS%"),
             ~SchoolStage.name.ilike("%Form %"),
-            ~ClassSection.name.ilike("%Form 1%"),
-            ~ClassSection.name.ilike("%Form 2%"),
-            ~ClassSection.name.ilike("%Form 3%"),
+            ~SchoolStage.name.ilike("%STEM%"),
+            ~ClassSection.name.ilike("%Form %"),
+            ~ClassSection.name.ilike("%SHS %"),
             ~ClassSection.name.ilike("%SHS%"),
-            ~ClassSection.name.ilike("%STEM%")
+            ~ClassSection.name.ilike("%STEM%"),
+            ~ClassSection.name.ilike("%HOME ECON%"),
+            ~ClassSection.name.ilike("%SCIENCE %")
         )
     elif school_mode == "SHS_ONLY":
         class_query = class_query.filter(
@@ -415,21 +441,15 @@ def get_executive_analytics(
     classes_matrix = []
     all_class_sections = class_query.all()
     for cls_item in all_class_sections:
-        st_type = (cls_item.stage.school_type if cls_item.stage else "").upper()
-        st_name = (cls_item.stage.name if cls_item.stage else "").upper()
-        c_name = (cls_item.name or "").upper()
+        st_type = cls_item.stage.school_type if cls_item.stage else ""
+        st_name = cls_item.stage.name if cls_item.stage else ""
+        c_name = cls_item.name or ""
 
         if school_mode == "BASIC_ONLY":
-            if cls_item.program_id is not None:
-                continue
-            if st_type == "SHS" or "SHS" in st_name or "FORM " in st_name or "STEM" in st_name:
-                continue
-            if any(k in c_name for k in ["FORM 1", "FORM 2", "FORM 3", "SHS 1", "SHS 2", "SHS 3", "STEM A", "STEM B", "GENERAL ARTS", "SCIENCE 1", "SCIENCE 2", "SCIENCE 3", "BUSINESS 1", "BUSINESS 2", "BUSINESS 3"]):
+            if not _is_basic_school_class(c_name, st_name, st_type, cls_item.program_id):
                 continue
         elif school_mode == "SHS_ONLY":
-            if st_type == "BASIC" or any(k in st_name for k in ["NURSERY", "KG", "PRIMARY", "CLASS 1", "CLASS 2", "CLASS 3", "CLASS 4", "CLASS 5", "CLASS 6", "JHS"]):
-                continue
-            if any(k in c_name for k in ["NURSERY", "KG 1", "KG 2", "CLASS 1", "CLASS 2", "CLASS 3", "CLASS 4", "CLASS 5", "CLASS 6", "JHS 1", "JHS 2", "JHS 3"]):
+            if _is_basic_school_class(c_name, st_name, st_type, cls_item.program_id):
                 continue
 
         fm_user = cls_item.form_master

@@ -43,6 +43,9 @@ def test_basic_school_dashboard_analytics():
             db.add(shs_school)
             db.commit()
             db.refresh(shs_school)
+        else:
+            shs_school.school_mode = "SHS_ONLY"
+            db.commit()
 
         # 3. Create stages and classes
         basic_stage = db.query(SchoolStage).filter(SchoolStage.name == "Primary School Stage").first()

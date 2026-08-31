@@ -1422,10 +1422,16 @@ async function loadExecutiveAnalytics() {
       // 4. Basic Class Streams Matrix vs Departmental Matrix
       if (isBasicOnly && Array.isArray(ac.classes_matrix)) {
         let validBasicClasses = ac.classes_matrix.filter(c => {
-          const n = (c.name || '').toUpperCase();
-          const st = (c.stage_name || '').toUpperCase();
-          if (st.includes('SHS') || st.includes('FORM ') || st.includes('STEM')) return false;
-          if (n.includes('FORM 1') || n.includes('FORM 2') || n.includes('FORM 3') || n.includes('SHS 1') || n.includes('SHS 2') || n.includes('SHS 3') || n.includes('STEM A') || n.includes('STEM B') || n.includes('SCIENCE 1') || n.includes('GENERAL ARTS') || n.includes('BUSINESS 1') || n.includes('HOME ECONOMICS')) return false;
+          const n = (c.name || '').toUpperCase().trim();
+          const st = (c.stage_name || '').toUpperCase().trim();
+          if (st.includes('SHS') || st.includes('FORM ') || st.includes('STEM') || st.includes('SENIOR') || st.includes('SECONDARY')) return false;
+          const shsTokens = [
+            'SHS', 'FORM 1', 'FORM 2', 'FORM 3', 'FORM 4', 'STEM',
+            'HOME ECON', 'HOME SCIENCE', 'GENERAL ART', 'VISUAL ART',
+            'BUSINESS', 'GENERAL AGRIC', 'TECHNICAL', 'ELECTIVE',
+            'SCIENCE 1', 'SCIENCE 2', 'SCIENCE 3', 'SCIENCE 4'
+          ];
+          if (shsTokens.some(t => n.includes(t))) return false;
           return true;
         });
 
@@ -1490,6 +1496,15 @@ async function loadExecutiveAnalytics() {
             </div>
           </div>
         `;
+        } else {
+          cardsHtml += `
+            <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #6366f1; background: var(--card-bg, #1e293b); margin-top:8px; padding:24px; text-align:center;">
+              <div style="font-size:2rem; margin-bottom:8px;">🏫</div>
+              <h4 style="margin:0 0 6px; font-size:1.1rem; color:#818cf8;">No Basic School Class Streams Setup</h4>
+              <p style="margin:0 0 14px; font-size:0.85rem; opacity:0.7;">Class streams for Nursery, Kindergarten, Primary (Class 1–6) or JHS (1–3) have not been created yet for this basic school.</p>
+              <a class="btn sm" href="classes.html" style="background:#4f46e5; color:white; font-weight:600; text-decoration:none; padding:8px 18px; font-size:0.85rem; border-radius:6px; display:inline-block;">+ Add Basic Class Streams</a>
+            </div>
+          `;
         }
       } else if (!isBasicOnly && Array.isArray(ac.departments_matrix) && ac.departments_matrix.length > 0) {
         let matrixRows = ac.departments_matrix.map(d => {

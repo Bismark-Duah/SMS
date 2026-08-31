@@ -204,9 +204,10 @@ def get_executive_analytics(
     from datetime import datetime
     from sqlalchemy import func
 
+    valid_user = current_user if (isinstance(current_user, User) or (hasattr(current_user, 'id') and not str(type(current_user)).endswith("Depends'>"))) else None
     target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
-    if target_sch_id is None and isinstance(current_user, User) and current_user.school_id:
-        target_sch_id = current_user.school_id
+    if target_sch_id is None and valid_user and getattr(valid_user, 'school_id', None):
+        target_sch_id = valid_user.school_id
 
     # School Mode check
     if target_sch_id:
@@ -237,16 +238,16 @@ def get_executive_analytics(
 
     # Scores metrics
     scores_query = db.query(Score)
-    if school_id is not None:
-        scores_query = scores_query.join(Student, Student.id == Score.student_id).filter(Student.school_id == school_id)
+    if target_sch_id is not None:
+        scores_query = scores_query.join(Student, Student.id == Score.student_id).filter(Student.school_id == target_sch_id)
     
     all_scores = scores_query.all()
     total_scores_recorded = len(all_scores)
 
     # Total subject assignments across classes
     assignments_query = db.query(TeacherAssignment)
-    if school_id is not None:
-        assignments_query = assignments_query.join(User, User.id == TeacherAssignment.teacher_id).filter(User.school_id == school_id)
+    if target_sch_id is not None:
+        assignments_query = assignments_query.join(User, User.id == TeacherAssignment.teacher_id).filter(User.school_id == target_sch_id)
     all_assignments = assignments_query.all()
 
     # Calculate Assessment Submission Progress
@@ -255,6 +256,13 @@ def get_executive_analytics(
 
     # Grade Distribution Curve & School Pass Rate
     grade_dist = {"A1": 0, "B2_B3": 0, "C4_C6": 0, "D7_E8": 0, "F9": 0}
+    basic_grade_dist = {
+        "Grade_1": 0, "Grade_2": 0, "Grade_3": 0, "Grade_4": 0, 
+        "Grade_5": 0, "Grade_6": 0, "Grade_7": 0, "Grade_8": 0, "Grade_9": 0
+    }
+    proficiency_dist = {
+        "Advanced": 0, "Proficient": 0, "Approaching": 0, "Developing": 0, "Beginning": 0
+    }
     passing_scores_count = 0
     student_failing_counts = {} # student_id -> count of failing subjects
 
@@ -265,6 +273,7 @@ def get_executive_analytics(
         else:
             student_failing_counts[sc.student_id] = student_failing_counts.get(sc.student_id, 0) + 1
 
+        # SHS WASSCE Scale
         if total >= 75.0:
             grade_dist["A1"] += 1
         elif total >= 65.0:
@@ -276,24 +285,76 @@ def get_executive_analytics(
         else:
             grade_dist["F9"] += 1
 
+        # Basic NCCA / BECE 9-Point Scale & Proficiency Bands
+        if total >= 90.0:
+            basic_grade_dist["Grade_1"] += 1
+            proficiency_dist["Advanced"] += 1
+        elif total >= 80.0:
+            basic_grade_dist["Grade_2"] += 1
+            proficiency_dist["Advanced"] += 1
+        elif total >= 70.0:
+            basic_grade_dist["Grade_3"] += 1
+            proficiency_dist["Proficient"] += 1
+        elif total >= 60.0:
+            basic_grade_dist["Grade_4"] += 1
+            proficiency_dist["Proficient"] += 1
+        elif total >= 55.0:
+            basic_grade_dist["Grade_5"] += 1
+            proficiency_dist["Approaching"] += 1
+        elif total >= 50.0:
+            basic_grade_dist["Grade_6"] += 1
+            proficiency_dist["Approaching"] += 1
+        elif total >= 45.0:
+            basic_grade_dist["Grade_7"] += 1
+            proficiency_dist["Developing"] += 1
+        elif total >= 40.0:
+            basic_grade_dist["Grade_8"] += 1
+            proficiency_dist["Developing"] += 1
+        else:
+            basic_grade_dist["Grade_9"] += 1
+            proficiency_dist["Beginning"] += 1
+
     school_pass_rate_pct = round((passing_scores_count / max(1, total_scores_recorded)) * 100.0, 1) if total_scores_recorded > 0 else 0.0
     at_risk_students_count = sum(1 for cnt in student_failing_counts.values() if cnt >= 2)
 
     # Core Subjects Performance Matrix
-    core_subjects = ["English Language", "Core Mathematics", "Integrated Science", "Social Studies", "Mathematics", "Science"]
-    core_matrix = []
-    for c_name in ["English Language", "Core Mathematics", "Integrated Science", "Social Studies"]:
-        sub_scores = [sc for sc in all_scores if sc.subject and c_name.lower() in sc.subject.name.lower()]
-        if sub_scores:
-            totals = [(sc.class_score or 0.0) + (sc.exam_score or 0.0) for sc in sub_scores]
-            avg = round(sum(totals) / max(1, len(totals)), 1)
-            pass_cnt = sum(1 for t in totals if t >= 50.0)
-            pass_p = round((pass_cnt / max(1, len(totals))) * 100.0, 1)
-            core_matrix.append({"subject": c_name, "average": avg, "pass_rate": pass_p, "count": len(totals)})
-        else:
-            core_matrix.append({"subject": c_name, "average": 0.0, "pass_rate": 0.0, "count": 0})
+    if school_mode == "BASIC_ONLY":
+        basic_core_names = [
+            "English Language", "Mathematics", "Science", "Social Studies", 
+            "Computing", "Ghanaian Language", "Religious and Moral Education", 
+            "Creative Arts", "Career Technology", "French"
+        ]
+        core_matrix = []
+        for c_name in basic_core_names:
+            sub_scores = [
+                sc for sc in all_scores 
+                if sc.subject and any(
+                    k.lower() in sc.subject.name.lower() 
+                    for k in [c_name, c_name.replace(" Language", ""), c_name.replace("Religious and Moral Education", "RME"), c_name.replace("Science", "Natural Science"), c_name.replace("Social Studies", "Our World Our People")]
+                )
+            ]
+            if sub_scores:
+                totals = [(sc.class_score or 0.0) + (sc.exam_score or 0.0) for sc in sub_scores]
+                avg = round(sum(totals) / max(1, len(totals)), 1)
+                pass_cnt = sum(1 for t in totals if t >= 50.0)
+                pass_p = round((pass_cnt / max(1, len(totals))) * 100.0, 1)
+                core_matrix.append({"subject": c_name, "average": avg, "pass_rate": pass_p, "count": len(totals)})
+            else:
+                core_matrix.append({"subject": c_name, "average": 0.0, "pass_rate": 0.0, "count": 0})
+    else:
+        core_matrix = []
+        for c_name in ["English Language", "Core Mathematics", "Integrated Science", "Social Studies"]:
+            sub_scores = [sc for sc in all_scores if sc.subject and c_name.lower() in sc.subject.name.lower()]
+            if sub_scores:
+                totals = [(sc.class_score or 0.0) + (sc.exam_score or 0.0) for sc in sub_scores]
+                avg = round(sum(totals) / max(1, len(totals)), 1)
+                pass_cnt = sum(1 for t in totals if t >= 50.0)
+                pass_p = round((pass_cnt / max(1, len(totals))) * 100.0, 1)
+                core_matrix.append({"subject": c_name, "average": avg, "pass_rate": pass_p, "count": len(totals)})
+            else:
+                core_matrix.append({"subject": c_name, "average": 0.0, "pass_rate": 0.0, "count": 0})
 
-    # Department Compliance Matrix
+    # Department Compliance Matrix (SHS) & Classes Compliance Matrix (Basic)
     departments_matrix = []
     if school_mode != "BASIC_ONLY":
         depts = dept_query.all()
@@ -320,6 +381,38 @@ def get_executive_analytics(
                 "sba_completion_pct": pct,
                 "status": status_str
             })
+
+    # Class-by-Class SBA Matrix (for Basic School mode & Master Overview)
+    classes_matrix = []
+    all_class_sections = class_query.all()
+    for cls_item in all_class_sections:
+        fm_user = cls_item.form_master
+        fm_name = (getattr(fm_user, 'full_name', None) or fm_user.username) if fm_user else "Unassigned Class Teacher"
+        c_students = [s for s in student_query.all() if s.class_section_id == cls_item.id]
+        c_student_ids = {s.id for s in c_students}
+        c_scores = [sc for sc in all_scores if sc.student_id in c_student_ids]
+        
+        cls_assignments = [asgn for asgn in all_assignments if asgn.class_section_id == cls_item.id]
+        exp_c_scores = max(1, len(c_students) * max(1, len(cls_assignments))) if cls_assignments else max(1, len(c_students))
+        c_sba_pct = round(min(100.0, (len(c_scores) / exp_c_scores) * 100.0), 1) if c_scores else 0.0
+        
+        c_pass_cnt = sum(1 for sc in c_scores if (sc.class_score or 0.0) + (sc.exam_score or 0.0) >= 50.0)
+        c_pass_rate = round((c_pass_cnt / max(1, len(c_scores))) * 100.0, 1) if c_scores else 0.0
+        
+        status_str = "COMPLETE" if c_sba_pct >= 100 else ("IN_PROGRESS" if c_sba_pct > 0 else "PENDING")
+        stage_title = cls_item.stage.name if cls_item.stage else "Basic"
+        
+        classes_matrix.append({
+            "id": cls_item.id,
+            "name": cls_item.name,
+            "stage_name": stage_title,
+            "class_teacher": fm_name,
+            "student_count": len(c_students),
+            "subjects_count": len(cls_assignments),
+            "sba_completion_pct": c_sba_pct,
+            "pass_rate_pct": c_pass_rate,
+            "status": status_str
+        })
 
     # Pending Teacher Submissions Roster (Top 6 Unsubmitted allocations)
     pending_submissions = []
@@ -354,8 +447,8 @@ def get_executive_analytics(
         Student.is_active == True,
         ExeatRecord.status.in_(["Departed", "Away", "Approved"])
     )
-    if school_id is not None:
-        away_exeats_query = away_exeats_query.filter(Student.school_id == school_id)
+    if target_sch_id is not None:
+        away_exeats_query = away_exeats_query.filter(Student.school_id == target_sch_id)
 
     away_exeats = away_exeats_query.all()
     currently_away_exeat = len(away_exeats) if school_mode != "BASIC_ONLY" else 0
@@ -399,8 +492,8 @@ def get_executive_analytics(
             ((StudentHealth.chronic_conditions.isnot(None)) & (StudentHealth.chronic_conditions != ""))
         )
     )
-    if school_id is not None:
-        health_query = health_query.filter(Student.school_id == school_id)
+    if target_sch_id is not None:
+        health_query = health_query.filter(Student.school_id == target_sch_id)
 
     health_records = health_query.all()
     medical_flags_count = len(health_records)
@@ -429,8 +522,8 @@ def get_executive_analytics(
     disc_query = db.query(DisciplineRecord).join(Student, Student.id == DisciplineRecord.student_id).filter(
         DisciplineRecord.action_taken.is_(None)
     )
-    if school_id is not None:
-        disc_query = disc_query.filter(Student.school_id == school_id)
+    if target_sch_id is not None:
+        disc_query = disc_query.filter(Student.school_id == target_sch_id)
 
     disc_records = disc_query.order_by(DisciplineRecord.id.desc()).all()
     active_discipline_incidents = len(disc_records)
@@ -521,7 +614,7 @@ def get_executive_analytics(
             "subjects_count": len(getattr(d, 'subjects', []))
         })
 
-    # Admissions & CSSPS Funnel
+    # Admissions Funnel & CRF Tracking
     all_active_students = student_query.filter(Student.is_active == True).all()
     total_students_enrolled = len(all_active_students)
     
@@ -531,21 +624,61 @@ def get_executive_analytics(
     if (placed_count + form_completed_count + fully_registered_count) == 0 and total_students_enrolled > 0:
         fully_registered_count = total_students_enrolled
 
-    # Form Demographics
-    form1_boys = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 1 and (getattr(s, 'gender', 'M') or '').upper().startswith('M'))
-    form1_girls = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 1 and (getattr(s, 'gender', 'F') or '').upper().startswith('F'))
-    
-    form2_boys = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 2 and (getattr(s, 'gender', 'M') or '').upper().startswith('M'))
-    form2_girls = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 2 and (getattr(s, 'gender', 'F') or '').upper().startswith('F'))
+    # GES Cumulative Record Folder (CRF) Tracking for Basic Education
+    crf_completed_count = 0
+    for s in all_active_students:
+        has_crf = any([
+            getattr(s, 'family_background_notes', None),
+            getattr(s, 'personality_traits', None),
+            getattr(s, 'teacher_observations', None),
+            getattr(s, 'co_curricular_activities', None),
+            getattr(s, 'hobbies_talents', None),
+            getattr(s, 'leadership_notes', None)
+        ])
+        if has_crf:
+            crf_completed_count += 1
+    crf_completion_pct = round((crf_completed_count / max(1, len(all_active_students))) * 100.0, 1) if all_active_students else 0.0
 
-    form3_boys = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 3 and (getattr(s, 'gender', 'M') or '').upper().startswith('M'))
-    form3_girls = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 3 and (getattr(s, 'gender', 'F') or '').upper().startswith('F'))
+    # Demographics (Stage-based for Basic School, Form-based for SHS)
+    if school_mode == "BASIC_ONLY":
+        kg_boys, kg_girls = 0, 0
+        pri_boys, pri_girls = 0, 0
+        jhs_boys, jhs_girls = 0, 0
+        for s in all_active_students:
+            c_name = (s.class_section.name if s.class_section else (s.class_name or "")).lower()
+            is_male = (getattr(s, 'gender', 'M') or '').upper().startswith('M') or (getattr(s, 'gender', 'M') or '').upper() == 'BOY'
+            if any(k in c_name for k in ['kg', 'nursery', 'creche', 'kindergarten', 'early']):
+                if is_male: kg_boys += 1
+                else: kg_girls += 1
+            elif any(k in c_name for k in ['jhs', 'basic 7', 'basic 8', 'basic 9']) or (getattr(s, 'form', 0) in [1, 2, 3] and 'class' not in c_name and 'primary' not in c_name and 'basic 1' not in c_name and 'basic 2' not in c_name and 'basic 3' not in c_name and 'basic 4' not in c_name and 'basic 5' not in c_name and 'basic 6' not in c_name):
+                if is_male: jhs_boys += 1
+                else: jhs_girls += 1
+            else:
+                if is_male: pri_boys += 1
+                else: pri_girls += 1
+        
+        stage_demographics = [
+            {"stage": "Early Childhood (Nursery & KG)", "form": "Early Childhood", "boys": kg_boys, "girls": kg_girls, "total": kg_boys + kg_girls},
+            {"stage": "Primary School (Class 1–6)", "form": "Primary School", "boys": pri_boys, "girls": pri_girls, "total": pri_boys + pri_girls},
+            {"stage": "Junior High School (JHS 1–3)", "form": "Junior High School", "boys": jhs_boys, "girls": jhs_girls, "total": jhs_boys + jhs_girls},
+        ]
+        form_demographics = stage_demographics
+    else:
+        form1_boys = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 1 and (getattr(s, 'gender', 'M') or '').upper().startswith('M'))
+        form1_girls = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 1 and (getattr(s, 'gender', 'F') or '').upper().startswith('F'))
+        
+        form2_boys = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 2 and (getattr(s, 'gender', 'M') or '').upper().startswith('M'))
+        form2_girls = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 2 and (getattr(s, 'gender', 'F') or '').upper().startswith('F'))
 
-    form_demographics = [
-        {"form": "Form 1", "boys": form1_boys, "girls": form1_girls, "total": form1_boys + form1_girls},
-        {"form": "Form 2", "boys": form2_boys, "girls": form2_girls, "total": form2_boys + form2_girls},
-        {"form": "Form 3", "boys": form3_boys, "girls": form3_girls, "total": form3_boys + form3_girls},
-    ]
+        form3_boys = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 3 and (getattr(s, 'gender', 'M') or '').upper().startswith('M'))
+        form3_girls = sum(1 for s in all_active_students if getattr(s, 'form', 1) == 3 and (getattr(s, 'gender', 'F') or '').upper().startswith('F'))
+
+        form_demographics = [
+            {"stage": "Form 1", "form": "Form 1", "boys": form1_boys, "girls": form1_girls, "total": form1_boys + form1_girls},
+            {"stage": "Form 2", "form": "Form 2", "boys": form2_boys, "girls": form2_girls, "total": form2_boys + form2_girls},
+            {"stage": "Form 3", "form": "Form 3", "boys": form3_boys, "girls": form3_girls, "total": form3_boys + form3_girls},
+        ]
+        stage_demographics = form_demographics
 
     # Institutional Broadcast SMS Stats
     total_broadcast_messages = 0
@@ -560,8 +693,8 @@ def get_executive_analytics(
     from ..models import ActivityAuditLog
     try:
         audit_query = db.query(ActivityAuditLog)
-        if school_id is not None:
-            audit_query = audit_query.filter(ActivityAuditLog.school_id == school_id)
+        if target_sch_id is not None:
+            audit_query = audit_query.filter(ActivityAuditLog.school_id == target_sch_id)
         audit_records = audit_query.order_by(ActivityAuditLog.timestamp.desc()).limit(6).all()
         for al in audit_records:
             ts_str = al.timestamp.strftime("%d %b, %H:%M") if al.timestamp else "Recent"
@@ -578,9 +711,9 @@ def get_executive_analytics(
 
     # 4. HOD Departmental Analytics
     dept = None
-    if current_user:
+    if valid_user:
         dept = db.query(Department).filter(
-            (Department.hod_id == current_user.id) | (Department.id == getattr(current_user, 'department_id', None))
+            (Department.hod_id == valid_user.id) | (Department.id == getattr(valid_user, 'department_id', None))
         ).first()
     if not dept and school_mode != "BASIC_ONLY":
         dept = dept_query.first()
@@ -656,8 +789,8 @@ def get_executive_analytics(
 
     # 5. Form Master Class Analytics
     cls = None
-    if current_user:
-        cls = db.query(ClassSection).filter(ClassSection.form_master_id == current_user.id).first()
+    if valid_user:
+        cls = db.query(ClassSection).filter(ClassSection.form_master_id == valid_user.id).first()
     if not cls:
         cls = class_query.first()
 
@@ -749,7 +882,7 @@ def get_executive_analytics(
     today_periods = []
     t_sba_overall_pct = 0.0
     
-    t_user_id = current_user.id if current_user else None
+    t_user_id = valid_user.id if valid_user else None
     t_assignments = db.query(TeacherAssignment).filter(TeacherAssignment.teacher_id == t_user_id).all() if t_user_id else []
     if not t_assignments and all_assignments:
         first_t_id = all_assignments[0].teacher_id
@@ -826,13 +959,13 @@ def get_executive_analytics(
 
     # 7. Housemaster / Housemistress Personal House Analytics
     target_house = None
-    if current_user:
+    if valid_user:
         target_house = db.query(House).filter(
-            (House.house_master_id == current_user.id) |
-            (House.assistant_house_master_id == current_user.id) |
-            (House.senior_in_charge_id == current_user.id) |
-            (House.house_master_girls_id == current_user.id) |
-            (House.assistant_house_master_girls_id == current_user.id)
+            (House.house_master_id == valid_user.id) |
+            (House.assistant_house_master_id == valid_user.id) |
+            (House.senior_in_charge_id == valid_user.id) |
+            (House.house_master_girls_id == valid_user.id) |
+            (House.assistant_house_master_girls_id == valid_user.id)
         ).first()
     if not target_house and school_mode != "BASIC_ONLY":
         target_house = house_query.first()
@@ -1017,10 +1150,10 @@ def get_executive_analytics(
 
     # 11. Student & Parent Stakeholder Portals
     st_record = None
-    if current_user:
-        st_record = db.query(Student).filter(Student.parent_id == current_user.id).first()
-        if not st_record:
-            st_record = db.query(Student).filter(Student.student_code == current_user.username).first()
+    if valid_user:
+        st_record = db.query(Student).filter(Student.parent_id == valid_user.id).first()
+        if not st_record and getattr(valid_user, 'username', None):
+            st_record = db.query(Student).filter(Student.student_code == valid_user.username).first()
     if not st_record:
         st_record = db.query(Student).filter(Student.is_active == True).first()
 
@@ -1071,9 +1204,12 @@ def get_executive_analytics(
         "school_mode": school_mode,
         "academic": {
             "sba_completion_pct": sba_completion_pct,
+            "crf_completion_pct": crf_completion_pct,
             "school_pass_rate_pct": school_pass_rate_pct,
             "at_risk_students_count": at_risk_students_count,
             "grade_distribution": grade_dist,
+            "basic_grade_distribution": basic_grade_dist,
+            "proficiency_distribution": proficiency_dist,
             "core_subjects_performance": core_matrix,
             "pending_submissions": pending_submissions[:6],
             "total_teachers": teachers_count,
@@ -1081,7 +1217,8 @@ def get_executive_analytics(
             "total_classes": classes_count,
             "pending_hod_approvals": pending_hod_approvals,
             "published_classes_count": published_classes_count,
-            "departments_matrix": departments_matrix
+            "departments_matrix": departments_matrix,
+            "classes_matrix": classes_matrix
         },
         "domestic": {
             "total_boarders": total_boarders,
@@ -1105,6 +1242,7 @@ def get_executive_analytics(
             "active_users_count": active_users_count,
             "inactive_users_count": inactive_users_count,
             "total_students_enrolled": total_students_enrolled,
+            "crf_completion_pct": crf_completion_pct,
             "admissions_funnel": {
                 "placed": placed_count,
                 "form_completed": form_completed_count,
@@ -1112,6 +1250,7 @@ def get_executive_analytics(
                 "total": total_students_enrolled
             },
             "form_demographics": form_demographics,
+            "stage_demographics": stage_demographics,
             "departments_staffing": departments_staffing,
             "total_broadcast_messages": total_broadcast_messages,
             "recent_audit_logs": recent_audit_logs,

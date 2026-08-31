@@ -324,13 +324,31 @@ function renderDailyShortcuts(activeRole) {
       { label: '💬 Message Form / House Master', href: 'messaging.html' }
     ];
   } else {
+    // Admin / Super Admin / Head Executive
+    const F_init = (window.SchoolFeatures && window.SchoolFeatures.version)
+      ? window.SchoolFeatures
+      : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+    const isBasicInit = F_init ? F_init.isBasicOnly : ((sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode')) === 'BASIC_ONLY');
+
     if (heading) heading.innerHTML = '⚡ Daily Operations Shortcuts';
-    shortcuts = [
-      { label: '⚡ Mark Attendance Today', href: 'attendance.html' },
-      { label: '✍️ Record Class Marks', href: 'bulk-entry.html' },
-      { label: '💳 Log Student Payment', href: 'fees.html' },
-      { label: '💬 Broadcast Parent SMS', href: 'messaging.html' }
-    ];
+    if (isBasicInit) {
+      shortcuts = [
+        { label: '⚡ Mark Daily Attendance', href: 'attendance.html' },
+        { label: '✍️ Record Class SBA Scores', href: 'bulk-entry.html' },
+        { label: '📂 Cumulative Record Folders', href: 'cumulative-record.html' },
+        { label: '📜 Master Class Broadsheet', href: 'broadsheet.html' },
+        { label: '🖨️ Terminal Pupil Reports', href: 'reports.html' },
+        { label: '💳 Log Tuition & Feeding Fees', href: 'fees.html' },
+        { label: '💬 Broadcast Parent SMS', href: 'messaging.html' }
+      ];
+    } else {
+      shortcuts = [
+        { label: '⚡ Mark Attendance Today', href: 'attendance.html' },
+        { label: '✍️ Record Class Marks', href: 'bulk-entry.html' },
+        { label: '💳 Log Student Payment', href: 'fees.html' },
+        { label: '💬 Broadcast Parent SMS', href: 'messaging.html' }
+      ];
+    }
   }
 
   // Filter shortcuts by SchoolFeatures
@@ -338,9 +356,9 @@ function renderDailyShortcuts(activeRole) {
     ? window.SchoolFeatures
     : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
 
-  const isBasicOnly = F ? F.isBasicOnly : (localStorage.getItem('school_mode') === 'BASIC_ONLY');
-  const isShsOnly   = F ? F.isShsOnly   : (localStorage.getItem('school_mode') === 'SHS_ONLY');
-  const isBoarding  = F ? F.isBoarding  : (localStorage.getItem('boarding_status') !== 'DAY_ONLY');
+  const isBasicOnly = F ? F.isBasicOnly : ((sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode')) === 'BASIC_ONLY');
+  const isShsOnly   = F ? F.isShsOnly   : ((sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode')) === 'SHS_ONLY');
+  const isBoarding  = F ? F.isBoarding  : ((sessionStorage.getItem('boarding_status') || localStorage.getItem('boarding_status')) !== 'DAY_ONLY');
 
   shortcuts = shortcuts.filter(s => {
     const href = (s.href || '').toLowerCase();
@@ -540,6 +558,29 @@ async function loadVoucherRevenueStat() {
   } catch (_) {}
 }
 
+// ── Stats: cumulative record folders (basic education) ──────────────────────
+async function loadCrfStat() {
+  const cardEl = document.getElementById('statCrfCard');
+  if (!cardEl) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/academic/executive-analytics`, {
+      headers: getDashboardHeaders(),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const ac = data.academic || {};
+    const crfPct = ac.crf_completion_pct !== undefined ? ac.crf_completion_pct : 0;
+    const el = document.getElementById('statCrf');
+    const subEl = document.getElementById('statCrfSub');
+    const progEl = document.getElementById('progCrf');
+
+    if (el) animateCountUp(el, crfPct, '%');
+    if (subEl) subEl.textContent = 'Cumulative Record Folders';
+    if (progEl) setTimeout(() => { progEl.style.width = `${Math.min(100, crfPct)}%`; }, 150);
+  } catch (_) {}
+}
+
 // ── Stats: boarding houses ───────────────────────────────────────────────────
 async function loadHousesStat() {
   const cardEl = document.getElementById('statHousesCard');
@@ -547,7 +588,7 @@ async function loadHousesStat() {
     ? window.SchoolFeatures
     : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
 
-  const isBoarding = F ? F.showBoardingKpi : ((sessionStorage.getItem('boarding_status') || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
+  const isBoarding = F ? F.showBoardingKpi : (((sessionStorage.getItem('boarding_status') || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY') && (sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode')) !== 'BASIC_ONLY');
   const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || '').toLowerCase();
 
   if (!isBoarding || ['assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_admin', 'assistant_head_admin'].includes(activeRole)) {
@@ -602,9 +643,17 @@ async function loadDashboardStats() {
   const isAdminHead = ['assistant_headmaster_admin', 'assistant_head_admin'].includes(activeRole);
   const isFinancialExecutive = ['admin', 'super_admin', 'headmaster', 'headmistress', 'bursar', 'accountant'].includes(activeRole);
 
+  const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+    ? window.SchoolFeatures
+    : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+  const isBasicOnly = F ? F.isBasicOnly : ((sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode') || 'COMBINED').toUpperCase() === 'BASIC_ONLY');
+  const isBoarding = F ? F.isBoarding : ((sessionStorage.getItem('boarding_status') || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() !== 'DAY_ONLY');
+
   const feesCard = document.getElementById('statFeesCard');
   const housesCard = document.getElementById('statHousesCard');
   const sbaCard = document.getElementById('statSbaCard');
+  const crfCard = document.getElementById('statCrfCard');
   const passRateCard = document.getElementById('statPassRateCard');
   const atRiskCard = document.getElementById('statAtRiskCard');
   const boardersCard = document.getElementById('statBoardersCard');
@@ -617,7 +666,7 @@ async function loadDashboardStats() {
   const vouchersRevenueCard = document.getElementById('statVouchersRevenueCard');
 
   if (vouchersRevenueCard) {
-    vouchersRevenueCard.style.display = isFinancialExecutive ? 'flex' : 'none';
+    vouchersRevenueCard.style.display = (!isBasicOnly && isFinancialExecutive) ? 'flex' : 'none';
   }
 
   if (isAcademicHead) {
@@ -631,24 +680,27 @@ async function loadDashboardStats() {
     if (usersCard) usersCard.style.display = 'none';
     if (broadcastsCard) broadcastsCard.style.display = 'none';
     if (sbaCard) sbaCard.style.display = 'flex';
+    if (crfCard) crfCard.style.display = isBasicOnly ? 'flex' : 'none';
     if (passRateCard) passRateCard.style.display = 'flex';
     if (atRiskCard) atRiskCard.style.display = 'flex';
   } else if (isDomesticHead) {
     if (feesCard) feesCard.style.display = 'none';
     if (sbaCard) sbaCard.style.display = 'none';
+    if (crfCard) crfCard.style.display = 'none';
     if (passRateCard) passRateCard.style.display = 'none';
     if (atRiskCard) atRiskCard.style.display = 'none';
     if (staffCard) staffCard.style.display = 'none';
     if (usersCard) usersCard.style.display = 'none';
     if (broadcastsCard) broadcastsCard.style.display = 'none';
-    if (boardersCard) boardersCard.style.display = 'flex';
-    if (exeatCard) exeatCard.style.display = 'flex';
+    if (boardersCard) boardersCard.style.display = (!isBasicOnly && isBoarding) ? 'flex' : 'none';
+    if (exeatCard) exeatCard.style.display = (!isBasicOnly && isBoarding) ? 'flex' : 'none';
     if (medicalCard) medicalCard.style.display = 'flex';
     if (disciplineCard) disciplineCard.style.display = 'flex';
-    if (housesCard) housesCard.style.display = 'flex';
+    if (housesCard) housesCard.style.display = (!isBasicOnly && isBoarding) ? 'flex' : 'none';
   } else if (isAdminHead) {
     if (feesCard) feesCard.style.display = 'none';
     if (sbaCard) sbaCard.style.display = 'none';
+    if (crfCard) crfCard.style.display = 'none';
     if (passRateCard) passRateCard.style.display = 'none';
     if (atRiskCard) atRiskCard.style.display = 'none';
     if (boardersCard) boardersCard.style.display = 'none';
@@ -670,6 +722,7 @@ async function loadDashboardStats() {
     if (usersCard) usersCard.style.display = 'none';
     if (broadcastsCard) broadcastsCard.style.display = 'none';
     if (sbaCard) sbaCard.style.display = 'flex';
+    if (crfCard) crfCard.style.display = 'none';
     if (passRateCard) passRateCard.style.display = 'flex';
     if (atRiskCard) atRiskCard.style.display = 'flex';
   } else if (['form_master', 'form_mistress'].includes(activeRole)) {
@@ -683,6 +736,7 @@ async function loadDashboardStats() {
     if (usersCard) usersCard.style.display = 'none';
     if (broadcastsCard) broadcastsCard.style.display = 'none';
     if (sbaCard) sbaCard.style.display = 'flex';
+    if (crfCard) crfCard.style.display = isBasicOnly ? 'flex' : 'none';
     if (passRateCard) passRateCard.style.display = 'flex';
     if (atRiskCard) atRiskCard.style.display = 'flex';
   } else if (activeRole === 'teacher') {
@@ -696,35 +750,38 @@ async function loadDashboardStats() {
     if (usersCard) usersCard.style.display = 'none';
     if (broadcastsCard) broadcastsCard.style.display = 'none';
     if (sbaCard) sbaCard.style.display = 'flex';
+    if (crfCard) crfCard.style.display = 'none';
     if (passRateCard) passRateCard.style.display = 'flex';
     if (atRiskCard) atRiskCard.style.display = 'flex';
   } else if (['house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress'].includes(activeRole)) {
     if (feesCard) feesCard.style.display = 'none';
     if (sbaCard) sbaCard.style.display = 'none';
+    if (crfCard) crfCard.style.display = 'none';
     if (passRateCard) passRateCard.style.display = 'none';
     if (atRiskCard) atRiskCard.style.display = 'none';
     if (staffCard) staffCard.style.display = 'none';
     if (usersCard) usersCard.style.display = 'none';
     if (broadcastsCard) broadcastsCard.style.display = 'none';
-    if (boardersCard) boardersCard.style.display = 'flex';
-    if (exeatCard) exeatCard.style.display = 'flex';
+    if (boardersCard) boardersCard.style.display = (!isBasicOnly && isBoarding) ? 'flex' : 'none';
+    if (exeatCard) exeatCard.style.display = (!isBasicOnly && isBoarding) ? 'flex' : 'none';
     if (medicalCard) medicalCard.style.display = 'flex';
     if (disciplineCard) disciplineCard.style.display = 'flex';
-    if (housesCard) housesCard.style.display = 'flex';
+    if (housesCard) housesCard.style.display = (!isBasicOnly && isBoarding) ? 'flex' : 'none';
   } else {
+    // Admin / Super Admin / Head Executive
     if (feesCard) feesCard.style.display = 'flex';
-    if (sbaCard) sbaCard.style.display = 'none';
-    if (passRateCard) passRateCard.style.display = 'none';
-    if (atRiskCard) atRiskCard.style.display = 'none';
-    if (boardersCard) boardersCard.style.display = 'none';
-    if (exeatCard) exeatCard.style.display = 'none';
+    if (sbaCard) sbaCard.style.display = isBasicOnly ? 'flex' : 'none';
+    if (crfCard) crfCard.style.display = isBasicOnly ? 'flex' : 'none';
+    if (passRateCard) passRateCard.style.display = isBasicOnly ? 'flex' : 'none';
+    if (atRiskCard) atRiskCard.style.display = isBasicOnly ? 'flex' : 'none';
+    if (boardersCard) boardersCard.style.display = (!isBasicOnly && isBoarding) ? 'flex' : 'none';
+    if (exeatCard) exeatCard.style.display = (!isBasicOnly && isBoarding) ? 'flex' : 'none';
     if (medicalCard) medicalCard.style.display = 'none';
     if (disciplineCard) disciplineCard.style.display = 'none';
-    if (staffCard) staffCard.style.display = 'none';
+    if (staffCard) staffCard.style.display = isBasicOnly ? 'flex' : 'none';
     if (usersCard) usersCard.style.display = 'none';
-    if (broadcastsCard) broadcastsCard.style.display = 'none';
-    const isBoardingSchool = ((sessionStorage.getItem('boarding_status') || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY') && (sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode')) !== 'BASIC_ONLY';
-    if (housesCard) housesCard.style.display = isBoardingSchool ? 'flex' : 'none';
+    if (broadcastsCard) broadcastsCard.style.display = isBasicOnly ? 'flex' : 'none';
+    if (housesCard) housesCard.style.display = (!isBasicOnly && isBoarding) ? 'flex' : 'none';
   }
 
   // All load in parallel — each handles its own errors
@@ -735,8 +792,9 @@ async function loadDashboardStats() {
     loadCurrentTerm(),
     loadAlertsStat(),
     loadFeesStat(),
-    loadHousesStat(),
-    isFinancialExecutive ? loadVoucherRevenueStat() : Promise.resolve(),
+    (!isBasicOnly && isBoarding) ? loadHousesStat() : Promise.resolve(),
+    (isBasicOnly) ? loadCrfStat() : Promise.resolve(),
+    (!isBasicOnly && isFinancialExecutive) ? loadVoucherRevenueStat() : Promise.resolve(),
   ]);
 
   // Remove skeleton loading shimmer from all stat cards
@@ -865,6 +923,13 @@ async function loadExecutiveAnalytics() {
 
     section.style.display = 'block';
 
+    const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+      ? window.SchoolFeatures
+      : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+    const isBasicOnly = F ? F.isBasicOnly : ((sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode') || data.school_mode || 'COMBINED').toUpperCase() === 'BASIC_ONLY');
+    const isBoarding  = F ? F.isBoarding : ((sessionStorage.getItem('boarding_status') || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() !== 'DAY_ONLY');
+
     const isAcademicHead = ['assistant_headmaster_academic', 'assistant_head_academic'].includes(activeRole);
     const isDomesticHead = ['assistant_headmaster_domestic', 'assistant_head_domestic', 'senior_housemaster', 'senior_housemistress'].includes(activeRole);
     const isAdminHead = ['assistant_headmaster_admin', 'assistant_head_admin'].includes(activeRole);
@@ -880,15 +945,15 @@ async function loadExecutiveAnalytics() {
     const isSuperOrHead = ['admin', 'super_admin', 'headmaster', 'headmistress'].includes(activeRole);
 
     const showAcademic = isAcademicHead || isSuperOrHead;
-    const showDomestic = isDomesticHead || isSuperOrHead;
+    const showDomestic = !isBasicOnly && isBoarding && (isDomesticHead || isSuperOrHead);
     const showAdmin = isAdminHead || isSuperOrHead;
     const showHOD = isHOD;
     const showFormMaster = isFormMaster;
     const showTeacher = isTeacher;
-    const showHouseMaster = isHouseMaster;
+    const showHouseMaster = !isBasicOnly && isBoarding && isHouseMaster;
     const showBursar = isBursar;
     const showStorekeeper = isStorekeeper;
-    const showSecurity = isSecurity;
+    const showSecurity = !isBasicOnly && isBoarding && isSecurity;
     const showStudent = isStudent;
     const showParent = isParent;
 
@@ -1139,19 +1204,24 @@ async function loadExecutiveAnalytics() {
 
     // ── Academic Executive Command Center ─────────────────────────────────────
     if (showAcademic) {
+      const academicTitle = isBasicOnly 
+        ? '<span>📚</span> Basic Education Continuous Assessment (SBA) Pipeline'
+        : '<span>📚</span> Academic Quality & Assessment Pipeline';
+      const academicBadge = isBasicOnly ? 'BASIC EDUCATION' : 'ACADEMIC HEAD';
+      
       // 1. Academic Quality & Assessment Overview Card
       cardsHtml += `
         <div class="card" style="border-left: 4px solid #818cf8; background: var(--card-bg, #1e293b);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h4 style="margin:0; font-size:1.05rem; color:#818cf8; display:flex; align-items:center; gap:8px;">
-              <span>📚</span> Academic Quality & Assessment Pipeline
+              ${academicTitle}
             </h4>
-            <span style="font-size:0.75rem; background:rgba(99,102,241,0.2); color:#818cf8; padding:2px 8px; border-radius:12px; font-weight:700;">ACADEMIC HEAD</span>
+            <span style="font-size:0.75rem; background:rgba(99,102,241,0.2); color:#818cf8; padding:2px 8px; border-radius:12px; font-weight:700;">${academicBadge}</span>
           </div>
 
           <div style="margin-bottom:14px;">
             <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
-              <span>Continuous Assessment (SBA) Entry Progress</span>
+              <span>Continuous Assessment (SBA 50% / 50% Exam) Entry</span>
               <strong style="color:#818cf8;">${ac.sba_completion_pct}%</strong>
             </div>
             <div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;">
@@ -1163,17 +1233,17 @@ async function loadExecutiveAnalytics() {
             <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
               <span style="opacity:0.7; font-size:0.75rem;">Institutional Pass Rate:</span><br/>
               <strong style="font-size:1.15rem; color:${ac.school_pass_rate_pct>=50?'#4ade80':'#f87171'};">${ac.school_pass_rate_pct}%</strong>
-              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Across all core subjects</div>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Across core curriculum</div>
             </div>
             <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
-              <span style="opacity:0.7; font-size:0.75rem;">At-Risk Students:</span><br/>
-              <strong style="font-size:1.15rem; color:${ac.at_risk_students_count>0?'#f87171':'#4ade80'};">${ac.at_risk_students_count} Students</strong>
-              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Failing 2+ subjects</div>
+              <span style="opacity:0.7; font-size:0.75rem;">At-Risk Students / Pupils:</span><br/>
+              <strong style="font-size:1.15rem; color:${ac.at_risk_students_count>0?'#f87171':'#4ade80'};">${ac.at_risk_students_count} Flagged</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Failing 2+ core subjects</div>
             </div>
             <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
-              <span style="opacity:0.7; font-size:0.75rem;">Pending HOD Approvals:</span><br/>
-              <strong style="font-size:1.15rem; color:${ac.pending_hod_approvals>0?'#f59e0b':'#4ade80'};">${ac.pending_hod_approvals} Sheets</strong>
-              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Awaiting verification</div>
+              <span style="opacity:0.7; font-size:0.75rem;">${isBasicOnly ? 'CRF Record Folders:' : 'Pending HOD Approvals:'}</span><br/>
+              <strong style="font-size:1.15rem; color:${isBasicOnly ? '#a78bfa' : (ac.pending_hod_approvals>0?'#f59e0b':'#4ade80')};">${isBasicOnly ? ((ac.crf_completion_pct !== undefined ? ac.crf_completion_pct : 100) + '%') : (ac.pending_hod_approvals + ' Sheets')}</strong>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">${isBasicOnly ? 'GES Cumulative Folders' : 'Awaiting verification'}</div>
             </div>
             <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
               <span style="opacity:0.7; font-size:0.75rem;">Published Class Reports:</span><br/>
@@ -1184,8 +1254,75 @@ async function loadExecutiveAnalytics() {
         </div>
       `;
 
-      // 2. Institutional Grade Distribution Chart (WASSCE / SHS & Basic Curve)
-      if (ac.grade_distribution) {
+      // 2. Institutional Grade Distribution Chart (Basic NCCA / BECE or SHS WASSCE)
+      if (isBasicOnly && (ac.basic_grade_distribution || ac.proficiency_distribution)) {
+        const bgd = ac.basic_grade_distribution || {};
+        const totalBGrades = Object.values(bgd).reduce((a, b) => a + b, 0) || 1;
+        const calcBPct = (cnt) => totalBGrades > 0 ? Math.round((cnt / totalBGrades) * 100) : 0;
+        const advCount = (bgd.Grade_1 || 0) + (bgd.Grade_2 || 0);
+        const profCount = (bgd.Grade_3 || 0) + (bgd.Grade_4 || 0);
+        const appCount = (bgd.Grade_5 || 0) + (bgd.Grade_6 || 0);
+        const devCount = (bgd.Grade_7 || 0) + (bgd.Grade_8 || 0);
+        const begCount = (bgd.Grade_9 || 0);
+
+        cardsHtml += `
+          <div class="card" style="border-left: 4px solid #10b981; background: var(--card-bg, #1e293b);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <h4 style="margin:0; font-size:1.05rem; color:#10b981; display:flex; align-items:center; gap:8px;">
+                <span>📈</span> NCCA Basic & BECE Grade Distribution
+              </h4>
+              <span style="font-size:0.75rem; background:rgba(16,185,129,0.2); color:#34d399; padding:2px 8px; border-radius:12px; font-weight:700;">BECE / NCCA SCALE</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#34d399;">🌟 Grade 1 & 2: Advanced (80–100%)</span>
+                  <strong>${advCount} (${calcBPct(advCount)}%)</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${calcBPct(advCount)}%; height:100%; background:#10b981;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#38bdf8;">📘 Grade 3 & 4: Proficient (60–79%)</span>
+                  <strong>${profCount} (${calcBPct(profCount)}%)</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${calcBPct(profCount)}%; height:100%; background:#0284c7;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#818cf8;">📗 Grade 5 & 6: Approaching Proficiency (50–59%)</span>
+                  <strong>${appCount} (${calcBPct(appCount)}%)</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${calcBPct(appCount)}%; height:100%; background:#6366f1;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#fbbf24;">📙 Grade 7 & 8: Developing (40–49%)</span>
+                  <strong>${devCount} (${calcBPct(devCount)}%)</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${calcBPct(devCount)}%; height:100%; background:#f59e0b;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                  <span style="font-weight:600; color:#f87171;">🚨 Grade 9: Beginning / Remedial (Below 40%)</span>
+                  <strong style="color:#f87171;">${begCount} (${calcBPct(begCount)}%)</strong>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${calcBPct(begCount)}%; height:100%; background:#ef4444;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (ac.grade_distribution) {
         const gd = ac.grade_distribution;
         const totalGrades = (gd.A1 || 0) + (gd.B2_B3 || 0) + (gd.C4_C6 || 0) + (gd.D7_E8 || 0) + (gd.F9 || 0);
         const calcPct = (cnt) => totalGrades > 0 ? Math.round((cnt / totalGrades) * 100) : 0;
@@ -1196,7 +1333,7 @@ async function loadExecutiveAnalytics() {
               <h4 style="margin:0; font-size:1.05rem; color:#10b981; display:flex; align-items:center; gap:8px;">
                 <span>📈</span> Institutional Grade Distribution
               </h4>
-              <span style="font-size:0.75rem; background:rgba(16,185,129,0.2); color:#34d399; padding:2px 8px; border-radius:12px; font-weight:700;">WASSCE / BECE SCALE</span>
+              <span style="font-size:0.75rem; background:rgba(16,185,129,0.2); color:#34d399; padding:2px 8px; border-radius:12px; font-weight:700;">WASSCE SCALE</span>
             </div>
             <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
               <div>
@@ -1255,7 +1392,7 @@ async function loadExecutiveAnalytics() {
           const passColor = cs.pass_rate >= 70 ? '#4ade80' : (cs.pass_rate >= 50 ? '#fbbf24' : '#f87171');
           return `
             <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06);">
-              <div style="font-weight:600; font-size:0.8rem; color:#f8fafc; margin-bottom:4px;">${cs.subject}</div>
+              <div style="font-weight:600; font-size:0.8rem; color:#f8fafc; margin-bottom:4px;">${escapeHtml(cs.subject)}</div>
               <div style="display:flex; justify-content:space-between; align-items:baseline;">
                 <span style="font-size:1.15rem; font-weight:800; color:#38bdf8;">${cs.average > 0 ? cs.average + '%' : '—'}</span>
                 <span style="font-size:0.75rem; font-weight:700; color:${passColor};">${cs.pass_rate > 0 ? cs.pass_rate + '% Pass' : 'No Data'}</span>
@@ -1269,7 +1406,7 @@ async function loadExecutiveAnalytics() {
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
               <div>
                 <h4 style="margin:0; font-size:1.05rem; color:#06b6d4; display:flex; align-items:center; gap:8px;">
-                  <span>🎯</span> Core Curriculum Performance Matrix
+                  <span>🎯</span> ${isBasicOnly ? 'Basic Education Core Curriculum Matrix' : 'Core Curriculum Performance Matrix'}
                 </h4>
                 <div style="font-size:0.75rem; opacity:0.65; margin-top:2px;">Institutional averages and pass rates across mandatory core subjects</div>
               </div>
@@ -1282,8 +1419,69 @@ async function loadExecutiveAnalytics() {
         `;
       }
 
-      // 4. Departmental Compliance Matrix
-      if (data.school_mode !== 'BASIC_ONLY' && Array.isArray(ac.departments_matrix) && ac.departments_matrix.length > 0) {
+      // 4. Basic Class Streams Matrix vs Departmental Matrix
+      if (isBasicOnly && Array.isArray(ac.classes_matrix) && ac.classes_matrix.length > 0) {
+        let classRows = ac.classes_matrix.map(c => {
+          let badge = `<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">⏳ IN PROGRESS</span>`;
+          if (c.status === 'COMPLETE') {
+            badge = `<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">✓ COMPLETE</span>`;
+          } else if (c.status === 'PENDING') {
+            badge = `<span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">⚠️ PENDING</span>`;
+          }
+
+          return `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🏫 ${escapeHtml(c.name)} <span style="font-size:0.75rem; opacity:0.6;">(${escapeHtml(c.stage_name)})</span></td>
+              <td style="padding:10px 12px;">👨‍🏫 ${escapeHtml(c.class_teacher)}</td>
+              <td style="padding:10px 12px;"><strong>${c.student_count}</strong> Pupils | ${c.subjects_count} Subjects</td>
+              <td style="padding:10px 12px; min-width:140px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.78rem; margin-bottom:2px;">
+                  <span>${c.sba_completion_pct}% SBA</span>
+                  <span style="opacity:0.7;">Pass: ${c.pass_rate_pct}%</span>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                  <div style="width:${c.sba_completion_pct}%; height:100%; background:linear-gradient(90deg, #6366f1, #818cf8);"></div>
+                </div>
+              </td>
+              <td style="padding:10px 12px;">${badge}</td>
+              <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
+                <a href="bulk-entry.html" class="btn sm" style="padding:4px 10px; font-size:0.75rem; background:rgba(99,102,241,0.2); color:#818cf8; border:1px solid rgba(99,102,241,0.4); text-decoration:none; border-radius:6px; font-weight:600;">✍️ Marks Desk</a>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #6366f1; background: var(--card-bg, #1e293b); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#818cf8; display:flex; align-items:center; gap:8px;">
+                  <span>🏫</span> Basic School Class Streams & SBA Compliance Matrix
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Real-time continuous assessment entry progress & class teacher leadership supervision</div>
+              </div>
+              <a class="btn sm" href="classes.html" style="background:#4f46e5; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">🏫 Class Streams Register</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:8px 12px;">Class Stream</th>
+                    <th style="padding:8px 12px;">Class Teacher</th>
+                    <th style="padding:8px 12px;">Pupil Census</th>
+                    <th style="padding:8px 12px;">SBA Progress & Pass Rate</th>
+                    <th style="padding:8px 12px;">Status</th>
+                    <th style="padding:8px 12px; text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${classRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      } else if (!isBasicOnly && Array.isArray(ac.departments_matrix) && ac.departments_matrix.length > 0) {
         let matrixRows = ac.departments_matrix.map(d => {
           let badge = `<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">⏳ IN PROGRESS</span>`;
           if (d.status === 'COMPLETE') {
@@ -1294,8 +1492,8 @@ async function loadExecutiveAnalytics() {
 
           return `
             <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-              <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">${d.name} <span style="font-size:0.75rem; opacity:0.6;">(${d.code})</span></td>
-              <td style="padding:10px 12px;">👨‍🏫 ${d.hod_name}</td>
+              <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">${escapeHtml(d.name)} <span style="font-size:0.75rem; opacity:0.6;">(${escapeHtml(d.code)})</span></td>
+              <td style="padding:10px 12px;">👨‍🏫 ${escapeHtml(d.hod_name)}</td>
               <td style="padding:10px 12px;">${d.teacher_count} Staff | ${d.subject_count} Subjects</td>
               <td style="padding:10px 12px; min-width:140px;">
                 <div style="display:flex; justify-content:space-between; font-size:0.78rem; margin-bottom:2px;">
@@ -1417,45 +1615,50 @@ async function loadExecutiveAnalytics() {
             <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
               <span style="opacity:0.7; font-size:0.75rem;">Teaching Staff Strength:</span><br/>
               <strong style="font-size:1.15rem; color:#38bdf8;">${adm.teaching_staff_count || 0} Teachers</strong>
-              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Across ${adm.total_departments || 0} Academic Departments</div>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">${isBasicOnly ? 'Class & Subject Teachers' : 'Across ' + (adm.total_departments || 0) + ' Academic Departments'}</div>
             </div>
             <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
               <span style="opacity:0.7; font-size:0.75rem;">Non-Teaching / Support:</span><br/>
               <strong style="font-size:1.15rem; color:#a855f7;">${adm.non_teaching_staff_count || 0} Staff</strong>
-              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Admin, Operations, Security & Boarding</div>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Admin, Operations & Support Staff</div>
             </div>
             <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
-              <span style="opacity:0.7; font-size:0.75rem;">Active User Portals:</span><br/>
+              <span style="opacity:0.7; font-size:0.75rem;">Active User Accounts:</span><br/>
               <strong style="font-size:1.15rem; color:#4ade80;">${adm.active_users_count || 0} Active</strong>
               <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">${adm.inactive_users_count || 0} Inactive / Pending</div>
             </div>
             <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
               <span style="opacity:0.7; font-size:0.75rem;">Active Class Sections:</span><br/>
               <strong style="font-size:1.15rem; color:#f59e0b;">${adm.total_classes || 0} Streams</strong>
-              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Under academic administration</div>
+              <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Under basic school administration</div>
             </div>
           </div>
         </div>
       `;
 
-      // 2. CSSPS Admission & Enrollment Funnel Radar
+      // 2. Admissions Funnel Radar (Basic School Direct vs SHS CSSPS)
       const funnel = adm.admissions_funnel || {};
       const totEnrolled = funnel.total || 1;
       const regPct = Math.min(100, Math.round(((funnel.fully_registered || 0) / totEnrolled) * 100));
+      const funnelTitle = isBasicOnly ? 'Basic School Enrolment & Admissions Funnel' : 'CSSPS Admission & Enrollment Funnel';
+      const funnelPlacedLabel = isBasicOnly ? '📋 Registered Inquiries:' : '📋 CSSPS Placed:';
+      const funnelPlacedUnit = isBasicOnly ? 'Pupils' : 'Candidates';
+      const funnelFormLabel = isBasicOnly ? '📝 Bio-Data & CRF Form:' : '📝 Form Completed:';
+      const funnelRegLabel = isBasicOnly ? '🎓 Fully Placed in Class:' : '🎓 Fully Registered:';
 
       cardsHtml += `
         <div class="card" style="border-left: 4px solid #10b981; background: var(--card-bg, #1e293b);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h4 style="margin:0; font-size:1.05rem; color:#34d399; display:flex; align-items:center; gap:8px;">
-              <span>📈</span> CSSPS Admission & Enrollment Funnel
+              <span>📈</span> ${funnelTitle}
             </h4>
             <a href="students.html" class="btn sm" style="background:#059669; color:white; font-weight:600; text-decoration:none; padding:4px 10px; font-size:0.75rem; border-radius:6px;">Admissions Desk</a>
           </div>
           <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
             <div>
               <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-                <span style="font-weight:600; color:#38bdf8;">📋 CSSPS Placed:</span>
-                <strong>${funnel.placed || 0} Candidates</strong>
+                <span style="font-weight:600; color:#38bdf8;">${funnelPlacedLabel}</span>
+                <strong>${funnel.placed || 0} ${funnelPlacedUnit}</strong>
               </div>
               <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
                 <div style="width:${Math.min(100, ((funnel.placed || 0) / totEnrolled) * 100)}%; height:100%; background:#0284c7;"></div>
@@ -1463,8 +1666,8 @@ async function loadExecutiveAnalytics() {
             </div>
             <div>
               <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-                <span style="font-weight:600; color:#fbbf24;">📝 Form Completed:</span>
-                <strong>${funnel.form_completed || 0} Students</strong>
+                <span style="font-weight:600; color:#fbbf24;">${funnelFormLabel}</span>
+                <strong>${funnel.form_completed || 0} Pupils</strong>
               </div>
               <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
                 <div style="width:${Math.min(100, ((funnel.form_completed || 0) / totEnrolled) * 100)}%; height:100%; background:#f59e0b;"></div>
@@ -1472,8 +1675,8 @@ async function loadExecutiveAnalytics() {
             </div>
             <div>
               <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-                <span style="font-weight:600; color:#4ade80;">🎓 Fully Registered:</span>
-                <strong>${funnel.fully_registered || 0} Students (${regPct}%)</strong>
+                <span style="font-weight:600; color:#4ade80;">${funnelRegLabel}</span>
+                <strong>${funnel.fully_registered || 0} Pupils (${regPct}%)</strong>
               </div>
               <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
                 <div style="width:${regPct}%; height:100%; background:#10b981;"></div>
@@ -1483,12 +1686,12 @@ async function loadExecutiveAnalytics() {
         </div>
       `;
 
-      // 3. Departmental Staffing & Faculty Deployment Matrix Table
-      if (Array.isArray(adm.departments_staffing) && adm.departments_staffing.length > 0) {
+      // 3. Departmental Staffing Matrix Table (SHS only)
+      if (!isBasicOnly && Array.isArray(adm.departments_staffing) && adm.departments_staffing.length > 0) {
         let deptRows = adm.departments_staffing.map(d => `
           <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-            <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🏛️ ${d.name} <span style="font-size:0.75rem; opacity:0.6;">(${d.code})</span></td>
-            <td style="padding:10px 12px; color:#38bdf8;">👨‍🏫 ${d.hod_name}</td>
+            <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🏛️ ${escapeHtml(d.name)} <span style="font-size:0.75rem; opacity:0.6;">(${escapeHtml(d.code)})</span></td>
+            <td style="padding:10px 12px; color:#38bdf8;">👨‍🏫 ${escapeHtml(d.hod_name)}</td>
             <td style="padding:10px 12px;"><strong>${d.staff_count}</strong> Staff Assigned</td>
             <td style="padding:10px 12px;">${d.subjects_count} Subjects</td>
             <td style="padding:10px 12px; text-align:right;">
@@ -1528,13 +1731,20 @@ async function loadExecutiveAnalytics() {
         `;
       }
 
-      // 4. Student Census & Gender Demographics by Form Level
-      if (Array.isArray(adm.form_demographics) && adm.form_demographics.length > 0) {
-        let demoRows = adm.form_demographics.map(f => {
+      // 4. Student Census & Key Stage Demographics Table
+      const demoList = (isBasicOnly && adm.stage_demographics) ? adm.stage_demographics : (adm.form_demographics || []);
+      const demoHeading = isBasicOnly ? 'Pupil Census & Key Stage Demographics' : 'Student Census & Gender Demographics by Form Level';
+      const demoSubtitle = isBasicOnly
+        ? 'Institutional pupil population breakdown across Early Childhood, Primary, and JHS stages'
+        : 'Institutional student population breakdown across form streams and gender balance';
+
+      if (Array.isArray(demoList) && demoList.length > 0) {
+        let demoRows = demoList.map(f => {
           const bPct = f.total > 0 ? Math.round((f.boys / f.total) * 100) : 50;
+          const stageName = f.stage || f.form || 'Stage';
           return `
             <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-              <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🎓 ${f.form}</td>
+              <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🎓 ${escapeHtml(stageName)}</td>
               <td style="padding:10px 12px; color:#38bdf8;">👦 ${f.boys} Boys</td>
               <td style="padding:10px 12px; color:#f472b6;">👧 ${f.girls} Girls</td>
               <td style="padding:10px 12px; font-weight:700;">${f.total} Total</td>
@@ -1556,9 +1766,9 @@ async function loadExecutiveAnalytics() {
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
               <div>
                 <h4 style="margin:0; font-size:1.05rem; color:#34d399; display:flex; align-items:center; gap:8px;">
-                  <span>👥</span> Student Census & Gender Demographics by Form Level
+                  <span>👥</span> ${demoHeading}
                 </h4>
-                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Institutional student population breakdown across form streams and gender balance</div>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">${demoSubtitle}</div>
               </div>
               <a class="btn sm" href="students.html" style="background:#059669; color:white; font-weight:600; text-decoration:none; padding:6px 14px; font-size:0.8rem; border-radius:6px;">📊 Student Census</a>
             </div>
@@ -1566,7 +1776,7 @@ async function loadExecutiveAnalytics() {
               <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
                 <thead>
                   <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
-                    <th style="padding:8px 12px;">Academic Level</th>
+                    <th style="padding:8px 12px;">Academic Stage / Level</th>
                     <th style="padding:8px 12px;">Male Census</th>
                     <th style="padding:8px 12px;">Female Census</th>
                     <th style="padding:8px 12px;">Total Enrollment</th>

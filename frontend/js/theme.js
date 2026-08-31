@@ -170,29 +170,14 @@
             root.style.setProperty('--primary', colors.primary);
             root.style.setProperty('--primary-hover', colors.primaryHover || adjustBrightness(colors.primary, -15));
             root.style.setProperty('--primary-light', colors.primary + '26');
-            root.style.setProperty('--secondary', colors.secondary || '#06b6d4');
-            const hex = colors.primary.replace('#', '');
-            const r = parseInt(hex.substring(0, 2), 16) || 0;
-            const g = parseInt(hex.substring(2, 4), 16) || 0;
-            const b = parseInt(hex.substring(4, 6), 16) || 0;
-            const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-            if (lum > 0.7) {
-              root.style.setProperty('--bg', '#0f172a');
-              root.style.setProperty('--bg-gradient', `radial-gradient(circle at top right, ${colors.primary}22, #0f172a 70%)`);
-              root.style.setProperty('--card-bg', 'rgba(30, 41, 59, 0.85)');
-              root.style.setProperty('--border-color', `${colors.primary}33`);
-              root.style.setProperty('--text-primary', '#f8fafc');
-              root.style.setProperty('--text-secondary', '#94a3b8');
-              root.style.setProperty('--input-bg', 'rgba(15, 23, 42, 0.7)');
-            } else {
-              root.style.setProperty('--bg', '#f8fafc');
-              root.style.setProperty('--bg-gradient', `linear-gradient(135deg, ${colors.primary}12 0%, #f1f5f9 100%)`);
-              root.style.setProperty('--card-bg', '#ffffff');
-              root.style.setProperty('--border-color', `${colors.primary}30`);
-              root.style.setProperty('--text-primary', '#0f172a');
-              root.style.setProperty('--text-secondary', '#475569');
-              root.style.setProperty('--input-bg', '#ffffff');
-            }
+            root.style.setProperty('--secondary', colors.secondary || '#38bdf8');
+            root.style.setProperty('--bg', '#0b0f19');
+            root.style.setProperty('--bg-gradient', `radial-gradient(circle at top right, ${colors.primary}1f, #0b0f19 75%)`);
+            root.style.setProperty('--card-bg', 'rgba(22, 30, 49, 0.85)');
+            root.style.setProperty('--border-color', 'rgba(255, 255, 255, 0.08)');
+            root.style.setProperty('--text-primary', '#f8fafc');
+            root.style.setProperty('--text-secondary', '#94a3b8');
+            root.style.setProperty('--input-bg', 'rgba(15, 23, 42, 0.7)');
           }
         } else {
           root.style.removeProperty('--primary');

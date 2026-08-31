@@ -233,6 +233,13 @@ window.applyBranding = async function(overrideSettings) {
       }
     }
 
+    if (s.system_theme && (!isSuperAdmin || isViewing)) {
+      localStorage.setItem('system_theme', s.system_theme);
+      if (window.applyTheme) {
+        window.applyTheme(s.system_theme);
+      }
+    }
+
     // ── Topbar Theme & Layout Switcher ────────────────────────────────
     if (window.mountThemeSelector) {
       window.mountThemeSelector();

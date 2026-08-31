@@ -145,9 +145,13 @@ def run_migrations():
         "departments": [
             ("school_id", "INTEGER REFERENCES schools(id)")
         ],
+        "school_stages": [
+            ("school_id", "INTEGER REFERENCES schools(id)")
+        ],
         "class_sections": [
             ("program_id", "INTEGER REFERENCES programs(id)"),
-            ("form_master_id", "INTEGER REFERENCES users(id)")
+            ("form_master_id", "INTEGER REFERENCES users(id)"),
+            ("school_id", "INTEGER REFERENCES schools(id)")
         ],
         "users": [
             ("gender", "VARCHAR"),

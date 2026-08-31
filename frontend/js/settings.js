@@ -116,6 +116,12 @@ window.applySchoolModeVisibility = function(mode) {
     const compCard = document.getElementById('naccaCompetenciesCard');
     if (compCard) compCard.style.display = isShs ? 'none' : 'block';
 
+    const conductSec = document.getElementById('conductSection');
+    if (conductSec) conductSec.style.display = isBasic ? 'none' : 'block';
+
+    const voucherSec = document.getElementById('voucherSection');
+    if (voucherSec) voucherSec.style.display = isBasic ? 'none' : 'block';
+
     const hierLabel = document.getElementById('hierarchyModeLabel');
     const bStatus = (document.getElementById('boarding_status')?.value || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase();
     if (hierLabel) hierLabel.style.display = (isBasic || bStatus === 'DAY_ONLY') ? 'none' : 'block';

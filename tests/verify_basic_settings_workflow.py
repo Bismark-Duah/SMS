@@ -27,8 +27,11 @@ def run_basic_settings_suite():
                 boarding_type="DAY_ONLY"
             )
             db.add(basic_sch)
-            db.commit()
-            db.refresh(basic_sch)
+        else:
+            basic_sch.school_mode = "BASIC_ONLY"
+            basic_sch.boarding_type = "DAY_ONLY"
+        db.commit()
+        db.refresh(basic_sch)
 
         # Mock Admin User
         admin_user = db.query(User).filter(User.username == "admin_settings").first()

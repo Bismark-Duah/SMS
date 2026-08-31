@@ -2,9 +2,10 @@
 Automated Verification Script for Academic Hierarchy & 3-Mode Report Card Publishing
 """
 import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from datetime import datetime
 from sqlalchemy.orm import Session
-
 from sqlalchemy import text
 from backend.app.database import engine, Base, SessionLocal
 from backend.app.models import (

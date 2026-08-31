@@ -1013,6 +1013,64 @@ def get_executive_analytics(
                 "room": tt.room or "Standard Classroom"
             })
 
+    # Detect Form Master Class and Multi-Role Status for Teacher
+    teacher_form_class = None
+    is_primary_teacher = False
+    is_jhs_teacher = False
+    is_assistant_head = False
+
+    if valid_user:
+        user_roles_list = [r.name.lower() for r in (valid_user.roles or [])]
+        is_assistant_head = any("assistant_head" in r for r in user_roles_list)
+        
+        fm_class = db.query(ClassSection).filter(ClassSection.form_master_id == valid_user.id).first()
+        if fm_class:
+            fm_st_count = db.query(Student).filter(Student.class_section_id == fm_class.id, Student.is_active == True).count()
+            c_name_lower = (fm_class.name or "").lower()
+            stage_name_lower = (fm_class.stage.name or "").lower() if fm_class.stage else ""
+            
+            is_prim = any(k in c_name_lower or k in stage_name_lower for k in ["primary", "class 1", "class 2", "class 3", "class 4", "class 5", "class 6", "basic 1", "basic 2", "basic 3", "basic 4", "basic 5", "basic 6", "kg", "nursery", "creche"])
+            is_jhs = any(k in c_name_lower or k in stage_name_lower for k in ["jhs", "basic 7", "basic 8", "basic 9"])
+            
+            teacher_form_class = {
+                "id": fm_class.id,
+                "name": fm_class.name,
+                "stage_name": fm_class.stage.name if fm_class.stage else "Basic",
+                "student_count": fm_st_count,
+                "is_primary": is_prim,
+                "is_jhs": is_jhs
+            }
+            if is_prim:
+                is_primary_teacher = True
+            if is_jhs:
+                is_jhs_teacher = True
+
+    # BECE Candidate Tracker (JHS 3 / Basic 9)
+    bece_tracker = None
+    jhs3_classes = class_query.filter(
+        (ClassSection.name.ilike("%JHS 3%")) | (ClassSection.name.ilike("%JHS3%")) | (ClassSection.name.ilike("%Basic 9%")) | (ClassSection.name.ilike("%Form 3%"))
+    ).all()
+    if jhs3_classes:
+        jhs3_ids = [c.id for c in jhs3_classes]
+        jhs3_students = student_query.filter(Student.class_section_id.in_(jhs3_ids)).all()
+        jhs3_boys = sum(1 for s in jhs3_students if (s.gender or '').upper().startswith('M') or (s.gender or '').upper() == 'BOY')
+        jhs3_girls = len(jhs3_students) - jhs3_boys
+        with_index_count = sum(1 for s in jhs3_students if s.bece_index_number or s.student_code)
+        
+        jhs3_st_ids = {s.id for s in jhs3_students}
+        jhs3_scores = [sc for sc in all_scores if sc.student_id in jhs3_st_ids]
+        jhs3_totals = [(sc.class_score or 0.0) + (sc.exam_score or 0.0) for sc in jhs3_scores]
+        jhs3_avg = round(sum(jhs3_totals) / max(1, len(jhs3_totals)), 1) if jhs3_totals else 0.0
+        
+        bece_tracker = {
+            "total_candidates": len(jhs3_students),
+            "boys_count": jhs3_boys,
+            "girls_count": jhs3_girls,
+            "index_assigned_count": with_index_count,
+            "mock_average": jhs3_avg,
+            "classes": [{"id": c.id, "name": c.name} for c in jhs3_classes]
+        }
+
     teacher_data = {
         "total_classes": len({a.class_section_id for a in t_assignments if a.class_section_id}),
         "total_subjects": len({a.subject_id for a in t_assignments if a.subject_id}),
@@ -1020,7 +1078,11 @@ def get_executive_analytics(
         "sba_completion_pct": t_sba_overall_pct,
         "allocations": teacher_allocations,
         "today_timetable": today_periods,
-        "at_risk_students": teacher_at_risk_list[:8]
+        "at_risk_students": teacher_at_risk_list[:8],
+        "form_class": teacher_form_class,
+        "is_primary_teacher": is_primary_teacher,
+        "is_jhs_teacher": is_jhs_teacher,
+        "is_assistant_head": is_assistant_head
     }
 
     # 7. Housemaster / Housemistress Personal House Analytics
@@ -1284,7 +1346,8 @@ def get_executive_analytics(
             "pending_hod_approvals": pending_hod_approvals,
             "published_classes_count": published_classes_count,
             "departments_matrix": departments_matrix,
-            "classes_matrix": classes_matrix
+            "classes_matrix": classes_matrix,
+            "bece_candidate_tracker": bece_tracker
         },
         "domestic": {
             "total_boarders": total_boarders,

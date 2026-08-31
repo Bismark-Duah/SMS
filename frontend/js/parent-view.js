@@ -147,8 +147,22 @@ async function loadChildDashboard() {
   // Update hero subtitle
   const child = allChildren.find(c => String(c.id) === String(childId));
   if (child) {
+    const classInfo = child.class_name ? ` · Class: ${child.class_name}` : '';
     document.getElementById('heroSub').textContent =
-      `Viewing records for ${child.full_name} · ${child.student_code || ''}`;
+      `Viewing records for ${child.full_name}${classInfo} · ${child.student_code || ''}`;
+  }
+
+  // Feature gating for Basic mode / Day Only
+  const F = (window.SchoolFeatures && window.SchoolFeatures.version)
+    ? window.SchoolFeatures
+    : (window.FeatureGate ? window.FeatureGate.getFeatures() : null);
+
+  const isBasicOnly = F ? F.isBasicOnly : (localStorage.getItem('school_mode') === 'BASIC_ONLY');
+  const isBoarding = F ? F.isBoarding : (localStorage.getItem('boarding_status') !== 'DAY_ONLY');
+
+  const exeatTabBtn = document.querySelector('.tab-btn[onclick*="exeat"]');
+  if (exeatTabBtn) {
+    exeatTabBtn.style.display = (!isBasicOnly && isBoarding) ? 'inline-block' : 'none';
   }
 
   // Reset KPIs
@@ -157,15 +171,18 @@ async function loadChildDashboard() {
   });
 
   // Load all sections in parallel
-  await Promise.all([
+  const tasks = [
     loadAttendanceHeatmap(childId),
     loadFees(childId),
     loadResults(childId),
-    loadExeat(childId),
     loadDiscipline(childId),
     loadNotifications(childId),
     loadSemesters()
-  ]);
+  ];
+  if (!isBasicOnly && isBoarding) {
+    tasks.push(loadExeat(childId));
+  }
+  await Promise.all(tasks);
 }
 
 // ── ATTENDANCE HEATMAP ────────────────────────────────────────
@@ -404,14 +421,24 @@ async function loadResults(childId) {
     }
 
     // Table
-    tbody.innerHTML = childResults.map(r => `
-      <tr>
-        <td>${subjectMap[r.subject_id] || `Subject ${r.subject_id}`}</td>
-        <td><strong>${r.total_score || '—'}</strong></td>
-        <td>${r.grade || '—'}</td>
-        <td>${r.term || '—'}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = childResults.map(r => {
+      const sba = r.class_score !== undefined && r.class_score !== null ? r.class_score : '—';
+      const exam = r.exam_score !== undefined && r.exam_score !== null ? r.exam_score : '—';
+      const total = r.total_score !== undefined && r.total_score !== null ? r.total_score : '—';
+      const grade = r.grade || '—';
+      const term = r.term || '—';
+      const sName = subjectMap[r.subject_id] || `Subject ${r.subject_id}`;
+      return `
+        <tr>
+          <td><strong>${sName}</strong></td>
+          <td>${sba}</td>
+          <td>${exam}</td>
+          <td style="font-weight:700; color:#38bdf8;">${total}</td>
+          <td><span style="font-weight:700; background:rgba(99,102,241,0.15); color:#818cf8; padding:2px 8px; border-radius:6px;">${grade}</span></td>
+          <td>${term}</td>
+        </tr>
+      `;
+    }).join('');
 
   } catch (err) {
     console.error('Results error:', err);

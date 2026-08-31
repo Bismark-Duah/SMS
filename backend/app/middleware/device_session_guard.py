@@ -87,7 +87,22 @@ def register_device_session(
             for old_sess in active_sessions[2:]:
                 old_sess.is_active = False
 
-    # 3. Create fresh active device session
+    # 3. Create or update active device session
+    existing_session = db.query(UserDeviceSession).filter(
+        UserDeviceSession.session_token_hash == token_digest
+    ).first()
+
+    if existing_session:
+        existing_session.user_id = user_id
+        existing_session.device_fingerprint = device_fp
+        existing_session.device_name = device_name
+        existing_session.ip_address = client_ip
+        existing_session.user_agent = user_agent
+        existing_session.is_active = True
+        db.commit()
+        db.refresh(existing_session)
+        return existing_session
+
     new_session = UserDeviceSession(
         user_id=user_id,
         device_fingerprint=device_fp,

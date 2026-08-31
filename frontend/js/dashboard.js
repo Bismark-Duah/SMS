@@ -1202,6 +1202,43 @@ async function loadExecutiveAnalytics() {
 
     let cardsHtml = '';
 
+    // ── Ghanaian Basic Education (NaCCA / GES) Academic Term Roadmap Bar ────────
+    if (isBasicOnly) {
+      cardsHtml += `
+        <div class="card" style="grid-column: 1 / -1; margin-bottom: 8px; background: linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.95)); border: 1px solid rgba(99,102,241,0.25); border-radius: 14px; padding: 16px 20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.2rem;">🇬🇭</span>
+              <strong style="font-family:'Outfit',sans-serif; font-size:0.98rem; color:#f8fafc;">Ghanaian Basic Education (NaCCA / GES) Academic Journey</strong>
+            </div>
+            <span style="font-size:0.75rem; background:rgba(99,102,241,0.2); color:#a5b4fc; border:1px solid rgba(99,102,241,0.4); padding:2px 10px; border-radius:12px; font-weight:700;">3-TERM CALENDAR • ACTIVE</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; font-size:0.78rem;">
+            <div style="background:rgba(255,255,255,0.04); padding:10px; border-radius:8px; border-left:3px solid #10b981;">
+              <div style="color:#34d399; font-weight:700; font-size:0.72rem; text-transform:uppercase;">Weeks 1–4: Continuous SBA</div>
+              <div style="color:#f8fafc; font-weight:600; margin-top:2px;">Class Tasks & Projects</div>
+              <div style="font-size:0.7rem; opacity:0.65;">Formative NaCCA Assessments</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04); padding:10px; border-radius:8px; border-left:3px solid #06b6d4;">
+              <div style="color:#38bdf8; font-weight:700; font-size:0.72rem; text-transform:uppercase;">Weeks 5–8: Mid-Term</div>
+              <div style="color:#f8fafc; font-weight:600; margin-top:2px;">Core Skills & Practical Work</div>
+              <div style="font-size:0.7rem; opacity:0.65;">Progress Reviews & Interventions</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04); padding:10px; border-radius:8px; border-left:3px solid #f59e0b;">
+              <div style="color:#fbbf24; font-weight:700; font-size:0.72rem; text-transform:uppercase;">Weeks 9–11: Exams & Mocks</div>
+              <div style="color:#f8fafc; font-weight:600; margin-top:2px;">Terminal Assessment</div>
+              <div style="font-size:0.7rem; opacity:0.65;">Summative & JHS 3 BECE Mocks</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04); padding:10px; border-radius:8px; border-left:3px solid #a855f7;">
+              <div style="color:#c084fc; font-weight:700; font-size:0.72rem; text-transform:uppercase;">Week 12: Reports & Vacation</div>
+              <div style="color:#f8fafc; font-weight:600; margin-top:2px;">Reports Published</div>
+              <div style="font-size:0.7rem; opacity:0.65;">Terminal Progress Cards Handover</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     // ── Academic Executive Command Center ─────────────────────────────────────
     if (showAcademic) {
       const academicTitle = isBasicOnly 
@@ -1380,6 +1417,44 @@ async function loadExecutiveAnalytics() {
                 <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
                   <div style="width:${calcPct(gd.F9)}%; height:100%; background:#ef4444;"></div>
                 </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // ── JHS 3 BECE Candidate Mock & Examination Readiness Hub ──────────────
+      if (ac.bece_candidate_tracker && ac.bece_candidate_tracker.total_candidates > 0) {
+        const bece = ac.bece_candidate_tracker;
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-left: 4px solid #8b5cf6; background: var(--card-bg, #1e293b);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#c084fc; display:flex; align-items:center; gap:8px;">
+                  <span>🎓</span> JHS 3 BECE Candidate Mock & Examination Readiness Hub
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">National Examination candidate census, index assignments, and mock preparation benchmarks</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <a href="broadsheet.html" class="btn sm" style="background:#7c3aed; color:white; font-weight:600; text-decoration:none; padding:5px 12px; font-size:0.75rem; border-radius:6px;">📜 JHS 3 Broadsheet</a>
+                <a href="reports.html" class="btn sm" style="background:rgba(139,92,246,0.2); color:#c084fc; border:1px solid rgba(139,92,246,0.4); text-decoration:none; padding:5px 12px; font-size:0.75rem; border-radius:6px; font-weight:600;">🖨️ Transcripts</a>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; font-size:0.85rem;">
+              <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                <span style="opacity:0.7; font-size:0.75rem;">Registered BECE Candidates:</span><br/>
+                <strong style="font-size:1.2rem; color:#38bdf8;">${bece.total_candidates} Candidates</strong>
+                <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">${bece.boys_count} Boys &bull; ${bece.girls_count} Girls</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                <span style="opacity:0.7; font-size:0.75rem;">BECE Index Numbers:</span><br/>
+                <strong style="font-size:1.2rem; color:#34d399;">${bece.index_assigned_count} / ${bece.total_candidates} Assigned</strong>
+                <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">National Examination Index</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                <span style="opacity:0.7; font-size:0.75rem;">Class Mock Exam Average:</span><br/>
+                <strong style="font-size:1.2rem; color:#fbbf24;">${bece.mock_average > 0 ? bece.mock_average + '%' : 'Pending Mocks'}</strong>
+                <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Candidate Performance Baseline</div>
               </div>
             </div>
           </div>
@@ -2166,7 +2241,83 @@ async function loadExecutiveAnalytics() {
     // ── Subject Teacher Personal Command Center ───────────────────────────────
     if (showTeacher) {
       const headingEl = document.getElementById('execAnalyticsTitle');
-      if (headingEl) headingEl.innerHTML = `✍️ Faculty Teaching & Continuous Assessment (SBA) Desk`;
+      const teacherTitle = tchr.is_assistant_head 
+        ? `👔 Assistant Headteacher Executive & Teaching Workspace`
+        : (tchr.form_class ? `👨‍🏫 Class Master & Teaching Faculty Workspace (${escapeHtml(tchr.form_class.name)})` : `✍️ Faculty Teaching & Continuous Assessment (SBA) Desk`);
+      if (headingEl) headingEl.innerHTML = teacherTitle;
+
+      // ── PRIMARY CLASS TEACHER FAST-ACTION HUB ─────────────────────────────
+      if (isBasicOnly && tchr.form_class && tchr.form_class.is_primary) {
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #10b981; background: var(--card-bg, #1e293b); padding: 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.15rem; color:#34d399; display:flex; align-items:center; gap:8px;">
+                  <span>⚡</span> Primary Class Fast-Action Hub (${escapeHtml(tchr.form_class.name)})
+                </h4>
+                <div style="font-size:0.8rem; opacity:0.7; margin-top:2px;">All-in-one class management desk for your ${tchr.form_class.student_count} assigned primary pupils</div>
+              </div>
+              <span style="background:rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.4); padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;">PRIMARY CLASS TEACHER</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+              <a href="bulk-entry.html" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:14px; text-decoration:none; color:white; display:flex; align-items:center; gap:12px; transition:transform 0.2s;">
+                <span style="font-size:1.8rem;">✍️</span>
+                <div>
+                  <strong style="font-size:0.9rem; color:#34d399;">All-in-One Broadsheet</strong>
+                  <div style="font-size:0.75rem; opacity:0.7;">Enter all 17 subjects on 1 grid</div>
+                </div>
+              </a>
+              <a href="attendance.html" style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:14px; text-decoration:none; color:white; display:flex; align-items:center; gap:12px; transition:transform 0.2s;">
+                <span style="font-size:1.8rem;">📝</span>
+                <div>
+                  <strong style="font-size:0.9rem; color:#38bdf8;">Daily Class Register</strong>
+                  <div style="font-size:0.75rem; opacity:0.7;">Mark morning/afternoon roll</div>
+                </div>
+              </a>
+              <a href="reports.html" style="background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); border-radius:10px; padding:14px; text-decoration:none; color:white; display:flex; align-items:center; gap:12px; transition:transform 0.2s;">
+                <span style="font-size:1.8rem;">🧠</span>
+                <div>
+                  <strong style="font-size:0.9rem; color:#c084fc;">NaCCA Remarks & Skills</strong>
+                  <div style="font-size:0.75rem; opacity:0.7;">Core competencies & conduct</div>
+                </div>
+              </a>
+              <a href="reports.html" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:10px; padding:14px; text-decoration:none; color:white; display:flex; align-items:center; gap:12px; transition:transform 0.2s;">
+                <span style="font-size:1.8rem;">📜</span>
+                <div>
+                  <strong style="font-size:0.9rem; color:#fbbf24;">Terminal Report Cards</strong>
+                  <div style="font-size:0.75rem; opacity:0.7;">Generate & print pupil cards</div>
+                </div>
+              </a>
+            </div>
+          </div>
+        `;
+      } else if (isBasicOnly && tchr.form_class && tchr.form_class.is_jhs) {
+        // ── JHS FORM MASTER PASTORAL DESK (PANEL 1) ─────────────────────────
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #6366f1; background: var(--card-bg, #1e293b); padding: 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.1rem; color:#818cf8; display:flex; align-items:center; gap:8px;">
+                  <span>🎓</span> PANEL 1: My Form Class Pastoral Desk (${escapeHtml(tchr.form_class.name)})
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.7; margin-top:2px;">Daily attendance, conduct supervision, and master report card sign-offs for your form class</div>
+              </div>
+              <span style="background:rgba(99,102,241,0.2); color:#818cf8; border:1px solid rgba(99,102,241,0.4); padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;">JHS FORM MASTER</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+              <a href="attendance.html" class="btn sm" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); text-decoration:none; border-radius:8px; padding:10px; text-align:center; font-weight:600;">
+                📝 Take ${escapeHtml(tchr.form_class.name)} Attendance
+              </a>
+              <a href="reports.html" class="btn sm" style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3); text-decoration:none; border-radius:8px; padding:10px; text-align:center; font-weight:600;">
+                🧠 NaCCA Conduct Remarks
+              </a>
+              <a href="broadsheet.html" class="btn sm" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); text-decoration:none; border-radius:8px; padding:10px; text-align:center; font-weight:600;">
+                📜 Class Broadsheet & Positions
+              </a>
+            </div>
+          </div>
+        `;
+      }
 
       // 1. My Teaching Allocations & Score Entry Matrix
       let allocRows = '';

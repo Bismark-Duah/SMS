@@ -1204,36 +1204,59 @@ async function loadExecutiveAnalytics() {
 
     // ── Ghanaian Basic Education (NaCCA / GES) Academic Term Roadmap Bar ────────
     if (isBasicOnly) {
+      const prog = ac.academic_term_progress || {
+        term_name: 'Active Term',
+        total_weeks: 15,
+        current_week: 7,
+        has_mid_term_break: true,
+        active_phase_index: 2,
+        active_phase_name: 'Mid-Term Assessment & Practical Skills Phase',
+        milestones: [
+          { phase: 1, week_range: 'Weeks 1–5', title: 'Continuous SBA', desc: 'Class Tasks & Projects', status: 'COMPLETED' },
+          { phase: 2, week_range: 'Weeks 6–10', title: 'Mid-Term Assessment', desc: '🌴 GES Mid-Term Break', status: 'ACTIVE' },
+          { phase: 3, week_range: 'Weeks 11–14', title: 'Exams & BECE Mocks', desc: 'Summative & Mock Exams', status: 'UPCOMING' },
+          { phase: 4, week_range: 'Week 15', title: 'Reports & Vacation', desc: 'Terminal Reports Handover', status: 'UPCOMING' }
+        ]
+      };
+
+      const msHtml = (prog.milestones || []).map(m => {
+        const isActive = m.status === 'ACTIVE';
+        const isDone = m.status === 'COMPLETED';
+        const borderColor = m.phase === 1 ? '#10b981' : (m.phase === 2 ? '#06b6d4' : (m.phase === 3 ? '#f59e0b' : '#a855f7'));
+        const textColor = m.phase === 1 ? '#34d399' : (m.phase === 2 ? '#38bdf8' : (m.phase === 3 ? '#fbbf24' : '#c084fc'));
+        
+        let statusBadge = isDone 
+          ? `<span style="font-size:0.68rem; background:rgba(34,197,94,0.15); color:#4ade80; padding:1px 6px; border-radius:8px; font-weight:700;">✓ Done</span>`
+          : (isActive 
+            ? `<span style="font-size:0.68rem; background:rgba(56,189,248,0.25); color:#38bdf8; border:1px solid rgba(56,189,248,0.5); padding:1px 6px; border-radius:8px; font-weight:800;">🟢 Active</span>`
+            : `<span style="font-size:0.68rem; opacity:0.5;">⏳ Upcoming</span>`);
+
+        return `
+          <div style="background:${isActive ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.04)'}; padding:10px 12px; border-radius:10px; border-left:3px solid ${borderColor}; ${isActive ? 'border:1px solid rgba(99,102,241,0.4); box-shadow:0 0 12px rgba(99,102,241,0.15);' : ''}">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+              <span style="color:${textColor}; font-weight:700; font-size:0.72rem; text-transform:uppercase;">${escapeHtml(m.week_range)}</span>
+              ${statusBadge}
+            </div>
+            <div style="color:#f8fafc; font-weight:700; font-size:0.82rem; margin-top:2px;">${escapeHtml(m.title)}</div>
+            <div style="font-size:0.7rem; opacity:0.7; margin-top:1px;">${escapeHtml(m.desc)}</div>
+          </div>
+        `;
+      }).join('');
+
       cardsHtml += `
         <div class="card" style="grid-column: 1 / -1; margin-bottom: 8px; background: linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.95)); border: 1px solid rgba(99,102,241,0.25); border-radius: 14px; padding: 16px 20px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-size:1.2rem;">🇬🇭</span>
-              <strong style="font-family:'Outfit',sans-serif; font-size:0.98rem; color:#f8fafc;">Ghanaian Basic Education (NaCCA / GES) Academic Journey</strong>
+              <div>
+                <strong style="font-family:'Outfit',sans-serif; font-size:0.98rem; color:#f8fafc;">Ghanaian Basic Education (NaCCA / GES) Academic Journey</strong>
+                <div style="font-size:0.75rem; opacity:0.7;">${escapeHtml(prog.term_name)} &bull; ${prog.total_weeks}-Week Calendar &bull; ${prog.has_mid_term_break ? '🌴 With GES Mid-Term Break' : '📚 Continuous Term (No Break)'}</div>
+              </div>
             </div>
-            <span style="font-size:0.75rem; background:rgba(99,102,241,0.2); color:#a5b4fc; border:1px solid rgba(99,102,241,0.4); padding:2px 10px; border-radius:12px; font-weight:700;">3-TERM CALENDAR • ACTIVE</span>
+            <span style="font-size:0.75rem; background:rgba(99,102,241,0.2); color:#a5b4fc; border:1px solid rgba(99,102,241,0.4); padding:3px 12px; border-radius:12px; font-weight:700;">📍 WEEK ${prog.current_week} OF ${prog.total_weeks} (ACTIVE)</span>
           </div>
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; font-size:0.78rem;">
-            <div style="background:rgba(255,255,255,0.04); padding:10px; border-radius:8px; border-left:3px solid #10b981;">
-              <div style="color:#34d399; font-weight:700; font-size:0.72rem; text-transform:uppercase;">Weeks 1–4: Continuous SBA</div>
-              <div style="color:#f8fafc; font-weight:600; margin-top:2px;">Class Tasks & Projects</div>
-              <div style="font-size:0.7rem; opacity:0.65;">Formative NaCCA Assessments</div>
-            </div>
-            <div style="background:rgba(255,255,255,0.04); padding:10px; border-radius:8px; border-left:3px solid #06b6d4;">
-              <div style="color:#38bdf8; font-weight:700; font-size:0.72rem; text-transform:uppercase;">Weeks 5–8: Mid-Term</div>
-              <div style="color:#f8fafc; font-weight:600; margin-top:2px;">Core Skills & Practical Work</div>
-              <div style="font-size:0.7rem; opacity:0.65;">Progress Reviews & Interventions</div>
-            </div>
-            <div style="background:rgba(255,255,255,0.04); padding:10px; border-radius:8px; border-left:3px solid #f59e0b;">
-              <div style="color:#fbbf24; font-weight:700; font-size:0.72rem; text-transform:uppercase;">Weeks 9–11: Exams & Mocks</div>
-              <div style="color:#f8fafc; font-weight:600; margin-top:2px;">Terminal Assessment</div>
-              <div style="font-size:0.7rem; opacity:0.65;">Summative & JHS 3 BECE Mocks</div>
-            </div>
-            <div style="background:rgba(255,255,255,0.04); padding:10px; border-radius:8px; border-left:3px solid #a855f7;">
-              <div style="color:#c084fc; font-weight:700; font-size:0.72rem; text-transform:uppercase;">Week 12: Reports & Vacation</div>
-              <div style="color:#f8fafc; font-weight:600; margin-top:2px;">Reports Published</div>
-              <div style="font-size:0.7rem; opacity:0.65;">Terminal Progress Cards Handover</div>
-            </div>
+            ${msHtml}
           </div>
         </div>
       `;
@@ -1452,10 +1475,76 @@ async function loadExecutiveAnalytics() {
                 <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">National Examination Index</div>
               </div>
               <div style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
-                <span style="opacity:0.7; font-size:0.75rem;">Class Mock Exam Average:</span><br/>
+                <span style="opacity:0.7; font-size:0.75rem;">Class Mock Average & Best Aggregate:</span><br/>
                 <strong style="font-size:1.2rem; color:#fbbf24;">${bece.mock_average > 0 ? bece.mock_average + '%' : 'Pending Mocks'}</strong>
-                <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Candidate Performance Baseline</div>
+                <div style="font-size:0.72rem; opacity:0.6; margin-top:2px;">Best: Agg ${bece.best_aggregate !== null && bece.best_aggregate !== undefined ? bece.best_aggregate : '—'} &bull; Avg: Agg ${bece.average_aggregate !== null && bece.average_aggregate !== undefined ? bece.average_aggregate : '—'}</div>
               </div>
+            </div>
+
+            <!-- CSSPS Senior High School Placement Forecast -->
+            ${bece.placement_forecast ? `
+              <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.08); display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; font-size:0.78rem;">
+                <div style="background:rgba(16,185,129,0.08); padding:8px 10px; border-radius:6px; border-left:3px solid #10b981;">
+                  <span style="color:#34d399; font-weight:700;">🌟 Category A Ready (Agg 06–12)</span>
+                  <div style="font-size:1.05rem; font-weight:800; color:#34d399; margin-top:2px;">${bece.placement_forecast.category_a_count} Candidates</div>
+                </div>
+                <div style="background:rgba(56,189,248,0.08); padding:8px 10px; border-radius:6px; border-left:3px solid #0284c7;">
+                  <span style="color:#38bdf8; font-weight:700;">📘 Category B/C Ready (Agg 13–24)</span>
+                  <div style="font-size:1.05rem; font-weight:800; color:#38bdf8; margin-top:2px;">${bece.placement_forecast.category_b_c_count} Candidates</div>
+                </div>
+                <div style="background:rgba(239,68,68,0.08); padding:8px 10px; border-radius:6px; border-left:3px solid #ef4444;">
+                  <span style="color:#f87171; font-weight:700;">⚠️ Remedial Needed (Agg 25+)</span>
+                  <div style="font-size:1.05rem; font-weight:800; color:#f87171; margin-top:2px;">${bece.placement_forecast.remedial_count} Candidates</div>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+
+      // ── Pastoral Truancy & Low Attendance Alert Hub (<80% threshold) ──────
+      if (Array.isArray(ac.low_attendance_pupils) && ac.low_attendance_pupils.length > 0) {
+        const truancyRows = ac.low_attendance_pupils.map(p => `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:8px 12px; font-weight:600; color:#f87171;">⚠️ ${escapeHtml(p.name)}</td>
+            <td style="padding:8px 12px; color:#f8fafc;">🏫 ${escapeHtml(p.class_name)}</td>
+            <td style="padding:8px 12px;"><strong style="color:#f87171;">${p.attendance_pct}%</strong> <span style="font-size:0.75rem; opacity:0.65;">(${p.present_days}/${p.total_days} Days)</span></td>
+            <td style="padding:8px 12px; opacity:0.8;">${escapeHtml(p.guardian_name || 'Parent')}</td>
+            <td style="padding:8px 12px; text-align:right;">
+              <button type="button" onclick="sendTruancyGuardianAlert('${escapeHtml(p.guardian_phone)}', '${escapeHtml(p.name)}', ${p.attendance_pct}, ${p.present_days}, ${p.total_days})"
+                      style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer; white-space:nowrap;">
+                📲 Contact Guardian
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+        cardsHtml += `
+          <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #ef4444; background: var(--card-bg, #1e293b);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h4 style="margin:0; font-size:1.05rem; color:#f87171; display:flex; align-items:center; gap:8px;">
+                  <span>🚨</span> Pastoral Truancy & Low Attendance Alert Roster
+                </h4>
+                <div style="font-size:0.78rem; opacity:0.65; margin-top:2px;">Pupils falling below the GES 80% attendance threshold requiring early pastoral intervention</div>
+              </div>
+              <a href="attendance.html" class="btn sm" style="background:#dc2626; color:white; font-weight:600; text-decoration:none; padding:5px 12px; font-size:0.75rem; border-radius:6px;">📋 Full Attendance Register</a>
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8;">
+                    <th style="padding:6px 12px;">Pupil Name</th>
+                    <th style="padding:6px 12px;">Class</th>
+                    <th style="padding:6px 12px;">Attendance Rate</th>
+                    <th style="padding:6px 12px;">Guardian</th>
+                    <th style="padding:6px 12px; text-align:right;">Pastoral Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${truancyRows}
+                </tbody>
+              </table>
             </div>
           </div>
         `;
@@ -3481,6 +3570,34 @@ async function loadComparativeDashboardWidget() {
     console.error('Failed to load comparative dashboard widget:', err);
   }
 }
+
+// ── Global Helper Alert Actions ───────────────────────────────────────────────
+window.sendTruancyGuardianAlert = function(phone, pupilName, attendancePct, presentDays, totalDays) {
+  const cleanPhone = (phone || '').replace(/\s+/g, '');
+  const message = encodeURIComponent(`Dear Parent/Guardian, this is an official notice from school regarding your ward ${pupilName}. Cumulative term attendance is currently ${attendancePct}% (${presentDays}/${totalDays} school days), which is below the required 80% threshold. Kindly contact the school administration or class teacher urgently.`);
+  
+  if (cleanPhone && cleanPhone !== 'NotRecorded' && cleanPhone !== '—') {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.open(`https://wa.me/${cleanPhone.replace(/^0/, '233')}?text=${message}`, '_blank');
+    } else {
+      window.open(`https://web.whatsapp.com/send?phone=${cleanPhone.replace(/^0/, '233')}&text=${message}`, '_blank');
+    }
+  } else {
+    alert(`Guardian contact not recorded for ${pupilName}. Please update student profile.`);
+  }
+};
+
+window.sendExeatParentAlert = function(phone, studentName) {
+  const cleanPhone = (phone || '').replace(/\s+/g, '');
+  const message = encodeURIComponent(`Dear Parent/Guardian, this is a communication from school regarding ${studentName}. Please contact the class teacher/school office regarding academic/pastoral matters.`);
+  
+  if (cleanPhone && cleanPhone !== 'NotRecorded' && cleanPhone !== '—') {
+    window.open(`https://wa.me/${cleanPhone.replace(/^0/, '233')}?text=${message}`, '_blank');
+  } else {
+    alert(`Parent contact not recorded for ${studentName}.`);
+  }
+};
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {

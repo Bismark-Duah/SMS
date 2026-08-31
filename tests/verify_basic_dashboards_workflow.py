@@ -30,6 +30,9 @@ def run_basic_dashboards_test_suite():
             db.add(sch)
             db.commit()
             db.refresh(sch)
+        else:
+            sch.school_mode = "BASIC_ONLY"
+            db.commit()
 
         # 2. Setup Headteacher User
         head_user = db.query(User).filter(User.username == "headteacher_test_dash").first()
@@ -237,13 +240,20 @@ def run_basic_dashboards_test_suite():
 
         assert exec_data["school_mode"] == "BASIC_ONLY"
         assert "academic" in exec_data
+        assert "academic_term_progress" in exec_data["academic"]
         assert "bece_candidate_tracker" in exec_data["academic"]
         
+        term_prog = exec_data["academic"]["academic_term_progress"]
+        assert term_prog["total_weeks"] >= 10, f"Expected total_weeks >= 10, got {term_prog['total_weeks']}"
+        assert len(term_prog["milestones"]) == 4, f"Expected 4 milestones, got {len(term_prog['milestones'])}"
+        print(f"   [OK] Adaptive GES Term Journey verified: Term={term_prog['term_name']}, Weeks={term_prog['total_weeks']}, CurrentWeek={term_prog['current_week']}, ActivePhase={term_prog['active_phase_name']}")
+
         bece_info = exec_data["academic"]["bece_candidate_tracker"]
         assert bece_info is not None, "BECE candidate tracker must be populated for basic schools with JHS 3"
         assert bece_info["total_candidates"] >= 1
         assert bece_info["index_assigned_count"] >= 1
-        print(f"   [OK] Headteacher Analytics verified: Mode={exec_data['school_mode']}, BECE Candidates={bece_info['total_candidates']}, IndexAssigned={bece_info['index_assigned_count']}")
+        assert "placement_forecast" in bece_info
+        print(f"   [OK] Headteacher Analytics verified: Mode={exec_data['school_mode']}, BECE Candidates={bece_info['total_candidates']}, CSSPS Cat A Ready={bece_info['placement_forecast']['category_a_count']}")
 
         print("\n[2] Testing Primary Class Teacher Workspace Data...")
         pri_data = get_executive_analytics(
@@ -277,8 +287,9 @@ def run_basic_dashboards_test_suite():
             asst_role = Role(name="assistant_head_academic")
             db.add(asst_role)
             db.commit()
-        teacher_jhs.roles.append(asst_role)
-        db.commit()
+        if asst_role not in teacher_jhs.roles:
+            teacher_jhs.roles.append(asst_role)
+            db.commit()
 
         asst_data = get_executive_analytics(
             db=db,

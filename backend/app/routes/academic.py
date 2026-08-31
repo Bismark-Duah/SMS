@@ -1045,11 +1045,106 @@ def get_executive_analytics(
             if is_jhs:
                 is_jhs_teacher = True
 
-    # BECE Candidate Tracker (JHS 3 / Basic 9)
+    # ── 6.5. Adaptive GES Academic Term Journey Engine (10–18 Weeks + Mid-Term Toggle) ──
+    cur_semester = db.query(Semester).filter(Semester.is_current == True).first()
+    if not cur_semester:
+        cur_semester = db.query(Semester).first()
+
+    term_name = cur_semester.name if cur_semester else "Term 1"
+    
+    # Check Mid-Term Break setting: Term 3 promotional term defaults to False; Term 1 & 2 default to True
+    mid_break_setting = db.query(Setting).filter(Setting.key == "has_mid_term_break").first()
+    if mid_break_setting and mid_break_setting.value:
+        has_mid_term_break = str(mid_break_setting.value).lower() in ["true", "1", "yes"]
+    else:
+        has_mid_term_break = False if ("term 3" in term_name.lower() or "third" in term_name.lower()) else True
+
+    # Total weeks calculation (from dates or GES standard defaults: Term 1: 15, Term 2: 14, Term 3: 12)
+    custom_weeks_setting = db.query(Setting).filter(Setting.key == "term_duration_weeks").first()
+    if cur_semester and cur_semester.start_date and cur_semester.end_date:
+        delta_days = (cur_semester.end_date - cur_semester.start_date).days
+        total_term_weeks = max(10, min(18, round(delta_days / 7)))
+    elif custom_weeks_setting and custom_weeks_setting.value and custom_weeks_setting.value.isdigit():
+        total_term_weeks = max(10, min(18, int(custom_weeks_setting.value)))
+    else:
+        if "term 1" in term_name.lower() or "first" in term_name.lower():
+            total_term_weeks = 15
+        elif "term 2" in term_name.lower() or "second" in term_name.lower():
+            total_term_weeks = 14
+        elif "term 3" in term_name.lower() or "third" in term_name.lower():
+            total_term_weeks = 12
+        else:
+            total_term_weeks = 15
+
+    # Current week calculation
+    if cur_semester and cur_semester.start_date:
+        elapsed_days = (datetime.now() - cur_semester.start_date).days
+        current_term_week = max(1, min(total_term_weeks, (elapsed_days // 7) + 1))
+    else:
+        current_term_week = min(total_term_weeks, 7) # default mid-term
+
+    # Phase boundaries
+    w_p1 = max(3, round(total_term_weeks * 0.33))
+    w_p2 = max(w_p1 + 2, round(total_term_weeks * 0.66))
+
+    if current_term_week <= w_p1:
+        active_phase_idx = 1
+        active_phase_title = "Continuous Assessment & SBA Phase"
+    elif current_term_week <= w_p2:
+        active_phase_idx = 2
+        active_phase_title = "Mid-Term Assessment & Practical Skills Phase"
+    elif current_term_week < total_term_weeks:
+        active_phase_idx = 3
+        active_phase_title = "Terminal Revision, Exams & BECE Mocks Phase"
+    else:
+        active_phase_idx = 4
+        active_phase_title = "Terminal Reports Publication & Vacation Phase"
+
+    academic_term_progress = {
+        "term_name": term_name,
+        "total_weeks": total_term_weeks,
+        "current_week": current_term_week,
+        "has_mid_term_break": has_mid_term_break,
+        "active_phase_index": active_phase_idx,
+        "active_phase_name": active_phase_title,
+        "milestones": [
+            {
+                "phase": 1,
+                "week_range": f"Weeks 1–{w_p1}",
+                "title": "Continuous SBA",
+                "desc": "Class Tasks & Projects",
+                "status": "COMPLETED" if current_term_week > w_p1 else ("ACTIVE" if current_term_week <= w_p1 else "UPCOMING")
+            },
+            {
+                "phase": 2,
+                "week_range": f"Weeks {w_p1+1}–{w_p2}",
+                "title": "Mid-Term Assessment",
+                "desc": "🌴 GES Mid-Term Break" if has_mid_term_break else "Continuous Term (No Break)",
+                "status": "COMPLETED" if current_term_week > w_p2 else ("ACTIVE" if (current_term_week > w_p1 and current_term_week <= w_p2) else "UPCOMING")
+            },
+            {
+                "phase": 3,
+                "week_range": f"Weeks {w_p2+1}–{total_term_weeks-1}",
+                "title": "Exams & BECE Mocks",
+                "desc": "Summative & Mock Exams",
+                "status": "COMPLETED" if current_term_week >= total_term_weeks else ("ACTIVE" if (current_term_week > w_p2 and current_term_week < total_term_weeks) else "UPCOMING")
+            },
+            {
+                "phase": 4,
+                "week_range": f"Week {total_term_weeks}",
+                "title": "Reports & Vacation",
+                "desc": "Terminal Reports Handover",
+                "status": "ACTIVE" if current_term_week >= total_term_weeks else "UPCOMING"
+            }
+        ]
+    }
+
+    # ── JHS 3 BECE Aggregate 6 & CSSPS Placement Engine ──────────────────────
     bece_tracker = None
     jhs3_classes = class_query.filter(
         (ClassSection.name.ilike("%JHS 3%")) | (ClassSection.name.ilike("%JHS3%")) | (ClassSection.name.ilike("%Basic 9%")) | (ClassSection.name.ilike("%Form 3%"))
     ).all()
+
     if jhs3_classes:
         jhs3_ids = [c.id for c in jhs3_classes]
         jhs3_students = student_query.filter(Student.class_section_id.in_(jhs3_ids)).all()
@@ -1061,15 +1156,108 @@ def get_executive_analytics(
         jhs3_scores = [sc for sc in all_scores if sc.student_id in jhs3_st_ids]
         jhs3_totals = [(sc.class_score or 0.0) + (sc.exam_score or 0.0) for sc in jhs3_scores]
         jhs3_avg = round(sum(jhs3_totals) / max(1, len(jhs3_totals)), 1) if jhs3_totals else 0.0
-        
+
+        def _calc_stanine(pct: float) -> int:
+            if pct >= 80.0: return 1
+            if pct >= 70.0: return 2
+            if pct >= 65.0: return 3
+            if pct >= 60.0: return 4
+            if pct >= 55.0: return 5
+            if pct >= 50.0: return 6
+            if pct >= 45.0: return 7
+            if pct >= 40.0: return 8
+            return 9
+
+        # Student-by-student Best-6 Aggregate computation
+        cat_a_count = 0     # Aggregate 06 – 12 (Category A Ready)
+        cat_b_c_count = 0   # Aggregate 13 – 24 (Category B/C Ready)
+        remedial_count = 0  # Aggregate 25+ (Intervention Needed)
+        aggregates_list = []
+
+        for st in jhs3_students:
+            st_scs = [sc for sc in jhs3_scores if sc.student_id == st.id]
+            if not st_scs:
+                continue
+
+            core_stanines = []
+            elective_stanines = []
+
+            for sc in st_scs:
+                s_name = sc.subject.name.lower() if sc.subject else ""
+                tot_m = (sc.class_score or 0.0) + (sc.exam_score or 0.0)
+                stn = _calc_stanine(tot_m)
+                
+                is_core = any(k in s_name for k in ["english", "math", "science", "social", "world"])
+                if is_core:
+                    core_stanines.append(stn)
+                else:
+                    elective_stanines.append(stn)
+
+            # Need 4 cores (fill missing with 9) + 2 best electives (fill missing with 9)
+            core_stanines.sort()
+            while len(core_stanines) < 4:
+                core_stanines.append(9)
+            
+            elective_stanines.sort()
+            while len(elective_stanines) < 2:
+                elective_stanines.append(9)
+
+            agg = sum(core_stanines[:4]) + sum(elective_stanines[:2])
+            aggregates_list.append(agg)
+
+            if agg <= 12:
+                cat_a_count += 1
+            elif agg <= 24:
+                cat_b_c_count += 1
+            else:
+                remedial_count += 1
+
+        best_agg = min(aggregates_list) if aggregates_list else None
+        avg_agg = round(sum(aggregates_list) / len(aggregates_list), 1) if aggregates_list else None
+
         bece_tracker = {
             "total_candidates": len(jhs3_students),
             "boys_count": jhs3_boys,
             "girls_count": jhs3_girls,
             "index_assigned_count": with_index_count,
             "mock_average": jhs3_avg,
+            "best_aggregate": best_agg,
+            "average_aggregate": avg_agg,
+            "placement_forecast": {
+                "category_a_count": cat_a_count,
+                "category_b_c_count": cat_b_c_count,
+                "remedial_count": remedial_count
+            },
             "classes": [{"id": c.id, "name": c.name} for c in jhs3_classes]
         }
+
+    # ── Pastoral Truancy & Low Attendance Alert Hub (<80% threshold) ──────────
+    low_attendance_pupils = []
+    from ..models import Attendance
+    all_att = db.query(Attendance).all()
+    att_by_student = {}
+    for a in all_att:
+        if a.student_id not in att_by_student:
+            att_by_student[a.student_id] = {"total": 0, "present": 0}
+        att_by_student[a.student_id]["total"] += 1
+        if (a.status or "").capitalize() in ["Present", "Late"]:
+            att_by_student[a.student_id]["present"] += 1
+
+    for st in all_active_students:
+        rec = att_by_student.get(st.id)
+        if rec and rec["total"] >= 2:
+            pct = round((rec["present"] / rec["total"]) * 100.0, 1)
+            if pct < 80.0:
+                low_attendance_pupils.append({
+                    "id": st.id,
+                    "name": st.full_name,
+                    "class_name": st.class_section.name if st.class_section else "—",
+                    "attendance_pct": pct,
+                    "present_days": rec["present"],
+                    "total_days": rec["total"],
+                    "guardian_phone": st.phone or "Not Recorded",
+                    "guardian_name": getattr(st, "guardian_name", None) or "Parent/Guardian"
+                })
 
     teacher_data = {
         "total_classes": len({a.class_section_id for a in t_assignments if a.class_section_id}),
@@ -1079,6 +1267,7 @@ def get_executive_analytics(
         "allocations": teacher_allocations,
         "today_timetable": today_periods,
         "at_risk_students": teacher_at_risk_list[:8],
+        "low_attendance_pupils": low_attendance_pupils[:8],
         "form_class": teacher_form_class,
         "is_primary_teacher": is_primary_teacher,
         "is_jhs_teacher": is_jhs_teacher,
@@ -1347,7 +1536,9 @@ def get_executive_analytics(
             "published_classes_count": published_classes_count,
             "departments_matrix": departments_matrix,
             "classes_matrix": classes_matrix,
-            "bece_candidate_tracker": bece_tracker
+            "academic_term_progress": academic_term_progress,
+            "bece_candidate_tracker": bece_tracker,
+            "low_attendance_pupils": low_attendance_pupils[:10]
         },
         "domestic": {
             "total_boarders": total_boarders,

@@ -150,7 +150,9 @@ class SchoolStage(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True, nullable=False)
     school_type = Column(String, nullable=False)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=None)
     
+    school = relationship("School")
     class_sections = relationship("ClassSection", back_populates="stage")
 
 class ClassSection(Base):
@@ -161,7 +163,9 @@ class ClassSection(Base):
     stage_id = Column(Integer, ForeignKey("school_stages.id"), nullable=False)
     program_id = Column(Integer, ForeignKey("programs.id"), nullable=True)
     form_master_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=None)
 
+    school = relationship("School")
     stage = relationship("SchoolStage", back_populates="class_sections")
     program = relationship("Program", back_populates="class_sections")
     students = relationship("Student", back_populates="class_section")

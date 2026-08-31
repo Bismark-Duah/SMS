@@ -199,7 +199,8 @@ def get_executive_analytics(
     from ..models import (
         Student, ClassSection, Subject, Department, User, ExeatRecord, 
         DisciplineRecord, House, Score, ClassSubjectScoreStatus, 
-        ClassSectionReportStatus, Setting, School, TeacherAssignment
+        ClassSectionReportStatus, Setting, School, TeacherAssignment, SchoolStage,
+        Attendance
     )
     from datetime import datetime
     from sqlalchemy import func
@@ -220,16 +221,44 @@ def get_executive_analytics(
     # Base queries scoped to school tenant
     user_query = db.query(User)
     student_query = db.query(Student).filter(Student.is_active == True)
-    class_query = db.query(ClassSection)
+    class_query = db.query(ClassSection).join(ClassSection.stage, isouter=True)
     dept_query = db.query(Department)
     house_query = db.query(House)
 
     if target_sch_id is not None:
         user_query = user_query.filter(User.school_id == target_sch_id)
         student_query = student_query.filter(Student.school_id == target_sch_id)
-        class_query = class_query.filter(ClassSection.school_id == target_sch_id) if hasattr(ClassSection, 'school_id') else class_query
         dept_query = dept_query.filter(Department.school_id == target_sch_id)
         house_query = house_query.filter(House.school_id == target_sch_id)
+        if hasattr(ClassSection, 'school_id'):
+            class_query = class_query.filter((ClassSection.school_id == target_sch_id) | (ClassSection.school_id == None))
+
+    if school_mode == "BASIC_ONLY":
+        class_query = class_query.filter(
+            ClassSection.program_id == None,
+            (SchoolStage.school_type.ilike("Basic%")) | (SchoolStage.school_type == None),
+            ~SchoolStage.name.ilike("%SHS%"),
+            ~SchoolStage.name.ilike("%Form %"),
+            ~ClassSection.name.ilike("%Form 1%"),
+            ~ClassSection.name.ilike("%Form 2%"),
+            ~ClassSection.name.ilike("%Form 3%"),
+            ~ClassSection.name.ilike("%SHS%"),
+            ~ClassSection.name.ilike("%STEM%")
+        )
+    elif school_mode == "SHS_ONLY":
+        class_query = class_query.filter(
+            (SchoolStage.school_type.ilike("SHS%")) | (ClassSection.program_id.isnot(None)) | (SchoolStage.name.ilike("%SHS%")) | (SchoolStage.name.ilike("%Form %")),
+            ~SchoolStage.name.ilike("%Nursery%"),
+            ~SchoolStage.name.ilike("%KG%"),
+            ~SchoolStage.name.ilike("%Primary%"),
+            ~SchoolStage.name.ilike("%Class 1%"),
+            ~SchoolStage.name.ilike("%Class 2%"),
+            ~SchoolStage.name.ilike("%Class 3%"),
+            ~SchoolStage.name.ilike("%Class 4%"),
+            ~SchoolStage.name.ilike("%Class 5%"),
+            ~SchoolStage.name.ilike("%Class 6%"),
+            ~SchoolStage.name.ilike("%JHS%")
+        )
 
     teachers_count = user_query.join(User.roles).filter(User.roles.any(name="teacher")).count()
     depts_count = dept_query.count() if school_mode != "BASIC_ONLY" else 0
@@ -386,6 +415,23 @@ def get_executive_analytics(
     classes_matrix = []
     all_class_sections = class_query.all()
     for cls_item in all_class_sections:
+        st_type = (cls_item.stage.school_type if cls_item.stage else "").upper()
+        st_name = (cls_item.stage.name if cls_item.stage else "").upper()
+        c_name = (cls_item.name or "").upper()
+
+        if school_mode == "BASIC_ONLY":
+            if cls_item.program_id is not None:
+                continue
+            if st_type == "SHS" or "SHS" in st_name or "FORM " in st_name or "STEM" in st_name:
+                continue
+            if any(k in c_name for k in ["FORM 1", "FORM 2", "FORM 3", "SHS 1", "SHS 2", "SHS 3", "STEM A", "STEM B", "GENERAL ARTS", "SCIENCE 1", "SCIENCE 2", "SCIENCE 3", "BUSINESS 1", "BUSINESS 2", "BUSINESS 3"]):
+                continue
+        elif school_mode == "SHS_ONLY":
+            if st_type == "BASIC" or any(k in st_name for k in ["NURSERY", "KG", "PRIMARY", "CLASS 1", "CLASS 2", "CLASS 3", "CLASS 4", "CLASS 5", "CLASS 6", "JHS"]):
+                continue
+            if any(k in c_name for k in ["NURSERY", "KG 1", "KG 2", "CLASS 1", "CLASS 2", "CLASS 3", "CLASS 4", "CLASS 5", "CLASS 6", "JHS 1", "JHS 2", "JHS 3"]):
+                continue
+
         fm_user = cls_item.form_master
         fm_name = (getattr(fm_user, 'full_name', None) or fm_user.username) if fm_user else "Unassigned Class Teacher"
         c_students = [s for s in student_query.all() if s.class_section_id == cls_item.id]

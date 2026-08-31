@@ -1420,8 +1420,17 @@ async function loadExecutiveAnalytics() {
       }
 
       // 4. Basic Class Streams Matrix vs Departmental Matrix
-      if (isBasicOnly && Array.isArray(ac.classes_matrix) && ac.classes_matrix.length > 0) {
-        let classRows = ac.classes_matrix.map(c => {
+      if (isBasicOnly && Array.isArray(ac.classes_matrix)) {
+        let validBasicClasses = ac.classes_matrix.filter(c => {
+          const n = (c.name || '').toUpperCase();
+          const st = (c.stage_name || '').toUpperCase();
+          if (st.includes('SHS') || st.includes('FORM ') || st.includes('STEM')) return false;
+          if (n.includes('FORM 1') || n.includes('FORM 2') || n.includes('FORM 3') || n.includes('SHS 1') || n.includes('SHS 2') || n.includes('SHS 3') || n.includes('STEM A') || n.includes('STEM B') || n.includes('SCIENCE 1') || n.includes('GENERAL ARTS') || n.includes('BUSINESS 1') || n.includes('HOME ECONOMICS')) return false;
+          return true;
+        });
+
+        if (validBasicClasses.length > 0) {
+          let classRows = validBasicClasses.map(c => {
           let badge = `<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">⏳ IN PROGRESS</span>`;
           if (c.status === 'COMPLETE') {
             badge = `<span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">✓ COMPLETE</span>`;
@@ -1481,6 +1490,7 @@ async function loadExecutiveAnalytics() {
             </div>
           </div>
         `;
+        }
       } else if (!isBasicOnly && Array.isArray(ac.departments_matrix) && ac.departments_matrix.length > 0) {
         let matrixRows = ac.departments_matrix.map(d => {
           let badge = `<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">⏳ IN PROGRESS</span>`;

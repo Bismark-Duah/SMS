@@ -37,7 +37,7 @@
           <label>Report Title
             <input type="text" id="report_title" placeholder="E.g. TERMINAL REPORT" />
           </label>
-          <label>Principal / Headteacher
+          <label><span id="lbl_report_headmaster">Principal / Headteacher</span>
             <input type="text" id="report_headmaster" placeholder="E.g. Dr. John Doe" />
           </label>
           <label>School Address
@@ -63,7 +63,7 @@
             </div>
           </div>
           <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 14px; margin-top: 6px; flex-wrap: wrap;">
-            <label style="flex: 1; min-width: 280px; margin: 0;">Headmaster Signature
+            <label style="flex: 1; min-width: 280px; margin: 0;"><span id="lbl_headmaster_signature">Headmaster / Headteacher Signature</span>
               <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
                 <input type="file" id="headmaster_signature_file" accept="image/png,image/jpeg,image/webp" style="display: none;" />
                 <button type="button" class="btn" style="white-space: nowrap; margin: 0; background: var(--primary);" onclick="document.getElementById('headmaster_signature_file').click()">📁 Select Signature</button>
@@ -95,6 +95,24 @@
             </select>
           </label>
 
+          <!-- 1-Click SBA Presets -->
+          <div id="sbaPresetsContainer" style="grid-column: 1 / -1; background: rgba(59,130,246,0.06); padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(59,130,246,0.2); margin-top: 2px;">
+            <div style="font-size:0.82rem; font-weight:700; color:var(--text-primary); margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+              <span>⚡ Continuous Assessment (SBA) &amp; Exam Weight Presets:</span>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <button type="button" class="btn sm" onclick="setSbaPreset(50, 50)" style="font-size:0.78rem; padding:4px 10px; background:rgba(16,185,129,0.18); color:#34d399; border:1px solid rgba(16,185,129,0.3);">
+                🇬🇭 50% SBA / 50% Exam (GES Basic Standard)
+              </button>
+              <button type="button" class="btn sm" onclick="setSbaPreset(60, 40)" style="font-size:0.78rem; padding:4px 10px; background:rgba(234,179,8,0.18); color:#fde047; border:1px solid rgba(234,179,8,0.3);">
+                🧸 60% SBA / 40% Exam (KG / Lower Primary)
+              </button>
+              <button type="button" class="btn sm" onclick="setSbaPreset(30, 70)" style="font-size:0.78rem; padding:4px 10px; background:rgba(99,102,241,0.18); color:#818cf8; border:1px solid rgba(99,102,241,0.3);">
+                🎓 30% SBA / 70% Exam (JHS Mock / Upper)
+              </button>
+            </div>
+          </div>
+
           <label>SBA Class Score Weight (%)
             <input type="number" id="class_score_weight" min="0" max="100" placeholder="E.g. 30" required />
           </label>
@@ -106,7 +124,7 @@
               <option value="">Loading years...</option>
             </select>
           </label>
-          <label>Active Academic Term / Semester
+          <label><span id="lbl_active_semester">Active Academic Term / Semester</span>
             <select id="active_semester_id">
               <option value="">Loading terms...</option>
             </select>
@@ -137,9 +155,79 @@
           </form>
         </section>
 
+        <!-- SECTION: NaCCA Basic School Core Competencies & Behavioral Domain Hub -->
+        <section class="card" id="naccaCompetenciesCard" style="margin-bottom:20px; border-left: 4px solid #10b981;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div>
+              <h3 style="margin:0; color:#34d399;">🌟 NaCCA Core Competencies &amp; Behavioral Domain Hub</h3>
+              <p style="margin:4px 0 0; opacity:.8; font-size:.85rem;">
+                Select which official NaCCA Core Competencies and Character Traits are rated by Class Teachers and printed on Pupil Terminal Report Cards.
+              </p>
+            </div>
+            <span style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;">NaCCA 2024+ CURRICULUM</span>
+          </div>
+
+          <form id="naccaCompetenciesForm" onsubmit="saveNaccaCompetencies(event)">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px; margin-bottom:16px;">
+              <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
+                <input type="checkbox" id="comp_critical_thinking" checked />
+                <div>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">🧠 Critical Thinking &amp; Problem Solving</strong>
+                  <div style="font-size:0.75rem; opacity:0.7;">Analytical ability, inquiry, and reasoning</div>
+                </div>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
+                <input type="checkbox" id="comp_creativity" checked />
+                <div>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">💡 Creativity &amp; Innovation</strong>
+                  <div style="font-size:0.75rem; opacity:0.7;">Original thinking, artistic expression, craft</div>
+                </div>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
+                <input type="checkbox" id="comp_collaboration" checked />
+                <div>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">🤝 Communication &amp; Collaboration</strong>
+                  <div style="font-size:0.75rem; opacity:0.7;">Teamwork, group participation, articulation</div>
+                </div>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
+                <input type="checkbox" id="comp_cultural_identity" checked />
+                <div>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">🇬🇭 Cultural Identity &amp; Global Citizenship</strong>
+                  <div style="font-size:0.75rem; opacity:0.7;">Civic responsibility, respect, cultural appreciation</div>
+                </div>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
+                <input type="checkbox" id="comp_personal_dev" checked />
+                <div>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">👤 Personal Development &amp; Leadership</strong>
+                  <div style="font-size:0.75rem; opacity:0.7;">Self-discipline, initiative, moral integrity</div>
+                </div>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
+                <input type="checkbox" id="comp_conduct_punctuality" checked />
+                <div>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">⏱️ General Conduct, Attendance &amp; Punctuality</strong>
+                  <div style="font-size:0.75rem; opacity:0.7;">Regularity, classroom behavior, cleanliness</div>
+                </div>
+              </label>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <button type="submit" class="btn primary" style="background:#10b981; border-color:#059669; font-weight:700;">💾 Save Core Competencies</button>
+              <span id="naccaCompMsg" style="font-size:0.85rem;"></span>
+            </div>
+          </form>
+        </section>
+
         <!-- SECTION 2: Academic & Report Card Publishing Policy -->
         <section class="card" style="margin-bottom:20px; border-left: 4px solid var(--primary);">
-          <h3>📜 Academic & Report Card Publishing Policy</h3>
+          <h3>📜 Academic &amp; Report Card Publishing Policy</h3>
           <p style="opacity:.8; font-size:.85rem; margin-bottom:16px;">
             Choose how terminal report cards are approved and published to guardians across your school.
           </p>
@@ -148,24 +236,24 @@
             <label style="display:flex; align-items:start; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
               <input type="radio" name="publishing_mode_radio" value="FORM_MASTER_DIRECT" style="margin-top:3px;" />
               <div>
-                <strong style="color:#818cf8;">Option 1: Direct Form Master Publishing</strong>
-                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Form Masters / Class Teachers can directly publish and send terminal report cards to guardians for their class as soon as their broadsheet is complete.</div>
+                <strong style="color:#818cf8;" id="lbl_pub_opt1">Option 1: Direct Class Teacher / Form Master Publishing</strong>
+                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Class Teachers can directly publish and send terminal report cards to guardians for their class as soon as their assessment broadsheet is complete.</div>
               </div>
             </label>
 
             <label style="display:flex; align-items:start; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
               <input type="radio" name="publishing_mode_radio" value="ACADEMIC_HEAD_ONLY" style="margin-top:3px;" />
               <div>
-                <strong style="color:#f59e0b;">Option 2: Centralized Executive Approval</strong>
-                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Form Masters submit class broadsheets for review. Only the Assistant Headmaster Academic / Headmaster can approve and publish terminal reports to guardians.</div>
+                <strong style="color:#f59e0b;" id="lbl_pub_opt2">Option 2: Centralized Executive Headteacher Approval</strong>
+                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Class Teachers submit class broadsheets for review. Only the Headteacher can approve and publish terminal reports to guardians.</div>
               </div>
             </label>
 
             <label style="display:flex; align-items:start; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
               <input type="radio" name="publishing_mode_radio" value="HYBRID_BOTH" style="margin-top:3px;" checked />
               <div>
-                <strong style="color:#10b981;">Option 3: Hybrid Dual Mode (Default)</strong>
-                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Both Form Masters AND the Assistant Headmaster Academic have publishing & overriding capability. Form Masters can publish their own class, and Academic Heads have master publish controls over all classes.</div>
+                <strong style="color:#10b981;" id="lbl_pub_opt3">Option 3: Hybrid Dual Mode (Default)</strong>
+                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Both Class Teachers AND the Headteacher have publishing &amp; overriding capability. Class Teachers can publish their own class, and the Headteacher has master publish controls over all classes.</div>
               </div>
             </label>
           </div>
@@ -413,7 +501,7 @@
       </section>
     </main>
 
-    <script src="js/guard.js"></script>
-    <script src="js/settings.js"></script>
+    <script src="js/guard.js?v=11.0"></script>
+    <script src="js/settings.js?v=11.0"></script>
   </body>
 </html>

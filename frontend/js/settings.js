@@ -55,9 +55,15 @@ function populateCustomTierDropdowns() {
     const gradeSel = document.getElementById('new_grade');
     const remarkSel = document.getElementById('new_remark');
     const pointsSel = document.getElementById('new_points');
+    const mode = (localStorage.getItem('school_mode') || document.getElementById('school_mode')?.value || 'COMBINED').toUpperCase();
 
     if (gradeSel) {
-        const grades = ['A1', 'B2', 'B3', 'C4', 'C5', 'C6', 'D7', 'E8', 'F9', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
+        let grades = [];
+        if (mode === 'BASIC_ONLY') {
+            grades = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
+        } else {
+            grades = ['A1', 'B2', 'B3', 'C4', 'C5', 'C6', 'D7', 'E8', 'F9', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
+        }
         gradeSel.innerHTML = '<option value="">Select Grade...</option>' + grades.map(g => `<option value="${g}">${g}</option>`).join('');
     }
 
@@ -71,6 +77,85 @@ function populateCustomTierDropdowns() {
         pointsSel.innerHTML = points.map(p => `<option value="${p}">${p}</option>`).join('');
     }
 }
+
+window.setSbaPreset = function(classWeight, examWeight) {
+    const classInput = document.getElementById('class_score_weight');
+    const examInput = document.getElementById('exam_score_weight');
+    if (classInput) classInput.value = classWeight;
+    if (examInput) examInput.value = examWeight;
+    localStorage.setItem('class_score_weight', classWeight);
+    localStorage.setItem('exam_score_weight', examWeight);
+    if (window.showToast) {
+        window.showToast(`Set Continuous Assessment to ${classWeight}% SBA / ${examWeight}% Exam`, 'info');
+    }
+};
+
+window.applySchoolModeVisibility = function(mode) {
+    const m = (mode || document.getElementById('school_mode')?.value || localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
+    const isBasic = (m === 'BASIC_ONLY');
+    const isShs = (m === 'SHS_ONLY');
+
+    const lblHead = document.getElementById('lbl_report_headmaster');
+    if (lblHead) lblHead.textContent = isBasic ? 'Headteacher' : (isShs ? 'Principal / Headmaster' : 'Principal / Headteacher');
+
+    const lblSig = document.getElementById('lbl_headmaster_signature');
+    if (lblSig) lblSig.textContent = isBasic ? 'Headteacher Signature' : (isShs ? 'Headmaster Signature' : 'Headmaster / Headteacher Signature');
+
+    const lblTerm = document.getElementById('lbl_active_semester');
+    if (lblTerm) lblTerm.textContent = isBasic ? 'Active Academic Term (Term 1, 2, or 3)' : (isShs ? 'Active Academic Semester (Semester 1 or 2)' : 'Active Academic Term / Semester');
+
+    const lblOpt1 = document.getElementById('lbl_pub_opt1');
+    if (lblOpt1) lblOpt1.textContent = isBasic ? 'Option 1: Direct Class Teacher Publishing' : 'Option 1: Direct Form Master Publishing';
+
+    const lblOpt2 = document.getElementById('lbl_pub_opt2');
+    if (lblOpt2) lblOpt2.textContent = isBasic ? 'Option 2: Centralized Executive Headteacher Approval' : 'Option 2: Centralized Executive Approval (Assistant Headmaster / Headmaster)';
+
+    const lblOpt3 = document.getElementById('lbl_pub_opt3');
+    if (lblOpt3) lblOpt3.textContent = isBasic ? 'Option 3: Hybrid Dual Mode (Class Teacher & Headteacher)' : 'Option 3: Hybrid Dual Mode (Form Master & Academic Head)';
+
+    const compCard = document.getElementById('naccaCompetenciesCard');
+    if (compCard) compCard.style.display = isShs ? 'none' : 'block';
+
+    const hierLabel = document.getElementById('hierarchyModeLabel');
+    const bStatus = (document.getElementById('boarding_status')?.value || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase();
+    if (hierLabel) hierLabel.style.display = (isBasic || bStatus === 'DAY_ONLY') ? 'none' : 'block';
+
+    populateCustomTierDropdowns();
+};
+
+window.saveNaccaCompetencies = async function(event) {
+    event.preventDefault();
+    const msgEl = document.getElementById('naccaCompMsg');
+    if (msgEl) { msgEl.style.color = '#34d399'; msgEl.textContent = 'Saving NaCCA Competencies...'; }
+
+    const competencies = {
+        critical_thinking: document.getElementById('comp_critical_thinking')?.checked ?? true,
+        creativity: document.getElementById('comp_creativity')?.checked ?? true,
+        collaboration: document.getElementById('comp_collaboration')?.checked ?? true,
+        cultural_identity: document.getElementById('comp_cultural_identity')?.checked ?? true,
+        personal_dev: document.getElementById('comp_personal_dev')?.checked ?? true,
+        conduct_punctuality: document.getElementById('comp_conduct_punctuality')?.checked ?? true
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/settings/`, {
+            method: 'PUT',
+            headers: getHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                nacca_core_competencies: JSON.stringify(competencies)
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            if (msgEl) { msgEl.style.color = '#34d399'; msgEl.textContent = '✔ NaCCA Core Competencies saved!'; }
+            if (window.showToast) window.showToast('NaCCA Core Competencies updated successfully!', 'success');
+        } else {
+            if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ ${data.detail || 'Failed to save'}`; }
+        }
+    } catch (err) {
+        if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = `❌ ${err.message}`; }
+    }
+};
 
 window.updateGradingStandardDropdown = function(mode) {
     const stdSel = document.getElementById('grading_standard');
@@ -141,6 +226,7 @@ window.onSettingsModeChange = function() {
     }
 
     window.updateGradingStandardDropdown(mode);
+    window.applySchoolModeVisibility(mode);
     window.updateSettingsProfilePreview(mode, boarding);
 };
 
@@ -314,7 +400,19 @@ async function loadSettings() {
         setVal('admission_momo_recipient_name', settings.admission_momo_recipient_name || 'Duah Bismark');
         setVal('admission_momo_recipient_network', settings.admission_momo_recipient_network || 'Telecel');
 
-        if (window.applySchoolModeVisibility) window.applySchoolModeVisibility();
+        if (settings.nacca_core_competencies) {
+            try {
+                const comps = typeof settings.nacca_core_competencies === 'string' ? JSON.parse(settings.nacca_core_competencies) : settings.nacca_core_competencies;
+                if (comps.critical_thinking !== undefined && document.getElementById('comp_critical_thinking')) document.getElementById('comp_critical_thinking').checked = !!comps.critical_thinking;
+                if (comps.creativity !== undefined && document.getElementById('comp_creativity')) document.getElementById('comp_creativity').checked = !!comps.creativity;
+                if (comps.collaboration !== undefined && document.getElementById('comp_collaboration')) document.getElementById('comp_collaboration').checked = !!comps.collaboration;
+                if (comps.cultural_identity !== undefined && document.getElementById('comp_cultural_identity')) document.getElementById('comp_cultural_identity').checked = !!comps.cultural_identity;
+                if (comps.personal_dev !== undefined && document.getElementById('comp_personal_dev')) document.getElementById('comp_personal_dev').checked = !!comps.personal_dev;
+                if (comps.conduct_punctuality !== undefined && document.getElementById('comp_conduct_punctuality')) document.getElementById('comp_conduct_punctuality').checked = !!comps.conduct_punctuality;
+            } catch (_) {}
+        }
+
+        if (window.applySchoolModeVisibility) window.applySchoolModeVisibility(mode);
     } catch (error) {
         console.error('Error loading settings:', error);
     }

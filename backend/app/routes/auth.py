@@ -61,7 +61,7 @@ from ..dependencies import rate_limit_auth, get_current_user, get_school_id
 
 router = APIRouter()
 
-DEFAULT_ROLES = ["super_admin", "admin", "teacher", "student", "parent", "headmaster", "headmistress", "form_master", "form_mistress", "house_master", "house_mistress", "senior_housemaster", "senior_housemistress", "hod", "assistant_house_master", "assistant_house_mistress", "assistant_headmaster_academic", "assistant_headmaster_domestic", "assistant_headmaster_admin", "bursar", "storekeeper", "security_officer"]
+DEFAULT_ROLES = ["super_admin", "admin", "proprietor", "headmaster", "headmistress", "assistant_headmaster_academic", "assistant_headmaster_domestic", "assistant_headmaster_admin", "school_administrator", "ict_coordinator", "bursar", "secretary", "teacher", "student", "parent", "form_master", "form_mistress", "house_master", "house_mistress", "senior_housemaster", "senior_housemistress", "hod", "assistant_house_master", "assistant_house_mistress", "storekeeper", "security_officer"]
 
 # Default master user for seeding
 DEFAULT_USER_TEMPLATES = [
@@ -755,10 +755,30 @@ ROLE_ALIASES = {
     "school owner": "proprietor",
     "board": "proprietor",
     "board of directors": "proprietor",
+    "school administrator": "school_administrator",
+    "school_administrator": "school_administrator",
+    "school admin officer": "school_administrator",
+    "school_admin_officer": "school_administrator",
+    "administrative officer": "school_administrator",
+    "administrative_officer": "school_administrator",
+    "admin officer": "school_administrator",
+    "admin_officer": "school_administrator",
+    "ict coordinator": "ict_coordinator",
+    "ict_coordinator": "ict_coordinator",
+    "it coordinator": "ict_coordinator",
+    "it_coordinator": "ict_coordinator",
+    "school it officer": "ict_coordinator",
+    "school_it_officer": "ict_coordinator",
+    "system admin": "ict_coordinator",
+    "system_admin": "ict_coordinator",
+    "ict director": "ict_coordinator",
+    "ict_director": "ict_coordinator",
     "secretary": "secretary",
     "school secretary": "secretary",
-    "admin officer": "secretary",
-    "admin_officer": "secretary",
+    "school_secretary": "secretary",
+    "admissions officer": "secretary",
+    "admissions_officer": "secretary",
+    "registrar": "secretary",
     "principal": "headmaster",
     "headmaster": "headmaster",
     "headmistress": "headmistress",
@@ -793,7 +813,8 @@ def list_roles(
     core_roles = [
         "super_admin", "admin", "proprietor", "headmaster", "headmistress",
         "assistant_headmaster_academic", "assistant_headmaster_admin", "assistant_headmaster_domestic",
-        "bursar", "secretary", "teacher", "form_master", "form_mistress", "hod",
+        "school_administrator", "ict_coordinator", "bursar", "secretary",
+        "teacher", "form_master", "form_mistress", "hod",
         "senior_house_master", "senior_house_mistress", "house_master", "house_mistress",
         "assistant_house_master", "assistant_house_mistress", "storekeeper", "security_officer",
         "parent", "student"

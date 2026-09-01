@@ -98,7 +98,10 @@ def run_universal_hierarchy_and_rbac_test_suite():
         role_names_pub_bas = [r.name.lower() for r in roles_pub_bas]
         assert "proprietor" not in role_names_pub_bas, "Proprietor role MUST be suppressed in Public Basic School"
         assert "headmaster" in role_names_pub_bas
-        print(f"   [OK] Public Basic School ({pub_basic.name}): 'proprietor' suppressed, 'headmaster' active.")
+        assert "school_administrator" in role_names_pub_bas
+        assert "ict_coordinator" in role_names_pub_bas
+        assert "secretary" in role_names_pub_bas
+        print(f"   [OK] Public Basic School ({pub_basic.name}): 'proprietor' suppressed, operational roles active.")
 
         # Private Basic School: Proprietor MUST be listed
         roles_pvt_bas = list_roles(db=db, school_id=pvt_basic.id)
@@ -110,13 +113,18 @@ def run_universal_hierarchy_and_rbac_test_suite():
         roles_pub_shs = list_roles(db=db, school_id=pub_shs.id)
         role_names_pub_shs = [r.name.lower() for r in roles_pub_shs]
         assert "proprietor" not in role_names_pub_shs, "Proprietor role MUST be suppressed in Public SHS"
+        assert "school_administrator" in role_names_pub_shs
+        assert "ict_coordinator" in role_names_pub_shs
         print(f"   [OK] Public SHS ({pub_shs.name}): 'proprietor' suppressed, 'headmaster' active.")
 
         # Private SHS: Proprietor MUST be listed
         roles_pvt_shs = list_roles(db=db, school_id=pvt_shs.id)
         role_names_pvt_shs = [r.name.lower() for r in roles_pvt_shs]
         assert "proprietor" in role_names_pvt_shs, "Proprietor role MUST be active in Private SHS"
-        print(f"   [OK] Private SHS ({pvt_shs.name}): 'proprietor' role available.")
+        assert "school_administrator" in role_names_pvt_shs
+        assert "ict_coordinator" in role_names_pvt_shs
+        assert "secretary" in role_names_pvt_shs
+        print(f"   [OK] Private SHS ({pvt_shs.name}): All operational and executive roles verified.")
 
         print("\n[2] Testing Separation of Duties (SoD) & Zero-Trust Route Access...")
         # Roles
@@ -124,6 +132,17 @@ def run_universal_hierarchy_and_rbac_test_suite():
         teacher_role = db.query(Role).filter(Role.name == "teacher").first()
         sec_role = db.query(Role).filter(Role.name == "secretary").first()
         prop_role = db.query(Role).filter(Role.name == "proprietor").first()
+        admin_officer_role = db.query(Role).filter(Role.name == "school_administrator").first()
+        if not admin_officer_role:
+            admin_officer_role = Role(name="school_administrator")
+            db.add(admin_officer_role)
+            db.commit()
+
+        ict_role = db.query(Role).filter(Role.name == "ict_coordinator").first()
+        if not ict_role:
+            ict_role = Role(name="ict_coordinator")
+            db.add(ict_role)
+            db.commit()
 
         # Users
         bursar_user = db.query(User).filter(User.username == "test_bursar_rbac").first()
@@ -158,6 +177,22 @@ def run_universal_hierarchy_and_rbac_test_suite():
             db.commit()
             db.refresh(prop_user)
 
+        school_admin_user = db.query(User).filter(User.username == "test_school_admin_officer").first()
+        if not school_admin_user:
+            school_admin_user = User(username="test_school_admin_officer", password_hash="hash", school_id=pvt_basic.id, is_first_login=False)
+            school_admin_user.roles.append(admin_officer_role)
+            db.add(school_admin_user)
+            db.commit()
+            db.refresh(school_admin_user)
+
+        ict_user = db.query(User).filter(User.username == "test_ict_coord_rbac").first()
+        if not ict_user:
+            ict_user = User(username="test_ict_coord_rbac", password_hash="hash", school_id=pvt_basic.id, is_first_login=False)
+            ict_user.roles.append(ict_role)
+            db.add(ict_user)
+            db.commit()
+            db.refresh(ict_user)
+
         # 1. Test require_admin(bursar_user) -> passes (Bursar has finance access)
         require_admin(bursar_user)
         fee_sum = get_fee_summary(db=db, current_user=bursar_user)
@@ -180,7 +215,23 @@ def run_universal_hierarchy_and_rbac_test_suite():
             assert e.status_code == 403
             print(f"   [OK] Secretary access to fees blocked: 403 Forbidden ({e.detail})")
 
-        # 4. Test require_admin(prop_user) -> passes (Proprietor has full executive financial access)
+        # 4. Test require_admin(school_admin_user) -> raises 403 (School Admin Officer cannot access financial collections)
+        try:
+            get_fee_summary(db=db, current_user=school_admin_user)
+            assert False, "School Administrator MUST be forbidden from accessing financial collection desk"
+        except HTTPException as e:
+            assert e.status_code == 403
+            print(f"   [OK] School Administrator access to fees blocked: 403 Forbidden ({e.detail})")
+
+        # 5. Test require_admin(ict_user) -> raises 403 (ICT Coordinator cannot access financial collections)
+        try:
+            get_fee_summary(db=db, current_user=ict_user)
+            assert False, "ICT Coordinator MUST be forbidden from accessing financial collection desk"
+        except HTTPException as e:
+            assert e.status_code == 403
+            print(f"   [OK] ICT Coordinator access to fees blocked: 403 Forbidden ({e.detail})")
+
+        # 6. Test require_admin(prop_user) -> passes (Proprietor has full executive financial access)
         prop_sum = get_fee_summary(db=db, current_user=prop_user)
         assert "total_billed" in prop_sum
         print("   [OK] Proprietor access to financial summary: PERMITTED (200 OK)")

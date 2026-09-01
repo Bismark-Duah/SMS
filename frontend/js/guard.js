@@ -24,40 +24,42 @@
   const HOUSE_STAFF = ['senior_housemaster', 'senior_housemistress', 'senior_house_master', 'senior_house_mistress', 'house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress'];
   const FORM_STAFF = ['form_master', 'form_mistress'];
   const FINANCE_STAFF = ['bursar', 'accountant', 'school_accountant'];
-  const ADMISSION_STAFF = ['secretary', 'school_secretary', 'admin_officer', 'admissions_officer'];
+  const ADMISSION_STAFF = ['secretary', 'school_secretary', 'admissions_officer', 'registrar'];
+  const IT_STAFF = ['ict_coordinator', 'it_coordinator', 'school_it_officer', 'system_admin', 'ict_director'];
+  const ADMIN_STAFF = ['school_administrator', 'admin_officer', 'school_admin_officer', 'administrative_officer'];
 
   // ── Page → allowed roles map ────────────────────────────────────
   // Pages NOT listed here are accessible to all authenticated users.
   const PAGE_ROLES = {
     'super-admin.html':   ['super_admin'],
-    'users.html':         ['admin', 'super_admin', ...EXEC_ADMIN],
-    'students.html':      ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...FINANCE_STAFF, ...ADMISSION_STAFF, ...FORM_STAFF, 'teacher'],
+    'users.html':         ['admin', 'super_admin', ...EXEC_ADMIN, ...IT_STAFF, ...ADMIN_STAFF],
+    'students.html':      ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...FINANCE_STAFF, ...ADMISSION_STAFF, ...IT_STAFF, ...ADMIN_STAFF, ...FORM_STAFF, 'teacher'],
     'classes.html':       ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod', ...FORM_STAFF],
     'subjects.html':      ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod', 'teacher', ...FORM_STAFF],
     'programs.html':      ['admin', 'super_admin', ...EXEC_ACADEMIC],
     'departments.html':   ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod'],
-    'academic.html':      ['admin', 'super_admin', ...EXEC_ACADEMIC],
+    'academic.html':      ['admin', 'super_admin', ...EXEC_ACADEMIC, ...IT_STAFF],
     'assignments.html':   ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod'],
     'promotions.html':    ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF],
     'fees.html':          ['admin', 'super_admin', ...EXEC_ADMIN, ...FINANCE_STAFF],
-    'assets.html':        ['admin', 'super_admin', ...EXEC_ADMIN, 'storekeeper'],
+    'assets.html':        ['admin', 'super_admin', ...EXEC_ADMIN, ...ADMIN_STAFF, 'storekeeper'],
     'houses.html':        ['admin', 'super_admin', ...EXEC_DOMESTIC, ...HOUSE_STAFF],
     'exeat.html':         ['admin', 'super_admin', ...EXEC_DOMESTIC, ...HOUSE_STAFF, 'security_officer', 'teacher'],
     'discipline.html':    ['admin', 'super_admin', ...EXEC_DOMESTIC, ...HOUSE_STAFF, ...FORM_STAFF, 'hod', 'teacher'],
-    'data-tools.html':    ['admin', 'super_admin', ...EXEC_ADMIN, 'storekeeper'],
-    'settings.html':      ['admin', 'super_admin', ...EXEC_ADMIN],
+    'data-tools.html':    ['admin', 'super_admin', ...EXEC_ADMIN, ...IT_STAFF, ...ADMIN_STAFF, 'storekeeper'],
+    'settings.html':      ['admin', 'super_admin', ...EXEC_ADMIN, ...IT_STAFF],
     'bulk-entry.html':    ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod', 'teacher', ...FORM_STAFF],
     'results.html':       ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod', 'teacher', ...FORM_STAFF],
     'broadsheet.html':    ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF, 'hod', 'teacher'],
     'reports.html':       ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF, 'teacher', 'parent', 'student'],
-    'announcements.html': ['admin', 'super_admin', ...EXEC_ADMIN, ...EXEC_DOMESTIC],
-    'timetable.html':     ['admin', 'super_admin', ...EXEC_ACADEMIC, 'teacher', ...FORM_STAFF, 'hod'],
+    'announcements.html': ['admin', 'super_admin', ...EXEC_ADMIN, ...EXEC_DOMESTIC, ...ADMIN_STAFF, ...IT_STAFF],
+    'timetable.html':     ['admin', 'super_admin', ...EXEC_ACADEMIC, ...IT_STAFF, ...ADMIN_STAFF, 'teacher', ...FORM_STAFF, 'hod'],
     'attendance.html':    ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...HOUSE_STAFF, ...FORM_STAFF, 'teacher'],
     'parent-view.html':   ['admin', 'super_admin', ...EXEC_ACADEMIC, 'teacher', 'parent'],
-    'dashboard.html':     ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...HOUSE_STAFF, ...FORM_STAFF, 'hod', 'teacher', ...FINANCE_STAFF, ...ADMISSION_STAFF, 'storekeeper', 'security_officer', 'parent', 'student'],
+    'dashboard.html':     ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...HOUSE_STAFF, ...FORM_STAFF, 'hod', 'teacher', ...FINANCE_STAFF, ...ADMISSION_STAFF, ...IT_STAFF, ...ADMIN_STAFF, 'storekeeper', 'security_officer', 'parent', 'student'],
     'cumulative-record.html': ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF, ...ADMISSION_STAFF, 'teacher'],
     'report-card.html':   ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF, 'teacher', 'parent', 'student'],
-    'clearance.html':     ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...FINANCE_STAFF, 'storekeeper', ...HOUSE_STAFF],
+    'clearance.html':     ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...FINANCE_STAFF, ...ADMISSION_STAFF, 'storekeeper', ...HOUSE_STAFF],
   };
 
   // ── Helpers ─────────────────────────────────────────────────────
@@ -431,7 +433,9 @@
       hod: 70, senior_housemaster: 60, senior_housemistress: 60,
       senior_house_master: 60, senior_house_mistress: 60,
       house_master: 55, house_mistress: 55, assistant_house_master: 55, assistant_house_mistress: 55,
-      form_master: 50, form_mistress: 50, bursar: 40, accountant: 40, secretary: 40, admin_officer: 40,
+      form_master: 50, form_mistress: 50,
+      school_administrator: 45, ict_coordinator: 45, admin_officer: 45,
+      bursar: 40, accountant: 40, secretary: 40,
       storekeeper: 40, security_officer: 40,
       teacher: 30, parent: 20, student: 10
     };
@@ -452,7 +456,7 @@
     }
 
     const ROLE_DISPLAY_NAMES = {
-      'admin': 'Admin',
+      'admin': 'School Admin / Headmaster',
       'super_admin': 'Super Admin',
       'proprietor': 'Proprietor / School Owner',
       'headmaster': 'Headmaster / Principal',
@@ -472,10 +476,12 @@
       'house_master': 'House Master / Mistress',
       'house_mistress': 'House Master / Mistress',
       'teacher': 'Subject Teacher',
+      'school_administrator': 'School Administrator / Admin Officer',
+      'ict_coordinator': 'ICT Coordinator / IT Officer',
       'bursar': 'Bursar / Accountant',
       'accountant': 'Bursar / Accountant',
-      'secretary': 'Secretary / Admin Officer',
-      'admin_officer': 'Secretary / Admin Officer',
+      'secretary': 'School Secretary / Registrar',
+      'admin_officer': 'School Administrator / Admin Officer',
       'storekeeper': 'Storekeeper',
       'security_officer': 'Security Officer',
       'student': 'Student',

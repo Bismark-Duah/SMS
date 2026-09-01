@@ -41,24 +41,64 @@ const cardsByRole = {
     { label: 'Data Tools',              icon: '🔧',   href: 'data-tools.html' },
     { label: 'Settings',                icon: '⚙️',   href: 'settings.html' },
   ],
+  proprietor: [
+    { label: 'Fee Management',          icon: '💰',   href: 'fees.html' },
+    { label: 'Class Broadsheet',        icon: '📜',   href: 'broadsheet.html' },
+    { label: 'Students',                icon: '👨‍🎓', href: 'students.html' },
+    { label: 'Staff & Users',           icon: '👤',   href: 'users.html' },
+    { label: 'Reports',                 icon: '📄',   href: 'reports.html' },
+    { label: 'Announcements',           icon: '📣',   href: 'announcements.html' },
+    { label: 'Settings',                icon: '⚙️',   href: 'settings.html' },
+  ],
+  school_administrator: [
+    { label: 'Staff & Users',           icon: '👤',   href: 'users.html' },
+    { label: 'Students',                icon: '👨‍🎓', href: 'students.html' },
+    { label: 'Announcements',           icon: '📣',   href: 'announcements.html' },
+    { label: 'Campus Assets',           icon: '📦',   href: 'assets.html' },
+    { label: 'Data Tools',              icon: '🔧',   href: 'data-tools.html' },
+    { label: 'Timetable',               icon: '🕐',   href: 'timetable.html' },
+    { label: 'Bulk Messaging',          icon: '📲',   href: 'messaging.html' },
+  ],
+  ict_coordinator: [
+    { label: 'Staff & Passwords',       icon: '👤',   href: 'users.html' },
+    { label: 'CSSPS & Data Tools',      icon: '🔧',   href: 'data-tools.html' },
+    { label: 'System Settings',         icon: '⚙️',   href: 'settings.html' },
+    { label: 'Students',                icon: '👨‍🎓', href: 'students.html' },
+    { label: 'Timetable',               icon: '🕐',   href: 'timetable.html' },
+    { label: 'Academic Calendar',       icon: '📅',   href: 'academic.html' },
+    { label: 'Bulk Messaging',          icon: '📲',   href: 'messaging.html' },
+  ],
+  secretary: [
+    { label: 'Student Admissions',      icon: '👨‍🎓', href: 'students.html' },
+    { label: 'Cumulative Record',       icon: '📂',   href: 'cumulative-record.html' },
+    { label: 'Final Clearance',         icon: '🎓',   href: 'clearance.html' },
+    { label: 'Announcements',           icon: '📣',   href: 'announcements.html' },
+    { label: 'Bulk Messaging',          icon: '📲',   href: 'messaging.html' },
+  ],
+  bursar: [
+    { label: 'Fee Management',          icon: '💰',   href: 'fees.html' },
+    { label: 'Students & Debtors',      icon: '👨‍🎓', href: 'students.html' },
+    { label: 'Final Clearance',         icon: '🎓',   href: 'clearance.html' },
+    { label: 'Bulk Messaging',          icon: '📲',   href: 'messaging.html' },
+  ],
   teacher: [
-    { label: 'Attendance',    icon: '✅',  href: 'attendance.html' },
-    { label: 'Results',       icon: '📝',  href: 'results.html' },
-    { label: 'Reports',       icon: '📄',  href: 'reports.html' },
-    { label: 'Timetable',     icon: '🕐',  href: 'timetable.html' },
-    { label: 'Bulk Messaging', icon: '📲', href: 'messaging.html' },
-    { label: 'Announcements', icon: '📣',  href: 'announcements.html' },
+    { label: 'Attendance',              icon: '✅',   href: 'attendance.html' },
+    { label: 'Results',                 icon: '📝',   href: 'results.html' },
+    { label: 'Reports',                 icon: '📄',   href: 'reports.html' },
+    { label: 'Timetable',               icon: '🕐',   href: 'timetable.html' },
+    { label: 'Bulk Messaging',          icon: '📲',   href: 'messaging.html' },
+    { label: 'Announcements',           icon: '📣',   href: 'announcements.html' },
   ],
   student: [
-    { label: 'My Attendance', icon: '✅',  href: 'attendance.html' },
-    { label: 'My Results',    icon: '📝',  href: 'results.html' },
-    { label: 'Reports',       icon: '📄',  href: 'reports.html' },
-    { label: 'Announcements', icon: '📣',  href: 'announcements.html' },
+    { label: 'My Attendance',           icon: '✅',   href: 'attendance.html' },
+    { label: 'My Results',              icon: '📝',   href: 'results.html' },
+    { label: 'Reports',                 icon: '📄',   href: 'reports.html' },
+    { label: 'Announcements',           icon: '📣',   href: 'announcements.html' },
   ],
   parent: [
-    { label: 'Parent Portal', icon: '👨‍👩‍👧', href: 'parent-view.html' },
-    { label: 'Reports',       icon: '📄',  href: 'reports.html' },
-    { label: 'Announcements', icon: '📣',  href: 'announcements.html' },
+    { label: 'Parent Portal',           icon: '👨‍👩‍👧', href: 'parent-view.html' },
+    { label: 'Reports',                 icon: '📄',   href: 'reports.html' },
+    { label: 'Announcements',           icon: '📣',   href: 'announcements.html' },
   ],
 };
 
@@ -211,7 +251,47 @@ function renderDailyShortcuts(activeRole) {
   const role = (activeRole || '').toLowerCase();
 
   let shortcuts = [];
-  if (['assistant_headmaster_academic', 'assistant_head_academic'].includes(role)) {
+  if (role === 'proprietor') {
+    if (heading) heading.innerHTML = '⚡ Sovereign Executive & Institutional Oversight';
+    shortcuts = [
+      { label: '📊 School Executive Analytics', href: 'dashboard.html' },
+      { label: '💰 Fee Collections & Subaccount', href: 'fees.html' },
+      { label: '📜 School-wide Performance Broadsheet', href: 'broadsheet.html' },
+      { label: '👥 Staff & Faculty Directory', href: 'users.html' },
+      { label: '📈 Student Enrollment Growth', href: 'students.html' },
+      { label: '⚙️ School Settings & Profile', href: 'settings.html' }
+    ];
+  } else if (['school_administrator', 'admin_officer', 'school_admin_officer', 'administrative_officer'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ Campus Administration & Operations Shortcuts';
+    shortcuts = [
+      { label: '👥 Staff User Accounts & Roles', href: 'users.html' },
+      { label: '📣 Post School Announcement', href: 'announcements.html' },
+      { label: '📦 Campus Asset & Inventory Log', href: 'assets.html' },
+      { label: '📊 Student Directory & Census', href: 'students.html' },
+      { label: '🔧 Data Tools & Exports', href: 'data-tools.html' },
+      { label: '💬 Institutional Broadcast SMS', href: 'messaging.html' }
+    ];
+  } else if (['ict_coordinator', 'it_coordinator', 'school_it_officer', 'system_admin', 'ict_director'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ Technical & Data Systems Shortcuts';
+    shortcuts = [
+      { label: '👥 Onboard Staff & Reset Passwords', href: 'users.html' },
+      { label: '🔧 CSSPS & Excel Raw Data Import', href: 'data-tools.html' },
+      { label: '⚙️ System Settings & Offline Sync', href: 'settings.html' },
+      { label: '🕐 Manage Timetables & Schedules', href: 'timetable.html' },
+      { label: '📊 Student Database Indexing', href: 'students.html' },
+      { label: '📲 Bulk Messaging & SMS Hub', href: 'messaging.html' }
+    ];
+  } else if (['secretary', 'school_secretary', 'admissions_officer', 'registrar'].includes(role)) {
+    if (heading) heading.innerHTML = '⚡ Admissions & Secretarial Registry Shortcuts';
+    shortcuts = [
+      { label: '📥 Enroll New Student & Bio-data', href: 'students.html' },
+      { label: '📄 Print Official Admission Letters', href: 'students.html' },
+      { label: '📂 Cumulative Record Folders', href: 'cumulative-record.html' },
+      { label: '🎓 Student Clearance Desk', href: 'clearance.html' },
+      { label: '📣 School Circulars & Notices', href: 'announcements.html' },
+      { label: '💬 Send Parent Admission SMS', href: 'messaging.html' }
+    ];
+  } else if (['assistant_headmaster_academic', 'assistant_head_academic'].includes(role)) {
     if (heading) heading.innerHTML = '⚡ Academic Operations Shortcuts';
     shortcuts = [
       { label: '📜 Master Class Broadsheet', href: 'broadsheet.html' },

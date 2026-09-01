@@ -29,10 +29,12 @@ const UNIFIED_ROLES = [
   { id: 'house_master', category: 'boarding', icon: '🛌', male: 'Housemaster', female: 'Housemistress', defaultChecked: false, boardingOnly: true },
   { id: 'assistant_house_master', category: 'boarding', icon: '🚪', male: 'Assistant Housemaster', female: 'Assistant Housemistress', defaultChecked: false, boardingOnly: true },
 
-  // 4. Operations, Admissions & Finance
+  // 4. Operations, IT & Administration
+  { id: 'school_administrator', category: 'operations', icon: '🏢', male: 'School Administrator / Admin Officer', female: 'School Administrator / Admin Officer', defaultChecked: false },
+  { id: 'ict_coordinator', category: 'operations', icon: '🖥️', male: 'ICT Coordinator / IT Officer', female: 'ICT Coordinator / IT Officer', defaultChecked: false },
+  { id: 'secretary', category: 'operations', icon: '📋', male: 'School Secretary / Registrar', female: 'School Secretary / Registrar', defaultChecked: false },
   { id: 'bursar', category: 'operations', icon: '💰', male: 'School Accountant / Bursar', female: 'School Accountant / Bursar', defaultChecked: false },
-  { id: 'secretary', category: 'operations', icon: '📋', male: 'Secretary / Admin Officer', female: 'Secretary / Admin Officer', defaultChecked: false },
-  { id: 'storekeeper', category: 'operations', icon: '📦', male: 'Storekeeper (Asset & Books)', female: 'Storekeeper (Asset & Books)', defaultChecked: false },
+  { id: 'storekeeper', category: 'operations', icon: '📦', male: 'Storekeeper (Assets & Inventory)', female: 'Storekeeper (Assets & Inventory)', defaultChecked: false },
   { id: 'security_officer', category: 'operations', icon: '🛡️', male: 'Security Officer (Gate & Exeats)', female: 'Security Officer (Gate & Exeats)', defaultChecked: false, boardingOnly: true },
 
   // 5. Stakeholder Portals
@@ -44,7 +46,17 @@ const GENDER_ROLE_ALIASES = {
   proprietress: 'proprietor',
   headmistress: 'headmaster',
   principal: 'headmaster',
-  admin_officer: 'secretary',
+  school_admin: 'school_administrator',
+  school_admin_officer: 'school_administrator',
+  administrative_officer: 'school_administrator',
+  admin_officer: 'school_administrator',
+  it_coordinator: 'ict_coordinator',
+  school_it_officer: 'ict_coordinator',
+  system_admin: 'ict_coordinator',
+  ict_director: 'ict_coordinator',
+  school_secretary: 'secretary',
+  admissions_officer: 'secretary',
+  registrar: 'secretary',
   form_mistress: 'form_master',
   senior_housemaster: 'senior_house_master',
   senior_house_mistress: 'senior_house_master',
@@ -123,7 +135,7 @@ async function loadRoles() {
       executive: { title: '🏛️ School Executive & Leadership', items: [] },
       academic: { title: '👨‍🏫 Teaching Faculty & Academics', items: [] },
       boarding: { title: '🏡 Boarding & Pastoral Care', items: [] },
-      operations: { title: '💼 Finance, Admissions & Operations', items: [] },
+      operations: { title: '💼 Operations, IT & Administration', items: [] },
       portal: { title: '👥 Stakeholder Portals', items: [] },
       custom: { title: '🌟 Custom Privileges', items: [] }
     };

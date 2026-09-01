@@ -76,6 +76,7 @@ class School(Base):
     code = Column(String, unique=True, index=True, nullable=False)
     slug = Column(String(100), unique=True, index=True, nullable=True)  # Subdomain routing (e.g. sunyani-shs)
     school_mode = Column(String, default="COMBINED")  # SHS_ONLY, BASIC_ONLY, COMBINED
+    ownership_type = Column(String(20), default="PRIVATE")  # PRIVATE, PUBLIC
     boarding_type = Column(String, default="BOARDING_AND_DAY")
     status = Column(String, default="ACTIVE")  # ACTIVE, SUSPENDED
     address = Column(String, nullable=True)

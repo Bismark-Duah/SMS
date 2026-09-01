@@ -88,6 +88,7 @@ def run_migrations():
         "schools": [
             ("slug", "VARCHAR(100)"),
             ("school_mode", "VARCHAR DEFAULT 'COMBINED'"),
+            ("ownership_type", "VARCHAR DEFAULT 'PRIVATE'"),
             ("boarding_type", "VARCHAR DEFAULT 'BOARDING_AND_DAY'"),
             ("status", "VARCHAR DEFAULT 'ACTIVE'"),
             ("address", "VARCHAR"),

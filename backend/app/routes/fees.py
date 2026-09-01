@@ -25,8 +25,13 @@ router = APIRouter()
 def require_admin(current_user: User):
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    if "admin" not in [r.name for r in current_user.roles]:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    role_names = [r.name.lower() for r in current_user.roles] if hasattr(current_user, 'roles') else []
+    allowed_roles = {
+        "admin", "super_admin", "proprietor", "headmaster", "headmistress",
+        "bursar", "accountant", "assistant_headmaster_admin", "assistant_head_admin"
+    }
+    if not any(r in allowed_roles for r in role_names):
+        raise HTTPException(status_code=403, detail="Finance or Administrative access required")
 
 
 def recalculate_fee_status(fee: Fee) -> str:

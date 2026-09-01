@@ -30,6 +30,7 @@ class SchoolCreateSchema(BaseModel):
     name: str
     code: str
     school_mode: str = "COMBINED"  # SHS_ONLY, BASIC_ONLY, COMBINED
+    ownership_type: str = "PRIVATE"  # PRIVATE, PUBLIC
     boarding_type: str = "BOARDING_AND_DAY"
     address: Optional[str] = None
     phone: Optional[str] = None
@@ -47,6 +48,7 @@ class SchoolUpdateSchema(BaseModel):
     name: Optional[str] = None
     code: Optional[str] = None
     school_mode: Optional[str] = None  # SHS_ONLY, BASIC_ONLY, COMBINED
+    ownership_type: Optional[str] = None  # PRIVATE, PUBLIC
     boarding_type: Optional[str] = None  # DAY_ONLY, BOARDING_AND_DAY, BOARDING_ONLY
     address: Optional[str] = None
     phone: Optional[str] = None
@@ -238,6 +240,7 @@ def list_all_schools(
             "name": s.name,
             "code": s.code,
             "school_mode": s.school_mode,
+            "ownership_type": s.ownership_type or "PRIVATE",
             "boarding_type": s.boarding_type,
             "status": s.status,
             "address": s.address,
@@ -273,6 +276,7 @@ def create_new_school(
         name=payload.name.strip(),
         code=payload.code.upper().strip(),
         school_mode=payload.school_mode.upper(),
+        ownership_type=payload.ownership_type.upper().strip() if payload.ownership_type else "PRIVATE",
         boarding_type=payload.boarding_type.upper(),
         status="ACTIVE",
         address=payload.address,
@@ -378,6 +382,7 @@ def get_school_details(
         "name": school.name,
         "code": school.code,
         "school_mode": school.school_mode,
+        "ownership_type": school.ownership_type or "PRIVATE",
         "boarding_type": school.boarding_type or "BOARDING_AND_DAY",
         "address": school.address,
         "phone": school.phone,
@@ -473,6 +478,18 @@ def update_school_profile(
                 b_setting.value = new_boarding
             else:
                 db.add(Setting(school_id=school.id, key="boarding_status", value=new_boarding))
+
+    # 4.5 Update Ownership Type
+    if payload.ownership_type is not None and payload.ownership_type.strip():
+        new_own = payload.ownership_type.upper().strip()
+        if new_own in ["PRIVATE", "PUBLIC"] and (school.ownership_type or "").upper() != new_own:
+            changes["ownership_type"] = {"old": school.ownership_type, "new": new_own}
+            school.ownership_type = new_own
+            own_setting = db.query(Setting).filter(Setting.school_id == school.id, Setting.key == "ownership_type").first()
+            if own_setting:
+                own_setting.value = new_own
+            else:
+                db.add(Setting(school_id=school.id, key="ownership_type", value=new_own))
 
     # 5. Update Contact Information & Subdomain
     if payload.address is not None:

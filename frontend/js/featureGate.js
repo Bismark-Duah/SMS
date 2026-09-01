@@ -28,30 +28,34 @@
   // default to COMBINED + BOARDING_AND_DAY (show everything) — never crash.
   function getConfig() {
     try {
-      const mode    = (sessionStorage.getItem('school_mode')    || localStorage.getItem('school_mode')    || 'COMBINED').toUpperCase().trim();
+      const mode     = (sessionStorage.getItem('school_mode')     || localStorage.getItem('school_mode')     || 'COMBINED').toUpperCase().trim();
       const boarding = (sessionStorage.getItem('boarding_status') || localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase().trim();
+      const ownership = (sessionStorage.getItem('ownership_type') || localStorage.getItem('ownership_type') || 'PRIVATE').toUpperCase().trim();
       // Validate values — if unexpected string, fall back safely
       const validModes    = ['SHS_ONLY', 'BASIC_ONLY', 'COMBINED'];
       const validBoarding = ['DAY_ONLY', 'BOARDING_AND_DAY'];
+      const validOwnership = ['PRIVATE', 'PUBLIC'];
       return {
-        mode:     validModes.includes(mode)     ? mode    : 'COMBINED',
-        boarding: validBoarding.includes(boarding) ? boarding : 'BOARDING_AND_DAY',
+        mode:      validModes.includes(mode)        ? mode      : 'COMBINED',
+        boarding:  validBoarding.includes(boarding) ? boarding  : 'BOARDING_AND_DAY',
+        ownership: validOwnership.includes(ownership) ? ownership : 'PRIVATE',
       };
     } catch (_) {
-      return { mode: 'COMBINED', boarding: 'BOARDING_AND_DAY' };
+      return { mode: 'COMBINED', boarding: 'BOARDING_AND_DAY', ownership: 'PRIVATE' };
     }
   }
 
   // ── Core Feature Computation ──────────────────────────────────────────────
   /**
    * Computes the full feature-flag object for the current tenant's configuration.
-   * @param {string} [mode]    - Override school_mode (optional, uses localStorage)
-   * @param {string} [boarding] - Override boarding_status (optional, uses localStorage)
+   * @param {string} [mode]       - Override school_mode (optional, uses localStorage)
+   * @param {string} [boarding]   - Override boarding_status (optional, uses localStorage)
+   * @param {string} [ownership]  - Override ownership_type (optional, uses localStorage)
    * @returns {Object} Feature flags
    */
-  function computeFeatures(mode, boarding) {
+  function computeFeatures(mode, boarding, ownership) {
     const cfg = (mode && boarding)
-      ? { mode: mode.toUpperCase(), boarding: boarding.toUpperCase() }
+      ? { mode: mode.toUpperCase(), boarding: boarding.toUpperCase(), ownership: (ownership || 'PRIVATE').toUpperCase() }
       : getConfig();
 
     const isBasicOnly = cfg.mode === 'BASIC_ONLY';
@@ -59,11 +63,14 @@
     const isCombined  = cfg.mode === 'COMBINED';
     const isBoarding  = cfg.boarding === 'BOARDING_AND_DAY';
     const isDay       = cfg.boarding === 'DAY_ONLY';
+    const isPrivate   = cfg.ownership === 'PRIVATE';
+    const isPublic    = cfg.ownership === 'PUBLIC';
 
     return {
       // ── Raw config values ─────────────────────────────────────────────────
       schoolMode:     cfg.mode,
       boardingStatus: cfg.boarding,
+      ownershipType:  cfg.ownership,
       version:        FEATURE_GATE_VERSION,
 
       // ── Derived booleans for convenience ─────────────────────────────────
@@ -72,6 +79,9 @@
       isCombined,
       isBoarding,
       isDay,
+      isPrivateSchool: isPrivate,
+      isPublicSchool:  isPublic,
+      showProprietorRole: isPrivate,
 
       // ── Navigation & Module Visibility ────────────────────────────────────
       /** Exeat Management — boarding schools only */
@@ -187,7 +197,7 @@
    * Call this after updating storage or fetching tenant settings.
    * Recomputes features and re-applies to DOM.
    */
-  function refreshFeatures(overrideMode, overrideBoarding) {
+  function refreshFeatures(overrideMode, overrideBoarding, overrideOwnership) {
     if (overrideMode) {
       sessionStorage.setItem('school_mode', overrideMode);
       localStorage.setItem('school_mode', overrideMode);
@@ -196,8 +206,15 @@
       sessionStorage.setItem('boarding_status', overrideBoarding);
       localStorage.setItem('boarding_status', overrideBoarding);
     }
-    window.SchoolFeatures = computeFeatures(overrideMode, overrideBoarding);
+    if (overrideOwnership) {
+      sessionStorage.setItem('ownership_type', overrideOwnership);
+      localStorage.setItem('ownership_type', overrideOwnership);
+    }
+    window.SchoolFeatures = computeFeatures(overrideMode, overrideBoarding, overrideOwnership);
     applyToDOM(window.SchoolFeatures);
+    if (window.filterSidebarByRole) {
+      window.filterSidebarByRole();
+    }
     if (window.applySchoolModeVisibility) {
       window.applySchoolModeVisibility(window.SchoolFeatures.schoolMode, window.SchoolFeatures.boardingStatus);
     }

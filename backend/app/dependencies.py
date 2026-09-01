@@ -133,7 +133,7 @@ def get_user_assigned_scope(user: User, db: Session) -> dict:
 
     role_names = [r.name.lower() for r in user.roles] if hasattr(user, 'roles') and user.roles else []
     admin_roles = {
-        "admin", "super_admin", "headmaster", "headmistress",
+        "admin", "super_admin", "proprietor", "headmaster", "headmistress",
         "assistant_headmaster_academic", "assistant_head_academic",
         "assistant_headmaster_admin", "assistant_head_admin",
         "assistant_headmaster_domestic", "assistant_head_domestic"
@@ -180,7 +180,7 @@ def rate_limit_auth(request: Request):
 
 # Roles that are treated as admins for daily class register authorization
 ATTENDANCE_ADMIN_ROLES = {
-    "admin", "super_admin", "headmaster", "headmistress",
+    "admin", "super_admin", "proprietor", "headmaster", "headmistress",
     "assistant_headmaster_academic", "assistant_head_academic",
     "assistant_headmaster_admin", "assistant_head_admin",
     "assistant_headmaster_domestic", "assistant_head_domestic",

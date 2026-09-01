@@ -13,6 +13,8 @@ function getHeaders(headers = {}) {
 
 const UNIFIED_ROLES = [
   // 1. Executive Leadership (Delegated sub-administrators)
+  { id: 'proprietor', category: 'executive', icon: '🏛️', male: 'Proprietor / School Owner', female: 'Proprietress / School Owner', defaultChecked: false, privateOnly: true },
+  { id: 'headmaster', category: 'executive', icon: '👔', male: 'Headmaster / Principal', female: 'Headmistress / Principal', defaultChecked: false },
   { id: 'assistant_headmaster_academic', category: 'executive', icon: '📘', male: 'Assistant Head (Academic)', female: 'Assistant Head (Academic)', defaultChecked: false },
   { id: 'assistant_headmaster_admin', category: 'executive', icon: '🏢', male: 'Assistant Head (Administration)', female: 'Assistant Head (Administration)', defaultChecked: false },
   { id: 'assistant_headmaster_domestic', category: 'executive', icon: '🏡', male: 'Assistant Head (Domestic / Boarding)', female: 'Assistant Head (Domestic / Boarding)', defaultChecked: false, boardingOnly: true },
@@ -27,8 +29,9 @@ const UNIFIED_ROLES = [
   { id: 'house_master', category: 'boarding', icon: '🛌', male: 'Housemaster', female: 'Housemistress', defaultChecked: false, boardingOnly: true },
   { id: 'assistant_house_master', category: 'boarding', icon: '🚪', male: 'Assistant Housemaster', female: 'Assistant Housemistress', defaultChecked: false, boardingOnly: true },
 
-  // 4. Operations & Finance
+  // 4. Operations, Admissions & Finance
   { id: 'bursar', category: 'operations', icon: '💰', male: 'School Accountant / Bursar', female: 'School Accountant / Bursar', defaultChecked: false },
+  { id: 'secretary', category: 'operations', icon: '📋', male: 'Secretary / Admin Officer', female: 'Secretary / Admin Officer', defaultChecked: false },
   { id: 'storekeeper', category: 'operations', icon: '📦', male: 'Storekeeper (Asset & Books)', female: 'Storekeeper (Asset & Books)', defaultChecked: false },
   { id: 'security_officer', category: 'operations', icon: '🛡️', male: 'Security Officer (Gate & Exeats)', female: 'Security Officer (Gate & Exeats)', defaultChecked: false, boardingOnly: true },
 
@@ -38,6 +41,10 @@ const UNIFIED_ROLES = [
 ];
 
 const GENDER_ROLE_ALIASES = {
+  proprietress: 'proprietor',
+  headmistress: 'headmaster',
+  principal: 'headmaster',
+  admin_officer: 'secretary',
   form_mistress: 'form_master',
   senior_housemaster: 'senior_house_master',
   senior_house_mistress: 'senior_house_master',
@@ -105,6 +112,7 @@ async function loadRoles() {
 
     const isBoarding = F ? F.showBoardingRoles : ((localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
     const isBasicOnly = F ? F.isBasicOnly : (localStorage.getItem('school_mode') === 'BASIC_ONLY');
+    const isPublicSchool = F ? F.isPublicSchool : ((localStorage.getItem('ownership_type') || 'PRIVATE').toUpperCase() === 'PUBLIC');
 
     // Retain checked values if re-rendering on gender change
     const previouslyChecked = new Set(
@@ -115,7 +123,7 @@ async function loadRoles() {
       executive: { title: '🏛️ School Executive & Leadership', items: [] },
       academic: { title: '👨‍🏫 Teaching Faculty & Academics', items: [] },
       boarding: { title: '🏡 Boarding & Pastoral Care', items: [] },
-      operations: { title: '💼 Finance, Assets & Operations', items: [] },
+      operations: { title: '💼 Finance, Admissions & Operations', items: [] },
       portal: { title: '👥 Stakeholder Portals', items: [] },
       custom: { title: '🌟 Custom Privileges', items: [] }
     };
@@ -123,6 +131,7 @@ async function loadRoles() {
     UNIFIED_ROLES.forEach(r => {
       if (r.boardingOnly && !isBoarding) return;
       if (isBasicOnly && r.id === 'hod') return;
+      if (r.privateOnly && isPublicSchool) return;
 
       const title = isFemale ? r.female : r.male;
       const isChecked = previouslyChecked.size ? previouslyChecked.has(r.id) : r.defaultChecked;

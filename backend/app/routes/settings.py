@@ -158,6 +158,7 @@ def get_settings(
             res["school_abbreviation"] = school.code
             res["school_logo"] = school.logo_url or ""
             res["school_mode"] = school.school_mode or "COMBINED"
+            res["ownership_type"] = school.ownership_type or "PRIVATE"
             res["boarding_status"] = school.boarding_type or "BOARDING_AND_DAY"
     elif isinstance(current_user, User) and current_user.school:
         res["school_name"] = current_user.school.name
@@ -165,6 +166,7 @@ def get_settings(
         res["school_abbreviation"] = current_user.school.code
         res["school_logo"] = current_user.school.logo_url or ""
         res["school_mode"] = current_user.school.school_mode or "COMBINED"
+        res["ownership_type"] = current_user.school.ownership_type or "PRIVATE"
         res["boarding_status"] = current_user.school.boarding_type or "BOARDING_AND_DAY"
 
     curr_year = db.query(AcademicYear).filter(AcademicYear.is_current == True).first()
@@ -176,6 +178,7 @@ def get_settings(
     res["active_semester_id"] = str(curr_sem.id) if curr_sem else res.get("active_semester_id", "")
     res["system_theme"] = res.get("system_theme", "midnight")
     res["school_mode"] = res.get("school_mode", "COMBINED")
+    res["ownership_type"] = res.get("ownership_type", "PRIVATE")
     if res["school_mode"] == "BASIC_ONLY":
         res["grading_standard"] = res.get("grading_standard") if res.get("grading_standard") in ("BECE", "PRIMARY") else "BECE"
     elif res["school_mode"] == "SHS_ONLY":

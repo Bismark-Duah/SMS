@@ -18,44 +18,46 @@
   const STORAGE_KEYS = ['accessToken', 'userRole', 'username', 'userId'];
 
   // Executive role helper sets
-  const EXEC_ACADEMIC = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_admin', 'assistant_head_admin'];
-  const EXEC_DOMESTIC = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'assistant_headmaster_admin', 'assistant_head_admin'];
-  const EXEC_ADMIN = ['admin', 'super_admin', 'headmaster', 'headmistress', 'assistant_headmaster_admin', 'assistant_head_admin'];
+  const EXEC_ACADEMIC = ['admin', 'super_admin', 'proprietor', 'headmaster', 'headmistress', 'principal', 'assistant_headmaster_academic', 'assistant_head_academic', 'assistant_headmaster_admin', 'assistant_head_admin'];
+  const EXEC_DOMESTIC = ['admin', 'super_admin', 'proprietor', 'headmaster', 'headmistress', 'assistant_headmaster_domestic', 'assistant_head_domestic', 'assistant_headmaster_admin', 'assistant_head_admin'];
+  const EXEC_ADMIN = ['admin', 'super_admin', 'proprietor', 'headmaster', 'headmistress', 'assistant_headmaster_admin', 'assistant_head_admin'];
   const HOUSE_STAFF = ['senior_housemaster', 'senior_housemistress', 'senior_house_master', 'senior_house_mistress', 'house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress'];
   const FORM_STAFF = ['form_master', 'form_mistress'];
+  const FINANCE_STAFF = ['bursar', 'accountant', 'school_accountant'];
+  const ADMISSION_STAFF = ['secretary', 'school_secretary', 'admin_officer', 'admissions_officer'];
 
   // ── Page → allowed roles map ────────────────────────────────────
   // Pages NOT listed here are accessible to all authenticated users.
   const PAGE_ROLES = {
     'super-admin.html':   ['super_admin'],
     'users.html':         ['admin', 'super_admin', ...EXEC_ADMIN],
-    'students.html':      ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, 'bursar', ...FORM_STAFF, 'teacher'],
-    'classes.html':       ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod'],
+    'students.html':      ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...FINANCE_STAFF, ...ADMISSION_STAFF, ...FORM_STAFF, 'teacher'],
+    'classes.html':       ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod', ...FORM_STAFF],
     'subjects.html':      ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod', 'teacher', ...FORM_STAFF],
     'programs.html':      ['admin', 'super_admin', ...EXEC_ACADEMIC],
     'departments.html':   ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod'],
     'academic.html':      ['admin', 'super_admin', ...EXEC_ACADEMIC],
     'assignments.html':   ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod'],
     'promotions.html':    ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF],
-    'fees.html':          ['admin', 'super_admin', ...EXEC_ADMIN, 'bursar'],
+    'fees.html':          ['admin', 'super_admin', ...EXEC_ADMIN, ...FINANCE_STAFF],
     'assets.html':        ['admin', 'super_admin', ...EXEC_ADMIN, 'storekeeper'],
     'houses.html':        ['admin', 'super_admin', ...EXEC_DOMESTIC, ...HOUSE_STAFF],
     'exeat.html':         ['admin', 'super_admin', ...EXEC_DOMESTIC, ...HOUSE_STAFF, 'security_officer', 'teacher'],
     'discipline.html':    ['admin', 'super_admin', ...EXEC_DOMESTIC, ...HOUSE_STAFF, ...FORM_STAFF, 'hod', 'teacher'],
     'data-tools.html':    ['admin', 'super_admin', ...EXEC_ADMIN, 'storekeeper'],
     'settings.html':      ['admin', 'super_admin', ...EXEC_ADMIN],
-    'bulk-entry.html':    ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod', 'teacher'],
-    'results.html':       ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod', 'teacher'],
-    'broadsheet.html':    ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF, 'hod'],
+    'bulk-entry.html':    ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod', 'teacher', ...FORM_STAFF],
+    'results.html':       ['admin', 'super_admin', ...EXEC_ACADEMIC, 'hod', 'teacher', ...FORM_STAFF],
+    'broadsheet.html':    ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF, 'hod', 'teacher'],
     'reports.html':       ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF, 'teacher', 'parent', 'student'],
     'announcements.html': ['admin', 'super_admin', ...EXEC_ADMIN, ...EXEC_DOMESTIC],
     'timetable.html':     ['admin', 'super_admin', ...EXEC_ACADEMIC, 'teacher', ...FORM_STAFF, 'hod'],
     'attendance.html':    ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...HOUSE_STAFF, ...FORM_STAFF, 'teacher'],
     'parent-view.html':   ['admin', 'super_admin', ...EXEC_ACADEMIC, 'teacher', 'parent'],
-    'dashboard.html':     ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...HOUSE_STAFF, ...FORM_STAFF, 'hod', 'teacher', 'bursar', 'storekeeper', 'security_officer', 'parent', 'student'],
-    'cumulative-record.html': ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF],
+    'dashboard.html':     ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...HOUSE_STAFF, ...FORM_STAFF, 'hod', 'teacher', ...FINANCE_STAFF, ...ADMISSION_STAFF, 'storekeeper', 'security_officer', 'parent', 'student'],
+    'cumulative-record.html': ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF, ...ADMISSION_STAFF, 'teacher'],
     'report-card.html':   ['admin', 'super_admin', ...EXEC_ACADEMIC, ...FORM_STAFF, 'teacher', 'parent', 'student'],
-    'clearance.html':     ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, 'bursar', 'storekeeper', ...HOUSE_STAFF],
+    'clearance.html':     ['admin', 'super_admin', ...EXEC_ACADEMIC, ...EXEC_DOMESTIC, ...FINANCE_STAFF, 'storekeeper', ...HOUSE_STAFF],
   };
 
   // ── Helpers ─────────────────────────────────────────────────────
@@ -421,7 +423,7 @@
       : userRoles;
 
     const rolePriorityMap = {
-      super_admin: 100, headmaster: 85, headmistress: 85,
+      super_admin: 100, proprietor: 95, headmaster: 85, headmistress: 85, principal: 85,
       assistant_headmaster_academic: 80, assistant_head_academic: 80,
       assistant_headmaster_domestic: 80, assistant_head_domestic: 80,
       assistant_headmaster_admin: 80, assistant_head_admin: 80,
@@ -429,7 +431,8 @@
       hod: 70, senior_housemaster: 60, senior_housemistress: 60,
       senior_house_master: 60, senior_house_mistress: 60,
       house_master: 55, house_mistress: 55, assistant_house_master: 55, assistant_house_mistress: 55,
-      form_master: 50, form_mistress: 50, bursar: 40, storekeeper: 40, security_officer: 40,
+      form_master: 50, form_mistress: 50, bursar: 40, accountant: 40, secretary: 40, admin_officer: 40,
+      storekeeper: 40, security_officer: 40,
       teacher: 30, parent: 20, student: 10
     };
     let topRole = userRoles[0];
@@ -451,8 +454,10 @@
     const ROLE_DISPLAY_NAMES = {
       'admin': 'Admin',
       'super_admin': 'Super Admin',
+      'proprietor': 'Proprietor / School Owner',
       'headmaster': 'Headmaster / Principal',
       'headmistress': 'Headmistress / Principal',
+      'principal': 'Principal / Headmaster',
       'assistant_headmaster_academic': 'Assistant Head (Academic)',
       'assistant_head_academic': 'Assistant Head (Academic)',
       'assistant_headmaster_domestic': 'Assistant Head (Domestic)',
@@ -468,6 +473,9 @@
       'house_mistress': 'House Master / Mistress',
       'teacher': 'Subject Teacher',
       'bursar': 'Bursar / Accountant',
+      'accountant': 'Bursar / Accountant',
+      'secretary': 'Secretary / Admin Officer',
+      'admin_officer': 'Secretary / Admin Officer',
       'storekeeper': 'Storekeeper',
       'security_officer': 'Security Officer',
       'student': 'Student',
@@ -785,11 +793,57 @@
     // 5. Sync system settings from DB into localStorage & Inject UI
     syncSystemSettings();
 
+    // ── Dynamic Role-Tailored Zero-Clutter Sidebar Navigation ───────
+    function filterSidebarByRole() {
+      try {
+        const activeRole = (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || sessionStorage.getItem('userRole') || localStorage.getItem('userRole') || '').toLowerCase().trim();
+        if (!activeRole) return;
+        if (['admin', 'super_admin'].includes(activeRole)) return; // Full admin sees all navigation
+
+        const navLinks = document.querySelectorAll('nav a, .sidebar-nav a, .nav-item a, aside a, .sidebar a, .nav-links a');
+        navLinks.forEach(link => {
+          const href = link.getAttribute('href');
+          if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+          const page = href.split('/').pop().split('?')[0].split('#')[0];
+          if (!page || !page.endsWith('.html')) return;
+
+          const allowed = PAGE_ROLES[page];
+          if (allowed) {
+            const isAllowed = allowed.includes(activeRole) || allowed.some(r => activeRole.includes(r));
+            const targetEl = link.closest('li') || link.closest('.nav-item') || link;
+            if (!isAllowed) {
+              targetEl.style.display = 'none';
+              targetEl.setAttribute('data-role-hidden', 'true');
+            } else {
+              targetEl.style.display = '';
+              targetEl.removeAttribute('data-role-hidden');
+            }
+          }
+        });
+
+        // Clean up empty section headers if all child links are hidden
+        const sectionContainers = document.querySelectorAll('.nav-section, .sidebar-section, .menu-group, ul.nav, ul.sidebar-menu');
+        sectionContainers.forEach(sec => {
+          const totalItems = sec.querySelectorAll('a[href$=".html"]');
+          const hiddenItems = sec.querySelectorAll('[data-role-hidden="true"]');
+          if (totalItems.length > 0 && totalItems.length === hiddenItems.length) {
+            sec.style.display = 'none';
+          } else if (totalItems.length > 0) {
+            sec.style.display = '';
+          }
+        });
+      } catch (err) {
+        console.warn('filterSidebarByRole non-fatal warning:', err);
+      }
+    }
+    window.filterSidebarByRole = filterSidebarByRole;
+
     function initGuardUI() {
       injectPasswordModal();
       injectUserPill();
       injectSuperAdminBanner();
       checkAndPromptFirstLoginOnboarding();
+      filterSidebarByRole();
     }
 
     if (document.readyState === 'loading') {
@@ -864,8 +918,12 @@
             localStorage.removeItem('school_abbreviation');
           }
 
+          if (data.ownership_type) {
+            sessionStorage.setItem('ownership_type', data.ownership_type);
+            localStorage.setItem('ownership_type', data.ownership_type);
+          }
           if (window.FeatureGate && window.FeatureGate.refresh) {
-            window.FeatureGate.refresh(data.school_mode, data.boarding_status);
+            window.FeatureGate.refresh(data.school_mode, data.boarding_status, data.ownership_type);
           }
           if (window.applyBranding) {
             window.applyBranding(data);

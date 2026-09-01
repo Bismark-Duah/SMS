@@ -750,6 +750,18 @@ ROLE_ALIASES = {
     "housemistress": "house_mistress",
     "assistant house mistress": "assistant_house_mistress",
     "assistant housemistress": "assistant_house_mistress",
+    "proprietor": "proprietor",
+    "proprietress": "proprietor",
+    "school owner": "proprietor",
+    "board": "proprietor",
+    "board of directors": "proprietor",
+    "secretary": "secretary",
+    "school secretary": "secretary",
+    "admin officer": "secretary",
+    "admin_officer": "secretary",
+    "principal": "headmaster",
+    "headmaster": "headmaster",
+    "headmistress": "headmistress",
     "bursar": "bursar",
     "school accountant": "bursar",
     "accountant": "bursar",
@@ -765,8 +777,46 @@ ROLE_ALIASES = {
 }
 
 @router.get("/roles")
-def list_roles(db: Session = Depends(get_db)):
-    return db.query(Role).order_by(Role.id).all()
+def list_roles(
+    db: Session = Depends(get_db),
+    school_id: Optional[int] = Depends(get_school_id),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id")
+):
+    target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
+    if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
+        try:
+            target_sch_id = int(x_school_id.strip())
+        except ValueError:
+            pass
+
+    # Ensure core roles exist
+    core_roles = [
+        "super_admin", "admin", "proprietor", "headmaster", "headmistress",
+        "assistant_headmaster_academic", "assistant_headmaster_admin", "assistant_headmaster_domestic",
+        "bursar", "secretary", "teacher", "form_master", "form_mistress", "hod",
+        "senior_house_master", "senior_house_mistress", "house_master", "house_mistress",
+        "assistant_house_master", "assistant_house_mistress", "storekeeper", "security_officer",
+        "parent", "student"
+    ]
+    existing_roles = {r.name.lower(): r for r in db.query(Role).all()}
+    for r_name in core_roles:
+        if r_name not in existing_roles:
+            try:
+                new_r = Role(name=r_name)
+                db.add(new_r)
+                db.commit()
+            except Exception:
+                db.rollback()
+
+    roles = db.query(Role).order_by(Role.id).all()
+
+    # Filter out proprietor if school is public
+    if target_sch_id:
+        sch = db.query(School).filter(School.id == target_sch_id).first()
+        if sch and (sch.ownership_type or "").upper() == "PUBLIC":
+            roles = [r for r in roles if r.name.lower() != "proprietor"]
+
+    return roles
 
 @router.post("/roles")
 def create_role(payload: dict, db: Session = Depends(get_db)):

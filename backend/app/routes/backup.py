@@ -17,6 +17,8 @@ BACKUPS_DIR = os.path.join(os.path.dirname(DEFAULT_DB_PATH), "backups")
 import zipfile
 import shutil
 
+from ..services.backup_service import BackupService
+
 def _is_admin(user: User):
     roles = [r.name.lower() for r in user.roles]
     admin_allowed = {
@@ -35,35 +37,10 @@ def run_backup(
     current_user: User = Depends(get_current_user)
 ):
     _is_admin(current_user)
-
-    if not os.path.exists(DEFAULT_DB_PATH):
-        raise HTTPException(status_code=404, detail="Primary database file not found.")
-
-    os.makedirs(BACKUPS_DIR, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    backup_filename = f"backup_{timestamp}.db"
-    backup_path = os.path.join(BACKUPS_DIR, backup_filename)
-
     try:
-        # Perform safe sqlite3 online hot backup to avoid page lock/corruption issues
-        src_conn = sqlite3.connect(DEFAULT_DB_PATH)
-        dest_conn = sqlite3.connect(backup_path)
-        with dest_conn:
-            src_conn.backup(dest_conn)
-        src_conn.close()
-        dest_conn.close()
-        
-        # Get file stats
-        size_bytes = os.path.getsize(backup_path)
-        return {
-            "status": "success",
-            "message": "Database backup completed successfully.",
-            "filename": backup_filename,
-            "size_bytes": size_bytes
-        }
+        res = BackupService.create_backup(verify_integrity=True)
+        return res
     except Exception as e:
-        if os.path.exists(backup_path):
-            os.remove(backup_path)
         raise HTTPException(status_code=500, detail=f"Database backup failed: {str(e)}")
 
 @router.get("/list")
@@ -72,24 +49,22 @@ def list_backups(
     current_user: User = Depends(get_current_user)
 ):
     _is_admin(current_user)
-    
-    if not os.path.exists(BACKUPS_DIR):
-        return []
+    return BackupService.list_backups()
 
-    backups = []
-    for f in os.listdir(BACKUPS_DIR):
-        if f.startswith("backup_") and f.endswith(".db"):
-            full_path = os.path.join(BACKUPS_DIR, f)
-            stat = os.stat(full_path)
-            backups.append({
-                "filename": f,
-                "size_bytes": stat.st_size,
-                "created_at": datetime.fromtimestamp(stat.st_mtime).isoformat()
-            })
-    
-    # Return newest first
-    backups.sort(key=lambda x: x["filename"], reverse=True)
-    return backups
+@router.post("/verify/{filename}")
+def verify_backup(
+    filename: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Verifies SHA-256 hash match and SQLite page integrity of a backup snapshot."""
+    _is_admin(current_user)
+    try:
+        return BackupService.verify_backup_integrity(filename)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Backup file {filename} not found.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Integrity verification failed: {str(e)}")
 
 @router.delete("/{filename}")
 def delete_backup(

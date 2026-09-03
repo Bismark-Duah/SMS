@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, R
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime, date
 import urllib.request
 import json
@@ -118,7 +118,7 @@ class FeeCreate(BaseModel):
     student_id: int
     fee_type: str           # Tuition | Boarding | Activity | Exam | Other
     description: Optional[str] = None
-    amount: float
+    amount: float = Field(..., gt=0, description="Fee amount must be greater than zero")
     due_date: Optional[datetime] = None
     academic_year: Optional[str] = None
     term: Optional[str] = None
@@ -128,7 +128,7 @@ class FeeBulkCreate(BaseModel):
     class_section_id: int
     fee_type: str
     description: Optional[str] = None
-    amount: float
+    amount: float = Field(..., gt=0, description="Fee amount must be greater than zero")
     due_date: Optional[datetime] = None
     academic_year: Optional[str] = None
     term: Optional[str] = None
@@ -137,7 +137,7 @@ class FeeBulkCreate(BaseModel):
 class FeeUpdate(BaseModel):
     fee_type: Optional[str] = None
     description: Optional[str] = None
-    amount: Optional[float] = None
+    amount: Optional[float] = Field(None, gt=0, description="Fee amount must be greater than zero")
     due_date: Optional[datetime] = None
     academic_year: Optional[str] = None
     term: Optional[str] = None
@@ -145,7 +145,7 @@ class FeeUpdate(BaseModel):
 
 
 class PaymentCreate(BaseModel):
-    amount_paid: float
+    amount_paid: float = Field(..., gt=0, description="Payment amount must be greater than zero")
     payment_date: Optional[datetime] = None
     payment_method: str = "Cash"    # Cash | Cheque | Bank Transfer | Mobile Money
     reference_no: Optional[str] = None

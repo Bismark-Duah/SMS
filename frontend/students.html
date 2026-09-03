@@ -131,6 +131,28 @@
               </tbody>
             </table>
           </div>
+
+          <!-- Pagination Control Bar -->
+          <div id="studentPaginationBar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:14px; padding:10px 14px; background:var(--surface-card, #1e293b); border-radius:8px; border:1px solid var(--border-color, rgba(255,255,255,0.1)); font-size:0.85rem;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span>Show:</span>
+              <select id="pageSizeSelect" onchange="changePageSize(this.value)" style="padding:4px 8px; border-radius:6px; background:var(--bg-card, #0f172a); color:inherit; border:1px solid var(--border-color, rgba(255,255,255,0.2));">
+                <option value="25">25 per page</option>
+                <option value="50" selected>50 per page</option>
+                <option value="100">100 per page</option>
+                <option value="250">250 per page</option>
+                <option value="ALL">All records</option>
+              </select>
+              <span id="paginationInfo" style="opacity:0.8; margin-left:8px;">Showing 0 - 0 of 0</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button class="btn" id="btnFirstPage" onclick="goToPage(1)" style="padding:4px 10px; font-size:0.82rem;" title="First Page">« First</button>
+              <button class="btn" id="btnPrevPage" onclick="changePage(-1)" style="padding:4px 10px; font-size:0.82rem;" title="Previous Page">‹ Prev</button>
+              <span id="pageIndicator" style="font-weight:600; padding:0 8px;">Page 1 of 1</span>
+              <button class="btn" id="btnNextPage" onclick="changePage(1)" style="padding:4px 10px; font-size:0.82rem;" title="Next Page">Next ›</button>
+              <button class="btn" id="btnLastPage" onclick="goToLastPage()" style="padding:4px 10px; font-size:0.82rem;" title="Last Page">Last »</button>
+            </div>
+          </div>
         </section>
       </div>
 

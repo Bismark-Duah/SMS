@@ -2,7 +2,7 @@ import io
 import hashlib
 from datetime import datetime
 from xhtml2pdf import pisa
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from ..models import (
     Student, Score, Subject, AcademicYear, Semester, Setting, StudentSemesterSummary, Attendance,
     ClassSectionReportStatus, User, ClassSection
@@ -795,7 +795,9 @@ class ReportService:
         form_master_name = cs.form_master.username if cs.form_master else "Unassigned"
 
         subjects = cs.subjects
-        students = db.query(Student).filter(
+        students = db.query(Student).options(
+            joinedload(Student.program)
+        ).filter(
             Student.class_section_id == cs.id,
             Student.is_active == True
         ).order_by(Student.full_name).all()
@@ -803,15 +805,24 @@ class ReportService:
         if not students:
             return None
 
-        # Build student data
+        # Build student data with batch-loaded scores to eliminate N+1 queries
         student_rows_data = []
         subject_scores_accumulator = {s.id: [] for s in subjects}
 
+        st_ids = [st.id for st in students]
+        all_scores = db.query(Score).options(
+            joinedload(Score.subject)
+        ).filter(
+            Score.student_id.in_(st_ids),
+            Score.semester_id == semester.id
+        ).all() if st_ids else []
+
+        scores_by_student = {}
+        for sc in all_scores:
+            scores_by_student.setdefault(sc.student_id, []).append(sc)
+
         for st in students:
-            scores = db.query(Score).filter(
-                Score.student_id == st.id,
-                Score.semester_id == semester.id
-            ).all()
+            scores = scores_by_student.get(st.id, [])
 
             subj_map = {sc.subject_id: sc for sc in scores}
             tot_marks = 0.0
@@ -1052,7 +1063,9 @@ class ReportService:
             return ""
 
         subjects = cs.subjects
-        students = db.query(Student).filter(
+        students = db.query(Student).options(
+            joinedload(Student.program)
+        ).filter(
             Student.class_section_id == cs.id,
             Student.is_active == True
         ).order_by(Student.full_name).all()
@@ -1072,15 +1085,30 @@ class ReportService:
         headers.extend(["Total Score", "Average (%)", "WASSCE Aggregate (Best 6)", "Attitude", "Conduct", "Form Master Remarks"])
         writer.writerow(headers)
 
-        # Calculate student scores and ranks
+        # Calculate student scores and ranks with batch queries
         student_rows = []
         subject_accumulator = {s.id: [] for s in subjects}
 
+        st_ids = [st.id for st in students]
+        all_scores = db.query(Score).options(
+            joinedload(Score.subject)
+        ).filter(
+            Score.student_id.in_(st_ids),
+            Score.semester_id == semester.id
+        ).all() if st_ids else []
+
+        scores_by_student = {}
+        for sc in all_scores:
+            scores_by_student.setdefault(sc.student_id, []).append(sc)
+
+        all_summaries = db.query(StudentSemesterSummary).filter(
+            StudentSemesterSummary.student_id.in_(st_ids),
+            StudentSemesterSummary.semester_id == semester.id
+        ).all() if st_ids else []
+        summary_map = {sm.student_id: sm for sm in all_summaries}
+
         for st in students:
-            scores = db.query(Score).filter(
-                Score.student_id == st.id,
-                Score.semester_id == semester.id
-            ).all()
+            scores = scores_by_student.get(st.id, [])
             subj_map = {sc.subject_id: sc for sc in scores}
             tot = 0.0
             cnt = 0
@@ -1104,10 +1132,7 @@ class ReportService:
             except Exception:
                 pass
 
-            summary = db.query(StudentSemesterSummary).filter(
-                StudentSemesterSummary.student_id == st.id,
-                StudentSemesterSummary.semester_id == semester.id
-            ).first()
+            summary = summary_map.get(st.id)
 
             student_rows.append({
                 "student": st,

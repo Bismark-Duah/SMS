@@ -8,7 +8,7 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 
-from ..database import get_db
+from ..database import get_db, get_database_telemetry
 from ..models import User, School, SyncOutbox, Student, Score, Setting
 from ..dependencies import get_current_user, get_school_id
 from ..services.sync_engine import (
@@ -413,6 +413,7 @@ def get_super_admin_sync_overview(
         "total_network_synced": total_network_synced,
         "cloud_sync_url": cloud_sync_url or "Direct Cloud DB / Localhost Loopback",
         "is_cloud_configured": bool(cloud_sync_url),
+        "database_telemetry": get_database_telemetry(db),
         "schools": school_telemetry
     }
 

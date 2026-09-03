@@ -1,6 +1,6 @@
 from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, Field
 
 # --- Auth & Roles ---
 class RoleBase(BaseModel):
@@ -282,16 +282,16 @@ class ScoreCreate(BaseModel):
     student_id: int
     subject_id: int
     semester_id: int
-    ex1: Optional[float] = 0.0
-    ex2: Optional[float] = 0.0
-    ass1: Optional[float] = 0.0
-    ass2: Optional[float] = 0.0
-    ind_proj: Optional[float] = 0.0
-    grp_work: Optional[float] = 0.0
-    pract_work: Optional[float] = 0.0
-    mid_sem: Optional[float] = 0.0
-    class_score: float = 0.0
-    exam_score: float = 0.0
+    ex1: Optional[float] = Field(0.0, ge=0.0, le=20.0)
+    ex2: Optional[float] = Field(0.0, ge=0.0, le=20.0)
+    ass1: Optional[float] = Field(0.0, ge=0.0, le=20.0)
+    ass2: Optional[float] = Field(0.0, ge=0.0, le=20.0)
+    ind_proj: Optional[float] = Field(0.0, ge=0.0, le=40.0)
+    grp_work: Optional[float] = Field(0.0, ge=0.0, le=20.0)
+    pract_work: Optional[float] = Field(0.0, ge=0.0, le=20.0)
+    mid_sem: Optional[float] = Field(0.0, ge=0.0, le=40.0)
+    class_score: float = Field(0.0, ge=0.0, le=100.0)
+    exam_score: float = Field(0.0, ge=0.0, le=100.0)
 
 class AttendanceCreate(BaseModel):
     student_id: int

@@ -58,20 +58,20 @@ window.openPrintableIDCardsModal = function() {
     cardsHtml += `
       <div class="id-card">
         <div class="id-header">
-          <div class="id-logo">${schAbbr}</div>
+          <div class="id-logo">${escapeHtml(schAbbr)}</div>
           <div class="id-title">STUDENT IDENTITY CARD</div>
         </div>
         <div class="id-body">
           <div class="id-photo">👤</div>
           <div class="id-details">
-            <div style="font-weight: 800; font-size: 0.9rem; color: #f8fafc; margin-bottom: 2px;">${s.full_name}</div>
-            <div><strong>ID:</strong> ${s.student_code}</div>
-            <div><strong>Class:</strong> ${s.class_name || 'N/A'}</div>
-            <div><strong>House:</strong> ${s.house_name || 'Day Student'}</div>
+            <div style="font-weight: 800; font-size: 0.9rem; color: #f8fafc; margin-bottom: 2px;">${escapeHtml(s.full_name || '')}</div>
+            <div><strong>ID:</strong> ${escapeHtml(s.student_code || '')}</div>
+            <div><strong>Class:</strong> ${escapeHtml(s.class_name || 'N/A')}</div>
+            <div><strong>House:</strong> ${escapeHtml(s.house_name || 'Day Student')}</div>
             <div><strong>Status:</strong> ${s.residential_status === 'B' ? 'Boarder' : 'Day Student'}</div>
           </div>
         </div>
-        <div class="id-barcode">*${s.student_code}*</div>
+        <div class="id-barcode">*${escapeHtml(s.student_code || '')}*</div>
       </div>
     `;
   });
@@ -398,7 +398,17 @@ window.loadStudents = async function() {
   }
 };
 
+let currentPage = 1;
+let pageSize = 50;
+let currentFilteredStudents = [];
+
 function renderTable(students) {
+  currentFilteredStudents = students || [];
+  currentPage = 1;
+  renderCurrentPage();
+}
+
+function renderCurrentPage() {
   const tbody = document.getElementById('studentBody');
   if (!tbody) return;
   const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true';
@@ -408,7 +418,9 @@ function renderTable(students) {
   }
 
   const colCount = isSuperAdmin ? 9 : 8;
-  if (!students || students.length === 0) {
+  const totalStudents = currentFilteredStudents.length;
+
+  if (!currentFilteredStudents || totalStudents === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="${colCount}" style="padding:0;">
@@ -419,8 +431,17 @@ function renderTable(students) {
           </div>
         </td>
       </tr>`;
+    updatePaginationUI(0, 0, 0, 1, 1);
     return;
   }
+
+  const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(totalStudents / pageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const startIdx = pageSize === 'ALL' ? 0 : (currentPage - 1) * pageSize;
+  const endIdx = pageSize === 'ALL' ? totalStudents : Math.min(startIdx + pageSize, totalStudents);
+  const pageSlice = currentFilteredStudents.slice(startIdx, endIdx);
 
   const currentSchoolMode = (systemSchoolMode || localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
   const F = (window.SchoolFeatures && window.SchoolFeatures.version)
@@ -437,7 +458,7 @@ function renderTable(students) {
   if (thProgramCol) thProgramCol.style.display = showPrograms ? 'table-cell' : 'none';
   if (thBoardingCol) thBoardingCol.style.display = showBoarding ? 'table-cell' : 'none';
 
-  tbody.innerHTML = students.map(s => {
+  tbody.innerHTML = pageSlice.map(s => {
     const isInactive = s.is_active === false || s.status === 'INACTIVE';
     const boardingBadge = s.residential_status === 'B' 
       ? '<span style="color:#10b981; font-weight:600;">Boarding</span>' 
@@ -478,17 +499,75 @@ function renderTable(students) {
           <button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#059669; border-color:#047857; color:#ffffff; margin-right:4px;" onclick="openIdCardModal(${s.id})">🪪 ID Card</button>
           ${!isBasicMode ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#0284c7; border-color:#0369a1; color:#ffffff; margin-right:4px;" onclick="downloadAdmissionPackage(${s.id})" title="Download Official Admission Letter & Prospectus PDF">📄 Prospectus</button>` : ''}
           ${canEdit ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem;" onclick="openEditForm(${s.id})">✏ Edit</button>` : ''}
-          ${canDeactivate && !isInactive ? `<button class="btn danger" style="padding:4px 8px; font-size:0.8rem; margin-left:4px;" onclick="deactivateStudent(${s.id}, '${escapeHtml(s.full_name)}')">🗑 Deactivate</button>` : ''}
+          ${canDeactivate && !isInactive ? `<button class="btn danger" style="padding:4px 8px; font-size:0.8rem; margin-left:4px;" onclick="deactivateStudent(${s.id})">🗑 Deactivate</button>` : ''}
         </td>
       </tr>
     `;
   }).join('');
+
+  updatePaginationUI(startIdx + 1, endIdx, totalStudents, currentPage, totalPages);
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function updatePaginationUI(start, end, total, page, totalPages) {
+  const info = document.getElementById('paginationInfo');
+  const indicator = document.getElementById('pageIndicator');
+  const btnPrev = document.getElementById('btnPrevPage');
+  const btnNext = document.getElementById('btnNextPage');
+  const btnFirst = document.getElementById('btnFirstPage');
+  const btnLast = document.getElementById('btnLastPage');
+
+  if (info) {
+    info.textContent = total === 0 ? 'Showing 0 - 0 of 0' : `Showing ${start} - ${end} of ${total} student${total !== 1 ? 's' : ''}`;
+  }
+  if (indicator) {
+    indicator.textContent = `Page ${page} of ${totalPages}`;
+  }
+  if (btnPrev) btnPrev.disabled = (page <= 1);
+  if (btnFirst) btnFirst.disabled = (page <= 1);
+  if (btnNext) btnNext.disabled = (page >= totalPages);
+  if (btnLast) btnLast.disabled = (page >= totalPages);
 }
+
+window.changePage = function(delta) {
+  const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(currentFilteredStudents.length / pageSize));
+  const newPage = currentPage + delta;
+  if (newPage >= 1 && newPage <= totalPages) {
+    currentPage = newPage;
+    renderCurrentPage();
+  }
+};
+
+window.goToPage = function(page) {
+  const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(currentFilteredStudents.length / pageSize));
+  if (page >= 1 && page <= totalPages) {
+    currentPage = page;
+    renderCurrentPage();
+  }
+};
+
+window.goToLastPage = function() {
+  const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(currentFilteredStudents.length / pageSize));
+  currentPage = totalPages;
+  renderCurrentPage();
+};
+
+window.changePageSize = function(size) {
+  pageSize = size === 'ALL' ? 'ALL' : parseInt(size, 10);
+  currentPage = 1;
+  renderCurrentPage();
+};
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/`/g, '&#96;');
+}
+window.escapeHtml = escapeHtml;
 
 window.filterStudents = function() {
   const query = document.getElementById('studentSearch')?.value.toLowerCase().trim() || '';
@@ -525,13 +604,15 @@ window.filterStudents = function() {
 };
 
 window.deactivateStudent = async function(id, name) {
+  const student = allStudents.find(s => s.id === id);
+  const studentName = name || (student ? student.full_name : 'this student');
   const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
     '⚠️ Deactivate Student Record',
-    `Are you sure you want to deactivate student ${name}? Their active enrollment will be paused.`,
+    `Are you sure you want to deactivate student ${studentName}? Their active enrollment will be paused.`,
     'Deactivate Student',
     'Cancel',
     'warning'
-  ) : Promise.resolve(confirm(`Are you sure you want to deactivate ${name}?`)));
+  ) : Promise.resolve(confirm(`Are you sure you want to deactivate ${studentName}?`)));
 
   if (!ok) return;
   try {

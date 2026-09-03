@@ -314,12 +314,49 @@ def update_settings(
             setting = db.query(Setting).filter(Setting.key == key).first()
             if setting:
                 setting.value = val_str
-            else:
-                new_setting = Setting(key=key, value=val_str)
-                db.add(new_setting)
-    
     db.commit()
     return {"status": "success"}
+
+
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 MB
+MAX_DOC_SIZE = 10 * 1024 * 1024   # 10 MB
+
+def _validate_image_bytes(file_bytes: bytes, filename: str) -> str:
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+    if len(file_bytes) > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=400, detail="File exceeds maximum size limit of 5MB.")
+    
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in [".png", ".jpg", ".jpeg", ".webp"]:
+        raise HTTPException(status_code=400, detail="Invalid image format. Allowed formats: PNG, JPG, JPEG, WEBP.")
+    
+    # Check Magic Bytes
+    if ext == ".png" and not file_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise HTTPException(status_code=400, detail="Corrupted or invalid PNG file header.")
+    elif ext in [".jpg", ".jpeg"] and not file_bytes.startswith(b"\xff\xd8\xff"):
+        raise HTTPException(status_code=400, detail="Corrupted or invalid JPEG file header.")
+    elif ext == ".webp" and not (file_bytes.startswith(b"RIFF") and b"WEBP" in file_bytes[:16]):
+        raise HTTPException(status_code=400, detail="Corrupted or invalid WEBP file header.")
+    
+    return ext
+
+def _validate_doc_bytes(file_bytes: bytes, filename: str) -> str:
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+    if len(file_bytes) > MAX_DOC_SIZE:
+        raise HTTPException(status_code=400, detail="File exceeds maximum size limit of 10MB.")
+    
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in [".pdf", ".png", ".jpg", ".jpeg", ".webp"]:
+        raise HTTPException(status_code=400, detail="Invalid document format. Allowed formats: PDF, PNG, JPG, JPEG, WEBP.")
+    
+    if ext == ".pdf" and not file_bytes.startswith(b"%PDF-"):
+        raise HTTPException(status_code=400, detail="Corrupted or invalid PDF file header.")
+    elif ext in [".png", ".jpg", ".jpeg", ".webp"]:
+        _validate_image_bytes(file_bytes, filename)
+    
+    return ext
 
 @router.post("/upload-logo")
 async def upload_logo(
@@ -333,14 +370,8 @@ async def upload_logo(
     if "admin" not in role_names and "super_admin" not in role_names:
         raise HTTPException(status_code=403, detail="Only administrators can upload school logos")
 
-    # Validate file extension
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only images are allowed.")
-
     file_bytes = await file.read()
-    if not file_bytes:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+    ext = _validate_image_bytes(file_bytes, file.filename or "logo.png")
 
     # Convert to Base64 data URI (persistent & works offline / on cloud)
     data_uri = _process_image_to_base64(file_bytes, file.filename, max_size=(360, 360))
@@ -433,14 +464,8 @@ async def upload_signature(
     if "admin" not in role_names and "super_admin" not in role_names:
         raise HTTPException(status_code=403, detail="Only administrators can upload headmaster signatures")
 
-    # Validate file extension
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only images are allowed.")
-
     file_bytes = await file.read()
-    if not file_bytes:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+    ext = _validate_image_bytes(file_bytes, file.filename or "signature.png")
 
     data_uri = _process_image_to_base64(file_bytes, file.filename, max_size=(400, 160))
 
@@ -488,7 +513,7 @@ async def upload_signature(
 
 
 @router.post("/upload-code-of-conduct")
-def upload_code_of_conduct(
+async def upload_code_of_conduct(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -502,9 +527,8 @@ def upload_code_of_conduct(
     if "admin" not in role_names and "super_admin" not in role_names and "headmaster" not in role_names:
         raise HTTPException(status_code=403, detail="Only administrators can upload the Code of Conduct document")
 
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in [".pdf", ".png", ".jpg", ".jpeg", ".webp"]:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only PDF and image files are allowed.")
+    file_bytes = await file.read()
+    ext = _validate_doc_bytes(file_bytes, file.filename or "conduct.pdf")
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     frontend_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "frontend"))
@@ -516,7 +540,7 @@ def upload_code_of_conduct(
     file_path = os.path.join(upload_dir, new_filename)
 
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(file_bytes)
 
     web_path = f"/assets/uploads/{new_filename}"
     
@@ -528,7 +552,8 @@ def upload_code_of_conduct(
     if setting:
         setting.value = web_path
     else:
-        db.add(Setting(school_id=target_sch_id, key="code_of_conduct_pdf_url", value=web_path))
+        new_setting = Setting(school_id=target_sch_id, key="code_of_conduct_pdf_url", value=web_path)
+        db.add(new_setting)
     db.commit()
 
     return {"document_url": web_path}

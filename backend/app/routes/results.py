@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 from ..database import get_db
 from ..models import Score, TeacherAssignment, User, Student, Subject, Setting, SchoolStage, ClassSection, School
@@ -224,6 +224,7 @@ def get_class_scores(
     school_id = get_school_id(current_user)
     query = (
         db.query(Score)
+        .options(joinedload(Score.student), joinedload(Score.subject))
         .join(Student, Score.student_id == Student.id)
         .filter(Student.class_section_id == class_id, Score.semester_id == semester_id)
     )
@@ -271,13 +272,21 @@ def get_class_students_for_scoring(
         stud_query = stud_query.filter(Student.school_id == school_id)
     students = stud_query.order_by(Student.full_name).all()
 
+    if not students:
+        return []
+
+    # Batch query all existing scores in a single SQL operation to eliminate N+1 queries
+    student_ids = [s.id for s in students]
+    existing_scores = db.query(Score).filter(
+        Score.student_id.in_(student_ids),
+        Score.subject_id == subject_id,
+        Score.semester_id == semester_id,
+    ).all()
+    score_map = {sc.student_id: sc for sc in existing_scores}
+
     result = []
     for student in students:
-        score = db.query(Score).filter(
-            Score.student_id == student.id,
-            Score.subject_id == subject_id,
-            Score.semester_id == semester_id,
-        ).first()
+        score = score_map.get(student.id)
         result.append(
             {
                 "student_id": student.id,

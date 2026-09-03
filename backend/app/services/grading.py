@@ -7,11 +7,17 @@ class GradingService:
     @staticmethod
     def get_grade(total: float, db = None) -> dict:
         """Returns grade and remark for a given total score (0-100)."""
-        close_db = False
         if db is None:
-            from ..database import SessionLocal
-            db = SessionLocal()
-            close_db = True
+            # Fast default standard WAEC boundaries without DB session allocation
+            if total >= 80: return {"grade": "A1", "remark": "Excellent"}
+            elif total >= 70: return {"grade": "B2", "remark": "Very Good"}
+            elif total >= 65: return {"grade": "B3", "remark": "Good"}
+            elif total >= 60: return {"grade": "C4", "remark": "Credit"}
+            elif total >= 55: return {"grade": "C5", "remark": "Credit"}
+            elif total >= 50: return {"grade": "C6", "remark": "Credit"}
+            elif total >= 45: return {"grade": "D7", "remark": "Pass"}
+            elif total >= 40: return {"grade": "E8", "remark": "Pass"}
+            else: return {"grade": "F9", "remark": "Fail"}
             
         try:
             from ..models import Setting
@@ -69,18 +75,26 @@ class GradingService:
                     return {"grade": "E8", "remark": "Pass"}
                 else:
                     return {"grade": "F9", "remark": "Fail"}
-        finally:
-            if close_db:
-                db.close()
+        except Exception:
+            if total >= 80: return {"grade": "A1", "remark": "Excellent"}
+            elif total >= 70: return {"grade": "B2", "remark": "Very Good"}
+            elif total >= 65: return {"grade": "B3", "remark": "Good"}
+            elif total >= 60: return {"grade": "C4", "remark": "Credit"}
+            elif total >= 55: return {"grade": "C5", "remark": "Credit"}
+            elif total >= 50: return {"grade": "C6", "remark": "Credit"}
+            elif total >= 45: return {"grade": "D7", "remark": "Pass"}
+            elif total >= 40: return {"grade": "E8", "remark": "Pass"}
+            else: return {"grade": "F9", "remark": "Fail"}
 
     @staticmethod
     def get_grade_point(grade: str, db = None) -> int:
         """Returns the grade point (1-9) for a given grade string."""
-        close_db = False
+        points = {
+            "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9,
+            "A1": 1, "B2": 2, "B3": 3, "C4": 4, "C5": 5, "C6": 6, "D7": 7, "E8": 8, "F9": 9
+        }
         if db is None:
-            from ..database import SessionLocal
-            db = SessionLocal()
-            close_db = True
+            return points.get(str(grade).upper(), 9)
             
         try:
             from ..models import Setting
@@ -94,17 +108,12 @@ class GradingService:
                 if rules_setting and rules_setting.value:
                     rules = json.loads(rules_setting.value)
                     for rule in rules:
-                        if str(rule.get("grade")) == str(grade):
+                        if str(rule.get("grade")).upper() == str(grade).upper():
                             return int(rule.get("point", 9))
             
-            points = {
-                "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9,
-                "A1": 1, "B2": 2, "B3": 3, "C4": 4, "C5": 5, "C6": 6, "D7": 7, "E8": 8, "F9": 9
-            }
-            return points.get(str(grade), 9)
-        finally:
-            if close_db:
-                db.close()
+            return points.get(str(grade).upper(), 9)
+        except Exception:
+            return points.get(str(grade).upper(), 9)
 
     @classmethod
     def calculate_shs_aggregate_breakdown(cls, scores: list, student = None) -> dict:

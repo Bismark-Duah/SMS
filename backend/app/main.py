@@ -267,7 +267,18 @@ with engine.connect() as conn:
 
 from .routes import assets, clearance, cssps_enrollment, cumulative_records
 from .ncca_seed import seed_ncca_curriculum
-from .database import run_migrations
+import time
+import uuid
+from datetime import datetime, timezone
+import logging
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from .logger import setup_logging, get_logger
+from .database import run_migrations, get_database_telemetry
+
+# Initialize structured logging engine
+setup_logging(log_level=os.getenv("LOG_LEVEL", "INFO"))
+logger = get_logger("main")
 
 # Run schema migrations once at startup
 run_migrations()
@@ -280,33 +291,111 @@ with next(get_db()) as db:
     try:
         seed_ncca_curriculum(db)
     except Exception as e:
-        print("NaCCA curriculum auto-seed notice:", e)
+        logger.info(f"NaCCA curriculum auto-seed notice: {e}")
 
-# Verify SECRET_KEY configuration
-secret_key = os.getenv("SECRET_KEY", "")
-if not secret_key or secret_key == "your-secret-key-change-in-production":
+# Verify SECRET_KEY configuration & Fail-Secure Production Guard
+secret_key = os.getenv("SECRET_KEY", "").strip()
+env_mode = os.getenv("ENVIRONMENT", os.getenv("ENV", "development")).lower()
+
+if env_mode in ("production", "prod"):
+    if not secret_key or secret_key in ("your-secret-key-change-in-production", "edumanage-hybrid-sync-secret-key-2026"):
+        logger.critical("CRITICAL DEVOPS SECURITY VIOLATION: Insecure default SECRET_KEY in production!")
+        raise RuntimeError(
+            "CRITICAL DEVOPS SECURITY ERROR: Insecure or default SECRET_KEY configured in production environment! "
+            "Server startup halted. Set a strong random 256-bit secret in environment variables."
+        )
+elif not secret_key or secret_key == "your-secret-key-change-in-production":
     import warnings
     warnings.warn(
-        "SECURITY WARNING: SECRET_KEY is set to default or empty. "
-        "Please specify a strong random SECRET_KEY in backend/.env for production deployment.",
+        "SECURITY WARNING: SECRET_KEY is set to default. For production deployment, configure a strong SECRET_KEY.",
         UserWarning
+    )
+
+# DevOps Concurrency Guard for SQLite
+db_url = os.getenv("DATABASE_URL", "sqlite")
+web_concurrency = os.getenv("WEB_CONCURRENCY") or os.getenv("WORKERS")
+if ("sqlite" in db_url.lower()) and web_concurrency and int(web_concurrency) > 1:
+    logger.warning(
+        f"DEVOPS CONCURRENCY WARNING: WEB_CONCURRENCY={web_concurrency} detected with SQLite database. "
+        "Multiple worker processes can cause SQLite database locked errors. Pin workers to 1 or switch to PostgreSQL."
     )
 
 app = FastAPI(title="School Management System", version="0.1.0")
 
-cors_origins_env = os.getenv("CORS_ORIGINS", "*")
-allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] if cors_origins_env != "*" else ["*"]
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """
+    Injects request correlation ID (X-Request-ID) and emits structured JSON access telemetry.
+    """
+    async def dispatch(self, request: Request, call_next):
+        req_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+        request.state.request_id = req_id
+        start_time = time.time()
+
+        client_ip = request.client.host if request.client else "unknown"
+        method = request.method
+        path = request.url.path
+
+        response = await call_next(request)
+
+        duration_ms = round((time.time() - start_time) * 1000, 2)
+        response.headers["X-Request-ID"] = req_id
+
+        # Skip high-frequency health poll noise unless error
+        if path not in ("/health", "/api/health") or response.status_code >= 400:
+            log_record = logging.LogRecord(
+                name="edumanage.access",
+                level=logging.INFO if response.status_code < 400 else logging.WARNING,
+                pathname="",
+                lineno=0,
+                msg=f"{method} {path} -> {response.status_code} ({duration_ms}ms)",
+                args=(),
+                exc_info=None
+            )
+            log_record.request_id = req_id
+            log_record.client_ip = client_ip
+            log_record.method = method
+            log_record.path = path
+            log_record.status_code = response.status_code
+            log_record.duration_ms = duration_ms
+            logger.handle(log_record)
+
+        return response
+
+DEFAULT_LOCAL_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://smsghana.onrender.com",
+    "https://smsgh.onrender.com"
+]
+
+cors_origins_env = os.getenv("CORS_ORIGINS", "").strip()
+if cors_origins_env and cors_origins_env != "*":
+    allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+elif cors_origins_env == "*":
+    allowed_origins = ["*"]
+else:
+    allowed_origins = DEFAULT_LOCAL_ORIGINS
+
+# If wildcard is explicitly configured, allow_credentials must be False per CORS security spec
+allow_creds = (allowed_origins != ["*"])
 
 from .middleware.cloudflare_guard import CloudflareGuardMiddleware
 from .middleware.tenant_subdomain import TenantSubdomainMiddleware
 
+app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(TenantSubdomainMiddleware)
 app.add_middleware(CloudflareGuardMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
+    allow_credentials=allow_creds,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -357,54 +446,46 @@ def sanitize_multi_tenant_state():
         db.commit()
         db.close()
     except Exception as e:
-        print(f"[StartupSanitization] Error: {e}")
+        logger.error(f"[StartupSanitization] Error: {e}")
 
 @app.get("/health", tags=["system"])
 @app.get("/api/health", tags=["system"])
 def get_system_health(db: Session = Depends(get_db)):
     """
     Enterprise health & telemetry endpoint for container orchestrators (Render / Azure / AWS).
-    Checks database connection responsiveness and reports engine status.
+    Checks database connection responsiveness, storage engine status, and replication state.
     """
-    import time
-    start_time = time.time()
-    try:
-        from sqlalchemy import text
-        from .models import School, User
-        db.execute(text("SELECT 1"))
-        latency_ms = round((time.time() - start_time) * 1000, 2)
-        
-        db_url = os.getenv("DATABASE_URL", "sqlite")
-        engine_type = "PostgreSQL" if "postgres" in db_url.lower() else "SQLite (Offline-First)"
-        
-        schools_count = db.query(School).count()
-        users_count = db.query(User).count()
-
-        return {
-            "status": "healthy",
-            "environment": "cloud_production" if "postgres" in db_url.lower() else "offline_local",
-            "database": {
-                "engine": engine_type,
-                "latency_ms": latency_ms,
-                "status": "connected"
-            },
-            "metrics": {
-                "registered_schools": schools_count,
-                "total_users": users_count
-            },
+    telemetry = get_database_telemetry(db)
+    is_healthy = telemetry.get("status") == "connected"
+    
+    status_code = 200 if is_healthy else 503
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": "healthy" if is_healthy else "degraded",
+            "environment": os.getenv("ENVIRONMENT", "offline_local"),
+            "database": telemetry,
             "version": "4.2.0"
         }
-    except Exception as err:
-        return JSONResponse(
-            status_code=503,
-            content={
-                "status": "degraded",
-                "database": {
-                    "status": "error",
-                    "error": str(err)
-                }
-            }
-        )
+    )
+
+@app.get("/api/system/telemetry", tags=["system"])
+def get_system_telemetry(db: Session = Depends(get_db)):
+    """
+    DevOps telemetry and observability endpoint for Prometheus, Grafana, and Super Admin monitors.
+    """
+    from .models import School, User, Student
+    db_telemetry = get_database_telemetry(db)
+    return {
+        "status": "success",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "database": db_telemetry,
+        "counts": {
+            "schools": db.query(School).count(),
+            "users": db.query(User).count(),
+            "students": db.query(Student).count()
+        }
+    }
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(students.router, prefix="/api/students", tags=["students"])

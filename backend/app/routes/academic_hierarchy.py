@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_, func
 from typing import List, Optional
 from datetime import datetime
@@ -244,24 +244,42 @@ def get_class_broadsheet(
             "status": status_val
         })
 
-    # Fetch students in class
-    students = db.query(Student).filter(Student.class_section_id == cs.id, Student.is_active == True).order_by(Student.full_name).all()
+    # Fetch students in class with stage/program loaded
+    students = db.query(Student).options(
+        joinedload(Student.program)
+    ).filter(Student.class_section_id == cs.id, Student.is_active == True).order_by(Student.full_name).all()
 
-    # Calculate scores & broadsheet matrix
+    # Calculate scores & broadsheet matrix with batch loading to eliminate N+1 queries
     raw_student_data = []
 
+    st_ids = [st.id for st in students]
+    all_scores = db.query(Score).options(
+        joinedload(Score.subject)
+    ).filter(
+        Score.student_id.in_(st_ids),
+        Score.semester_id == sem.id
+    ).all() if st_ids else []
+
+    scores_by_student = {}
+    for sc in all_scores:
+        scores_by_student.setdefault(sc.student_id, []).append(sc)
+
+    all_summaries = db.query(StudentSemesterSummary).filter(
+        StudentSemesterSummary.student_id.in_(st_ids),
+        StudentSemesterSummary.semester_id == sem.id
+    ).all() if st_ids else []
+    summary_map = {sm.student_id: sm for sm in all_summaries}
+
     for st in students:
-        scores = db.query(Score).filter(
-            Score.student_id == st.id,
-            Score.semester_id == sem.id
-        ).all()
+        scores = scores_by_student.get(st.id, [])
 
         subj_score_map = {}
         total_marks = 0.0
         subj_count = 0
 
         for s in scores:
-            subj_score_map[s.subject.name] = s.total_score or 0.0
+            subj_name = s.subject.name if s.subject else f"Subject {s.subject_id}"
+            subj_score_map[subj_name] = s.total_score or 0.0
             total_marks += (s.total_score or 0.0)
             subj_count += 1
 
@@ -281,10 +299,7 @@ def get_class_broadsheet(
             pass
 
         # Form teacher remarks & summaries
-        summary = db.query(StudentSemesterSummary).filter(
-            StudentSemesterSummary.student_id == st.id,
-            StudentSemesterSummary.semester_id == sem.id
-        ).first()
+        summary = summary_map.get(st.id)
 
         raw_student_data.append({
             "student_id": st.id,

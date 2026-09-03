@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from pydantic import BaseModel
 
@@ -86,11 +86,15 @@ def get_class_timetable(
 ):
     """Get the full weekly timetable for a class section."""
     school_id = get_school_id(current_user)
-    cs = db.query(ClassSection).filter(ClassSection.id == class_section_id).first()
+    cs = db.query(ClassSection).options(joinedload(ClassSection.program)).filter(ClassSection.id == class_section_id).first()
     if not cs or not _check_class_school(cs, school_id):
         raise HTTPException(status_code=404, detail="Class section not found")
 
-    query = db.query(Timetable).filter(Timetable.class_section_id == class_section_id)
+    query = db.query(Timetable).options(
+        joinedload(Timetable.class_section),
+        joinedload(Timetable.subject),
+        joinedload(Timetable.teacher)
+    ).filter(Timetable.class_section_id == class_section_id)
     if semester_id:
         query = query.filter(Timetable.semester_id == semester_id)
     slots = query.order_by(Timetable.day_of_week, Timetable.period_number).all()
@@ -105,7 +109,11 @@ def get_teacher_timetable(
     current_user: User = Depends(get_current_user),
 ):
     """Get a teacher's complete teaching schedule across all classes."""
-    query = db.query(Timetable).filter(Timetable.teacher_id == teacher_id)
+    query = db.query(Timetable).options(
+        joinedload(Timetable.class_section),
+        joinedload(Timetable.subject),
+        joinedload(Timetable.teacher)
+    ).filter(Timetable.teacher_id == teacher_id)
     if semester_id:
         query = query.filter(Timetable.semester_id == semester_id)
     slots = query.order_by(Timetable.day_of_week, Timetable.period_number).all()
@@ -121,7 +129,11 @@ def check_conflicts(
     require_admin(current_user)
 
     school_id = get_school_id(current_user)
-    query = db.query(Timetable).join(Timetable.class_section).outerjoin(ClassSection.program)
+    query = db.query(Timetable).options(
+        joinedload(Timetable.class_section),
+        joinedload(Timetable.subject),
+        joinedload(Timetable.teacher)
+    ).join(Timetable.class_section).outerjoin(ClassSection.program)
     if school_id is not None:
         if hasattr(ClassSection, "school_id"):
             query = query.filter((ClassSection.school_id == school_id) | (Program.school_id == school_id))
@@ -174,7 +186,11 @@ def list_all_slots(
 ):
     """Admin: list all timetable entries."""
     require_admin(current_user)
-    slots = db.query(Timetable).order_by(
+    slots = db.query(Timetable).options(
+        joinedload(Timetable.class_section),
+        joinedload(Timetable.subject),
+        joinedload(Timetable.teacher)
+    ).order_by(
         Timetable.class_section_id, Timetable.day_of_week, Timetable.period_number
     ).all()
     return [_enrich(s) for s in slots]

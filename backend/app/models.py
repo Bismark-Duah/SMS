@@ -442,6 +442,11 @@ class Score(Base):
     subject = relationship("Subject", back_populates="scores")
     semester = relationship("Semester", back_populates="scores")
 
+    __table_args__ = (
+        Index("ix_scores_student_subject_sem", "student_id", "subject_id", "semester_id"),
+        Index("ix_scores_sem_subject", "semester_id", "subject_id"),
+    )
+
 class Attendance(Base):
     __tablename__ = "attendance"
 
@@ -461,6 +466,10 @@ class Attendance(Base):
     student = relationship("Student", back_populates="attendance")
     subject = relationship("Subject", foreign_keys=[subject_id])
     logged_by = relationship("User", foreign_keys=[logged_by_id])
+
+    __table_args__ = (
+        Index("ix_attendance_student_date", "student_id", "date"),
+    )
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -492,28 +501,33 @@ class Fee(Base):
     __tablename__ = "fees"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
     fee_type = Column(String, nullable=False)
     description = Column(String, nullable=True)
     amount = Column(Float, nullable=False)
     amount_paid = Column(Float, default=0.0)
     due_date = Column(DateTime, nullable=True)
-    academic_year = Column(String, nullable=True)
-    term = Column(String, nullable=True)
-    status = Column(String, default="Pending")
+    academic_year = Column(String, nullable=True, index=True)
+    term = Column(String, nullable=True, index=True)
+    status = Column(String, default="Pending", index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     student = relationship("Student", back_populates="fees")
     payments = relationship("Payment", back_populates="fee", cascade="all, delete-orphan")
 
+    __table_args__ = (
+        Index("ix_fees_student_status", "student_id", "status"),
+        Index("ix_fees_year_term", "academic_year", "term"),
+    )
+
 class Payment(Base):
     __tablename__ = "payments"
 
     id = Column(Integer, primary_key=True, index=True)
-    fee_id = Column(Integer, ForeignKey("fees.id"), nullable=False)
+    fee_id = Column(Integer, ForeignKey("fees.id"), nullable=False, index=True)
     amount_paid = Column(Float, nullable=False)
-    payment_date = Column(DateTime, nullable=False, server_default=func.now())
+    payment_date = Column(DateTime, nullable=False, server_default=func.now(), index=True)
     payment_method = Column(String, default="Cash")
     reference_no = Column(String, nullable=True)
     receipt_number = Column(String, unique=True, index=True, nullable=True)
@@ -524,20 +538,29 @@ class Payment(Base):
     fee = relationship("Fee", back_populates="payments")
     recorder = relationship("User")
 
+    __table_args__ = (
+        Index("ix_payments_fee_date", "fee_id", "payment_date"),
+    )
+
 # ── Timetable ─────────────────────────────────────────────────────────────────
 
 class Timetable(Base):
     __tablename__ = "timetable"
 
     id = Column(Integer, primary_key=True, index=True)
-    class_section_id = Column(Integer, ForeignKey("class_sections.id"), nullable=False)
-    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
-    teacher_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    semester_id = Column(Integer, ForeignKey("semesters.id"), nullable=True)
+    class_section_id = Column(Integer, ForeignKey("class_sections.id"), nullable=False, index=True)
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False, index=True)
+    teacher_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    semester_id = Column(Integer, ForeignKey("semesters.id"), nullable=True, index=True)
     day_of_week = Column(Integer, nullable=False)
     period_number = Column(Integer, nullable=False)
     start_time = Column(String, nullable=True)
     end_time = Column(String, nullable=True)
+
+    __table_args__ = (
+        Index("ix_timetable_class_day_period", "class_section_id", "day_of_week", "period_number"),
+        Index("ix_timetable_teacher_day_period", "teacher_id", "day_of_week", "period_number"),
+    )
     room = Column(String, nullable=True)
 
     class_section = relationship("ClassSection")

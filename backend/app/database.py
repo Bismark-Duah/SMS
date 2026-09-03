@@ -101,6 +101,151 @@ def vacuum_database() -> dict:
         return {"status": "success", "message": "Database successfully vacuumed and compacted."}
 
 
+def get_database_telemetry(db = None) -> dict:
+    """
+    Returns enterprise database telemetry, health metrics, and replication lag data
+    for PostgreSQL clusters or SQLite WAL storage engines.
+    """
+    import time
+    start_time = time.time()
+    
+    if is_postgres:
+        try:
+            with engine.connect() as conn:
+                from sqlalchemy import text
+                # 1. Check recovery / replica mode
+                rec_res = conn.execute(text("SELECT pg_is_in_recovery();")).fetchone()
+                is_replica = bool(rec_res[0]) if rec_res else False
+
+                latency_ms = round((time.time() - start_time) * 1000, 2)
+                
+                if is_replica:
+                    # Query replication lag from replica viewpoint
+                    lag_res = conn.execute(text("""
+                        SELECT 
+                            pg_last_wal_receive_lsn()::text AS receive_lsn,
+                            pg_last_wal_replay_lsn()::text AS replay_lsn,
+                            EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))::float AS lag_seconds
+                    """)).fetchone()
+                    
+                    return {
+                        "engine": "PostgreSQL",
+                        "role": "Replica (Standby)",
+                        "status": "connected",
+                        "latency_ms": latency_ms,
+                        "replication": {
+                            "is_in_recovery": True,
+                            "lag_seconds": round(lag_res[2], 2) if (lag_res and lag_res[2] is not None) else 0.0,
+                            "last_wal_receive_lsn": lag_res[0] if lag_res else None,
+                            "last_wal_replay_lsn": lag_res[1] if lag_res else None,
+                            "health": "healthy" if (lag_res and (lag_res[2] is None or lag_res[2] < 30)) else "lagging"
+                        }
+                    }
+                else:
+                    # Primary node: query active standby replicas from pg_stat_replication
+                    try:
+                        rep_res = conn.execute(text("""
+                            SELECT 
+                                client_addr::text,
+                                state,
+                                sync_state,
+                                replay_lsn::text,
+                                pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)::bigint AS lag_bytes
+                            FROM pg_stat_replication
+                        """)).fetchall()
+                        
+                        replicas = []
+                        max_lag_bytes = 0
+                        for r in rep_res:
+                            lag_b = r[4] or 0
+                            if lag_b > max_lag_bytes: max_lag_bytes = lag_b
+                            replicas.append({
+                                "client_addr": r[0],
+                                "state": r[1],
+                                "sync_state": r[2],
+                                "replay_lsn": r[3],
+                                "lag_bytes": lag_b
+                            })
+                            
+                        return {
+                            "engine": "PostgreSQL",
+                            "role": "Primary (Writer)",
+                            "status": "connected",
+                            "latency_ms": latency_ms,
+                            "replication": {
+                                "active_replicas_count": len(replicas),
+                                "max_replication_lag_bytes": max_lag_bytes,
+                                "replicas": replicas,
+                                "health": "healthy" if max_lag_bytes < (10 * 1024 * 1024) else "lagging"
+                            }
+                        }
+                    except Exception as rep_err:
+                        return {
+                            "engine": "PostgreSQL",
+                            "role": "Primary (Standalone)",
+                            "status": "connected",
+                            "latency_ms": latency_ms,
+                            "replication": {
+                                "active_replicas_count": 0,
+                                "notice": str(rep_err)
+                            }
+                        }
+        except Exception as e:
+            return {
+                "engine": "PostgreSQL",
+                "status": "degraded",
+                "error": str(e)
+            }
+            
+    # SQLite WAL Telemetry
+    try:
+        db_file = DEFAULT_DB_PATH
+        wal_file = f"{db_file}-wal"
+        shm_file = f"{db_file}-shm"
+        
+        db_size_bytes = os.path.getsize(db_file) if os.path.exists(db_file) else 0
+        wal_size_bytes = os.path.getsize(wal_file) if os.path.exists(wal_file) else 0
+        
+        with engine.connect() as conn:
+            from sqlalchemy import text
+            cp_res = conn.execute(text("PRAGMA wal_checkpoint(PASSIVE);")).fetchone()
+            page_res = conn.execute(text("PRAGMA page_count;")).fetchone()
+            pagesize_res = conn.execute(text("PRAGMA page_size;")).fetchone()
+            
+            latency_ms = round((time.time() - start_time) * 1000, 2)
+            
+            page_count = page_res[0] if page_res else 0
+            page_size = pagesize_res[0] if pagesize_res else 4096
+            
+            return {
+                "engine": "SQLite (Offline-First WAL)",
+                "role": "Standalone Local Server",
+                "status": "connected",
+                "latency_ms": latency_ms,
+                "storage": {
+                    "db_path": os.path.basename(db_file),
+                    "db_size_bytes": db_size_bytes,
+                    "db_size_mb": round(db_size_bytes / (1024 * 1024), 2),
+                    "wal_size_bytes": wal_size_bytes,
+                    "wal_size_mb": round(wal_size_bytes / (1024 * 1024), 2),
+                    "page_count": page_count,
+                    "page_size": page_size
+                },
+                "wal_checkpoint_status": {
+                    "busy": cp_res[0] if cp_res else 0,
+                    "log_frames": cp_res[1] if cp_res else 0,
+                    "checkpointed_frames": cp_res[2] if cp_res else 0,
+                    "health": "optimal" if (cp_res and cp_res[0] == 0) else "busy"
+                }
+            }
+    except Exception as e:
+        return {
+            "engine": "SQLite",
+            "status": "error",
+            "error": str(e)
+        }
+
+
 def run_migrations():
     from sqlalchemy import text, inspect
     Base.metadata.create_all(bind=engine)
@@ -269,17 +414,25 @@ def run_migrations():
                 conn.rollback()
                 print("Notice: SQLite users email migration:", sqlite_user_err)
 
-        # Auto-populate missing slugs for existing schools
-        try:
-            conn.execute(text("""
-                UPDATE schools 
-                SET slug = LOWER(REPLACE(REPLACE(TRIM(code), ' ', '-'), '_', '-'))
-                WHERE slug IS NULL OR slug = ''
-            """))
-            conn.commit()
-        except Exception as slug_err:
-            conn.rollback()
-            print("Notice: Auto-populating school slugs:", slug_err)
+        # Performance & Scalability Indexes Migration
+        indexes_to_ensure = [
+            "CREATE INDEX IF NOT EXISTS ix_scores_student_subject_sem ON scores (student_id, subject_id, semester_id);",
+            "CREATE INDEX IF NOT EXISTS ix_scores_sem_subject ON scores (semester_id, subject_id);",
+            "CREATE INDEX IF NOT EXISTS ix_attendance_student_date ON attendance (student_id, date);",
+            "CREATE INDEX IF NOT EXISTS ix_fees_student_id ON fees (student_id);",
+            "CREATE INDEX IF NOT EXISTS ix_fees_student_status ON fees (student_id, status);",
+            "CREATE INDEX IF NOT EXISTS ix_fees_year_term ON fees (academic_year, term);",
+            "CREATE INDEX IF NOT EXISTS ix_payments_fee_id ON payments (fee_id);",
+            "CREATE INDEX IF NOT EXISTS ix_payments_fee_date ON payments (fee_id, payment_date);",
+            "CREATE INDEX IF NOT EXISTS ix_timetable_class_day_period ON timetable (class_section_id, day_of_week, period_number);",
+            "CREATE INDEX IF NOT EXISTS ix_timetable_teacher_day_period ON timetable (teacher_id, day_of_week, period_number);",
+        ]
+        for idx_sql in indexes_to_ensure:
+            try:
+                conn.execute(text(idx_sql))
+                conn.commit()
+            except Exception:
+                conn.rollback()
 
 def get_db():
     db = SessionLocal()

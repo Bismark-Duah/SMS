@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status, Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 import csv
 import io
@@ -113,12 +113,22 @@ def _student_dict(s: Student) -> dict:
 def list_students(
     class_id: Optional[int] = Query(None),
     include_inactive: bool = Query(False),
+    limit: Optional[int] = Query(None, ge=1, le=10000),
+    offset: Optional[int] = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     school_id = get_school_id(current_user)
     mode = _get_school_mode(db, school_id)
-    query = db.query(Student)
+    query = db.query(Student).options(
+        joinedload(Student.class_section),
+        joinedload(Student.program),
+        joinedload(Student.parent),
+        joinedload(Student.house),
+        joinedload(Student.dormitory),
+        joinedload(Student.health_profile),
+        joinedload(Student.school)
+    )
 
     # ── Multi-tenancy: scope to current school ──────────────────────────────
     if school_id is not None:
@@ -159,7 +169,11 @@ def list_students(
         query = query.filter(Student.class_section_id == class_id)
 
     try:
-        students = query.order_by(Student.full_name).all()
+        query = query.order_by(Student.full_name)
+        if limit is not None and isinstance(limit, int):
+            off = offset if (offset is not None and isinstance(offset, int)) else 0
+            query = query.limit(limit).offset(off)
+        students = query.all()
         return [_student_dict(s) for s in students]
     except Exception as e:
         print("Error in list_students query:", e)
@@ -176,7 +190,15 @@ def get_student(
     current_user: User = Depends(get_current_user),
 ):
     school_id = get_school_id(current_user)
-    query = db.query(Student).filter(Student.id == student_id)
+    query = db.query(Student).options(
+        joinedload(Student.class_section),
+        joinedload(Student.program),
+        joinedload(Student.parent),
+        joinedload(Student.house),
+        joinedload(Student.dormitory),
+        joinedload(Student.health_profile),
+        joinedload(Student.school)
+    ).filter(Student.id == student_id)
     if school_id is not None:
         query = query.filter(Student.school_id == school_id)
     student = query.first()
@@ -438,8 +460,21 @@ async def import_students_csv(
 ):
     _check_admin(current_user)
     school_id = get_school_id(current_user)
+    
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Invalid file type. Only .csv files are supported.")
+
     content = await file.read()
-    decoded = content.decode("utf-8")
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded CSV file is empty.")
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds maximum 10MB limit.")
+
+    try:
+        decoded = content.decode("utf-8-sig")
+    except Exception:
+        decoded = content.decode("latin-1", errors="replace")
+
     stream = io.StringIO(decoded)
     reader = csv.DictReader(stream)
 

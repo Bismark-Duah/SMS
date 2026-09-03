@@ -152,7 +152,15 @@ def verify_bece_index(index_number: str, db: Session = Depends(get_db)):
 @router.post("/import-csv", status_code=status.HTTP_201_CREATED)
 async def import_cssps_csv(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     school_id = get_school_id(current_user)
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Invalid file type. Only .csv files are supported.")
+
     content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds maximum 10MB limit.")
+
     try:
         decoded = content.decode("utf-8-sig")
     except UnicodeDecodeError:

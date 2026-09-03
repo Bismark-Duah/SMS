@@ -12,6 +12,7 @@ from datetime import datetime, date
 # Setup path so tests can run standalone
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
+from sqlalchemy import func
 from backend.app.database import SessionLocal
 from backend.app.models import (
     School, Student, User, Role, Program, AcademicYear, Semester,
@@ -170,7 +171,7 @@ class TestAttendanceScannerAndTruancy(unittest.TestCase):
         # Verify DB entry
         att = self.db.query(Attendance).filter(
             Attendance.student_id == self.st1.id,
-            Attendance.date == datetime.now().date()
+            func.date(Attendance.date) == datetime.now().strftime("%Y-%m-%d")
         ).first()
         self.assertIsNotNone(att)
         self.assertEqual(att.status, "Present")
@@ -226,15 +227,16 @@ class TestAttendanceScannerAndTruancy(unittest.TestCase):
     def test_06_dispatch_truancy_alerts_sms(self):
         """Verify unexcused absences trigger personalized Hubtel SMS alerts."""
         today = datetime.now().date()
+        today_str = today.strftime("%Y-%m-%d")
         # Mark st2 as Absent for today
         att2 = self.db.query(Attendance).filter(
             Attendance.student_id == self.st2.id,
-            Attendance.date == today
+            func.date(Attendance.date) == today_str
         ).first()
         if att2:
             att2.status = "Absent"
         else:
-            att2 = Attendance(student_id=self.st2.id, date=today, status="Absent")
+            att2 = Attendance(student_id=self.st2.id, date=datetime.now(), status="Absent")
             self.db.add(att2)
         self.db.commit()
 

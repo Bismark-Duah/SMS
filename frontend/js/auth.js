@@ -64,34 +64,46 @@ if (form) {
         if (score > maxScore) { maxScore = score; topRole = (r || '').toLowerCase(); }
       });
 
-      // Store all session data
-      localStorage.setItem('userRole',     topRole || data.role);
-      localStorage.setItem('activeRole',   topRole || data.role);
-      localStorage.setItem('username',     data.username);
-      localStorage.setItem('userId',       data.user_id);
-      localStorage.setItem('accessToken',  data.access_token);
-      localStorage.setItem('userRoles',    JSON.stringify(rolesList));
+      // Store all session data (sessionStorage for tab isolation, localStorage for persist)
+      const sessionMap = {
+        'userRole': topRole || data.role,
+        'activeRole': topRole || data.role,
+        'username': data.username,
+        'userId': String(data.user_id),
+        'accessToken': data.access_token,
+        'userRoles': JSON.stringify(rolesList),
+        'is_first_login': data.is_first_login ? 'true' : 'false',
+        'phone_number': data.phone_number || '',
+        'email': data.email || '',
+        'contact_verified': data.contact_verified ? 'true' : 'false',
+        '_lastActivity': Date.now().toString()
+      };
+
       if (data.is_super_admin) {
-        localStorage.setItem('is_super_admin', 'true');
+        sessionMap['is_super_admin'] = 'true';
+        sessionMap['school_name'] = 'Master System Portal';
+        sessionMap['school_abbreviation'] = 'SUPER ADMIN';
+        sessionStorage.removeItem('is_super_admin_viewing');
+        sessionStorage.removeItem('school_id');
+        sessionStorage.removeItem('school_logo');
         localStorage.removeItem('is_super_admin_viewing');
-        localStorage.setItem('school_name', 'Master System Portal');
-        localStorage.setItem('school_abbreviation', 'SUPER ADMIN');
         localStorage.removeItem('school_id');
         localStorage.removeItem('school_logo');
       } else {
+        sessionStorage.removeItem('is_super_admin');
+        sessionStorage.removeItem('is_super_admin_viewing');
         localStorage.removeItem('is_super_admin');
         localStorage.removeItem('is_super_admin_viewing');
-        if (data.school_id) localStorage.setItem('school_id', String(data.school_id));
-        if (data.school_name) localStorage.setItem('school_name', data.school_name);
-        if (data.school_code) localStorage.setItem('school_abbreviation', data.school_code);
-        else localStorage.removeItem('school_abbreviation');
-        if (data.school_mode) localStorage.setItem('school_mode', data.school_mode);
+        if (data.school_id) sessionMap['school_id'] = String(data.school_id);
+        if (data.school_name) sessionMap['school_name'] = data.school_name;
+        if (data.school_code) sessionMap['school_abbreviation'] = data.school_code;
+        if (data.school_mode) sessionMap['school_mode'] = data.school_mode;
       }
-      localStorage.setItem('is_first_login', data.is_first_login ? 'true' : 'false');
-      localStorage.setItem('phone_number', data.phone_number || '');
-      localStorage.setItem('email', data.email || '');
-      localStorage.setItem('contact_verified', data.contact_verified ? 'true' : 'false');
-      localStorage.setItem('_lastActivity', Date.now().toString());
+
+      for (const [k, v] of Object.entries(sessionMap)) {
+        sessionStorage.setItem(k, v);
+        localStorage.setItem(k, v);
+      }
 
       if (msgEl) {
         msgEl.textContent = `✔ Login successful. Redirecting…`;
@@ -100,7 +112,7 @@ if (form) {
 
       // ── Fetch tenant configuration immediately after login ──────────────
       // Populates boarding_status, boarding_hierarchy_mode etc. into
-      // localStorage BEFORE redirect, preventing flash of wrong features.
+      // sessionStorage & localStorage BEFORE redirect, preventing flash of wrong features.
       if (!data.is_super_admin) {
         try {
           const settingsHeaders = { 'Authorization': `Bearer ${data.access_token}` };
@@ -108,14 +120,13 @@ if (form) {
           const settingsRes = await fetch(`${API_BASE}/settings/`, { headers: settingsHeaders });
           if (settingsRes.ok) {
             const s = await settingsRes.json();
-            if (s.boarding_status)        localStorage.setItem('boarding_status', s.boarding_status);
-            if (s.boarding_hierarchy_mode) localStorage.setItem('boarding_hierarchy_mode', s.boarding_hierarchy_mode);
-            if (s.school_mode)            localStorage.setItem('school_mode', s.school_mode);
-            if (s.school_name)            localStorage.setItem('school_name', s.school_name);
-            if (s.school_logo)            localStorage.setItem('school_logo', s.school_logo);
-            if (s.class_score_weight)     localStorage.setItem('class_score_weight', String(s.class_score_weight));
-            if (s.exam_score_weight)      localStorage.setItem('exam_score_weight', String(s.exam_score_weight));
-            if (s.system_theme)           localStorage.setItem('system_theme', s.system_theme);
+            const configKeys = ['boarding_status', 'boarding_hierarchy_mode', 'school_mode', 'school_name', 'school_logo', 'class_score_weight', 'exam_score_weight', 'system_theme'];
+            configKeys.forEach(ck => {
+              if (s[ck] !== undefined && s[ck] !== null) {
+                sessionStorage.setItem(ck, String(s[ck]));
+                localStorage.setItem(ck, String(s[ck]));
+              }
+            });
             // Refresh feature gate with accurate tenant config
             if (window.FeatureGate && window.FeatureGate.refresh) {
               window.FeatureGate.refresh();

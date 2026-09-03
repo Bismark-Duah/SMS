@@ -31,6 +31,13 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    if hasattr(user, "is_active") and user.is_active is False:
+        raise HTTPException(status_code=401, detail="Account is deactivated. Please contact your administrator.")
+
+    role_names = [r.name.lower() for r in user.roles] if hasattr(user, "roles") and user.roles else []
+    if "super_admin" not in role_names and user.school and getattr(user.school, "status", "ACTIVE") == "SUSPENDED":
+        raise HTTPException(status_code=403, detail="Access Denied: Your school's account has been suspended by the Super-Admin.")
+
     # Multi-Device Zero-Trust Session Active Check
     if not is_session_active(token, user.id, db):
         raise HTTPException(status_code=401, detail="Session terminated: your account was logged in on another device.")

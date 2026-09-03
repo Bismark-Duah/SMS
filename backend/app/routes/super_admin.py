@@ -1213,9 +1213,11 @@ def export_all_schools(
             "payments": [
                 {
                     "student_code": p.fee.student.student_code if p.fee and p.fee.student else None,
-                    "amount": p.amount,
+                    "amount_paid": p.amount_paid,
+                    "amount": p.amount_paid,
                     "payment_method": p.payment_method,
                     "receipt_number": p.receipt_number,
+                    "reference_no": p.reference_no,
                     "payment_date": str(p.payment_date) if p.payment_date else None
                 }
                 for p in payments
@@ -1536,11 +1538,14 @@ def sync_from_cloud(
             for p in s_data.get("payments", []):
                 f_id = fee_map.get(p.get("student_code"))
                 if f_id:
+                    pay_amt = float(p.get("amount_paid") or p.get("amount") or 0.0)
+                    rc_num = p.get("receipt_number") or p.get("receipt_no")
                     db.add(Payment(
                         fee_id=f_id,
-                        amount=p.get("amount", 0.0),
+                        amount_paid=pay_amt,
                         payment_method=p.get("payment_method", "Cash"),
-                        receipt_number=p.get("receipt_number", "REC-001")
+                        receipt_number=rc_num,
+                        reference_no=p.get("reference_no")
                     ))
 
             # Attendance

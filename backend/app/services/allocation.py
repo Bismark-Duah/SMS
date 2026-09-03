@@ -19,8 +19,10 @@ def allocate_student_house_and_dorm(db: Session, student: Student) -> dict:
 
     # 1. House Allocation (if student has no house_id)
     if not student.house_id:
-        # Filter houses by gender compatibility
+        # Filter houses by gender compatibility and tenant school_id
         house_query = db.query(House)
+        if getattr(student, "school_id", None) is not None:
+            house_query = house_query.filter((House.school_id == student.school_id) | (House.school_id == None))
         all_houses = house_query.all()
 
         if all_houses:
@@ -51,8 +53,21 @@ def allocate_student_house_and_dorm(db: Session, student: Student) -> dict:
     if is_boarder and student.house_id and not student.dormitory_id:
         dorms = db.query(Dormitory).filter(Dormitory.house_id == student.house_id).all()
         if not dorms:
-            # Fallback: Search all dormitories in eligible houses
-            dorms = db.query(Dormitory).all()
+            # Fallback: Search dormitories in gender-compatible houses
+            house_q = db.query(House)
+            if getattr(student, "school_id", None) is not None:
+                house_q = house_q.filter((House.school_id == student.school_id) | (House.school_id == None))
+            all_candidate_houses = house_q.all()
+            eligible_house_ids = []
+            for h in all_candidate_houses:
+                hg = (h.gender or "Co-ed").strip().lower()
+                if hg in ["co-ed", "coed", "mixed"]:
+                    eligible_house_ids.append(h.id)
+                elif is_female and hg in ["female", "girls", "female only"]:
+                    eligible_house_ids.append(h.id)
+                elif not is_female and hg in ["male", "boys", "male only"]:
+                    eligible_house_ids.append(h.id)
+            dorms = db.query(Dormitory).filter(Dormitory.house_id.in_(eligible_house_ids)).all() if eligible_house_ids else []
 
         if dorms:
             available_dorms = []

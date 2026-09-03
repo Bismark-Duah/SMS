@@ -1,7 +1,8 @@
-"""
-Automated Verification Script for Student Terminal Report Card Service & Integration
-"""
+import os
 import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -67,6 +68,8 @@ def run_tests():
         if not st1:
             st1 = Student(student_code="ACAD-STU-001", full_name="Kojo Mensah", class_section_id=class_sec.id)
             db.add(st1)
+        else:
+            st1.class_section_id = class_sec.id
 
         st1.house_id = house_sci.id
         st1.dormitory_id = dorm_a.id

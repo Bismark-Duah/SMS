@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from ..database import get_db
-from ..models import Program, Subject, User, ClassSection, ElectiveCombination
+from ..models import Program, Subject, User, ClassSection, ElectiveCombination, School
 from ..schemas import (
     ProgramCreate,
     ProgramCoreSubjectsUpdate,
@@ -111,6 +111,13 @@ def create_program(
     current_user: User = Depends(get_current_user),
 ):
     school_id = get_school_id(current_user)
+    if school_id:
+        sch = db.query(School).filter(School.id == school_id).first()
+        if sch and sch.school_mode == "BASIC_ONLY":
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid Operation: Basic Schools (Nursery/Primary/JHS) do not utilize SHS elective programs."
+            )
     data = payload.dict()
     if school_id is not None and hasattr(Program, "school_id"):
         data["school_id"] = school_id
@@ -340,7 +347,11 @@ def update_elective_combination(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    combo = db.query(ElectiveCombination).filter(ElectiveCombination.id == combo_id).first()
+    school_id = get_school_id(current_user)
+    query = db.query(ElectiveCombination).filter(ElectiveCombination.id == combo_id)
+    if school_id is not None and hasattr(ElectiveCombination, "school_id"):
+        query = query.filter((ElectiveCombination.school_id == school_id) | (ElectiveCombination.school_id.is_(None)))
+    combo = query.first()
     if not combo:
         raise HTTPException(status_code=404, detail="Elective combination not found")
 
@@ -378,7 +389,11 @@ def delete_elective_combination(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    combo = db.query(ElectiveCombination).filter(ElectiveCombination.id == combo_id).first()
+    school_id = get_school_id(current_user)
+    query = db.query(ElectiveCombination).filter(ElectiveCombination.id == combo_id)
+    if school_id is not None and hasattr(ElectiveCombination, "school_id"):
+        query = query.filter((ElectiveCombination.school_id == school_id) | (ElectiveCombination.school_id.is_(None)))
+    combo = query.first()
     if not combo:
         raise HTTPException(status_code=404, detail="Elective combination not found")
     

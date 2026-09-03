@@ -1,9 +1,12 @@
-"""
-Automated Verification Script for End-of-Term Rollover Wizard
-"""
 import sys
+import os
 import json
 from sqlalchemy.orm import Session
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sms_root = os.path.abspath(os.path.join(current_dir, ".."))
+if sms_root not in sys.path:
+    sys.path.insert(0, sms_root)
 
 from backend.app.database import engine, Base, SessionLocal
 from backend.app.models import User, Role, AcademicYear, Semester, Student, Fee, Setting
@@ -28,24 +31,42 @@ def run_tests():
 
         user_admin = db.query(User).filter(User.username == "admin").first()
 
-        # Clean old academic years
-        db.query(Semester).delete()
-        db.query(AcademicYear).delete()
+        # Mark existing academic years & semesters as non-current
+        db.query(Semester).update({Semester.is_current: False})
+        db.query(AcademicYear).update({AcademicYear.is_current: False})
         db.commit()
 
-        # Source Year & Sem
-        yr_old = AcademicYear(label="2025/2026", is_current=True)
-        db.add(yr_old)
-        db.commit()
+        # Source Year & Sem (idempotent lookup/creation)
+        yr_old = db.query(AcademicYear).filter(AcademicYear.label == "2025/2026").first()
+        if not yr_old:
+            yr_old = AcademicYear(label="2025/2026", is_current=True)
+            db.add(yr_old)
+            db.commit()
+            db.refresh(yr_old)
+        else:
+            yr_old.is_current = True
+            db.commit()
 
-        sem_old = Semester(name="Term 1", academic_year_id=yr_old.id, is_current=True)
-        db.add(sem_old)
-        db.commit()
+        sem_old = db.query(Semester).filter(Semester.academic_year_id == yr_old.id, Semester.name == "Term 1").first()
+        if not sem_old:
+            sem_old = Semester(name="Term 1", academic_year_id=yr_old.id, is_current=True)
+            db.add(sem_old)
+            db.commit()
+            db.refresh(sem_old)
+        else:
+            sem_old.is_current = True
+            db.commit()
 
         # Target Year & Sem
-        sem_new = Semester(name="Term 2", academic_year_id=yr_old.id, is_current=False)
-        db.add(sem_new)
-        db.commit()
+        sem_new = db.query(Semester).filter(Semester.academic_year_id == yr_old.id, Semester.name == "Term 2").first()
+        if not sem_new:
+            sem_new = Semester(name="Term 2", academic_year_id=yr_old.id, is_current=False)
+            db.add(sem_new)
+            db.commit()
+            db.refresh(sem_new)
+        else:
+            sem_new.is_current = False
+            db.commit()
 
         print(f"   [OK] Active period set to {yr_old.label} - {sem_old.name}.")
         print(f"   [OK] Target period set to {yr_old.label} - {sem_new.name}.")
@@ -133,8 +154,6 @@ def run_tests():
         # Cleanup
         db.query(Setting).filter(Setting.key == "locked_semester_ids").delete()
         db.query(Fee).filter(Fee.student_id == st.id).delete()
-        db.query(Semester).delete()
-        db.query(AcademicYear).delete()
         db.commit()
 
         print("\n==================================================")

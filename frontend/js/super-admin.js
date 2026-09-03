@@ -114,6 +114,9 @@ window.loadSuperAdminDashboard = async function() {
     // Render Schools Directory Table
     window.filterSchoolsDirectory();
 
+    // Load Multi-Tenant Real-Time Sync Telemetry Monitor
+    window.loadSuperAdminSyncMonitor();
+
     // Load Real-Time Master Audit Feed
     window.loadMasterAuditStream();
 
@@ -128,6 +131,7 @@ window.loadSuperAdminDashboard = async function() {
           document.getElementById('kpiTotalSchools').textContent = window.allRegisteredSchools.length;
         }
         window.filterSchoolsDirectory();
+        window.loadSuperAdminSyncMonitor();
         window.loadMasterAuditStream();
         return;
       }
@@ -1345,6 +1349,150 @@ window.handleSaveEditSchool = async function(event) {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '💾 Save Profile Changes';
+  }
+};
+
+// ── Multi-Tenant Sync & Telemetry Monitor Handlers ─────────────────────────
+
+window.loadSuperAdminSyncMonitor = async function() {
+  const tbody = document.getElementById('syncMonitorTableBody');
+  const badge = document.getElementById('syncMonitorNetworkBadge');
+  const kpiPending = document.getElementById('syncKpiPending');
+  const kpiSynced = document.getElementById('syncKpiSynced');
+  const kpiCloud = document.getElementById('syncKpiCloudGateway');
+  const kpiSub = document.getElementById('syncKpiGatewaySubtitle');
+
+  try {
+    const res = await fetch(`${API_BASE}/sync/super-admin/overview`, { headers: getHeaders() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (kpiPending) kpiPending.textContent = (data.total_network_pending || 0).toLocaleString();
+    if (kpiSynced) kpiSynced.textContent = (data.total_network_synced || 0).toLocaleString();
+    if (kpiCloud) {
+      kpiCloud.textContent = data.is_cloud_configured ? 'Central Cloud Connected' : 'Local Standalone Engine';
+      kpiCloud.style.color = data.is_cloud_configured ? '#38bdf8' : '#a78bfa';
+    }
+    if (kpiSub) {
+      kpiSub.textContent = data.cloud_sync_url || 'Local Delta Store-and-Forward';
+    }
+
+    if (badge) {
+      if (data.total_network_pending === 0) {
+        badge.textContent = '● All Nodes Synchronized';
+        badge.style.background = '#10b981';
+      } else {
+        badge.textContent = `● ${data.total_network_pending} Queued Offline Changes`;
+        badge.style.background = '#f59e0b';
+      }
+    }
+
+    window.renderSuperAdminSyncMonitor(data.schools || []);
+
+  } catch (err) {
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="6" style="padding:16px; text-align:center; color:#f87171;">⚠️ Could not retrieve sync telemetry: ${err.message}</td></tr>`;
+    }
+    if (badge) {
+      badge.textContent = '● Telemetry Offline';
+      badge.style.background = '#ef4444';
+    }
+  }
+};
+
+window.renderSuperAdminSyncMonitor = function(schools) {
+  const tbody = document.getElementById('syncMonitorTableBody');
+  if (!tbody) return;
+
+  if (!schools || schools.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:16px; text-align:center; opacity:0.7;">No school nodes found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = schools.map(s => {
+    let stateBadge = '<span class="badge-mode" style="background:#10b981; font-size:0.72rem;">● SYNCHRONIZED</span>';
+    if (s.health_state === 'PENDING_SYNC') {
+      stateBadge = `<span class="badge-mode" style="background:#f59e0b; font-size:0.72rem;">● ${s.pending_count} QUEUED</span>`;
+    } else if (s.health_state === 'IDLE') {
+      stateBadge = '<span class="badge-mode" style="background:#64748b; font-size:0.72rem;">● IDLE</span>';
+    }
+
+    const lastSyncTime = s.last_synced_at ? new Date(s.last_synced_at).toLocaleString() : 'Never';
+
+    return `
+      <tr style="border-bottom:1px solid var(--border-color, #334155); transition:background 0.15s;">
+        <td style="padding:8px 10px;">
+          <div style="font-weight:700; color:#fff;">${s.school_name}</div>
+          <div style="font-size:0.72rem; color:#94a3b8;"><code style="color:#cbd5e1;">${s.school_code}</code> • ID: #${s.school_id}</div>
+        </td>
+        <td style="padding:8px 10px; text-align:center; font-weight:700; color:${s.pending_count > 0 ? '#f59e0b' : '#10b981'};">
+          ${s.pending_count}
+        </td>
+        <td style="padding:8px 10px; text-align:center; color:#cbd5e1;">
+          ${s.total_synced_count}
+        </td>
+        <td style="padding:8px 10px; text-align:center; font-size:0.75rem; color:#94a3b8;">
+          ${lastSyncTime}
+        </td>
+        <td style="padding:8px 10px; text-align:center;">
+          ${stateBadge}
+        </td>
+        <td style="padding:8px 10px; text-align:right;">
+          <button type="button" class="btn" style="padding:4px 9px; font-size:0.75rem; background:rgba(14,165,233,0.2); border-color:#0ea5e9; color:#38bdf8; font-weight:600;" onclick="window.triggerSingleSchoolSync(${s.school_id})">
+            ⚡ Force Sync
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+};
+
+window.triggerSingleSchoolSync = async function(schoolId) {
+  try {
+    const res = await fetch(`${API_BASE}/sync/super-admin/trigger-school/${schoolId}`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Sync failed');
+    if (window.showToast) {
+      window.showToast(data.message, 'success');
+    } else {
+      alert(`✔ ${data.message}`);
+    }
+    window.loadSuperAdminSyncMonitor();
+  } catch (err) {
+    alert(`❌ Sync failed for school #${schoolId}: ${err.message}`);
+  }
+};
+
+window.triggerAllSchoolsSync = async function() {
+  const btn = document.getElementById('btnSyncAllSchools');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ Syncing All Nodes...';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/sync/super-admin/trigger-all`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Global sync failed');
+    if (window.showToast) {
+      window.showToast(data.message, 'success');
+    } else {
+      alert(`✔ ${data.message}`);
+    }
+    window.loadSuperAdminSyncMonitor();
+  } catch (err) {
+    alert(`❌ Global Sync Failed: ${err.message}`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '🔄 Sync All Network Nodes';
+    }
   }
 };
 

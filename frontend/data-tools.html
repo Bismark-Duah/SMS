@@ -39,6 +39,69 @@
         <button class="btn" onclick="exportStudentsCSV()">Export Students CSV</button>
       </section>
       
+      <!-- ── Enterprise Cloud Auto-Sync & Multi-Campus Ledger ── -->
+      <section class="card" style="border: 2px solid #6366f1; background: var(--surface-card, #1e293b);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <div>
+            <h3 style="color:#818cf8; margin:0; display:flex; align-items:center; gap:8px;">
+              <span>☁️</span> Enterprise Hybrid Offline-to-Cloud Auto-Sync Desk
+            </h3>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin:4px 0 0;">
+              Automatic Store-and-Forward Delta Sync. Works 100% offline, automatically updating the central cloud database whenever internet is available.
+            </p>
+          </div>
+          <div id="cloudSyncStatusPill" style="padding:4px 12px; border-radius:999px; font-size:0.8rem; font-weight:700; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);">
+            🟢 Cloud Connected
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;">
+          <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2); border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; text-transform:uppercase;">Pending Delta Queue</div>
+            <div id="syncPendingCount" style="font-size:1.6rem; font-weight:800; color:#f59e0b; margin-top:2px;">0</div>
+          </div>
+          <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; text-transform:uppercase;">Total Synced Records</div>
+            <div id="syncTotalCount" style="font-size:1.6rem; font-weight:800; color:#10b981; margin-top:2px;">0</div>
+          </div>
+          <div style="background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.2); border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; text-transform:uppercase;">Last Successful Sync</div>
+            <div id="syncLastTime" style="font-size:0.95rem; font-weight:700; color:#38bdf8; margin-top:8px;">Never</div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+          <button class="btn primary" style="background:#6366f1; border-color:#4f46e5; font-weight:700;" onclick="triggerManualSyncPush()">
+            🔄 Force Cloud Sync Now
+          </button>
+          <button class="btn" style="background:#0284c7; color:#fff; font-weight:700;" onclick="pullCloudSnapshot()">
+            📥 Pull Fresh Cloud Snapshot
+          </button>
+        </div>
+
+        <div id="syncStatusMsg" style="margin-top:10px;"></div>
+
+        <h4 style="margin-top:20px; margin-bottom:8px; font-size:0.95rem; color:#e2e8f0;">Recent Sync Outbox Activity Log</h4>
+        <div style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08); border-radius:6px;">
+          <table style="width:100%; font-size:0.82rem;">
+            <thead>
+              <tr style="background:rgba(255,255,255,0.03);">
+                <th>Entity</th>
+                <th>Action</th>
+                <th>Entity ID</th>
+                <th>Created At</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="syncOutboxListBody">
+              <tr>
+                <td colspan="5" style="text-align:center; opacity:0.6; padding:10px;">Loading sync log...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="card" style="border: 2px solid #0284c7;">
         <h3 style="color:#0284c7; margin-top:0;">💾 1-Click Offline USB & LAN Backup Hub</h3>
         <p style="color:var(--text-muted);font-size:.9rem; margin-bottom:16px;">

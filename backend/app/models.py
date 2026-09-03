@@ -1,8 +1,29 @@
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table, Text, Index
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Table, Text, Index
+from sqlalchemy.types import TypeDecorator, Boolean as _SQLABoolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from .database import Base
+
+class Boolean(TypeDecorator):
+    """
+    Robust SQLite-tolerant Boolean type decorator that handles SQLite storing
+    booleans as '0'/'1', 'false'/'true', or integers 0/1 safely without truthy string coercion bugs.
+    """
+    impl = String(10)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return "1" if bool(value) else "0"
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return value.strip().lower() in ("true", "1", "t", "yes")
+        return bool(value)
 
 # Many-to-many relationship table for Users and Roles
 user_roles = Table(
@@ -495,6 +516,7 @@ class Payment(Base):
     payment_date = Column(DateTime, nullable=False, server_default=func.now())
     payment_method = Column(String, default="Cash")
     reference_no = Column(String, nullable=True)
+    receipt_number = Column(String, unique=True, index=True, nullable=True)
     notes = Column(String, nullable=True)
     recorded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -926,6 +948,30 @@ class VoucherOrder(Base):
 Voucher = AdmissionVoucher
 
 
+# ── Enterprise Offline-to-Cloud Delta Sync Engine ──────────────────────────
 
+class SyncOutbox(Base):
+    """
+    Enterprise Offline-to-Cloud Delta Sync Outbox Ledger.
+    Captures atomic insert/update/delete change sets locally with cryptographic checksums
+    and UUIDs for idempotent, store-and-forward synchronization to central cloud.
+    """
+    __tablename__ = "sync_outbox"
 
+    id = Column(Integer, primary_key=True, index=True)
+    sync_uuid = Column(String(36), unique=True, index=True, nullable=False)  # UUID4
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    entity_type = Column(String(50), nullable=False, index=True)  # "student", "score", "fee_payment", "attendance", "discipline", "announcement", "setting", etc.
+    entity_id = Column(String(100), nullable=False, index=True)
+    action = Column(String(10), nullable=False)  # "INSERT", "UPDATE", "DELETE"
+    payload_json = Column(Text, nullable=False)  # JSON payload of modified record
+    checksum = Column(String(64), nullable=False)  # SHA-256 hash of payload
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    is_synced = Column(Boolean, default=False, index=True)
+    synced_at = Column(DateTime(timezone=True), nullable=True)
 
+    school = relationship("School")
+
+    __table_args__ = (
+        Index("ix_sync_outbox_pending", "school_id", "is_synced", "created_at"),
+    )

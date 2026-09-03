@@ -55,17 +55,17 @@ class GradingService:
                     return {"grade": "A1", "remark": "Excellent"}
                 elif total >= 70:
                     return {"grade": "B2", "remark": "Very Good"}
-                elif total >= 60:
+                elif total >= 65:
                     return {"grade": "B3", "remark": "Good"}
-                elif total >= 55:
+                elif total >= 60:
                     return {"grade": "C4", "remark": "Credit"}
-                elif total >= 50:
+                elif total >= 55:
                     return {"grade": "C5", "remark": "Credit"}
-                elif total >= 45:
+                elif total >= 50:
                     return {"grade": "C6", "remark": "Credit"}
-                elif total >= 40:
+                elif total >= 45:
                     return {"grade": "D7", "remark": "Pass"}
-                elif total >= 35:
+                elif total >= 40:
                     return {"grade": "E8", "remark": "Pass"}
                 else:
                     return {"grade": "F9", "remark": "Fail"}

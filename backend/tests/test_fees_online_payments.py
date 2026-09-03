@@ -127,6 +127,16 @@ class TestFeesOnlinePayments(unittest.TestCase):
         cls.db.commit()
         cls.db.refresh(cls.fee)
 
+        cls.init_pay = Payment(
+            fee_id=cls.fee.id,
+            amount_paid=100.0,
+            payment_method="Cash",
+            receipt_number=f"REC-INIT-{uuid.uuid4().hex[:6].upper()}",
+            recorded_by=cls.admin_user.id
+        )
+        cls.db.add(cls.init_pay)
+        cls.db.commit()
+
     @classmethod
     def tearDownClass(cls):
         try:
@@ -223,7 +233,10 @@ class TestFeesOnlinePayments(unittest.TestCase):
 
     def test_06_paystack_verify_idempotency(self):
         """Test that re-verifying an existing reference returns existing payment record without double charging."""
-        existing_pay = self.db.query(Payment).filter(Payment.fee_id == self.fee.id).first()
+        existing_pay = self.db.query(Payment).filter(
+            Payment.fee_id == self.fee.id,
+            Payment.payment_method == "Paystack MoMo"
+        ).first()
         self.assertIsNotNone(existing_pay)
 
         res = verify_paystack_payment(existing_pay.reference_no, self.db, self.parent_user_1)

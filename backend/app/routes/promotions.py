@@ -5,7 +5,7 @@ from typing import List
 from pydantic import BaseModel
 
 from ..database import get_db
-from ..models import Student, User, StudentSemesterSummary, ClassSection
+from ..models import Student, User, StudentSemesterSummary, ClassSection, Semester, AcademicYear
 from ..dependencies import get_current_user, get_school_id
 
 router = APIRouter()
@@ -61,14 +61,25 @@ def get_promotion_candidates(
         stud_q = stud_q.filter(Student.school_id == school_id)
     students = stud_q.order_by(Student.full_name.asc()).all()
 
+    active_sem = db.query(Semester).filter(Semester.is_current == True).first()
+    active_year = db.query(AcademicYear).filter(AcademicYear.is_current == True).first()
+
     candidates = []
     for s in students:
         summary = db.query(StudentSemesterSummary).filter(
             StudentSemesterSummary.student_id == s.id
         ).order_by(StudentSemesterSummary.id.desc()).first()
 
-        # Compute academic scores average
-        scores = db.query(Score).filter(Score.student_id == s.id).all()
+        # Compute academic scores average for active promotional academic year/term
+        score_q = db.query(Score).filter(Score.student_id == s.id)
+        if active_year:
+            score_q = score_q.join(Score.semester).filter(Semester.academic_year_id == active_year.id)
+        elif active_sem:
+            score_q = score_q.filter(Score.semester_id == active_sem.id)
+        scores = score_q.all()
+        if not scores:
+            scores = db.query(Score).filter(Score.student_id == s.id).all()
+
         score_vals = [sc.total_score for sc in scores if sc.total_score is not None]
         avg_score = round(sum(score_vals) / len(score_vals), 1) if score_vals else 0.0
 
@@ -94,8 +105,19 @@ def get_promotion_candidates(
             elif "form" in prom_val or "promoted" in prom_val:
                 rec = "Promoted"
         else:
-            # Automated GES Decision Rules
-            if s.form and s.form >= 3:
+            # Automated GES Decision Rules: Distinguish terminal graduating classes from progressing basic/SHS grades
+            cls_sec = s.class_section
+            stage = cls_sec.stage if cls_sec else None
+            stage_type = (stage.school_type or "SHS").upper() if stage else "SHS"
+            cls_name = (cls_sec.name or "").upper() if cls_sec else ""
+
+            is_terminal = (
+                (stage_type == "SHS" and (s.form or 1) >= 3) or
+                ("SHS 3" in cls_name or "SHS3" in cls_name or ("FORM 3" in cls_name and stage_type == "SHS")) or
+                ("JHS 3" in cls_name or "JHS3" in cls_name or "BASIC 9" in cls_name)
+            )
+
+            if is_terminal:
                 rec = "Graduated" if avg_score >= 50.0 else "Repeat"
             elif avg_score >= 50.0 and att_rate >= 70.0:
                 rec = "Promoted"

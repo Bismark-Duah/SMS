@@ -36,16 +36,36 @@ def require_admin(current_user: User):
 
 def recalculate_fee_status(fee: Fee) -> str:
     """Compute status based on amount_paid vs amount and due_date."""
-    if fee.amount_paid >= fee.amount:
+    if (fee.amount_paid or 0.0) >= fee.amount:
         return "Paid"
     if fee.status == "Waived":
         return "Waived"
-    balance = fee.amount - fee.amount_paid
+    balance = fee.amount - (fee.amount_paid or 0.0)
     if balance > 0:
         if fee.due_date and datetime.utcnow() > fee.due_date:
             return "Overdue"
-        return "Partial" if fee.amount_paid > 0 else "Pending"
+        return "Partial" if (fee.amount_paid or 0.0) > 0 else "Pending"
     return "Paid"
+
+
+def generate_receipt_number(db: Session, school_id: Optional[int] = None, payment_date: Optional[datetime] = None) -> str:
+    """
+    Generates a tenant-scoped, collision-proof receipt number.
+    Format: REC/{SCHOOL_CODE}/{YEAR}/{RAND_HEX} e.g. REC/GSHS/2026/F4E8B2
+    """
+    import uuid
+    school_code = "SCH"
+    if school_id:
+        sch = db.query(School).filter(School.id == school_id).first()
+        if sch and sch.code:
+            school_code = sch.code.upper().strip()
+        elif sch and sch.name:
+            words = sch.name.split()
+            school_code = "".join(w[0] for w in words if w).upper()[:6]
+    
+    year_str = (payment_date or datetime.utcnow()).strftime("%Y")
+    rand_suffix = uuid.uuid4().hex[:6].upper()
+    return f"REC/{school_code}/{year_str}/{rand_suffix}"
 
 
 def update_overdue_statuses(db: Session):
@@ -138,8 +158,9 @@ class PaymentOut(BaseModel):
     amount_paid: float
     payment_date: datetime
     payment_method: str
-    reference_no: Optional[str]
-    notes: Optional[str]
+    reference_no: Optional[str] = None
+    receipt_number: Optional[str] = None
+    notes: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -245,12 +266,17 @@ def get_student_fees(
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
         
-    student = db.query(Student).filter(Student.id == student_id).first()
+    school_id = get_school_id(current_user)
+    st_q = db.query(Student).filter(Student.id == student_id)
+    if school_id is not None:
+        st_q = st_q.filter(Student.school_id == school_id)
+    student = st_q.first()
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=404, detail="Student not found in your school")
 
-    roles = [r.name for r in current_user.roles]
-    if "admin" not in roles and student.parent_id != current_user.id:
+    roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, 'roles') else []
+    admin_roles = {"admin", "super_admin", "headmaster", "headmistress", "bursar", "accountant", "assistant_headmaster_admin", "assistant_head_admin"}
+    if not any(r in admin_roles for r in roles) and student.parent_id != current_user.id and current_user.username != student.student_code:
         raise HTTPException(status_code=403, detail="Access denied")
 
     fees = db.query(Fee).filter(Fee.student_id == student_id).order_by(desc(Fee.created_at)).all()
@@ -268,9 +294,10 @@ def list_fees(
 ):
     """Admin: list all fees with optional filters."""
     require_admin(current_user)
+    school_id = get_school_id(current_user)
     update_overdue_statuses(db)
 
-    query = _filter_fee_query(db.query(Fee), db)
+    query = _filter_fee_query(db.query(Fee), db, school_id=school_id)
     if status:
         query = query.filter(Fee.status == status)
     if fee_type:
@@ -278,8 +305,10 @@ def list_fees(
     if academic_year:
         query = query.filter(Fee.academic_year == academic_year)
     if class_section_id:
-        student_ids = [s.id for s in db.query(Student).filter(Student.class_section_id == class_section_id).all()]
-        query = query.filter(Fee.student_id.in_(student_ids))
+        st_ids_q = db.query(Student.id).filter(Student.class_section_id == class_section_id)
+        if school_id is not None:
+            st_ids_q = st_ids_q.filter(Student.school_id == school_id)
+        query = query.filter(Fee.student_id.in_(st_ids_q))
 
     fees = query.order_by(desc(Fee.created_at)).all()
     return [_enrich(f) for f in fees]
@@ -293,9 +322,13 @@ def create_fee(
 ):
     """Admin: create a fee for a single student."""
     require_admin(current_user)
-    student = db.query(Student).filter(Student.id == payload.student_id).first()
+    school_id = get_school_id(current_user)
+    st_q = db.query(Student).filter(Student.id == payload.student_id)
+    if school_id is not None:
+        st_q = st_q.filter(Student.school_id == school_id)
+    student = st_q.first()
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=404, detail="Student not found in your school")
 
     fee = Fee(
         student_id=payload.student_id,
@@ -322,13 +355,17 @@ def bulk_create_fees(
 ):
     """Admin: assign the same fee to all active students in a class section."""
     require_admin(current_user)
+    school_id = get_school_id(current_user)
 
-    students = db.query(Student).filter(
+    st_q = db.query(Student).filter(
         Student.class_section_id == payload.class_section_id,
         Student.is_active == True
-    ).all()
+    )
+    if school_id is not None:
+        st_q = st_q.filter(Student.school_id == school_id)
+    students = st_q.all()
     if not students:
-        raise HTTPException(status_code=404, detail="No active students found in this class section")
+        raise HTTPException(status_code=404, detail="No active students found in this class section for your school")
 
     fees = [
         Fee(
@@ -358,12 +395,17 @@ def get_fee(
     """Get a specific fee record."""
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
-    fee = db.query(Fee).filter(Fee.id == fee_id).first()
+    school_id = get_school_id(current_user)
+    fee_q = db.query(Fee).join(Fee.student).filter(Fee.id == fee_id)
+    if school_id is not None:
+        fee_q = fee_q.filter(Student.school_id == school_id)
+    fee = fee_q.first()
     if not fee:
         raise HTTPException(status_code=404, detail="Fee not found")
         
-    roles = [r.name for r in current_user.roles]
-    if "admin" not in roles and "teacher" not in roles:
+    roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, 'roles') else []
+    admin_roles = {"admin", "super_admin", "headmaster", "headmistress", "bursar", "accountant", "assistant_headmaster_admin", "assistant_head_admin", "teacher"}
+    if not any(r in admin_roles for r in roles):
         student = fee.student
         is_parent = student and student.parent_id == current_user.id
         is_student = student and current_user.username == student.student_code
@@ -383,9 +425,20 @@ def update_fee(
 ):
     """Admin: update a fee record."""
     require_admin(current_user)
-    fee = db.query(Fee).filter(Fee.id == fee_id).first()
+    school_id = get_school_id(current_user)
+    fee_q = db.query(Fee).join(Fee.student).filter(Fee.id == fee_id)
+    if school_id is not None:
+        fee_q = fee_q.filter(Student.school_id == school_id)
+    fee = fee_q.first()
     if not fee:
         raise HTTPException(status_code=404, detail="Fee not found")
+
+    # Anti-Fraud Constraint: Cannot reduce billed amount below what has already been collected
+    if payload.amount is not None and payload.amount < (fee.amount_paid or 0.0) - 0.01:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Financial Guard: Cannot reduce billed fee to GHS {payload.amount:.2f}, which is less than the GHS {fee.amount_paid:.2f} already paid by the student."
+        )
 
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(fee, field, value)
@@ -393,6 +446,22 @@ def update_fee(
     # Recalculate status unless manually set to Waived
     if payload.status != "Waived":
         fee.status = recalculate_fee_status(fee)
+
+    # Audit log
+    try:
+        from ..models import ActivityAuditLog
+        student = fee.student
+        target_sch_id = student.school_id if student else school_id
+        db.add(ActivityAuditLog(
+            user_id=current_user.id,
+            action="UPDATE_FEE",
+            entity_type="Fee",
+            entity_id=fee.id,
+            details=f"Updated fee record #{fee.id} for Student {student.student_code if student else ''}: amount=GHS {fee.amount:.2f}, status={fee.status}.",
+            school_id=target_sch_id
+        ))
+    except Exception:
+        pass
 
     db.commit()
     db.refresh(fee)
@@ -407,9 +476,37 @@ def delete_fee(
 ):
     """Admin: delete a fee and all its payments."""
     require_admin(current_user)
-    fee = db.query(Fee).filter(Fee.id == fee_id).first()
+    school_id = get_school_id(current_user)
+    fee_q = db.query(Fee).join(Fee.student).filter(Fee.id == fee_id)
+    if school_id is not None:
+        fee_q = fee_q.filter(Student.school_id == school_id)
+    fee = fee_q.first()
     if not fee:
         raise HTTPException(status_code=404, detail="Fee not found")
+
+    # Anti-Fraud Constraint: Block deletion of fee records that have completed payments
+    if (fee.amount_paid or 0.0) > 0.0 or (fee.payments and len(fee.payments) > 0):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Financial Guard: Cannot delete fee record #{fee.id} because GHS {fee.amount_paid:.2f} in payments has already been recorded. Adjust or waive the fee instead."
+        )
+
+    # Audit log
+    try:
+        from ..models import ActivityAuditLog
+        student = fee.student
+        target_sch_id = student.school_id if student else school_id
+        db.add(ActivityAuditLog(
+            user_id=current_user.id,
+            action="DELETE_FEE",
+            entity_type="Fee",
+            entity_id=fee.id,
+            details=f"Deleted uncollected fee record #{fee.id} ({fee.fee_type}) for Student {student.student_code if student else ''}.",
+            school_id=target_sch_id
+        ))
+    except Exception:
+        pass
+
     db.delete(fee)
     db.commit()
 
@@ -423,18 +520,33 @@ def record_payment(
 ):
     """Admin: record a payment against a fee."""
     require_admin(current_user)
-    fee = db.query(Fee).filter(Fee.id == fee_id).first()
+    school_id = get_school_id(current_user)
+    fee_q = db.query(Fee).join(Fee.student).filter(Fee.id == fee_id)
+    if school_id is not None:
+        fee_q = fee_q.filter(Student.school_id == school_id)
+    fee = fee_q.first()
     if not fee:
         raise HTTPException(status_code=404, detail="Fee not found")
 
-    balance = fee.amount - fee.amount_paid
     if payload.amount_paid <= 0:
         raise HTTPException(status_code=400, detail="Payment amount must be greater than zero")
+
+    student = fee.student
+    target_school_id = student.school_id if student else school_id
+
+    # Atomic sum of existing payments from database
+    current_total_paid = db.query(func.coalesce(func.sum(Payment.amount_paid), 0.0))\
+        .filter(Payment.fee_id == fee_id).scalar()
+    
+    balance = max(0.0, fee.amount - float(current_total_paid))
     if payload.amount_paid > balance + 0.01:   # 0.01 tolerance for float rounding
         raise HTTPException(
             status_code=400,
-            detail=f"Payment of {payload.amount_paid} exceeds remaining balance of {round(balance, 2)}"
+            detail=f"Payment of GHS {payload.amount_paid:.2f} exceeds remaining balance of GHS {round(balance, 2):.2f}"
         )
+
+    # Generate persistent unique tenant receipt number
+    receipt_no = generate_receipt_number(db, target_school_id, payload.payment_date)
 
     payment = Payment(
         fee_id=fee_id,
@@ -442,14 +554,40 @@ def record_payment(
         payment_date=payload.payment_date or datetime.utcnow(),
         payment_method=payload.payment_method,
         reference_no=payload.reference_no,
+        receipt_number=receipt_no,
         notes=payload.notes,
         recorded_by=current_user.id,
     )
     db.add(payment)
+    db.flush()
 
-    # Update running total on fee
-    fee.amount_paid = round(fee.amount_paid + payload.amount_paid, 2)
+    # Atomically re-aggregate total payments
+    new_total_paid = db.query(func.coalesce(func.sum(Payment.amount_paid), 0.0))\
+        .filter(Payment.fee_id == fee_id).scalar()
+    
+    if new_total_paid > fee.amount + 0.01:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Concurrent payment detected. Total payments (GHS {new_total_paid:.2f}) would exceed billed fee of GHS {fee.amount:.2f}."
+        )
+
+    fee.amount_paid = round(float(new_total_paid), 2)
     fee.status = recalculate_fee_status(fee)
+
+    # Activity Audit Log
+    try:
+        from ..models import ActivityAuditLog
+        db.add(ActivityAuditLog(
+            user_id=current_user.id,
+            action="RECORD_PAYMENT",
+            entity_type="FeePayment",
+            entity_id=payment.id,
+            details=f"Recorded GHS {payload.amount_paid:.2f} for Student {student.student_code if student else ''} (Receipt: {receipt_no}).",
+            school_id=target_school_id
+        ))
+    except Exception:
+        pass
 
     db.commit()
     db.refresh(fee)
@@ -464,7 +602,6 @@ def record_payment(
         db.add(notif)
 
     # Automated Event Notification Trigger: Fee Payment Receipt
-    student = fee.student
     rem_balance = max(0.0, fee.amount - fee.amount_paid)
     if student and student.phone and len(student.phone.strip()) >= 7:
         try:
@@ -477,7 +614,7 @@ def record_payment(
                     "guardian_name": student.guardian_name,
                     "phone": student.phone,
                     "amount": payload.amount_paid,
-                    "receipt_no": payload.reference_no or f"REC-{payment.id:04d}",
+                    "receipt_no": receipt_no,
                     "balance": rem_balance
                 },
                 db
@@ -546,6 +683,7 @@ def _enrich(fee: Fee) -> dict:
                 "payment_date": p.payment_date,
                 "payment_method": p.payment_method,
                 "reference_no": p.reference_no,
+                "receipt_number": p.receipt_number or f"REC-{p.id:06d}",
                 "notes": p.notes,
                 "created_at": p.created_at,
             }
@@ -566,9 +704,13 @@ def get_student_fee_summary(
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required")
         
-    student = db.query(Student).filter(Student.id == student_id).first()
+    school_id = get_school_id(current_user)
+    st_q = db.query(Student).filter(Student.id == student_id)
+    if school_id is not None:
+        st_q = st_q.filter(Student.school_id == school_id)
+    student = st_q.first()
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=404, detail="Student not found in your school")
 
     roles = [r.name for r in current_user.roles]
     if "admin" not in roles and "teacher" not in roles:
@@ -736,6 +878,10 @@ def verify_paystack_payment(
 
     amount_paid = float(verification.get("amount", fee.amount - fee.amount_paid))
 
+    student = fee.student
+    target_sch_id = student.school_id if student else getattr(current_user, 'school_id', None)
+    receipt_no = generate_receipt_number(db, target_sch_id, datetime.utcnow())
+
     # Create Payment record atomically
     pay_record = Payment(
         fee_id=fee.id,
@@ -743,22 +889,24 @@ def verify_paystack_payment(
         payment_date=datetime.utcnow(),
         payment_method="Paystack MoMo",
         reference_no=reference,
+        receipt_number=receipt_no,
         notes=f"Paystack Online MoMo Verification ({verification.get('channel', 'mobile_money')})",
         recorded_by=current_user.id
     )
     db.add(pay_record)
-    fee.amount_paid = round(fee.amount_paid + amount_paid, 2)
+    db.flush()
+
+    new_tot = db.query(func.coalesce(func.sum(Payment.amount_paid), 0.0)).filter(Payment.fee_id == fee.id).scalar()
+    fee.amount_paid = round(float(new_tot), 2)
     fee.status = recalculate_fee_status(fee)
     db.commit()
     db.refresh(pay_record)
     db.refresh(fee)
 
     # Dispatch SMS Payment Receipt via Hubtel / CommunicationService
-    student = fee.student
     if student and student.phone:
         school = student.school
         sch_name = school.name if school else "School"
-        receipt_no = f"REC-{pay_record.id:06d}"
         bal_now = max(0.0, fee.amount - fee.amount_paid)
         sms_text = (
             f"PAYMENT RECEIPT [{receipt_no}]: GHS {amount_paid:.2f} received for {student.full_name} "
@@ -796,39 +944,64 @@ async def paystack_webhook(
     """
     body_bytes = await request.body()
     
-    s = db.query(Setting).filter(Setting.key == "paystack_secret_key").first()
-    secret_key = s.value.strip() if s and s.value else ""
-    if secret_key and x_paystack_signature:
-        computed_sig = hmac.new(secret_key.encode("utf-8"), body_bytes, hashlib.sha512).hexdigest()
-        if not hmac.compare_digest(computed_sig.lower(), x_paystack_signature.lower()):
-            raise HTTPException(status_code=400, detail="Invalid Paystack Webhook Signature.")
+    # Authenticate webhook signature if configured
+    if not verify_paystack_signature(body_bytes, x_paystack_signature, db):
+        raise HTTPException(status_code=400, detail="Invalid Paystack Webhook Signature.")
 
-    event_data = json.loads(body_bytes.decode("utf-8"))
-    if event_data.get("event") == "charge.success":
-        data = event_data.get("data", {})
-        reference = data.get("reference")
-        meta = data.get("metadata", {})
-        fee_id = meta.get("fee_id")
-        amount_paid = float(data.get("amount", 0)) / 100.0
+    try:
+        data = json.loads(body_bytes.decode('utf-8'))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload.")
 
-        if fee_id and reference:
-            fee = db.query(Fee).filter(Fee.id == fee_id).first()
-            if fee:
-                existing_pay = db.query(Payment).filter(Payment.reference_no == reference).first()
-                if not existing_pay:
-                    pay_record = Payment(
-                        fee_id=fee.id,
-                        amount_paid=amount_paid,
-                        payment_date=datetime.utcnow(),
-                        payment_method="Paystack MoMo",
-                        reference_no=reference,
-                        notes="Automated Paystack Webhook Confirmation",
-                        recorded_by=meta.get("recorded_by", 1)
-                    )
-                    db.add(pay_record)
-                    fee.amount_paid = round(fee.amount_paid + amount_paid, 2)
-                    fee.status = recalculate_fee_status(fee)
-                    db.commit()
+    event = data.get("event")
+    if event != "charge.success":
+        return {"status": "ignored", "message": f"Event {event} not handled."}
+
+    charge_data = data.get("data", {})
+    reference = charge_data.get("reference")
+    if not reference:
+        return {"status": "ignored", "message": "No reference found."}
+
+    existing_pay = db.query(Payment).filter(Payment.reference_no == reference).first()
+    if existing_pay:
+        return {"status": "success", "message": "Payment already processed."}
+
+    meta = charge_data.get("metadata", {})
+    fee_id = meta.get("fee_id")
+    if not fee_id:
+        parts = reference.split("-")
+        if len(parts) >= 3 and parts[2].isdigit():
+            fee_id = int(parts[2])
+
+    fee = db.query(Fee).filter(Fee.id == fee_id).first() if fee_id else None
+    if not fee:
+        return {"status": "error", "message": "Associated fee bill not found."}
+
+    amount_paid = float(charge_data.get("amount", 0)) / 100.0  # Paystack amounts in pesewas
+    if amount_paid <= 0:
+        amount_paid = fee.amount - fee.amount_paid
+
+    student = fee.student
+    target_sch_id = student.school_id if student else None
+    receipt_no = generate_receipt_number(db, target_sch_id, datetime.utcnow())
+
+    pay_record = Payment(
+        fee_id=fee.id,
+        amount_paid=amount_paid,
+        payment_date=datetime.utcnow(),
+        payment_method="Paystack MoMo Webhook",
+        reference_no=reference,
+        receipt_number=receipt_no,
+        notes=f"Paystack Webhook Auto-Verification ({charge_data.get('channel', 'mobile_money')})",
+        recorded_by=meta.get("payer_user_id")
+    )
+    db.add(pay_record)
+    db.flush()
+
+    new_tot = db.query(func.coalesce(func.sum(Payment.amount_paid), 0.0)).filter(Payment.fee_id == fee.id).scalar()
+    fee.amount_paid = round(float(new_tot), 2)
+    fee.status = recalculate_fee_status(fee)
+    db.commit()
 
     return {"status": "success"}
 
@@ -857,8 +1030,8 @@ def download_payment_receipt_pdf(
     # Role Scoping
     roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, 'roles') and current_user.roles else []
     admin_or_staff = {
-        "admin", "super_admin", "headmaster", "headmistress",
-        "assistant_headmaster_academic", "assistant_head_academic",
+        "admin", "super_admin", "proprietor", "headmaster", "headmistress",
+        "bursar", "accountant", "assistant_headmaster_academic", "assistant_head_academic",
         "assistant_headmaster_admin", "assistant_head_admin", "teacher"
     }
     if not any(r in admin_or_staff for r in roles):
@@ -880,7 +1053,9 @@ def download_payment_receipt_pdf(
     school_email = _setting("school_email", "")
     bursar_name = _setting("school_bursar", "Head of Accounts / Bursar")
 
-    receipt_no = f"REC-{payment.id:06d}"
+    school_code = (school.code if school and school.code else "SCH").upper().strip()
+    year_str = (payment.payment_date or datetime.utcnow()).strftime("%Y")
+    receipt_no = payment.receipt_number or f"REC/{school_code}/{year_str}/{payment.id:05d}"
     token_code = f"FEE-{student.student_code}-{payment.id}-{payment.reference_no or 'LOCAL'}"
     date_str = payment.payment_date.strftime("%d %B, %Y %I:%M %p") if payment.payment_date else datetime.utcnow().strftime("%d %B, %Y")
     rem_bal = max(0.0, fee.amount - fee.amount_paid)
@@ -1022,7 +1197,8 @@ def download_payment_receipt_pdf(
     if pisa_status.err:
         raise HTTPException(status_code=500, detail="Failed to compile PDF receipt.")
 
-    filename = f"Receipt_{receipt_no}_{student.student_code}.pdf"
+    clean_receipt_no = receipt_no.replace("/", "_")
+    filename = f"Receipt_{clean_receipt_no}_{student.student_code}.pdf"
     return Response(
         content=pdf_buffer.getvalue(),
         media_type="application/pdf",

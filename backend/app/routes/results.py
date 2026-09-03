@@ -6,6 +6,7 @@ from ..models import Score, TeacherAssignment, User, Student, Subject, Setting, 
 from ..schemas import ScoreCreate
 from ..services.grading import GradingService
 from ..dependencies import get_current_user, get_school_id
+from ..services.sync_engine import log_sync_change
 
 router = APIRouter()
 
@@ -123,6 +124,18 @@ def create_score(
         existing.total_score = total
         existing.grade = grading["grade"]
         existing.remark = grading["remark"]
+        
+        log_sync_change(db, school_id or 1, "score", existing.id, "UPDATE", {
+            "student_id": score.student_id,
+            "subject_id": score.subject_id,
+            "semester_id": score.semester_id,
+            "class_score": score.class_score,
+            "exam_score": score.exam_score,
+            "total_score": total,
+            "grade": grading["grade"],
+            "remark": grading["remark"]
+        })
+        
         db.commit()
         db.refresh(existing)
 
@@ -157,6 +170,19 @@ def create_score(
         remark=grading["remark"],
     )
     db.add(db_score)
+    db.flush()
+
+    log_sync_change(db, school_id or 1, "score", db_score.id, "INSERT", {
+        "student_id": score.student_id,
+        "subject_id": score.subject_id,
+        "semester_id": score.semester_id,
+        "class_score": score.class_score,
+        "exam_score": score.exam_score,
+        "total_score": total,
+        "grade": grading["grade"],
+        "remark": grading["remark"]
+    })
+
     db.commit()
     db.refresh(db_score)
 
@@ -293,6 +319,18 @@ def update_score(
     existing.total_score = total
     existing.grade = grading["grade"]
     existing.remark = grading["remark"]
+
+    log_sync_change(db, school_id or 1, "score", existing.id, "UPDATE", {
+        "student_id": existing.student_id,
+        "subject_id": existing.subject_id,
+        "semester_id": existing.semester_id,
+        "class_score": score.class_score,
+        "exam_score": score.exam_score,
+        "total_score": total,
+        "grade": grading["grade"],
+        "remark": grading["remark"]
+    })
+
     db.commit()
     db.refresh(existing)
     return existing
@@ -338,14 +376,18 @@ def submit_to_hod(
     current_user: User = Depends(get_current_user),
 ):
     """Tier 1: Subject Teacher submits class score sheet to HOD."""
-    scores = db.query(Score).join(Student).filter(
+    school_id = get_school_id(current_user)
+    scores_q = db.query(Score).join(Student).filter(
         Student.class_section_id == class_id,
         Score.subject_id == subject_id,
         Score.semester_id == semester_id
-    ).all()
+    )
+    if school_id is not None:
+        scores_q = scores_q.filter(Student.school_id == school_id)
+    scores = scores_q.all()
 
     if not scores:
-        raise HTTPException(status_code=404, detail="No scores found for this class, subject, and semester.")
+        raise HTTPException(status_code=404, detail="No scores found for this class, subject, and semester in your school.")
 
     for s in scores:
         s.approval_status = "SUBMITTED_TO_HOD"
@@ -368,14 +410,18 @@ def approve_by_hod(
     if not any(r in allowed for r in role_names):
         raise HTTPException(status_code=403, detail="Only HODs or Academic Executives can approve score sheets.")
 
-    scores = db.query(Score).join(Student).filter(
+    school_id = get_school_id(current_user)
+    scores_q = db.query(Score).join(Student).filter(
         Student.class_section_id == class_id,
         Score.subject_id == subject_id,
         Score.semester_id == semester_id
-    ).all()
+    )
+    if school_id is not None:
+        scores_q = scores_q.filter(Student.school_id == school_id)
+    scores = scores_q.all()
 
     if not scores:
-        raise HTTPException(status_code=404, detail="No scores found for approval.")
+        raise HTTPException(status_code=404, detail="No scores found for approval in your school.")
 
     for s in scores:
         s.approval_status = "APPROVED_BY_HOD"
@@ -397,13 +443,17 @@ def publish_by_academic_head(
     if not any(r in allowed for r in role_names):
         raise HTTPException(status_code=403, detail="Only the Assistant Headmaster (Academic) or Headmaster can publish terminal class reports.")
 
-    scores = db.query(Score).join(Student).filter(
+    school_id = get_school_id(current_user)
+    scores_q = db.query(Score).join(Student).filter(
         Student.class_section_id == class_id,
         Score.semester_id == semester_id
-    ).all()
+    )
+    if school_id is not None:
+        scores_q = scores_q.filter(Student.school_id == school_id)
+    scores = scores_q.all()
 
     if not scores:
-        raise HTTPException(status_code=404, detail="No scores found for publishing.")
+        raise HTTPException(status_code=404, detail="No scores found for publishing in your school.")
 
     for s in scores:
         s.approval_status = "PUBLISHED"
@@ -572,10 +622,13 @@ def get_comparative_rankings(
         subjs = d.subjects
         subj_ids = [s.id for s in subjs]
 
-        dept_scores = db.query(Score.total_score).filter(
+        dept_sc_q = db.query(Score.total_score).join(Score.student).filter(
             Score.subject_id.in_(subj_ids),
             Score.semester_id == sem_id
-        ).all() if subj_ids else []
+        )
+        if school_id is not None:
+            dept_sc_q = dept_sc_q.filter(Student.school_id == school_id)
+        dept_scores = dept_sc_q.all() if subj_ids else []
 
         valid_dept_sc = [s[0] for s in dept_scores if s[0] is not None]
         avg_dept = round(sum(valid_dept_sc) / len(valid_dept_sc), 2) if valid_dept_sc else 0.0
@@ -612,10 +665,13 @@ def get_comparative_rankings(
     subject_mastery = []
     for sub in subjects:
         # All scores for this subject in current semester
-        all_sub_scores = db.query(Score.total_score, Student.class_section_id).join(Student).filter(
+        all_sub_q = db.query(Score.total_score, Student.class_section_id).join(Student).filter(
             Score.subject_id == sub.id,
             Score.semester_id == sem_id
-        ).all()
+        )
+        if school_id is not None:
+            all_sub_q = all_sub_q.filter(Student.school_id == school_id)
+        all_sub_scores = all_sub_q.all()
 
         if not all_sub_scores:
             continue
@@ -889,6 +945,16 @@ def save_batch_class_matrix(
             existing.grade = grading["grade"]
             existing.remark = item.remarks or grading["remark"]
             saved_count += 1
+            log_sync_change(db, school_id or 1, "score", existing.id, "UPDATE", {
+                "student_id": item.student_id,
+                "subject_id": item.subject_id,
+                "semester_id": payload.semester_id,
+                "class_score": item.class_score,
+                "exam_score": item.exam_score,
+                "total_score": total,
+                "grade": grading["grade"],
+                "remark": item.remarks or grading["remark"]
+            })
         else:
             new_sc = Score(
                 student_id=item.student_id,
@@ -901,7 +967,18 @@ def save_batch_class_matrix(
                 remark=item.remarks or grading["remark"]
             )
             db.add(new_sc)
+            db.flush()
             saved_count += 1
+            log_sync_change(db, school_id or 1, "score", new_sc.id, "INSERT", {
+                "student_id": item.student_id,
+                "subject_id": item.subject_id,
+                "semester_id": payload.semester_id,
+                "class_score": item.class_score,
+                "exam_score": item.exam_score,
+                "total_score": total,
+                "grade": grading["grade"],
+                "remark": item.remarks or grading["remark"]
+            })
 
     db.commit()
     return {

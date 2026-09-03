@@ -708,9 +708,10 @@ def scan_checkin_student(
         pass
 
     # Check if attendance record exists for today
+    today_str = today.strftime("%Y-%m-%d")
     att = db.query(Attendance).filter(
         Attendance.student_id == student.id,
-        Attendance.date == today
+        func.date(Attendance.date) == today_str
     ).first()
 
     is_duplicate = False
@@ -722,7 +723,7 @@ def scan_checkin_student(
     else:
         att = Attendance(
             student_id=student.id,
-            date=today,
+            date=now,
             status=status,
             attendance_type="daily",
             period_label=f"Scanned at {time_str} [{payload.scan_type}]"
@@ -764,9 +765,10 @@ def dispatch_truancy_alerts(
     """
     school_id = get_school_id(current_user)
     target_date = _parse_date(payload.date_str) if payload.date_str else datetime.now().date()
+    target_date_str = target_date.strftime("%Y-%m-%d")
 
     query = db.query(Attendance).join(Student).filter(
-        Attendance.date == target_date,
+        func.date(Attendance.date) == target_date_str,
         Attendance.status == "Absent"
     )
     if school_id is not None:

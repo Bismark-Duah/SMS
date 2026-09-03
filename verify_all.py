@@ -142,7 +142,13 @@ def run_all():
         "backend/tests/test_transcripts_and_promotions.py",
         "backend/tests/test_timetable_engine_and_pdf.py",
         "backend/tests/test_state_bus_and_live_reactivity.py",
-        "backend/tests/test_multi_tenant_scoping_and_view.py"
+        "backend/tests/test_multi_tenant_scoping_and_view.py",
+        "tests/verify_enterprise_sync_engine.py",
+        "tests/verify_super_admin_sync_monitor.py",
+        "tests/test_sync_engine_hardening.py",
+        "tests/test_sqlite_wal_and_concurrency.py",
+        "tests/test_fee_financial_audit.py",
+        "tests/test_academic_engine_audit.py"
     ]
 
     server_proc = ensure_server()

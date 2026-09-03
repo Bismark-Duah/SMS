@@ -1184,7 +1184,16 @@ class ReportService:
         school_phone = _get_setting(db, "school_phone", "")
         headmaster_name = _get_setting(db, "report_headmaster", "")
 
-        all_scores = db.query(Score).filter(Score.student_id == student_id).all()
+        all_scores = db.query(Score)\
+            .outerjoin(Score.semester)\
+            .outerjoin(Semester.academic_year)\
+            .outerjoin(Score.subject)\
+            .filter(Score.student_id == student_id)\
+            .order_by(
+                AcademicYear.label.asc(),
+                Semester.name.asc(),
+                Subject.name.asc()
+            ).all()
 
         external_subjects = []
         internal_subjects = []
@@ -1192,6 +1201,7 @@ class ReportService:
         for sc in all_scores:
             sub = sc.subject
             sem = sc.semester
+            acad_yr_label = sem.academic_year.label if sem and sem.academic_year else (student.academic_year or "2025/2026")
             item = {
                 "score_id": sc.id,
                 "subject_name": sub.name if sub else "Subject",
@@ -1201,7 +1211,7 @@ class ReportService:
                 "group_code": getattr(sub, "group_code", None),
                 "assessment_type": getattr(sub, "assessment_type", "External_WASSCE"),
                 "semester_name": sem.name if sem else "Term",
-                "academic_year": sem.academic_year.label if sem and sem.academic_year else "2025/2026",
+                "academic_year": acad_yr_label,
                 "total_score": sc.total_score,
                 "grade": sc.grade,
                 "remark": sc.remark,
@@ -1294,12 +1304,14 @@ class ReportService:
             for idx, sub in enumerate(internal_subs):
                 g = sub.get("grade") or "-"
                 g_class = "#059669" if g in ["A1", "B2"] else "#0284c7"
+                term_label = f"{sub.get('academic_year', '')} ({sub.get('semester_name', '')})"
                 int_rows_html += f"""
                 <tr>
                     <td style="text-align:center;">{idx + 1}</td>
                     <td style="font-family:monospace; font-size:8px;">{sub.get('subject_code', '')}</td>
                     <td style="text-align:left; font-weight:bold;">{sub.get('subject_name', '')}</td>
                     <td style="text-align:center;">Internal</td>
+                    <td style="text-align:center; font-size:8px; color:#64748b;">{term_label}</td>
                     <td style="text-align:center; font-weight:bold;">{sub.get('total_score', '-')}</td>
                     <td style="text-align:center; font-weight:bold; color:{g_class}; font-size:9px;">{g}</td>
                     <td style="text-align:left; font-size:8px; color:#475569;">{sub.get('interpretation', 'Pass')}</td>
@@ -1316,6 +1328,7 @@ class ReportService:
                         <th style="width:55px;">Code</th>
                         <th style="text-align:left;">Subject Title</th>
                         <th style="width:50px;">Type</th>
+                        <th style="width:70px;">Term / Year</th>
                         <th style="width:45px;">Score</th>
                         <th style="width:40px;">Grade</th>
                         <th style="text-align:left;">Interpretation</th>

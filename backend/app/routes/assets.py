@@ -64,9 +64,13 @@ def delete_asset(
     current_user: User = Depends(get_current_user)
 ):
     _check_storekeeper_or_admin(current_user)
-    asset = db.query(Asset).filter(Asset.id == asset_id).first()
+    school_id = get_school_id(current_user)
+    asset_q = db.query(Asset).filter(Asset.id == asset_id)
+    if school_id is not None:
+        asset_q = asset_q.filter(Asset.school_id == school_id)
+    asset = asset_q.first()
     if not asset:
-        raise HTTPException(status_code=404, detail="Asset not found")
+        raise HTTPException(status_code=404, detail="Asset not found in your school")
     db.delete(asset)
     db.commit()
     return {"status": "success", "message": "Asset deleted"}
@@ -113,9 +117,12 @@ def issue_textbook(
     _check_storekeeper_or_admin(current_user)
     school_id = get_school_id(current_user)
     
-    student = db.query(Student).filter(Student.id == payload.student_id).first()
+    st_q = db.query(Student).filter(Student.id == payload.student_id)
+    if school_id is not None:
+        st_q = st_q.filter(Student.school_id == school_id)
+    student = st_q.first()
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=404, detail="Student not found in your school")
         
     # Check if barcode is already issued
     existing = db.query(TextbookAllocation).filter(
@@ -154,9 +161,13 @@ def return_textbook(
     current_user: User = Depends(get_current_user)
 ):
     _check_storekeeper_or_admin(current_user)
-    alloc = db.query(TextbookAllocation).filter(TextbookAllocation.id == alloc_id).first()
+    school_id = get_school_id(current_user)
+    alloc_q = db.query(TextbookAllocation).filter(TextbookAllocation.id == alloc_id)
+    if school_id is not None:
+        alloc_q = alloc_q.filter(TextbookAllocation.school_id == school_id)
+    alloc = alloc_q.first()
     if not alloc:
-        raise HTTPException(status_code=404, detail="Textbook allocation record not found")
+        raise HTTPException(status_code=404, detail="Textbook allocation record not found in your school")
         
     alloc.status = status
     alloc.actual_return_date = datetime.now()
@@ -206,13 +217,19 @@ def disburse_uniform(
     _check_storekeeper_or_admin(current_user)
     school_id = get_school_id(current_user)
     
-    student = db.query(Student).filter(Student.id == payload.student_id).first()
+    st_q = db.query(Student).filter(Student.id == payload.student_id)
+    if school_id is not None:
+        st_q = st_q.filter(Student.school_id == school_id)
+    student = st_q.first()
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=404, detail="Student not found in your school")
         
-    item = db.query(UniformItem).filter(UniformItem.id == payload.item_id).first()
+    it_q = db.query(UniformItem).filter(UniformItem.id == payload.item_id)
+    if school_id is not None:
+        it_q = it_q.filter(UniformItem.school_id == school_id)
+    item = it_q.first()
     if not item:
-        raise HTTPException(status_code=404, detail="Uniform item not found")
+        raise HTTPException(status_code=404, detail="Uniform item not found in your school")
         
     if item.quantity_in_stock < payload.quantity:
         raise HTTPException(status_code=400, detail=f"Insufficient stock for {item.item_name} (Size: {item.size}). Available: {item.quantity_in_stock}")

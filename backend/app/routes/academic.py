@@ -498,8 +498,19 @@ def get_executive_analytics(
                 "status": "NOT_STARTED"
             })
 
-    pending_hod_approvals = db.query(ClassSubjectScoreStatus).filter(ClassSubjectScoreStatus.status != "Approved").count()
-    published_classes_count = db.query(ClassSectionReportStatus).filter(ClassSectionReportStatus.is_published == True).count()
+    pending_hod_q = db.query(ClassSubjectScoreStatus).join(ClassSubjectScoreStatus.class_section).filter(
+        ClassSubjectScoreStatus.status.in_(["Draft", "Submitted_HOD", "Pending", "SUBMITTED_TO_HOD", "NOT_APPROVED"])
+    )
+    if target_sch_id is not None:
+        pending_hod_q = pending_hod_q.filter(ClassSection.school_id == target_sch_id)
+    pending_hod_approvals = pending_hod_q.count()
+
+    pub_cls_q = db.query(ClassSectionReportStatus).join(ClassSectionReportStatus.class_section).filter(
+        ClassSectionReportStatus.is_published == True
+    )
+    if target_sch_id is not None:
+        pub_cls_q = pub_cls_q.filter(ClassSection.school_id == target_sch_id)
+    published_classes_count = pub_cls_q.count()
 
     # 2. Domestic Executive Metrics
     is_boarder_filter = (Student.residential_status.in_(["B", "b", "Boarding", "BOARDING", "boarding"])) | (Student.house_id.isnot(None))
@@ -1234,7 +1245,8 @@ def get_executive_analytics(
     # ── Pastoral Truancy & Low Attendance Alert Hub (<80% threshold) ──────────
     low_attendance_pupils = []
     from ..models import Attendance
-    all_att = db.query(Attendance).all()
+    active_st_ids = [st.id for st in all_active_students]
+    all_att = db.query(Attendance).filter(Attendance.student_id.in_(active_st_ids)).all() if active_st_ids else []
     att_by_student = {}
     for a in all_att:
         if a.student_id not in att_by_student:
@@ -1338,8 +1350,9 @@ def get_executive_analytics(
 
     # 8. Bursar & Financial Analytics
     from ..models import Fee, Payment, Asset, TextbookAllocation, UniformItem, UniformDisbursement, GatePassLog, StudentClearanceRecord
-    all_fees = db.query(Fee).all()
-    all_payments = db.query(Payment).all()
+    all_fees = db.query(Fee).filter(Fee.student_id.in_(active_st_ids)).all() if active_st_ids else []
+    fee_ids = [f.id for f in all_fees]
+    all_payments = db.query(Payment).filter(Payment.fee_id.in_(fee_ids)).all() if fee_ids else []
 
     total_billed = sum(f.amount for f in all_fees) if all_fees else 0.0
     total_collected = sum(f.amount_paid for f in all_fees) if all_fees else 0.0
@@ -1414,9 +1427,17 @@ def get_executive_analytics(
     }
 
     # 9. Storekeeper & Inventory Analytics
-    all_assets = db.query(Asset).all()
-    all_uniforms = db.query(UniformItem).all()
-    all_textbooks = db.query(TextbookAllocation).all()
+    asset_q = db.query(Asset)
+    uniform_q = db.query(UniformItem)
+    textbook_q = db.query(TextbookAllocation)
+    if target_sch_id is not None:
+        asset_q = asset_q.filter((Asset.school_id == target_sch_id) | (Asset.school_id.is_(None)))
+        uniform_q = uniform_q.filter((UniformItem.school_id == target_sch_id) | (UniformItem.school_id.is_(None)))
+        textbook_q = textbook_q.filter((TextbookAllocation.school_id == target_sch_id) | (TextbookAllocation.school_id.is_(None)))
+
+    all_assets = asset_q.all()
+    all_uniforms = uniform_q.all()
+    all_textbooks = textbook_q.all()
     
     total_uniform_stock = sum(u.quantity_in_stock for u in all_uniforms) if all_uniforms else 0
     low_stock_uniforms = [u for u in all_uniforms if (u.quantity_in_stock or 0) < 10]
@@ -1442,7 +1463,10 @@ def get_executive_analytics(
     }
 
     # 10. Security & Gatehouse Analytics
-    all_gate_logs = db.query(GatePassLog).all()
+    gate_q = db.query(GatePassLog)
+    if target_sch_id is not None:
+        gate_q = gate_q.filter(GatePassLog.school_id == target_sch_id)
+    all_gate_logs = gate_q.all()
     today_gate = [g for g in all_gate_logs if g.timestamp and g.timestamp >= today_start and g.timestamp <= today_end]
     
     security_data = {

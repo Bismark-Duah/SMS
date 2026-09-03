@@ -60,14 +60,15 @@ def assign_teacher_department(
     if not _is_academic_head(current_user):
         raise HTTPException(status_code=403, detail="Only Administrators or Assistant Head Academic can assign teachers to departments")
 
+    school_id = get_school_id(current_user)
     teacher = db.query(User).filter(User.id == payload.teacher_id).first()
-    if not teacher:
-        raise HTTPException(status_code=404, detail="Teacher not found")
+    if not teacher or (school_id is not None and teacher.school_id != school_id):
+        raise HTTPException(status_code=404, detail="Teacher not found in your school")
 
     if payload.department_id:
         dept = db.query(Department).filter(Department.id == payload.department_id).first()
-        if not dept:
-            raise HTTPException(status_code=404, detail="Department not found")
+        if not dept or (school_id is not None and dept.school_id != school_id):
+            raise HTTPException(status_code=404, detail="Department not found in your school")
         teacher.department_id = dept.id
     else:
         teacher.department_id = None
@@ -494,7 +495,11 @@ def get_academic_overview(
     total_expected_scores = 0
     total_actual_scores = 0
 
-    for cs in db.query(ClassSection).all():
+    all_cs_q = db.query(ClassSection)
+    if school_id is not None:
+        all_cs_q = all_cs_q.filter(ClassSection.school_id == school_id)
+
+    for cs in all_cs_q.all():
         student_count = db.query(Student).filter(Student.class_section_id == cs.id, Student.is_active == True).count()
         subj_count = len(cs.subjects)
         total_expected_scores += (student_count * subj_count)
@@ -507,10 +512,13 @@ def get_academic_overview(
 
     overall_pct = round((total_actual_scores / total_expected_scores * 100), 1) if total_expected_scores > 0 else 100.0
 
-    pending_hod = db.query(ClassSubjectScoreStatus).filter(
+    pending_hod_q = db.query(ClassSubjectScoreStatus).filter(
         ClassSubjectScoreStatus.semester_id == sem_id,
         ClassSubjectScoreStatus.status.in_(["Draft", "Submitted_HOD"])
-    ).count()
+    )
+    if school_id is not None:
+        pending_hod_q = pending_hod_q.join(ClassSubjectScoreStatus.class_section).filter(ClassSection.school_id == school_id)
+    pending_hod = pending_hod_q.count()
 
     mode = _get_publishing_mode(db)
 

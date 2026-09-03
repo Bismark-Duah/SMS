@@ -413,6 +413,136 @@ window.saveToCustomPath = async function() {
   }
 };
 
+// ── Enterprise Cloud Auto-Sync Desk Logic ──────────────────────────────────
+window.loadSyncStatus = async function() {
+  const pendingEl = document.getElementById('syncPendingCount');
+  const totalEl = document.getElementById('syncTotalCount');
+  const lastTimeEl = document.getElementById('syncLastTime');
+  const tbody = document.getElementById('syncOutboxListBody');
+  const pill = document.getElementById('cloudSyncStatusPill');
+
+  try {
+    const res = await fetch(`${API_BASE}/sync/status`, { headers: getHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      if (pendingEl) pendingEl.textContent = data.pending_count || 0;
+      if (totalEl) totalEl.textContent = data.total_synced_count || 0;
+      if (lastTimeEl) {
+        lastTimeEl.textContent = data.last_synced_at 
+          ? new Date(data.last_synced_at).toLocaleString() 
+          : 'Never';
+      }
+
+      if (pill) {
+        if (!navigator.onLine) {
+          pill.innerHTML = '🟡 Offline Mode (Local)';
+          pill.style.background = 'rgba(245, 158, 11, 0.15)';
+          pill.style.color = '#f59e0b';
+          pill.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+        } else if (data.pending_count > 0) {
+          pill.innerHTML = `🔄 Pending Sync (${data.pending_count})`;
+          pill.style.background = 'rgba(234, 88, 12, 0.15)';
+          pill.style.color = '#ea580c';
+          pill.style.borderColor = 'rgba(234, 88, 12, 0.3)';
+        } else {
+          pill.innerHTML = '🟢 Cloud Connected & Synced';
+          pill.style.background = 'rgba(16, 185, 129, 0.15)';
+          pill.style.color = '#34d399';
+          pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        }
+      }
+
+      if (tbody) {
+        const activities = data.recent_activity || [];
+        if (activities.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; opacity:0.6; padding:10px;">No sync events recorded yet.</td></tr>`;
+        } else {
+          tbody.innerHTML = activities.map(a => {
+            const timeStr = a.created_at ? new Date(a.created_at).toLocaleTimeString() : '-';
+            const statusBadge = a.is_synced 
+              ? `<span style="color:#34d399; font-weight:700;">✔ Synced</span>`
+              : `<span style="color:#f59e0b; font-weight:700;">⏳ Pending</span>`;
+            return `
+              <tr>
+                <td><strong>${a.entity.toUpperCase()}</strong></td>
+                <td><code style="background:rgba(255,255,255,0.06); padding:2px 4px; border-radius:4px;">${a.action}</code></td>
+                <td>#${a.entity_id}</td>
+                <td>${timeStr}</td>
+                <td>${statusBadge}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+    }
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; opacity:0.6; padding:10px;">Offline local mode active.</td></tr>`;
+  }
+};
+
+window.triggerManualSyncPush = async function() {
+  const msg = document.getElementById('syncStatusMsg');
+  if (msg) msg.innerHTML = '<span style="color:#818cf8; font-weight:700;">🔄 Bundling delta changes and pushing to cloud...</span>';
+
+  try {
+    const res = await fetch(`${API_BASE}/sync/push`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (msg) msg.innerHTML = `<span style="color:var(--success-color); font-weight:700;">✔ ${data.message}</span>`;
+      if (window.showToast) window.showToast(`✔ Cloud Sync: ${data.message}`, 'success');
+      window.loadSyncStatus();
+    } else {
+      if (msg) msg.innerHTML = `<span style="color:var(--warning-color); font-weight:700;">Notice: ${data.detail || 'Sync failed.'}</span>`;
+    }
+  } catch (e) {
+    if (msg) msg.innerHTML = `<span style="color:var(--danger-color)">Network error during sync dispatch.</span>`;
+  }
+};
+
+window.pullCloudSnapshot = async function() {
+  const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
+    '📥 Pull Cloud Snapshot',
+    'This will download a complete cloud backup snapshot of all student records and settings for this school. Proceed?',
+    'Pull Snapshot',
+    'Cancel',
+    'info'
+  ) : Promise.resolve(confirm('Download fresh cloud snapshot package?')));
+
+  if (!ok) return;
+
+  const msg = document.getElementById('syncStatusMsg');
+  if (msg) msg.innerHTML = '<span style="color:#0284c7; font-weight:700;">📥 Fetching school snapshot from central cloud...</span>';
+
+  try {
+    const res = await fetch(`${API_BASE}/sync/pull-snapshot`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    const data = await res.json();
+    if (res.ok && data.snapshot) {
+      const blob = new Blob([JSON.stringify(data.snapshot, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `School_Snapshot_${data.school_id}_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      if (msg) msg.innerHTML = `<span style="color:var(--success-color); font-weight:700;">✔ Cloud snapshot successfully exported (${data.snapshot.students_count || 0} students, ${data.snapshot.scores_count || 0} scores).</span>`;
+    } else {
+      if (msg) msg.innerHTML = `<span style="color:var(--danger-color)">Failed to pull snapshot: ${data.detail || 'Error'}</span>`;
+    }
+  } catch (e) {
+    if (msg) msg.innerHTML = `<span style="color:var(--danger-color)">Network error pulling snapshot: ${e.message}</span>`;
+  }
+};
+
+window.addEventListener('sms:sync-updated', () => {
+  if (window.loadSyncStatus) window.loadSyncStatus();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   if (window.loadBackups) window.loadBackups();
+  if (window.loadSyncStatus) window.loadSyncStatus();
 });

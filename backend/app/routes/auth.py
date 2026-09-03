@@ -356,6 +356,13 @@ def impersonate_user(
     if not target_user:
         raise HTTPException(status_code=404, detail="User to impersonate not found")
 
+    if "super_admin" not in user_roles:
+        if target_user.school_id != current_user.school_id:
+            raise HTTPException(
+                status_code=403, 
+                detail="Access Denied: You cannot impersonate staff from another institution."
+            )
+
     target_roles = {r.name.lower() for r in target_user.roles}
     if ("super_admin" in target_roles or "admin" in target_roles) and "super_admin" not in user_roles:
         raise HTTPException(status_code=403, detail="Cannot impersonate root administrator accounts")

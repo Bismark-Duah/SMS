@@ -11,6 +11,7 @@ from ..dependencies import get_current_user, get_school_id, get_user_assigned_sc
 from ..services.guardian_service import auto_link_guardian_for_student, auto_link_all_guardians
 from ..services.allocation import allocate_student_house_and_dorm
 from ..services.admission_package import AdmissionPackageService
+from ..services.sync_engine import log_sync_change
 
 router = APIRouter()
 
@@ -265,6 +266,20 @@ def create_student(
         )
         db.add(health)
 
+    log_sync_change(db, school_id or 1, "student", db_student.student_code, "INSERT", {
+        "student_code": db_student.student_code,
+        "full_name": db_student.full_name,
+        "gender": db_student.gender,
+        "phone": db_student.phone,
+        "address": db_student.address,
+        "guardian_name": db_student.guardian_name,
+        "residential_status": db_student.residential_status,
+        "bece_index_number": db_student.bece_index_number,
+        "bece_raw_score": db_student.bece_raw_score,
+        "bece_aggregate": db_student.bece_aggregate,
+        "status": db_student.status
+    })
+
     db.commit()
     db.refresh(db_student)
     return _student_dict(db_student)
@@ -340,6 +355,20 @@ def update_student(
     if student.doctor_clearance_status is not None:
         health.doctor_clearance_status = student.doctor_clearance_status
 
+    log_sync_change(db, school_id or 1, "student", db_student.student_code, "UPDATE", {
+        "student_code": db_student.student_code,
+        "full_name": db_student.full_name,
+        "gender": db_student.gender,
+        "phone": db_student.phone,
+        "address": db_student.address,
+        "guardian_name": db_student.guardian_name,
+        "residential_status": db_student.residential_status,
+        "bece_index_number": db_student.bece_index_number,
+        "bece_raw_score": db_student.bece_raw_score,
+        "bece_aggregate": db_student.bece_aggregate,
+        "status": db_student.status
+    })
+
     db.commit()
     db.refresh(db_student)
     return _student_dict(db_student)
@@ -364,6 +393,11 @@ def deactivate_student(
 
     db_student.is_active = False
     db_student.status = "INACTIVE"
+    log_sync_change(db, school_id or 1, "student", db_student.student_code, "DELETE", {
+        "student_code": db_student.student_code,
+        "status": "INACTIVE",
+        "is_active": False
+    })
     db.commit()
     return {"message": f"Student {db_student.full_name} has been deactivated."}
 

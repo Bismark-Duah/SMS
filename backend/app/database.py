@@ -50,8 +50,11 @@ def _init_resilient_engine():
     def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
         try:
-            cursor.execute("PRAGMA journal_mode=WAL")
-            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA journal_mode=WAL;")
+            cursor.execute("PRAGMA synchronous=NORMAL;")
+            cursor.execute("PRAGMA foreign_keys=ON;")
+            cursor.execute("PRAGMA busy_timeout=30000;")
+            cursor.execute("PRAGMA wal_autocheckpoint=1000;")
         except Exception:
             pass
         finally:
@@ -62,6 +65,40 @@ engine = _init_resilient_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+
+def checkpoint_database(mode: str = "TRUNCATE") -> dict:
+    """
+    Executes a WAL checkpoint operation to flush WAL log frames back to the main DB file.
+    Modes: PASSIVE, FULL, RESTART, TRUNCATE.
+    """
+    if not is_sqlite:
+        return {"status": "skipped", "message": "WAL checkpoint only applicable to SQLite database."}
+    valid_modes = {"PASSIVE", "FULL", "RESTART", "TRUNCATE"}
+    selected_mode = mode.upper() if mode.upper() in valid_modes else "TRUNCATE"
+    with engine.connect() as conn:
+        from sqlalchemy import text
+        res = conn.execute(text(f"PRAGMA wal_checkpoint({selected_mode});")).fetchone()
+        return {
+            "status": "success",
+            "mode": selected_mode,
+            "busy": res[0] if res else 0,
+            "log": res[1] if res else 0,
+            "checkpointed": res[2] if res else 0
+        }
+
+
+def vacuum_database() -> dict:
+    """
+    Reclaims unused disk space and defragments SQLite database file.
+    """
+    if not is_sqlite:
+        return {"status": "skipped", "message": "VACUUM only applicable to SQLite database."}
+    with engine.connect() as conn:
+        from sqlalchemy import text
+        # Set isolation level to autocommit for VACUUM
+        conn.execution_options(isolation_level="AUTOCOMMIT").execute(text("VACUUM;"))
+        return {"status": "success", "message": "Database successfully vacuumed and compacted."}
 
 
 def run_migrations():
@@ -172,6 +209,9 @@ def run_migrations():
         "admission_vouchers": [
             ("purchased_by_phone", "VARCHAR(20)"),
             ("amount_paid", "FLOAT DEFAULT 50.0")
+        ],
+        "payments": [
+            ("receipt_number", "VARCHAR")
         ]
     }
 

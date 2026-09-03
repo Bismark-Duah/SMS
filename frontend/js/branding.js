@@ -641,4 +641,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 })();
 
+// ── Enterprise Offline-to-Cloud Auto-Sync Background Script Loader ──
+if (!window.SyncManager && !document.querySelector('script[src*="syncManager.js"]')) {
+  const syncScript = document.createElement('script');
+  syncScript.src = 'js/syncManager.js?v=4.2';
+  document.head.appendChild(syncScript);
+}
+
 

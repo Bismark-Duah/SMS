@@ -110,12 +110,14 @@ class TestTranscriptsAndPromotions(unittest.TestCase):
         cls.class_sec1 = ClassSection(
             name=f"Science 1A {u_suffix}",
             stage_id=cls.stage1.id,
-            program_id=cls.program.id
+            program_id=cls.program.id,
+            school_id=cls.school.id
         )
         cls.class_sec2 = ClassSection(
             name=f"Science 2A {u_suffix}",
             stage_id=cls.stage2.id,
-            program_id=cls.program.id
+            program_id=cls.program.id,
+            school_id=cls.school.id
         )
         cls.db.add_all([cls.class_sec1, cls.class_sec2])
         cls.db.commit()

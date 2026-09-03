@@ -107,6 +107,59 @@
             <!-- Rendered dynamically via renderNetworkDemographics -->
           </div>
         </div>
+      <!-- Master Multi-Tenant Sync & Telemetry Monitor -->
+      <section class="card" style="padding:18px 22px; border-radius:12px; margin-bottom:24px; border:1px solid rgba(14,165,233,0.3); background:linear-gradient(180deg, rgba(14,165,233,0.04) 0%, rgba(30,41,59,0.7) 100%);">
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; border-bottom:1px solid var(--border-color, #334155); padding-bottom:10px;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+              <span>📡</span> Multi-Tenant Real-Time Sync &amp; Telemetry Monitor
+            </h3>
+            <p style="margin:2px 0 0 0; font-size:0.8rem; color:#94a3b8;">Observe store-and-forward outbox queue metrics, delta sync health, and offline/online node connectivity across all institutions.</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <span id="syncMonitorNetworkBadge" class="badge-mode" style="background:#0284c7; padding:4px 10px; font-size:0.75rem;">Loading Sync Telemetry...</span>
+            <button type="button" class="btn" style="padding:6px 12px; font-size:0.8rem; background:#0284c7; border-color:#0369a1; color:#fff; font-weight:600;" onclick="window.triggerAllSchoolsSync()" id="btnSyncAllSchools">🔄 Sync All Network Nodes</button>
+            <button type="button" class="btn" style="padding:6px 10px; font-size:0.8rem;" onclick="window.loadSuperAdminSyncMonitor()">⚡ Refresh</button>
+          </div>
+        </div>
+
+        <!-- Sync Telemetry Mini-KPI Row -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;">
+          <div style="background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:8px; padding:10px 14px; text-align:center;">
+            <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Global Outbox Queue</div>
+            <div id="syncKpiPending" style="font-size:1.4rem; font-weight:700; color:#f59e0b; margin-top:2px;">0</div>
+            <div style="font-size:0.72rem; color:#64748b;">Pending deltas awaiting transmission</div>
+          </div>
+          <div style="background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:8px; padding:10px 14px; text-align:center;">
+            <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Synchronized Records</div>
+            <div id="syncKpiSynced" style="font-size:1.4rem; font-weight:700; color:#10b981; margin-top:2px;">0</div>
+            <div style="font-size:0.72rem; color:#64748b;">Lifetime committed delta transactions</div>
+          </div>
+          <div style="background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:8px; padding:10px 14px; text-align:center;">
+            <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Cloud Gateway Engine</div>
+            <div id="syncKpiCloudGateway" style="font-size:0.92rem; font-weight:700; color:#38bdf8; margin-top:6px; word-break:break-all;">Local Loopback</div>
+            <div style="font-size:0.72rem; color:#64748b;" id="syncKpiGatewaySubtitle">Store &amp; Forward Active</div>
+          </div>
+        </div>
+
+        <!-- Sync Monitor Table -->
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+            <thead>
+              <tr style="text-align:left; border-bottom:1px solid var(--border-color, #334155); color:#94a3b8;">
+                <th style="padding:8px 10px;">School Node</th>
+                <th style="padding:8px 10px; text-align:center;">Outbox Queue</th>
+                <th style="padding:8px 10px; text-align:center;">Lifetime Synced</th>
+                <th style="padding:8px 10px; text-align:center;">Last Synchronization</th>
+                <th style="padding:8px 10px; text-align:center;">Sync State</th>
+                <th style="padding:8px 10px; text-align:right;">Node Action</th>
+              </tr>
+            </thead>
+            <tbody id="syncMonitorTableBody">
+              <tr><td colspan="6" style="padding:16px; text-align:center; opacity:0.7;">Loading multi-tenant sync telemetry...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <!-- Schools Directory Table & Toolbar -->

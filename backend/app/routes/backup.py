@@ -211,3 +211,37 @@ def copy_backup_to_path(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to write backup to custom path: {str(e)}")
+
+
+@router.post("/checkpoint")
+def trigger_wal_checkpoint(
+    payload: dict = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Triggers an immediate SQLite WAL checkpoint to flush log frames into the main database.
+    """
+    _is_admin(current_user)
+    from ..database import checkpoint_database
+    mode = (payload or {}).get("mode", "TRUNCATE")
+    res = checkpoint_database(mode)
+    return res
+
+
+@router.post("/optimize")
+def trigger_database_optimize(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Executes a WAL TRUNCATE checkpoint followed by VACUUM to reclaim disk space and defragment.
+    """
+    _is_admin(current_user)
+    from ..database import checkpoint_database, vacuum_database
+    chk_res = checkpoint_database("TRUNCATE")
+    vac_res = vacuum_database()
+    return {
+        "status": "success",
+        "checkpoint": chk_res,
+        "vacuum": vac_res,
+        "message": "Database optimized, checkpointed, and compacted successfully."
+    }

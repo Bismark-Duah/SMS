@@ -222,15 +222,18 @@ def update_house(
 ):
     _check_admin(current_user)
 
-    db_house = db.query(House).filter(House.id == id).first()
+    school_id = get_school_id(current_user)
+    query = db.query(House).filter(House.id == id)
+    if school_id is not None and hasattr(House, "school_id"):
+        query = query.filter((House.school_id == school_id) | (House.school_id.is_(None)))
+    db_house = query.first()
     if not db_house:
-        raise HTTPException(status_code=404, detail="House not found")
+        raise HTTPException(status_code=404, detail="House not found in your school")
 
     # Check unique constraints
-    school_id = get_school_id(current_user)
     dup_query = db.query(House).filter(House.name == payload.name, House.id != id)
     if school_id is not None and hasattr(House, "school_id"):
-        dup_query = dup_query.filter(House.school_id == school_id)
+        dup_query = dup_query.filter((House.school_id == school_id) | (House.school_id.is_(None)))
     if dup_query.first():
         raise HTTPException(status_code=400, detail="House name already exists")
 
@@ -337,13 +340,19 @@ def delete_house(
     current_user: User = Depends(get_current_user)
 ):
     _check_admin(current_user)
-
-    db_house = db.query(House).filter(House.id == id).first()
+    school_id = get_school_id(current_user)
+    query = db.query(House).filter(House.id == id)
+    if school_id is not None and hasattr(House, "school_id"):
+        query = query.filter((House.school_id == school_id) | (House.school_id.is_(None)))
+    db_house = query.first()
     if not db_house:
-        raise HTTPException(status_code=404, detail="House not found")
+        raise HTTPException(status_code=404, detail="House not found in your school")
 
     # Unset house and dorm references for students in this house
-    students = db.query(Student).filter(Student.house_id == id).all()
+    students_q = db.query(Student).filter(Student.house_id == id)
+    if school_id is not None:
+        students_q = students_q.filter(Student.school_id == school_id)
+    students = students_q.all()
     for s in students:
         s.house_id = None
         s.dormitory_id = None
@@ -362,11 +371,15 @@ def create_dormitory(
     current_user: User = Depends(get_current_user)
 ):
     _check_admin(current_user)
+    school_id = get_school_id(current_user)
 
-    # Check house exists
-    house = db.query(House).filter(House.id == house_id).first()
+    # Check house exists in this school
+    house_q = db.query(House).filter(House.id == house_id)
+    if school_id is not None and hasattr(House, "school_id"):
+        house_q = house_q.filter((House.school_id == school_id) | (House.school_id.is_(None)))
+    house = house_q.first()
     if not house:
-        raise HTTPException(status_code=404, detail="House not found")
+        raise HTTPException(status_code=404, detail="House not found in your school")
 
     # Validate Housemaster
     if payload.housemaster_id:
@@ -404,10 +417,14 @@ def update_dormitory(
     current_user: User = Depends(get_current_user)
 ):
     _check_admin(current_user)
+    school_id = get_school_id(current_user)
 
-    db_dorm = db.query(Dormitory).filter(Dormitory.id == dorm_id).first()
+    query = db.query(Dormitory).join(House, Dormitory.house_id == House.id).filter(Dormitory.id == dorm_id)
+    if school_id is not None and hasattr(House, "school_id"):
+        query = query.filter((House.school_id == school_id) | (House.school_id.is_(None)))
+    db_dorm = query.first()
     if not db_dorm:
-        raise HTTPException(status_code=404, detail="Dormitory not found")
+        raise HTTPException(status_code=404, detail="Dormitory not found in your school")
 
     # Validate Housemaster
     if payload.housemaster_id:
@@ -442,13 +459,20 @@ def delete_dormitory(
     current_user: User = Depends(get_current_user)
 ):
     _check_admin(current_user)
+    school_id = get_school_id(current_user)
 
-    db_dorm = db.query(Dormitory).filter(Dormitory.id == dorm_id).first()
+    query = db.query(Dormitory).join(House, Dormitory.house_id == House.id).filter(Dormitory.id == dorm_id)
+    if school_id is not None and hasattr(House, "school_id"):
+        query = query.filter((House.school_id == school_id) | (House.school_id.is_(None)))
+    db_dorm = query.first()
     if not db_dorm:
-        raise HTTPException(status_code=404, detail="Dormitory not found")
+        raise HTTPException(status_code=404, detail="Dormitory not found in your school")
 
     # Unset dormitory reference for students in this dormitory
-    students = db.query(Student).filter(Student.dormitory_id == dorm_id).all()
+    students_q = db.query(Student).filter(Student.dormitory_id == dorm_id)
+    if school_id is not None:
+        students_q = students_q.filter(Student.school_id == school_id)
+    students = students_q.all()
     for s in students:
         s.dormitory_id = None
 

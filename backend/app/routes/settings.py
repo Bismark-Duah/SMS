@@ -124,14 +124,15 @@ def get_settings(
     school_id: Optional[int] = Depends(get_school_id),
     x_school_id: Optional[str] = Header(None, alias="X-School-Id")
 ):
+    user = current_user if isinstance(current_user, User) else None
     target_school_id = int(school_id) if isinstance(school_id, (int, float)) else None
     if target_school_id is None and isinstance(x_school_id, str) and x_school_id.strip():
         try:
             target_school_id = int(x_school_id.strip())
         except ValueError:
             pass
-    elif target_school_id is None and isinstance(current_user, User) and current_user.school_id:
-        target_school_id = current_user.school_id
+    elif target_school_id is None and user and user.school_id:
+        target_school_id = user.school_id
 
     res = {}
     # 1. Global settings (fallback defaults)
@@ -144,30 +145,36 @@ def get_settings(
         tenant_settings = db.query(Setting).filter(Setting.school_id == target_school_id).all()
         for s in tenant_settings:
             res[s.key] = s.value
-    elif not current_user:
-        # For public unauthenticated queries without school_id, load all as available
-        all_settings = db.query(Setting).all()
-        for s in all_settings:
-            res[s.key] = s.value
-
-    if target_school_id:
         school = db.query(School).filter(School.id == target_school_id).first()
         if school:
             res["school_name"] = school.name
             res["school_code"] = school.code
             res["school_abbreviation"] = school.code
             res["school_logo"] = school.logo_url or ""
-            res["school_mode"] = school.school_mode or "COMBINED"
-            res["ownership_type"] = school.ownership_type or "PRIVATE"
-            res["boarding_status"] = school.boarding_type or "BOARDING_AND_DAY"
-    elif isinstance(current_user, User) and current_user.school:
-        res["school_name"] = current_user.school.name
-        res["school_code"] = current_user.school.code
-        res["school_abbreviation"] = current_user.school.code
-        res["school_logo"] = current_user.school.logo_url or ""
-        res["school_mode"] = current_user.school.school_mode or "COMBINED"
-        res["ownership_type"] = current_user.school.ownership_type or "PRIVATE"
-        res["boarding_status"] = current_user.school.boarding_type or "BOARDING_AND_DAY"
+            res["school_mode"] = school.school_mode or res.get("school_mode", "COMBINED")
+            res["ownership_type"] = school.ownership_type or res.get("ownership_type", "PRIVATE")
+            res["boarding_status"] = school.boarding_type or res.get("boarding_status", "BOARDING_AND_DAY")
+    elif user and user.school:
+        res["school_name"] = user.school.name
+        res["school_code"] = user.school.code
+        res["school_abbreviation"] = user.school.code
+        res["school_logo"] = user.school.logo_url or ""
+        res["school_mode"] = user.school.school_mode or res.get("school_mode", "COMBINED")
+        res["ownership_type"] = user.school.ownership_type or res.get("ownership_type", "PRIVATE")
+        res["boarding_status"] = user.school.boarding_type or res.get("boarding_status", "BOARDING_AND_DAY")
+    else:
+        school = db.query(School).first()
+        if school:
+            tenant_settings = db.query(Setting).filter(Setting.school_id == school.id).all()
+            for s in tenant_settings:
+                res[s.key] = s.value
+            res["school_name"] = school.name
+            res["school_code"] = school.code
+            res["school_abbreviation"] = school.code
+            res["school_logo"] = school.logo_url or ""
+            res["school_mode"] = school.school_mode or res.get("school_mode", "COMBINED")
+            res["ownership_type"] = school.ownership_type or res.get("ownership_type", "PRIVATE")
+            res["boarding_status"] = school.boarding_type or res.get("boarding_status", "BOARDING_AND_DAY")
 
     curr_year = db.query(AcademicYear).filter(AcademicYear.is_current == True).first()
     curr_sem = db.query(Semester).filter(Semester.is_current == True).first()
@@ -365,16 +372,19 @@ async def upload_logo(
 
     web_path = f"/uploads/{new_filename}"
 
+    target_sch_id = getattr(current_user, 'school_id', None)
     # Save/update setting with persistent Data URI
-    setting = db.query(Setting).filter(Setting.key == "school_logo").first()
+    setting_q = db.query(Setting).filter(Setting.key == "school_logo")
+    if target_sch_id:
+        setting_q = setting_q.filter(Setting.school_id == target_sch_id)
+    setting = setting_q.first()
     if setting:
         setting.value = data_uri
     else:
-        new_setting = Setting(key="school_logo", value=data_uri)
+        new_setting = Setting(school_id=target_sch_id, key="school_logo", value=data_uri)
         db.add(new_setting)
 
     # Sync with associated School model if available
-    target_sch_id = getattr(current_user, 'school_id', None)
     if target_sch_id:
         sch = db.query(School).filter(School.id == target_sch_id).first()
         if sch:
@@ -395,11 +405,14 @@ def delete_logo(
     if "admin" not in role_names and "super_admin" not in role_names:
         raise HTTPException(status_code=403, detail="Only administrators can remove school logos")
 
-    setting = db.query(Setting).filter(Setting.key == "school_logo").first()
+    target_sch_id = getattr(current_user, 'school_id', None)
+    setting_q = db.query(Setting).filter(Setting.key == "school_logo")
+    if target_sch_id:
+        setting_q = setting_q.filter(Setting.school_id == target_sch_id)
+    setting = setting_q.first()
     if setting:
         setting.value = ""
 
-    target_sch_id = getattr(current_user, 'school_id', None)
     if target_sch_id:
         sch = db.query(School).filter(School.id == target_sch_id).first()
         if sch:
@@ -458,12 +471,16 @@ async def upload_signature(
 
     web_path = f"/uploads/{new_filename}"
 
+    target_sch_id = getattr(current_user, 'school_id', None)
     # Save/update setting
-    setting = db.query(Setting).filter(Setting.key == "headmaster_signature").first()
+    setting_q = db.query(Setting).filter(Setting.key == "headmaster_signature")
+    if target_sch_id:
+        setting_q = setting_q.filter(Setting.school_id == target_sch_id)
+    setting = setting_q.first()
     if setting:
         setting.value = data_uri
     else:
-        new_setting = Setting(key="headmaster_signature", value=data_uri)
+        new_setting = Setting(school_id=target_sch_id, key="headmaster_signature", value=data_uri)
         db.add(new_setting)
     db.commit()
 
@@ -503,11 +520,15 @@ def upload_code_of_conduct(
 
     web_path = f"/assets/uploads/{new_filename}"
     
-    setting = db.query(Setting).filter(Setting.key == "code_of_conduct_pdf_url").first()
+    target_sch_id = getattr(current_user, 'school_id', None)
+    setting_q = db.query(Setting).filter(Setting.key == "code_of_conduct_pdf_url")
+    if target_sch_id:
+        setting_q = setting_q.filter(Setting.school_id == target_sch_id)
+    setting = setting_q.first()
     if setting:
         setting.value = web_path
     else:
-        db.add(Setting(key="code_of_conduct_pdf_url", value=web_path))
+        db.add(Setting(school_id=target_sch_id, key="code_of_conduct_pdf_url", value=web_path))
     db.commit()
 
     return {"document_url": web_path}

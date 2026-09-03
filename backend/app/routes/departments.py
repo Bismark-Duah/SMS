@@ -146,12 +146,26 @@ def create_department(
     current_user: User = Depends(get_current_user)
 ):
     _check_admin(current_user)
+    school_id = get_school_id(current_user)
+    if school_id:
+        from ..models import School
+        sch = db.query(School).filter(School.id == school_id).first()
+        if sch and sch.school_mode == "BASIC_ONLY":
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid Operation: Basic Schools (Nursery/Primary/JHS) do not utilize HOD departments."
+            )
 
-    # Check unique constraints
-    if db.query(Department).filter(Department.name == payload.name).first():
-        raise HTTPException(status_code=400, detail="Department name already exists")
-    if db.query(Department).filter(Department.code == payload.code).first():
-        raise HTTPException(status_code=400, detail="Department code already exists")
+    # Check unique constraints within this school
+    name_q = db.query(Department).filter(Department.name == payload.name)
+    code_q = db.query(Department).filter(Department.code == payload.code)
+    if school_id is not None:
+        name_q = name_q.filter(Department.school_id == school_id)
+        code_q = code_q.filter(Department.school_id == school_id)
+    if name_q.first():
+        raise HTTPException(status_code=400, detail="Department name already exists in your school")
+    if code_q.first():
+        raise HTTPException(status_code=400, detail="Department code already exists in your school")
 
     # Verify HOD exists and is teacher/admin
     if payload.hod_id:
@@ -164,7 +178,6 @@ def create_department(
     if payload.subject_ids:
         subjects = db.query(Subject).filter(Subject.id.in_(payload.subject_ids)).all()
 
-    school_id = get_school_id(current_user)
     db_dept = Department(
         name=payload.name,
         code=payload.code,
@@ -204,15 +217,18 @@ def update_department(
         query = query.filter(Department.school_id == school_id)
     db_dept = query.first()
     if not db_dept:
-        raise HTTPException(status_code=404, detail="Department not found")
+        raise HTTPException(status_code=404, detail="Department not found in your school")
 
-    # Check unique constraints
-    dup_name = db.query(Department).filter(Department.name == payload.name, Department.id != id).first()
-    if dup_name:
-        raise HTTPException(status_code=400, detail="Department name already exists")
-    dup_code = db.query(Department).filter(Department.code == payload.code, Department.id != id).first()
-    if dup_code:
-        raise HTTPException(status_code=400, detail="Department code already exists")
+    # Check unique constraints within this school
+    dup_name = db.query(Department).filter(Department.name == payload.name, Department.id != id)
+    dup_code = db.query(Department).filter(Department.code == payload.code, Department.id != id)
+    if school_id is not None:
+        dup_name = dup_name.filter(Department.school_id == school_id)
+        dup_code = dup_code.filter(Department.school_id == school_id)
+    if dup_name.first():
+        raise HTTPException(status_code=400, detail="Department name already exists in your school")
+    if dup_code.first():
+        raise HTTPException(status_code=400, detail="Department code already exists in your school")
 
     # Verify HOD
     if payload.hod_id:
@@ -254,10 +270,13 @@ def delete_department(
     current_user: User = Depends(get_current_user)
 ):
     _check_admin(current_user)
-
-    db_dept = db.query(Department).filter(Department.id == id).first()
+    school_id = get_school_id(current_user)
+    query = db.query(Department).filter(Department.id == id)
+    if school_id is not None:
+        query = query.filter(Department.school_id == school_id)
+    db_dept = query.first()
     if not db_dept:
-        raise HTTPException(status_code=404, detail="Department not found")
+        raise HTTPException(status_code=404, detail="Department not found in your school")
 
     db.delete(db_dept)
     db.commit()

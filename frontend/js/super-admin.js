@@ -13,6 +13,45 @@ window.escapeJsQuotes = function(str) {
   return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 };
 
+// ── Enterprise 4-Tab Navigation Controller ─────────────────────────────────
+window.switchSuperAdminTab = function(tabName) {
+  const tabPanes = document.querySelectorAll('.sa-tab-pane');
+  const tabBtns = document.querySelectorAll('.sa-tab-btn');
+
+  tabPanes.forEach(pane => pane.classList.remove('active'));
+  tabBtns.forEach(btn => btn.classList.remove('active'));
+
+  const targetPane = document.getElementById(`tab-${tabName}`);
+  if (targetPane) targetPane.classList.add('active');
+
+  const activeBtn = Array.from(tabBtns).find(b => b.getAttribute('onclick')?.includes(tabName));
+  if (activeBtn) activeBtn.classList.add('active');
+
+  try {
+    localStorage.setItem('superadmin_active_tab', tabName);
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', `#${tabName}`);
+    }
+  } catch (_) {}
+};
+
+// Initialize active tab from hash or localStorage
+document.addEventListener('DOMContentLoaded', () => {
+  const hashTab = (window.location.hash || '').replace('#', '');
+  const storedTab = localStorage.getItem('superadmin_active_tab');
+  const validTabs = ['overview', 'schools', 'security', 'operations'];
+  const activeTab = validTabs.includes(hashTab) ? hashTab : (validTabs.includes(storedTab) ? storedTab : 'overview');
+  window.switchSuperAdminTab(activeTab);
+});
+
+window.logoutSuperAdmin = function() {
+  sessionStorage.clear();
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = 'auth.html?msg=Logged+out+successfully';
+};
+
 const modal = document.getElementById('newSchoolModal');
 const form = document.getElementById('newSchoolForm');
 
@@ -22,11 +61,11 @@ window.openNewSchoolModal = function() {
   if (uInput && !uInput.dataset.userTyped) uInput.value = '';
   const pInput = document.getElementById('adminPassword');
   if (pInput && !pInput.dataset.userTyped) pInput.value = '';
-  if (modal) modal.classList.add('active');
+  if (modal) modal.style.display = 'flex';
 };
 
 window.closeNewSchoolModal = function() {
-  if (modal) modal.classList.remove('active');
+  if (modal) modal.style.display = 'none';
   if (form) form.reset();
 };
 
@@ -87,6 +126,7 @@ window.loadSuperAdminDashboard = async function() {
 
     // Populate KPIs
     if (document.getElementById('kpiTotalSchools')) document.getElementById('kpiTotalSchools').textContent = data.total_schools || 0;
+    if (document.getElementById('tabBadgeSchoolCount')) document.getElementById('tabBadgeSchoolCount').textContent = data.total_schools || 0;
     const activeBadge = document.getElementById('kpiActiveSchoolsBadge');
     if (activeBadge) activeBadge.textContent = `${data.active_schools || 0} Active / ${data.total_schools || 0} Total`;
 
@@ -317,72 +357,68 @@ window.renderSchoolsDirectory = function(schoolsList) {
     const statusClass = s.status === 'ACTIVE' ? 'status-active' : 'status-suspended';
     const boardingVal = s.boarding_type || 'BOARDING_AND_DAY';
 
-    // Profile Badge
-    let profileBadge = '';
+    // Profile & Stage Badge
+    let stageBadge = '';
     if (s.school_mode === 'BASIC_ONLY') {
-      profileBadge = `<span class="badge-mode badge-basic" style="display:inline-flex; align-items:center; gap:4px; padding:4px 10px; font-size:0.8rem;" title="Basic School Profile (KG - JHS)">🎯 Basic School</span>`;
+      stageBadge = `<span class="badge-mode badge-basic" title="Basic School (KG - JHS)">🎯 Basic School</span>`;
     } else if (s.school_mode === 'SHS_ONLY') {
-      profileBadge = `<span class="badge-mode badge-shs" style="display:inline-flex; align-items:center; gap:4px; padding:4px 10px; font-size:0.8rem;" title="Senior High School Profile (SHS 1 - 3, CSSPS, WAEC)">🏛️ SHS Profile</span>`;
+      stageBadge = `<span class="badge-mode badge-shs" title="Senior High School (SHS 1 - 3)">🏛️ Senior High</span>`;
     } else {
-      profileBadge = `<span class="badge-mode badge-combined" style="display:inline-flex; align-items:center; gap:4px; padding:4px 10px; font-size:0.8rem;" title="Combined Multi-Tier Profile (Basic + SHS)">🌐 Combined</span>`;
+      stageBadge = `<span class="badge-mode badge-combined" title="Combined (Basic + SHS)">🌐 Combined</span>`;
     }
 
+    let boardingLabel = boardingVal === 'BOARDING_AND_DAY' ? 'Boarding & Day' : (boardingVal === 'BOARDING_ONLY' ? 'Boarding Only' : 'Day Only');
+
     return `
-      <tr style="border-bottom: 1px solid var(--border-color, #334155); transition: background 0.15s;">
+      <tr style="border-bottom: 1px solid var(--sa-card-border); transition: background 0.15s;">
         <!-- 1. School Identity -->
-        <td style="padding:10px 12px;">
-          <div style="font-weight:700; font-size:0.92rem; color:#fff; margin-bottom:3px;">${s.name}</div>
-          <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#94a3b8;">
-            <code style="background:rgba(255,255,255,0.08); padding:1px 5px; border-radius:4px; font-weight:700; color:#cbd5e1;">${s.code}</code>
+        <td style="padding:12px 14px;">
+          <div style="font-weight:700; font-size:0.92rem; color:#fff; display:flex; align-items:center; gap:8px;">
+            <span>🏫</span>
+            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:320px;" title="${s.name}">${s.name}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; font-size:0.75rem; color:var(--sa-text-muted); margin-top:3px;">
+            <code style="background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; font-weight:700; color:#cbd5e1;">${s.code}</code>
             <span>•</span>
-            <span style="font-weight:600;">ID: #${s.id}</span>
+            <span>ID: #${s.id}</span>
+            ${s.subdomain ? `<span>•</span> <span style="color:#38bdf8;">${s.subdomain}.domain</span>` : ''}
           </div>
         </td>
 
-        <!-- 2. Academic & Boarding Config -->
-        <td style="padding:10px 12px; width:160px;">
-          <div style="display:flex; flex-direction:column; gap:5px;">
-            <select onchange="window.changeSchoolMode(${s.id}, this.value, this.closest('tr').querySelector('.boarding-select').value)"
-                    style="width:100%; box-sizing:border-box; padding:4px 6px; font-size:0.78rem; border-radius:5px; background:#1e293b; color:#fff; border:1px solid #6366f1; cursor:pointer;" title="Academic Mode">
-              <option value="SHS_ONLY"   ${s.school_mode === 'SHS_ONLY'   ? 'selected' : ''}>SHS Only</option>
-              <option value="BASIC_ONLY" ${s.school_mode === 'BASIC_ONLY' ? 'selected' : ''}>Basic Only</option>
-              <option value="COMBINED"   ${s.school_mode === 'COMBINED'   ? 'selected' : ''}>Combined</option>
-            </select>
-            <select class="boarding-select"
-                    onchange="window.changeSchoolBoarding(${s.id}, this.value)"
-                    style="width:100%; box-sizing:border-box; padding:4px 6px; font-size:0.78rem; border-radius:5px; background:#1e293b; color:#fff; border:1px solid #0891b2; cursor:pointer;" title="Boarding Setup">
-              <option value="BOARDING_AND_DAY" ${boardingVal === 'BOARDING_AND_DAY' ? 'selected' : ''}>Boarding &amp; Day</option>
-              <option value="DAY_ONLY"         ${boardingVal === 'DAY_ONLY'         ? 'selected' : ''}>Day Only</option>
-              <option value="BOARDING_ONLY"     ${boardingVal === 'BOARDING_ONLY'     ? 'selected' : ''}>Boarding Only</option>
-            </select>
+        <!-- 2. Stage & Mode -->
+        <td style="padding:12px 14px;">
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <div>${stageBadge}</div>
+            <div style="font-size:0.75rem; color:var(--sa-text-muted);">${boardingLabel}</div>
           </div>
         </td>
 
-        <!-- 3. Active Profile Badge -->
-        <td style="padding:10px 12px; text-align:center; white-space:nowrap;">
-          ${profileBadge}
+        <!-- 3. Enrollment -->
+        <td style="padding:12px 14px; text-align:center;">
+          <div style="font-size:0.92rem; font-weight:700; color:#fff;">${(s.student_count || 0).toLocaleString()} <span style="font-size:0.72rem; font-weight:500; opacity:0.7;">Students</span></div>
+          <div style="font-size:0.72rem; color:var(--sa-text-muted); margin-top:2px;">Enrolled Capacity</div>
         </td>
 
-        <!-- 4. Enrollment & Staff Counts -->
-        <td style="padding:10px 12px; text-align:center; white-space:nowrap;">
-          <div style="font-size:0.92rem; font-weight:700; color:#fff;">${s.student_count} <span style="font-size:0.72rem; font-weight:500; opacity:0.7;">Students</span></div>
-          <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">${s.user_count} Staff</div>
+        <!-- 4. Staff & Users -->
+        <td style="padding:12px 14px; text-align:center;">
+          <div style="font-size:0.88rem; font-weight:600; color:#cbd5e1;">${s.user_count || 0} Staff</div>
+          <div style="font-size:0.72rem; color:var(--sa-text-muted); margin-top:2px;">Accounts</div>
         </td>
 
         <!-- 5. Status Pill -->
-        <td style="padding:10px 12px; text-align:center; white-space:nowrap;">
-          <span class="${statusClass}" style="display:inline-flex; align-items:center; gap:4px; font-size:0.8rem; font-weight:700;">● ${s.status}</span>
+        <td style="padding:12px 14px; text-align:center; white-space:nowrap;">
+          <span class="${statusClass}">● ${s.status}</span>
         </td>
 
-        <!-- 6. Command Actions Toolbar -->
-        <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
-          <div style="display:inline-flex; gap:5px; align-items:center; justify-content:flex-end;">
-            <button class="btn" style="padding:5px 9px; font-size:0.78rem; font-weight:600; background:rgba(99,102,241,0.25); border-color:#818cf8; color:#e0e7ff;" onclick="window.openEditSchoolModal(${s.id})" title="Edit School Registration &amp; Profile">✏️ Edit</button>
-            <button class="btn primary" style="padding:5px 10px; font-size:0.78rem; font-weight:600;" onclick="window.enterSchoolView(${s.id}, '${window.escapeJsQuotes(s.name)}', '${s.school_mode}', '${window.escapeJsQuotes(s.code || '')}')" title="Enter live school view">👁 Enter</button>
-            <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:rgba(99,102,241,0.2); border-color:#6366f1; color:#a5b4fc;" onclick="window.openAccreditationModal(${s.id}, '${window.escapeJsQuotes(s.name)}', '${s.school_mode}')" title="Configure accredited tracks and active subjects">⚙️ Accredit</button>
-            <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:#0284c7; border-color:#0369a1; color:#fff;" onclick="window.downloadSchoolBackup(${s.id}, '${s.code}')" title="Download school backup snapshot">📥 Backup</button>
-            <button class="btn" style="padding:5px 8px; font-size:0.78rem; background:${s.status === 'ACTIVE' ? '#d97706' : '#10b981'}; border-color:${s.status === 'ACTIVE' ? '#b45309' : '#059669'}; color:#fff;" onclick="window.toggleSchoolStatus(${s.id}, '${s.status}')" title="${s.status === 'ACTIVE' ? 'Suspend School Account' : 'Activate School'}">${s.status === 'ACTIVE' ? '⏸ Suspend' : '▶ Activate'}</button>
-            <button class="btn danger" style="padding:5px 8px; font-size:0.78rem; background:#dc2626; border-color:#b91c1c;" onclick="window.openDeleteSchoolModal(${s.id}, '${window.escapeJsQuotes(s.name)}', '${window.escapeJsQuotes(s.code || '')}')" title="Permanently Purge School">🗑 Delete</button>
+        <!-- 6. Actions -->
+        <td style="padding:12px 14px; text-align:right; white-space:nowrap;">
+          <div style="display:inline-flex; gap:6px; align-items:center; justify-content:flex-end;">
+            <button class="btn-manage" onclick="window.openEditSchoolModal(${s.id})" title="Configure School Governance & Profile">
+              ⚙️ Manage School
+            </button>
+            <button class="btn-enter" onclick="window.enterSchoolView(${s.id}, '${window.escapeJsQuotes(s.name)}', '${s.school_mode}', '${window.escapeJsQuotes(s.code || '')}')" title="Enter live school view">
+              👁️ Enter View
+            </button>
           </div>
         </td>
       </tr>
@@ -411,27 +447,59 @@ window.loadMasterAuditStream = async function() {
 
     container.innerHTML = data.logs.map(log => {
       let actionBadgeColor = '#6366f1';
-      if (log.action.includes('DELETE') || log.action.includes('DEPROVISION') || log.action.includes('PURGE')) actionBadgeColor = '#ef4444';
-      else if (log.action.includes('UPDATE') || log.action.includes('EDIT')) actionBadgeColor = '#f59e0b';
-      else if (log.action.includes('CREATE') || log.action.includes('PAYMENT') || log.action.includes('ENROLL')) actionBadgeColor = '#10b981';
+      let actionIcon = '📝';
 
-      const timeFormatted = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'Just now';
+      if (log.action.includes('DELETE') || log.action.includes('DEPROVISION') || log.action.includes('PURGE')) {
+        actionBadgeColor = '#ef4444';
+        actionIcon = '⚠️';
+      } else if (log.action.includes('UPDATE') || log.action.includes('EDIT') || log.action.includes('SETTINGS')) {
+        actionBadgeColor = '#f59e0b';
+        actionIcon = '⚙️';
+      } else if (log.action.includes('PAYMENT') || log.action.includes('FEE')) {
+        actionBadgeColor = '#10b981';
+        actionIcon = '💳';
+      } else if (log.action.includes('LOGIN') || log.action.includes('AUTH')) {
+        actionBadgeColor = '#38bdf8';
+        actionIcon = '🔑';
+      } else if (log.action.includes('ENROLL')) {
+        actionBadgeColor = '#a855f7';
+        actionIcon = '🎓';
+      }
+
+      const timeFormatted = log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Just now';
+      const dateFormatted = log.timestamp ? new Date(log.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+
+      // Clean, human-friendly details summary
+      let summaryText = log.details || 'Administrative mutation executed';
+      let jsonViewer = '';
+
+      if (typeof summaryText === 'string' && (summaryText.startsWith('{') || summaryText.startsWith('['))) {
+        try {
+          const parsed = JSON.parse(summaryText);
+          const keys = Object.keys(parsed);
+          summaryText = `Updated ${keys.join(', ')} fields`;
+          jsonViewer = `<details style="margin-top:4px; font-size:0.75rem; color:#94a3b8; cursor:pointer;"><summary>View Raw JSON Payload</summary><pre style="background:rgba(0,0,0,0.4); padding:6px; border-radius:4px; overflow-x:auto; margin:4px 0 0 0;">${JSON.stringify(parsed, null, 2)}</pre></details>`;
+        } catch (_) {}
+      }
 
       return `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); font-size:0.82rem;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="background:rgba(255,255,255,0.08); font-weight:700; color:#e2e8f0; padding:2px 6px; border-radius:4px; font-size:0.74rem;">
-              ${log.school_code}
-            </span>
-            <span style="font-weight:600; color:#fff;">${log.user_name}</span>
-            <span style="font-size:0.74rem; padding:1px 6px; border-radius:4px; background:${actionBadgeColor}22; color:${actionBadgeColor}; font-weight:700;">
-              ${log.action}
-            </span>
-            <span style="color:#94a3b8; font-size:0.8rem;">${log.details || ''}</span>
+        <div class="audit-card">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <span style="font-size:1.1rem;">${actionIcon}</span>
+              <span class="audit-badge" style="background:${actionBadgeColor}22; color:${actionBadgeColor}; border:1px solid ${actionBadgeColor}44;">
+                ${log.action}
+              </span>
+              <span style="font-weight:700; color:#fff;">${log.user_name || 'System Operator'}</span>
+              <span style="color:#94a3b8; font-size:0.82rem;">${summaryText}</span>
+              ${log.school_code ? `<span style="background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; font-size:0.72rem; color:#cbd5e1;">${log.school_code}</span>` : ''}
+            </div>
+            <div style="font-size:0.75rem; color:#64748b; white-space:nowrap; text-align:right;">
+              <div>${timeFormatted}</div>
+              <div style="font-size:0.7rem;">${dateFormatted}</div>
+            </div>
           </div>
-          <div style="font-size:0.74rem; color:#64748b; white-space:nowrap; margin-left:12px;">
-            ${timeFormatted}
-          </div>
+          ${jsonViewer}
         </div>
       `;
     }).join('');

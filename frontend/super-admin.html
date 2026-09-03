@@ -4,374 +4,758 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>eduManage360 Master Portal — Unified Multi-School Administration</title>
-    <meta name="description" content="Central Master Management Portal for all registered schools in eduManage360." />
-    <link rel="stylesheet" href="css/styles.css?v=9.8" />
-    <script src="js/featureGate.js?v=9.8"></script>
-    <script src="js/theme.js?v=9.8"></script>
+    <meta name="description" content="Central Executive Management Console for all registered schools in eduManage360." />
+    <link rel="stylesheet" href="css/styles.css?v=9.9" />
+    <script src="js/featureGate.js?v=9.9"></script>
+    <script src="js/theme.js?v=9.9"></script>
     <style>
-      .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
-      .kpi-card { background: var(--card-bg, #1e293b); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 16px; text-align: center; }
-      .kpi-value { font-size: 1.8rem; font-weight: 700; color: var(--primary-color, #6366f1); margin: 6px 0; }
-      .badge-mode { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; color: #fff; }
-      .badge-shs { background-color: #198754; }
-      .badge-basic { background-color: #0d6efd; }
-      .badge-combined { background-color: #6f42c1; }
-      .badge-boarding { background-color: #0891b2; }
-      .badge-day { background-color: #b45309; }
-      .status-active { color: #10b981; font-weight: 600; }
-      .status-suspended { color: #ef4444; font-weight: 600; }
-      .profile-preview { font-size: 0.72rem; opacity: 0.75; margin-top: 2px; }
-      .profile-preview .feat-on  { color: #4ade80; }
-      .profile-preview .feat-off { color: #64748b; text-decoration: line-through; }
+      /* ── Enterprise Design Tokens ────────────────────────────────────────── */
+      :root {
+        --sa-primary: #6366f1;
+        --sa-primary-hover: #4f46e5;
+        --sa-surface: #0f172a;
+        --sa-card-bg: rgba(30, 41, 59, 0.7);
+        --sa-card-border: rgba(255, 255, 255, 0.08);
+        --sa-text-main: #f8fafc;
+        --sa-text-muted: #94a3b8;
+        --sa-success: #10b981;
+        --sa-warning: #f59e0b;
+        --sa-danger: #ef4444;
+        --sa-info: #0ea5e9;
+      }
+
+      body {
+        background: #090d16;
+        color: var(--sa-text-main);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+
+      .sa-container {
+        max-width: 1440px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 20px 28px;
+        box-sizing: border-box;
+      }
+
+      /* ── Topbar / Header ─────────────────────────────────────────────────── */
+      .sa-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--sa-card-border);
+        margin-bottom: 20px;
+      }
+
+      .sa-brand-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        letter-spacing: -0.02em;
+      }
+
+      .sa-brand-pill {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: rgba(99, 102, 241, 0.15);
+        color: #818cf8;
+        padding: 3px 8px;
+        border-radius: 6px;
+        border: 1px solid rgba(99, 102, 241, 0.3);
+      }
+
+      /* ── Segmented Navigation Tabs ───────────────────────────────────────── */
+      .sa-nav-tabs {
+        display: flex;
+        gap: 8px;
+        border-bottom: 1px solid var(--sa-card-border);
+        margin-bottom: 24px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+
+      .sa-tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--sa-text-muted);
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        border-radius: 6px 6px 0 0;
+      }
+
+      .sa-tab-btn:hover {
+        color: var(--sa-text-main);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .sa-tab-btn.active {
+        color: #818cf8;
+        border-bottom: 2px solid var(--sa-primary);
+        background: rgba(99, 102, 241, 0.08);
+      }
+
+      .sa-tab-badge {
+        font-size: 0.72rem;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2px 6px;
+        border-radius: 10px;
+        color: #e2e8f0;
+      }
+
+      .sa-tab-btn.active .sa-tab-badge {
+        background: var(--sa-primary);
+        color: #fff;
+      }
+
+      /* ── Tab Panes ───────────────────────────────────────────────────────── */
+      .sa-tab-pane {
+        display: none;
+        animation: fadeIn 0.2s ease-in-out;
+      }
+
+      .sa-tab-pane.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* ── KPI Cards ───────────────────────────────────────────────────────── */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .kpi-card {
+        background: var(--sa-card-bg);
+        border: 1px solid var(--sa-card-border);
+        backdrop-filter: blur(12px);
+        border-radius: 12px;
+        padding: 16px 18px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      .kpi-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--sa-text-muted);
+      }
+
+      .kpi-value {
+        font-size: 1.85rem;
+        font-weight: 800;
+        margin: 6px 0 4px;
+        letter-spacing: -0.03em;
+      }
+
+      .kpi-meta {
+        font-size: 0.75rem;
+        color: var(--sa-text-muted);
+      }
+
+      /* ── Clean Data Tables ───────────────────────────────────────────────── */
+      .sa-table-card {
+        background: var(--sa-card-bg);
+        border: 1px solid var(--sa-card-border);
+        border-radius: 12px;
+        padding: 20px;
+        backdrop-filter: blur(12px);
+      }
+
+      .sa-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+        text-align: left;
+      }
+
+      .sa-table th {
+        padding: 12px 14px;
+        color: var(--sa-text-muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--sa-card-border);
+        background: rgba(15, 23, 42, 0.4);
+      }
+
+      .sa-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        vertical-align: middle;
+      }
+
+      .sa-table tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      /* ── Badges ──────────────────────────────────────────────────────────── */
+      .badge-mode {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .badge-shs { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+      .badge-basic { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
+      .badge-combined { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+      .status-active { color: #34d399; font-weight: 600; font-size: 0.8rem; }
+      .status-suspended { color: #f87171; font-weight: 600; font-size: 0.8rem; }
+
+      /* ── Action Buttons ──────────────────────────────────────────────────── */
+      .btn-manage {
+        background: rgba(99, 102, 241, 0.15);
+        color: #a5b4fc;
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .btn-manage:hover {
+        background: var(--sa-primary);
+        color: #fff;
+      }
+
+      .btn-enter {
+        background: rgba(16, 185, 129, 0.15);
+        color: #6ee7b7;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .btn-enter:hover {
+        background: var(--sa-success);
+        color: #fff;
+      }
+
+      /* ── Audit Stream Cards ──────────────────────────────────────────────── */
+      .audit-card {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid var(--sa-card-border);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 0.84rem;
+        transition: background 0.15s ease;
+      }
+      .audit-card:hover {
+        background: rgba(30, 41, 59, 0.6);
+      }
+      .audit-badge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
     </style>
   </head>
   <body>
-    <main class="page" style="max-width:1440px; width:100%; margin:0 auto; padding:24px 32px; box-sizing:border-box;">
-      <header class="topbar">
+    <main class="sa-container">
+      
+      <!-- ── Executive Header ───────────────────────────────────────────────── -->
+      <header class="sa-header">
         <div>
-          <h1 style="margin:0;font-size:1.3rem;">🌐 eduManage360 Master Portal</h1>
-          <p style="margin:0;opacity:.7;font-size:.85rem;">Unified multi-school administration portal.</p>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <h1 class="sa-brand-title">🌐 eduManage360</h1>
+            <span class="sa-brand-pill">Master Console</span>
+          </div>
+          <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--sa-text-muted);">
+            Executive Multi-Tenant Governance &amp; Cloud Telemetry
+          </p>
         </div>
-        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
-          <button class="btn" style="background:#0284c7; border-color:#0369a1; color:#fff; font-weight:600;" onclick="openCloudSyncModal()">🔄 Pull from Cloud</button>
-          <button class="btn primary" onclick="openNewSchoolModal()">+ Register New School</button>
+
+        <div style="display:flex; gap:10px; align-items:center;">
+          <span id="headerCloudSyncPill" class="badge-mode" style="background:rgba(14,165,233,0.15); color:#38bdf8; border:1px solid rgba(14,165,233,0.3); padding:5px 12px;">
+            ● Cloud Engine Connected
+          </span>
+          <button class="btn" style="padding:7px 12px; font-size:0.82rem;" onclick="window.loadSuperAdminDashboard()">⚡ Refresh</button>
+          <a href="dashboard.html" class="btn" style="padding:7px 12px; font-size:0.82rem; text-decoration:none;">🏫 School View</a>
+          <button class="btn" style="padding:7px 12px; font-size:0.82rem; background:#334155;" onclick="window.logoutSuperAdmin()">🚪 Logout</button>
         </div>
       </header>
 
-      <!-- KPI Summary Cards -->
-      <div class="kpi-grid">
-        <div class="kpi-card" style="background:linear-gradient(135deg, rgba(99,102,241,0.12), rgba(30,41,59,0.8));">
-          <div style="font-size:0.82rem; opacity:0.8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Registered Schools</div>
-          <div class="kpi-value" id="kpiTotalSchools">...</div>
-          <div style="font-size:0.75rem; opacity:0.8; color:#818cf8;" id="kpiActiveSchoolsBadge">Active Network</div>
-        </div>
-        <div class="kpi-card" style="background:linear-gradient(135deg, rgba(16,185,129,0.12), rgba(30,41,59,0.8));">
-          <div style="font-size:0.82rem; opacity:0.8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Total Enrolled Students</div>
-          <div class="kpi-value" id="kpiTotalStudents" style="color:#10b981;">...</div>
-          <div style="font-size:0.75rem; opacity:0.8; color:#6ee7b7;" id="kpiStudentsDemographics">Loading split...</div>
-        </div>
-        <div class="kpi-card" style="background:linear-gradient(135deg, rgba(14,165,233,0.12), rgba(30,41,59,0.8));">
-          <div style="font-size:0.82rem; opacity:0.8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">System Users &amp; Staff</div>
-          <div class="kpi-value" id="kpiTotalUsers" style="color:#0ea5e9;">...</div>
-          <div style="font-size:0.75rem; opacity:0.8; color:#7dd3fc;">Admins, Teachers, Staff</div>
-        </div>
-        <div class="kpi-card" style="background:linear-gradient(135deg, rgba(245,158,11,0.12), rgba(30,41,59,0.8));">
-          <div style="font-size:0.82rem; opacity:0.8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Network Fee Collections</div>
-          <div class="kpi-value" id="kpiTotalFees" style="color:#f59e0b;">...</div>
-          <div style="font-size:0.75rem; opacity:0.8; color:#fcd34d;" id="kpiFeeRecoveryRate">Recovery: ...</div>
-        </div>
-        <div class="kpi-card" style="background:linear-gradient(135deg, rgba(139,92,246,0.12), rgba(30,41,59,0.8));">
-          <div style="font-size:0.82rem; opacity:0.8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Database &amp; Storage Health</div>
-          <div class="kpi-value" id="kpiDbSize" style="color:#a78bfa;">...</div>
-          <div style="font-size:0.75rem; opacity:0.8; color:#c4b5fd;" id="kpiBackupStatus">Last Backup: ...</div>
-        </div>
-      </div>
+      <!-- ── 4-Segmented Executive Navigation Tab Bar ────────────────────────── -->
+      <nav class="sa-nav-tabs" id="superAdminTabs">
+        <button class="sa-tab-btn active" onclick="window.switchSuperAdminTab('overview')">
+          <span>📊</span> Overview &amp; Telemetry
+        </button>
+        <button class="sa-tab-btn" onclick="window.switchSuperAdminTab('schools')">
+          <span>🏫</span> School Directory &amp; Governance
+          <span class="sa-tab-badge" id="tabBadgeSchoolCount">0</span>
+        </button>
+        <button class="sa-tab-btn" onclick="window.switchSuperAdminTab('security')">
+          <span>🛡️</span> Security &amp; Audit Trail
+        </button>
+        <button class="sa-tab-btn" onclick="window.switchSuperAdminTab('operations')">
+          <span>⚙️</span> System Operations &amp; Tools
+        </button>
+      </nav>
 
-      <!-- Multi-School Comparative Visual Analytics Grid -->
-      <section style="display:grid; grid-template-columns:repeat(auto-fit, minmax(380px, 1fr)); gap:20px; margin-bottom:24px;">
-        <!-- Card 1: Student Enrollment Comparison -->
-        <div class="card" style="padding:18px 20px; border-radius:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border-color, #334155); padding-bottom:8px;">
-            <h4 style="margin:0; font-size:0.98rem; display:flex; align-items:center; gap:8px;">
-              <span>📊</span> Enrolment Distribution by School
-            </h4>
-            <span style="font-size:0.75rem; color:#94a3b8;" id="enrolmentTotalHeader">Total: 0</span>
+      <!-- ══════════════════════════════════════════════════════════════════════ -->
+      <!-- TAB 1: OVERVIEW & TELEMETRY                                            -->
+      <!-- ══════════════════════════════════════════════════════════════════════ -->
+      <section class="sa-tab-pane active" id="tab-overview">
+        
+        <!-- KPI Summary Row -->
+        <div class="kpi-grid">
+          <div class="kpi-card" style="border-left:4px solid var(--sa-primary);">
+            <div class="kpi-label">Registered Schools</div>
+            <div class="kpi-value" id="kpiTotalSchools" style="color:var(--sa-primary);">...</div>
+            <div class="kpi-meta" id="kpiActiveSchoolsBadge">Active Network</div>
           </div>
-          <div id="comparativeEnrolmentContainer" style="display:flex; flex-direction:column; gap:12px; max-height:280px; overflow-y:auto; padding-right:4px;">
-            <p style="opacity:0.7; font-size:0.85rem; text-align:center; padding:20px;">Loading enrollment data...</p>
+          <div class="kpi-card" style="border-left:4px solid var(--sa-success);">
+            <div class="kpi-label">Total Enrolled Students</div>
+            <div class="kpi-value" id="kpiTotalStudents" style="color:var(--sa-success);">...</div>
+            <div class="kpi-meta" id="kpiStudentsDemographics">Loading demographics...</div>
           </div>
-        </div>
-
-        <!-- Card 2: Fee Recovery & Revenue Comparison -->
-        <div class="card" style="padding:18px 20px; border-radius:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border-color, #334155); padding-bottom:8px;">
-            <h4 style="margin:0; font-size:0.98rem; display:flex; align-items:center; gap:8px;">
-              <span>💳</span> Financial Recovery &amp; Revenue
-            </h4>
-            <span style="font-size:0.75rem; color:#10b981; font-weight:600;" id="feesCollectedHeader">GH₵ 0.00</span>
+          <div class="kpi-card" style="border-left:4px solid var(--sa-info);">
+            <div class="kpi-label">Staff &amp; Educators</div>
+            <div class="kpi-value" id="kpiTotalUsers" style="color:var(--sa-info);">...</div>
+            <div class="kpi-meta">Administrators, Teachers &amp; Staff</div>
           </div>
-          <div id="comparativeFeesContainer" style="display:flex; flex-direction:column; gap:12px; max-height:280px; overflow-y:auto; padding-right:4px;">
-            <p style="opacity:0.7; font-size:0.85rem; text-align:center; padding:20px;">Loading fee records...</p>
+          <div class="kpi-card" style="border-left:4px solid var(--sa-warning);">
+            <div class="kpi-label">Network Fee Collections</div>
+            <div class="kpi-value" id="kpiTotalFees" style="color:var(--sa-warning);">...</div>
+            <div class="kpi-meta" id="kpiFeeRecoveryRate">Recovery: ...</div>
+          </div>
+          <div class="kpi-card" style="border-left:4px solid #a855f7;">
+            <div class="kpi-label">Database Health &amp; Latency</div>
+            <div class="kpi-value" id="kpiDbSize" style="color:#c084fc;">...</div>
+            <div class="kpi-meta" id="kpiBackupStatus">Last Backup: ...</div>
           </div>
         </div>
 
-        <!-- Card 3: Institutional Profiles & Demographics -->
-        <div class="card" style="padding:18px 20px; border-radius:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border-color, #334155); padding-bottom:8px;">
-            <h4 style="margin:0; font-size:0.98rem; display:flex; align-items:center; gap:8px;">
-              <span>🌐</span> Network Profiles &amp; Demographics
-            </h4>
-            <span style="font-size:0.75rem; color:#94a3b8;">Ghana National Grid</span>
+        <!-- Visual Analytics Grid -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:20px; margin-bottom:24px;">
+          
+          <!-- Enrolment Distribution -->
+          <div class="sa-table-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:8px;">
+              <h3 style="margin:0; font-size:1rem; display:flex; align-items:center; gap:8px;">
+                <span>📊</span> Enrolment Distribution
+              </h3>
+              <span style="font-size:0.75rem; color:var(--sa-text-muted);" id="enrolmentTotalHeader">Total: 0</span>
+            </div>
+            <div id="comparativeEnrolmentContainer" style="display:flex; flex-direction:column; gap:12px; max-height:280px; overflow-y:auto; padding-right:4px;">
+              <p style="opacity:0.7; font-size:0.85rem; text-align:center; padding:20px;">Loading enrollment data...</p>
+            </div>
           </div>
-          <div id="networkDemographicsContainer" style="display:flex; flex-direction:column; gap:14px;">
-            <!-- Rendered dynamically via renderNetworkDemographics -->
+
+          <!-- Financial Collections -->
+          <div class="sa-table-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:8px;">
+              <h3 style="margin:0; font-size:1rem; display:flex; align-items:center; gap:8px;">
+                <span>💳</span> Financial Recovery &amp; Revenue
+              </h3>
+              <span style="font-size:0.75rem; color:var(--sa-success); font-weight:600;" id="feesCollectedHeader">GH₵ 0.00</span>
+            </div>
+            <div id="comparativeFeesContainer" style="display:flex; flex-direction:column; gap:12px; max-height:280px; overflow-y:auto; padding-right:4px;">
+              <p style="opacity:0.7; font-size:0.85rem; text-align:center; padding:20px;">Loading fee records...</p>
+            </div>
           </div>
-        </div>
-      <!-- Master Multi-Tenant Sync & Telemetry Monitor -->
-      <section class="card" style="padding:18px 22px; border-radius:12px; margin-bottom:24px; border:1px solid rgba(14,165,233,0.3); background:linear-gradient(180deg, rgba(14,165,233,0.04) 0%, rgba(30,41,59,0.7) 100%);">
-        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; border-bottom:1px solid var(--border-color, #334155); padding-bottom:10px;">
-          <div>
-            <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
-              <span>📡</span> Multi-Tenant Real-Time Sync &amp; Telemetry Monitor
-            </h3>
-            <p style="margin:2px 0 0 0; font-size:0.8rem; color:#94a3b8;">Observe store-and-forward outbox queue metrics, delta sync health, and offline/online node connectivity across all institutions.</p>
-          </div>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <span id="syncMonitorNetworkBadge" class="badge-mode" style="background:#0284c7; padding:4px 10px; font-size:0.75rem;">Loading Sync Telemetry...</span>
-            <button type="button" class="btn" style="padding:6px 12px; font-size:0.8rem; background:#0284c7; border-color:#0369a1; color:#fff; font-weight:600;" onclick="window.triggerAllSchoolsSync()" id="btnSyncAllSchools">🔄 Sync All Network Nodes</button>
-            <button type="button" class="btn" style="padding:6px 10px; font-size:0.8rem;" onclick="window.loadSuperAdminSyncMonitor()">⚡ Refresh</button>
+
+          <!-- Institutional Demographics -->
+          <div class="sa-table-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:8px;">
+              <h3 style="margin:0; font-size:1rem; display:flex; align-items:center; gap:8px;">
+                <span>🌐</span> Institutional Breakdown
+              </h3>
+              <span style="font-size:0.75rem; color:var(--sa-text-muted);">Ghana National Grid</span>
+            </div>
+            <div id="networkDemographicsContainer" style="display:flex; flex-direction:column; gap:14px;"></div>
           </div>
         </div>
 
-        <!-- Sync Telemetry Mini-KPI Row -->
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;">
-          <div style="background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:8px; padding:10px 14px; text-align:center;">
-            <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Global Outbox Queue</div>
-            <div id="syncKpiPending" style="font-size:1.4rem; font-weight:700; color:#f59e0b; margin-top:2px;">0</div>
-            <div style="font-size:0.72rem; color:#64748b;">Pending deltas awaiting transmission</div>
+        <!-- Real-Time Sync & Telemetry Matrix -->
+        <div class="sa-table-card" style="border:1px solid rgba(14,165,233,0.3); background:linear-gradient(180deg, rgba(14,165,233,0.03) 0%, rgba(30,41,59,0.7) 100%);">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
+            <div>
+              <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+                <span>📡</span> Multi-Tenant Real-Time Sync &amp; Telemetry Matrix
+              </h3>
+              <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);">Monitor store-and-forward outbox queue deltas and node health across all schools.</p>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span id="syncMonitorNetworkBadge" class="badge-mode" style="background:rgba(2,132,199,0.2); color:#38bdf8; border:1px solid #0284c7;">Loading Sync...</span>
+              <button class="btn" style="padding:5px 10px; font-size:0.78rem; background:#0284c7; color:#fff;" onclick="window.triggerAllSchoolsSync()">🔄 Sync All Nodes</button>
+            </div>
           </div>
-          <div style="background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:8px; padding:10px 14px; text-align:center;">
-            <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Synchronized Records</div>
-            <div id="syncKpiSynced" style="font-size:1.4rem; font-weight:700; color:#10b981; margin-top:2px;">0</div>
-            <div style="font-size:0.72rem; color:#64748b;">Lifetime committed delta transactions</div>
-          </div>
-          <div style="background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:8px; padding:10px 14px; text-align:center;">
-            <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Cloud Gateway Engine</div>
-            <div id="syncKpiCloudGateway" style="font-size:0.92rem; font-weight:700; color:#38bdf8; margin-top:6px; word-break:break-all;">Local Loopback</div>
-            <div style="font-size:0.72rem; color:#64748b;" id="syncKpiGatewaySubtitle">Store &amp; Forward Active</div>
-          </div>
-        </div>
 
-        <!-- Sync Monitor Table -->
-        <div style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-            <thead>
-              <tr style="text-align:left; border-bottom:1px solid var(--border-color, #334155); color:#94a3b8;">
-                <th style="padding:8px 10px;">School Node</th>
-                <th style="padding:8px 10px; text-align:center;">Outbox Queue</th>
-                <th style="padding:8px 10px; text-align:center;">Lifetime Synced</th>
-                <th style="padding:8px 10px; text-align:center;">Last Synchronization</th>
-                <th style="padding:8px 10px; text-align:center;">Sync State</th>
-                <th style="padding:8px 10px; text-align:right;">Node Action</th>
-              </tr>
-            </thead>
-            <tbody id="syncMonitorTableBody">
-              <tr><td colspan="6" style="padding:16px; text-align:center; opacity:0.7;">Loading multi-tenant sync telemetry...</td></tr>
-            </tbody>
-          </table>
+          <div style="overflow-x:auto;">
+            <table class="sa-table">
+              <thead>
+                <tr>
+                  <th>School Node</th>
+                  <th style="text-align:center;">Outbox Queue</th>
+                  <th style="text-align:center;">Lifetime Synced</th>
+                  <th style="text-align:center;">Last Sync</th>
+                  <th style="text-align:center;">Node State</th>
+                  <th style="text-align:right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="syncMonitorTableBody">
+                <tr><td colspan="6" style="padding:16px; text-align:center; opacity:0.7;">Loading telemetry...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
-      <!-- Schools Directory Table & Toolbar -->
-      <section class="card" style="padding:18px 22px; border-radius:12px; margin-bottom:24px;">
-        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px;">
-          <div>
-            <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
-              <span>🏫</span> Registered Schools Directory
-            </h3>
-            <p style="margin:2px 0 0 0; font-size:0.8rem; color:#94a3b8;" id="directorySummarySubtitle">Managing all institutions in the network.</p>
-          </div>
+      <!-- ══════════════════════════════════════════════════════════════════════ -->
+      <!-- TAB 2: SCHOOL DIRECTORY & GOVERNANCE                                   -->
+      <!-- ══════════════════════════════════════════════════════════════════════ -->
+      <section class="sa-tab-pane" id="tab-schools">
+        <div class="sa-table-card">
+          
+          <!-- Toolbar -->
+          <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; border-bottom:1px solid var(--sa-card-border); padding-bottom:14px;">
+            <div>
+              <h3 style="margin:0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+                <span>🏫</span> Registered Institutions Directory
+              </h3>
+              <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);" id="directorySummarySubtitle">
+                Managing all institutions in the network.
+              </p>
+            </div>
 
-          <!-- Live Search & Profile Filters Toolbar -->
-          <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-            <input type="text" id="schoolSearchInput" name="no_autofill_school_search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="🔍 Search name or code..." oninput="window.filterSchoolsDirectory()"
-                   style="padding:6px 12px; font-size:0.85rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#fff; width:180px;" />
-            <select id="schoolModeFilter" onchange="window.filterSchoolsDirectory()"
-                    style="padding:6px 10px; font-size:0.82rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#fff; cursor:pointer;">
-              <option value="ALL">All Modes</option>
-              <option value="SHS_ONLY">SHS Only</option>
-              <option value="BASIC_ONLY">Basic Only</option>
-              <option value="COMBINED">Combined</option>
-            </select>
-            <select id="schoolBoardingFilter" onchange="window.filterSchoolsDirectory()"
-                    style="padding:6px 10px; font-size:0.82rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#fff; cursor:pointer;">
-              <option value="ALL">All Boarding</option>
-              <option value="BOARDING_AND_DAY">Boarding &amp; Day</option>
-              <option value="DAY_ONLY">Day Only</option>
-              <option value="BOARDING_ONLY">Boarding Only</option>
-            </select>
-          </div>
-        </div>
-
-        <div style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
-            <thead>
-              <tr style="text-align:left; border-bottom:2px solid var(--border-color, #334155); padding-bottom:8px;">
-                <th style="padding:10px 12px;">School Identity</th>
-                <th style="padding:10px 12px; width:170px;">Configuration</th>
-                <th style="padding:10px 12px; text-align:center; width:130px;">Profile</th>
-                <th style="padding:10px 12px; text-align:center; width:130px;">Enrollment</th>
-                <th style="padding:10px 12px; text-align:center; width:85px;">Status</th>
-                <th style="padding:10px 12px; text-align:right; width:270px;">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="schoolsTableBody">
-              <tr><td colspan="6" style="padding:20px; text-align:center; opacity:0.7;">Loading registered schools...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Master Real-Time Security & Activity Audit Stream -->
-      <section class="card" style="padding:18px 22px; border-radius:12px; margin-bottom:24px;">
-        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; border-bottom:1px solid var(--border-color, #334155); padding-bottom:10px;">
-          <div>
-            <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
-              <span>🛡️</span> Master Real-Time Security &amp; Activity Audit Stream
-            </h3>
-            <p style="margin:2px 0 0 0; font-size:0.8rem; color:#94a3b8;">Live cross-school administrative operations, student changes, and security events.</p>
-          </div>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <select id="auditActionFilter" onchange="window.loadMasterAuditStream()"
-                    style="padding:5px 10px; font-size:0.8rem; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#fff; cursor:pointer;">
-              <option value="">All Actions</option>
-              <option value="USER_LOGIN">User Logins</option>
-              <option value="ENROLLMENT">Enrollment</option>
-              <option value="FEE_PAYMENT">Fee Payments</option>
-              <option value="SCORE_UPDATE">Grades &amp; SBA</option>
-              <option value="SETTINGS_UPDATE">System Settings</option>
-              <option value="DEPROVISION">Deprovisioning</option>
-            </select>
-            <button type="button" class="btn" style="padding:5px 10px; font-size:0.8rem;" onclick="window.loadMasterAuditStream()">🔄 Refresh</button>
-          </div>
-        </div>
-
-        <div id="masterAuditStreamContainer" style="display:flex; flex-direction:column; gap:8px; max-height:360px; overflow-y:auto; padding-right:4px;">
-          <p style="opacity:0.7; font-size:0.85rem; text-align:center; padding:20px;">Loading live audit feed...</p>
-        </div>
-      </section>
-    </main>
-
-    <!-- Modal: Register New School -->
-    <div class="modal" id="newSchoolModal">
-      <div class="modal-content">
-        <h3 style="margin-top:0;">🏫 Onboard New School</h3>
-        <form id="newSchoolForm" autocomplete="off">
-          <!-- Chromium & Safari Autofill Honeypot Decoys -->
-          <input type="text" name="fake_username_trap" style="position:absolute; top:-9999px; left:-9999px; width:0; height:0; opacity:0;" tabindex="-1" autocomplete="off" />
-          <input type="password" name="fake_password_trap" style="position:absolute; top:-9999px; left:-9999px; width:0; height:0; opacity:0;" tabindex="-1" autocomplete="new-password" />
-
-          <label>School Name
-            <input id="schoolName" name="no_autofill_sch_name" placeholder="e.g. Antoa Senior High School" required autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
-          </label>
-
-          <label>School Code (Unique)
-            <input id="schoolCode" name="no_autofill_sch_code" placeholder="e.g. ANTOA-SHS" required style="text-transform:uppercase;" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
-          </label>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <label>School Mode
-              <select id="schoolMode" required>
-                <option value="SHS_ONLY">SHS Only (Senior High)</option>
-                <option value="BASIC_ONLY">Basic School Only (KG-JHS)</option>
-                <option value="COMBINED" selected>Combined (Basic & SHS)</option>
+            <!-- Search, Filter & Register CTA -->
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+              <input type="text" id="schoolSearchInput" placeholder="🔍 Search school name, code, region..." oninput="window.filterSchoolsDirectory()"
+                     style="padding:8px 14px; font-size:0.85rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; width:220px;" />
+              
+              <select id="schoolModeFilter" onchange="window.filterSchoolsDirectory()"
+                      style="padding:8px 12px; font-size:0.82rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; cursor:pointer;">
+                <option value="ALL">All Stages</option>
+                <option value="BASIC_ONLY">🎯 Basic Only (KG - JHS)</option>
+                <option value="SHS_ONLY">🏛️ SHS Only (SHS 1 - 3)</option>
+                <option value="COMBINED">🌐 Combined (Basic + SHS)</option>
               </select>
-            </label>
 
-            <label>Boarding Type
-              <select id="schoolBoarding">
-                <option value="BOARDING_AND_DAY" selected>Boarding & Day</option>
+              <select id="schoolBoardingFilter" onchange="window.filterSchoolsDirectory()"
+                      style="padding:8px 12px; font-size:0.82rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; cursor:pointer;">
+                <option value="ALL">All Boarding Types</option>
+                <option value="BOARDING_AND_DAY">Boarding &amp; Day</option>
                 <option value="DAY_ONLY">Day Only</option>
                 <option value="BOARDING_ONLY">Boarding Only</option>
               </select>
-            </label>
+
+              <button class="btn primary" onclick="openNewSchoolModal()" style="padding:8px 16px; font-size:0.85rem; font-weight:700;">
+                + Onboard School
+              </button>
+            </div>
           </div>
 
-          <label>Address / Location
-            <input id="schoolAddress" name="no_autofill_sch_addr" placeholder="e.g. Antoa, Ashanti Region" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
-          </label>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <label>Phone Contact
-              <input id="schoolPhone" name="no_autofill_sch_phone" placeholder="+233 24 000 0000" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
-            </label>
-
-            <label>School Email
-              <input id="schoolEmail" name="no_autofill_sch_email" type="email" placeholder="info@antoashs.edu.gh" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
-            </label>
-          </div>
-
-          <h4 style="margin-bottom:8px; margin-top:16px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">🔑 Initial School Admin Account</h4>
-
-          <label>Admin Username
-            <input id="adminUsername" name="no_autofill_admin_user" placeholder="e.g. antoa_admin" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
-          </label>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <label>Admin Email
-              <input id="adminEmail" name="no_autofill_admin_email" type="email" placeholder="admin@antoashs.edu.gh" required autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" />
-            </label>
-
-            <label>Admin Password
-              <div style="position:relative; display:flex; align-items:center;">
-                <input id="adminPassword" name="no_autofill_admin_pass" type="password" placeholder="••••••••" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" style="padding-right:38px; width:100%;" />
-                <button type="button" onclick="toggleRegisterPasswordVisibility()" style="position:absolute; right:8px; background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:1.05rem; padding:4px;" title="Toggle Password Visibility" id="toggleAdminPassBtn">👁️</button>
-              </div>
-            </label>
-          </div>
-
-          <div style="display:flex; gap:10px; margin-top:20px;">
-            <button type="submit" class="btn primary" style="flex:1;">Create & Onboard School</button>
-            <button type="button" class="btn" onclick="closeNewSchoolModal()" style="flex:1;">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Modal: Enterprise Danger Zone / Delete School Confirmation -->
-    <div class="modal" id="deleteSchoolModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
-      <div class="modal-content" style="max-width:480px; width:90%; background:var(--card-bg, #1e293b); border:1px solid #ef4444; border-radius:12px; padding:24px; box-shadow:0 25px 50px -12px rgba(239,68,68,0.25);">
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-          <div style="background:rgba(239,68,68,0.15); color:#ef4444; width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
-            ⚠️
-          </div>
-          <div>
-            <h3 style="margin:0; color:#ef4444; font-size:1.15rem;">Permanently Purge School</h3>
-            <p style="margin:2px 0 0 0; font-size:0.8rem; opacity:0.75;">Enterprise multi-tenant data deprovisioning</p>
+          <!-- Clean Wide Data Table -->
+          <div style="overflow-x:auto;">
+            <table class="sa-table">
+              <thead>
+                <tr>
+                  <th style="min-width:280px;">School Identity</th>
+                  <th style="width:170px;">Stage &amp; Mode</th>
+                  <th style="width:160px; text-align:center;">Enrolment</th>
+                  <th style="width:120px; text-align:center;">Staff &amp; Users</th>
+                  <th style="width:100px; text-align:center;">Status</th>
+                  <th style="width:200px; text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="schoolsTableBody">
+                <tr><td colspan="6" style="padding:20px; text-align:center; opacity:0.7;">Loading registered schools...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
+      </section>
 
-        <div style="background:rgba(239,68,68,0.08); border-left:4px solid #ef4444; border-radius:4px; padding:10px 14px; margin-bottom:16px; font-size:0.85rem; line-height:1.45;">
-          You are about to permanently purge <strong id="deleteSchoolModalName" style="color:#fff;">...</strong>.
-          <ul style="margin:6px 0 0 16px; padding:0; font-size:0.8rem; opacity:0.9;">
-            <li>All enrolled students, grades, and health records</li>
-            <li>All class sections, subjects, houses, and dormitories</li>
-            <li>All recorded fees, payments, and staff assignments</li>
-          </ul>
-          <div style="margin-top:8px; font-weight:600; color:#10b981; font-size:0.8rem;">
-            🛡 An automated JSON backup will be created in <code>/backups</code>.
+      <!-- ══════════════════════════════════════════════════════════════════════ -->
+      <!-- TAB 3: SECURITY & AUDIT TRAIL                                          -->
+      <!-- ══════════════════════════════════════════════════════════════════════ -->
+      <section class="sa-tab-pane" id="tab-security">
+        <div class="sa-table-card">
+          <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; border-bottom:1px solid var(--sa-card-border); padding-bottom:12px;">
+            <div>
+              <h3 style="margin:0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+                <span>🛡️</span> Master Activity &amp; Security Audit Trail
+              </h3>
+              <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);">
+                Chronological ledger of cross-school administrative mutations and security events.
+              </p>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:center;">
+              <select id="auditActionFilter" onchange="window.loadMasterAuditStream()"
+                      style="padding:7px 12px; font-size:0.82rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; cursor:pointer;">
+                <option value="">All Actions</option>
+                <option value="USER_LOGIN">🔑 User Logins</option>
+                <option value="ENROLLMENT">🎓 Student Enrollments</option>
+                <option value="FEE_PAYMENT">💳 Fee Collections</option>
+                <option value="SCORE_UPDATE">📝 Scores &amp; SBA</option>
+                <option value="SETTINGS_UPDATE">⚙️ Configuration Updates</option>
+                <option value="DEPROVISION">⚠️ Deprovisioning &amp; Purge</option>
+              </select>
+              <button class="btn" style="padding:7px 12px; font-size:0.82rem;" onclick="window.loadMasterAuditStream()">🔄 Refresh Feed</button>
+            </div>
+          </div>
+
+          <div id="masterAuditStreamContainer" style="display:flex; flex-direction:column; gap:10px; max-height:550px; overflow-y:auto; padding-right:4px;">
+            <p style="opacity:0.7; font-size:0.85rem; text-align:center; padding:20px;">Loading live audit feed...</p>
           </div>
         </div>
+      </section>
 
-        <form id="deleteSchoolForm" onsubmit="handleConfirmDeleteSchool(event)">
-          <input type="hidden" id="deleteSchoolModalId" />
-          <input type="hidden" id="deleteSchoolModalTargetCode" />
-          <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:6px;">
-            To confirm deletion, please type the school code <code id="deleteSchoolModalCodePrompt" style="background:#0f172a; padding:2px 6px; border-radius:4px; color:#f87171; border:1px solid #334155;">...</code> below:
-          </label>
-          <input id="deleteSchoolConfirmInput" type="text" autocomplete="off" placeholder="Type school code exactly" required style="width:100%; box-sizing:border-box; padding:10px 12px; font-family:monospace; font-weight:700; letter-spacing:1px; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#fff;" oninput="onDeleteSchoolInput(this)" />
-
-          <div style="display:flex; gap:10px; margin-top:20px;">
-            <button type="submit" id="deleteSchoolConfirmBtn" class="btn danger" style="flex:1; padding:10px; background:#dc2626; border-color:#b91c1c; opacity:0.5; cursor:not-allowed;" disabled>Purge School</button>
-            <button type="button" class="btn" onclick="closeDeleteSchoolModal()" style="flex:1; padding:10px;">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Modal: Curriculum Accreditation & Active Subjects -->
-    <div id="accreditationModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; backdrop-filter:blur(6px); justify-content:center; align-items:center; padding:16px;">
-      <div class="card" style="max-width:1040px; width:100%; max-height:90vh; display:flex; flex-direction:column; padding:24px; background:var(--card-bg, #1e293b); border:1px solid var(--border-color, #334155); border-radius:12px; box-shadow:0 25px 50px rgba(0,0,0,0.7); box-sizing:border-box;">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color, #334155); padding-bottom:12px; margin-bottom:14px;">
-          <div>
-            <h3 style="margin:0; font-size:1.2rem; display:flex; align-items:center; gap:8px;" id="accreditationModalTitle">
-              <span>⚙️</span> Curriculum Accreditation & Active Subjects
+      <!-- ══════════════════════════════════════════════════════════════════════ -->
+      <!-- TAB 4: SYSTEM OPERATIONS & TOOLS                                       -->
+      <!-- ══════════════════════════════════════════════════════════════════════ -->
+      <section class="sa-tab-pane" id="tab-operations">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:20px;">
+          
+          <!-- Operation 1: Cloud Pull & Mirror Sync -->
+          <div class="sa-table-card">
+            <h3 style="margin:0 0 8px 0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+              <span>🔄</span> 1-Click Master Cloud Mirroring
             </h3>
-            <p style="margin:4px 0 0 0; font-size:0.8rem; color:#94a3b8;" id="accreditationModalSubtitle">
+            <p style="font-size:0.82rem; color:var(--sa-text-muted); line-height:1.45; margin-bottom:16px;">
+              Connect securely to your live remote Render PostgreSQL database to pull all registered schools, students, classes, and marks into your local instance.
+            </p>
+            <button class="btn" style="width:100%; padding:10px; background:#0284c7; color:#fff; font-weight:700;" onclick="openCloudSyncModal()">
+              🔄 Open Cloud Synchronization Wizard
+            </button>
+          </div>
+
+          <!-- Operation 2: Curriculum Accreditation -->
+          <div class="sa-table-card">
+            <h3 style="margin:0 0 8px 0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+              <span>📚</span> National Curriculum Accreditation
+            </h3>
+            <p style="font-size:0.82rem; color:var(--sa-text-muted); line-height:1.45; margin-bottom:16px;">
+              Manage accredited learning tracks (General Science, Business, General Arts, TVET, Basic) and active subject catalogs per institution.
+            </p>
+            <p style="font-size:0.8rem; color:#818cf8; margin-bottom:16px;">
+              💡 Open any school from the <strong>School Directory</strong> tab and click <em>"⚙️ Accredit"</em> to configure its catalog.
+            </p>
+          </div>
+
+          <!-- Operation 3: Database Snapshots & Maintenance -->
+          <div class="sa-table-card">
+            <h3 style="margin:0 0 8px 0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+              <span>💾</span> System Diagnostics &amp; Snapshots
+            </h3>
+            <p style="font-size:0.82rem; color:var(--sa-text-muted); line-height:1.45; margin-bottom:16px;">
+              The platform executes hot non-blocking SQLite snapshots with SHA-256 integrity checksums and 14-day rolling retention.
+            </p>
+            <div style="background:rgba(15,23,42,0.6); padding:10px 12px; border-radius:6px; font-size:0.8rem; font-family:monospace; color:#38bdf8;">
+              Status: WAL Mode Active • PRAGMA Integrity OK
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ── Modals & Drawers ─────────────────────────────────────────────────── -->
+
+    <!-- Modal 1: Onboard New School -->
+    <div class="modal" id="newSchoolModal">
+      <div class="modal-content" style="max-width:620px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
+          <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+            <span>🏫</span> Onboard New Institution
+          </h3>
+          <button type="button" onclick="closeNewSchoolModal()" style="background:none; border:none; color:var(--sa-text-muted); font-size:1.3rem; cursor:pointer;">✕</button>
+        </div>
+
+        <form id="newSchoolForm" autocomplete="off">
+          <input type="text" name="fake_username_trap" style="position:absolute; top:-9999px; left:-9999px; width:0; height:0; opacity:0;" tabindex="-1" autocomplete="off" />
+          <input type="password" name="fake_password_trap" style="position:absolute; top:-9999px; left:-9999px; width:0; height:0; opacity:0;" tabindex="-1" autocomplete="new-password" />
+
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Official School Name *</label>
+            <input id="schoolName" name="no_autofill_sch_name" placeholder="e.g. Antoa Senior High School" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">School Code (Unique) *</label>
+              <input id="schoolCode" name="no_autofill_sch_code" placeholder="e.g. ANTOA-SHS" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; text-transform:uppercase;" />
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Academic School Mode *</label>
+              <select id="schoolMode" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;">
+                <option value="SHS_ONLY">🏛️ SHS Only (Senior High)</option>
+                <option value="BASIC_ONLY">🎯 Basic School Only (KG - JHS)</option>
+                <option value="COMBINED" selected>🌐 Combined (Basic &amp; SHS)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Boarding Facility</label>
+              <select id="schoolBoarding" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;">
+                <option value="BOARDING_AND_DAY" selected>Boarding &amp; Day</option>
+                <option value="DAY_ONLY">Day Only</option>
+                <option value="BOARDING_ONLY">Boarding Only</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Campus Address</label>
+              <input id="schoolAddress" name="no_autofill_sch_addr" placeholder="e.g. Antoa, Ashanti Region" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+            </div>
+          </div>
+
+          <h4 style="margin:14px 0 8px 0; font-size:0.88rem; border-top:1px solid var(--sa-card-border); padding-top:10px; color:#818cf8;">
+            🔑 Initial School Administrator Account
+          </h4>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Admin Username *</label>
+              <input id="adminUsername" name="no_autofill_admin_user" placeholder="e.g. antoa_admin" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Admin Password *</label>
+              <input id="adminPassword" name="no_autofill_admin_pass" type="password" placeholder="••••••••" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <button type="submit" class="btn primary" style="flex:1; padding:10px; font-weight:700;">Create &amp; Onboard School</button>
+            <button type="button" class="btn" onclick="closeNewSchoolModal()" style="flex:1; padding:10px;">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 2: Edit School Profile -->
+    <div id="editSchoolModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; backdrop-filter:blur(8px); justify-content:center; align-items:center; padding:16px;">
+      <div class="card" style="max-width:680px; width:100%; max-height:90vh; overflow-y:auto; padding:24px; background:var(--sa-surface); border:1px solid var(--sa-card-border); border-radius:14px; box-shadow:0 24px 48px rgba(0,0,0,0.7);">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--sa-card-border); padding-bottom:12px;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem; color:#f8fafc; display:flex; align-items:center; gap:8px;">
+              <span>✏️</span> Edit School Profile &amp; Governance
+            </h3>
+            <div id="editSchoolSubtitle" style="font-size:0.8rem; color:var(--sa-text-muted); margin-top:2px;">Configuring School ID: #<span id="editSchoolIdLabel">—</span></div>
+          </div>
+          <button type="button" onclick="closeEditSchoolModal()" style="background:none; border:none; color:var(--sa-text-muted); font-size:1.3rem; cursor:pointer;">✕</button>
+        </div>
+
+        <form id="editSchoolForm" onsubmit="handleSaveEditSchool(event)">
+          <input type="hidden" id="editSchoolId" />
+
+          <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Official School Full Name *</label>
+              <input id="editSchoolName" type="text" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Code / Abbreviation *</label>
+              <input id="editSchoolCode" type="text" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; text-transform:uppercase;" />
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Academic School Mode *</label>
+              <select id="editSchoolMode" onchange="updateEditModeNotice()" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-primary); border-radius:6px; color:#fff; font-weight:600;">
+                <option value="BASIC_ONLY">🎯 Basic School (KG - JHS 3 Only)</option>
+                <option value="SHS_ONLY">🏛️ Senior High School (SHS 1 - 3 Only)</option>
+                <option value="COMBINED">🌐 Combined Institution (Basic + SHS)</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Boarding Facility *</label>
+              <select id="editSchoolBoarding" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-info); border-radius:6px; color:#fff; font-weight:600;">
+                <option value="DAY_ONLY">☀️ Day School Only</option>
+                <option value="BOARDING_AND_DAY">🏡 Boarding &amp; Day Facility</option>
+                <option value="BOARDING_ONLY">🏠 Pure Boarding School Only</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="editSchoolModeNotice" style="margin-bottom:14px; padding:10px 14px; border-radius:6px; font-size:0.8rem; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.25); color:#c7d2fe;"></div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Contact Phone</label>
+              <input id="editSchoolPhone" type="text" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Official Email</label>
+              <input id="editSchoolEmail" type="email" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+            </div>
+          </div>
+
+          <div id="editSchoolStatusMsg" style="margin-bottom:14px; font-size:0.85rem; display:none; padding:10px 14px; border-radius:6px;"></div>
+
+          <div style="margin-top:16px; padding-top:14px; border-top:1px dashed var(--sa-card-border);">
+            <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--sa-text-muted); margin-bottom:8px;">
+              ⚡ Quick Operations for this School:
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:rgba(99,102,241,0.2); border-color:#6366f1; color:#a5b4fc;" onclick="window.openAccreditationModal(document.getElementById('editSchoolId').value, document.getElementById('editSchoolName').value, document.getElementById('editSchoolMode').value)">⚙️ Accredit Subjects</button>
+              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:#0284c7; color:#fff;" onclick="window.downloadSchoolBackup(document.getElementById('editSchoolId').value, document.getElementById('editSchoolCode').value)">📥 Download Backup</button>
+              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:#d97706; color:#fff;" onclick="window.toggleSchoolStatus(document.getElementById('editSchoolId').value, 'ACTIVE')">⏸ Toggle Suspend</button>
+              <button type="button" class="btn danger" style="padding:6px 10px; font-size:0.78rem;" onclick="closeEditSchoolModal(); window.openDeleteSchoolModal(document.getElementById('editSchoolId').value, document.getElementById('editSchoolName').value, document.getElementById('editSchoolCode').value)">🗑 Purge School</button>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px; border-top:1px solid var(--sa-card-border); padding-top:16px; margin-top:14px;">
+            <button type="submit" id="btnSaveEditSchool" class="btn primary" style="flex:1; padding:10px; font-weight:700;">
+              💾 Save Profile Changes
+            </button>
+            <button type="button" class="btn" onclick="closeEditSchoolModal()" style="flex:1; padding:10px;">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 3: Curriculum Accreditation -->
+    <div id="accreditationModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; backdrop-filter:blur(6px); justify-content:center; align-items:center; padding:16px;">
+      <div class="card" style="max-width:1040px; width:100%; max-height:90vh; display:flex; flex-direction:column; padding:24px; background:var(--sa-surface); border:1px solid var(--sa-card-border); border-radius:12px; box-shadow:0 25px 50px rgba(0,0,0,0.7); box-sizing:border-box;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--sa-card-border); padding-bottom:12px; margin-bottom:14px;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;" id="accreditationModalTitle">
+              <span>⚙️</span> Curriculum Accreditation &amp; Active Subjects
+            </h3>
+            <p style="margin:4px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);" id="accreditationModalSubtitle">
               Select accredited tracks and active subjects for this institution.
             </p>
           </div>
-          <button type="button" onclick="closeAccreditationModal()" style="background:none; border:none; color:#94a3b8; font-size:1.3rem; cursor:pointer;">✕</button>
+          <button type="button" onclick="closeAccreditationModal()" style="background:none; border:none; color:var(--sa-text-muted); font-size:1.3rem; cursor:pointer;">✕</button>
         </div>
 
         <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:10px; background:rgba(99,102,241,0.08); padding:8px 14px; border-radius:8px; border:1px solid rgba(99,102,241,0.2);">
@@ -384,196 +768,91 @@
           </div>
         </div>
 
-        <!-- One-Click GES Track Presets Toolbar -->
-        <div style="margin-bottom:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px;">
-          <div style="font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">
-            ⚡ Quick GES Track Presets (Click to Auto-Select Track &amp; Cross-Cutting Electives):
+        <div style="margin-bottom:12px; background:rgba(255,255,255,0.02); border:1px solid var(--sa-card-border); border-radius:8px; padding:10px 12px;">
+          <div style="font-size:0.75rem; font-weight:700; color:var(--sa-text-muted); text-transform:uppercase; margin-bottom:8px;">
+            ⚡ Quick GES Track Presets:
           </div>
-          <div id="accreditationPresetsToolbar" style="display:flex; flex-wrap:wrap; gap:6px;">
-            <!-- Populated dynamically via renderAccreditationPresets -->
-          </div>
+          <div id="accreditationPresetsToolbar" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
         </div>
 
-        <!-- Scrollable Subject Groups Container -->
         <div id="accreditationCatalogContainer" style="flex:1; overflow-y:auto; padding-right:6px; margin-bottom:16px;">
           <p style="opacity:0.7; text-align:center; padding:20px;">Loading national subject catalog...</p>
         </div>
 
         <input type="hidden" id="accreditationSchoolId" />
-        <div style="display:flex; gap:10px; border-top:1px solid var(--border-color, #334155); padding-top:14px;">
-          <button type="button" id="saveAccreditationBtn" class="btn primary" style="flex:1; padding:10px; font-weight:600;" onclick="handleSaveAccreditation()">
-            Save Accreditation & Active Catalog
+        <div style="display:flex; gap:10px; border-top:1px solid var(--sa-card-border); padding-top:14px;">
+          <button type="button" id="saveAccreditationBtn" class="btn primary" style="flex:1; padding:10px; font-weight:700;" onclick="handleSaveAccreditation()">
+            Save Accreditation &amp; Active Catalog
           </button>
           <button type="button" class="btn" onclick="closeAccreditationModal()" style="flex:1; padding:10px;">Cancel</button>
         </div>
       </div>
     </div>
 
-    <!-- Cloud Pull & Sync Modal -->
+    <!-- Modal 4: Cloud Pull & Sync Modal -->
     <div id="cloudSyncModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; backdrop-filter:blur(8px); justify-content:center; align-items:center; padding:16px;">
-      <div class="card" style="max-width:520px; width:100%; padding:28px; background:var(--card-bg, #1e293b); border:1px solid var(--border-color, #334155); border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.6);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div class="card" style="max-width:500px; width:100%; padding:24px; background:var(--sa-surface); border:1px solid var(--sa-card-border); border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.6);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
           <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
             <span>🔄</span> 1-Click Master Cloud Sync
           </h3>
-          <button type="button" onclick="closeCloudSyncModal()" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer;">✕</button>
+          <button type="button" onclick="closeCloudSyncModal()" style="background:none; border:none; color:var(--sa-text-muted); font-size:1.2rem; cursor:pointer;">✕</button>
         </div>
 
-        <p style="font-size:0.85rem; color:#94a3b8; margin:0 0 16px 0; line-height:1.45;">
-          Connect securely to your live Render deployment to pull all registered schools, students, classes, fees, and exam records into your local database.
+        <p style="font-size:0.84rem; color:var(--sa-text-muted); margin:0 0 16px 0; line-height:1.45;">
+          Connect to your remote Render deployment to pull all registered schools, students, classes, and marks into your local database.
         </p>
 
         <form id="cloudSyncForm" onsubmit="handleStartCloudSync(event)">
-          <div style="margin-bottom:14px;">
+          <div style="margin-bottom:12px;">
             <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Remote Render Cloud URL</label>
-            <input id="cloudSyncRemoteUrl" type="url" required placeholder="https://sms-1-4g9s.onrender.com"
-                   style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:0.9rem; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#fff;" />
+            <input id="cloudSyncRemoteUrl" type="url" required placeholder="https://sms-nald.onrender.com"
+                   style="width:100%; box-sizing:border-box; padding:9px 12px; font-size:0.88rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
           </div>
 
           <div style="margin-bottom:14px;">
             <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Super-Admin Password</label>
-            <input id="cloudSyncPassword" name="no_autofill_sync_pass" type="password" required autocomplete="new-password" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="Enter superadmin password"
-                   style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:0.9rem; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#fff;" />
-          </div>
-
-          <div style="margin-bottom:18px;">
-            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Sync Mode</label>
-            <select id="cloudSyncMode" style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:0.85rem; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#fff;">
-              <option value="MIRROR">Mirror Cloud (Replace local database with exact live cloud copy)</option>
-            </select>
+            <input id="cloudSyncPassword" name="no_autofill_sync_pass" type="password" required placeholder="Enter superadmin password"
+                   style="width:100%; box-sizing:border-box; padding:9px 12px; font-size:0.88rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
           </div>
 
           <div id="cloudSyncStatusMsg" style="margin-bottom:14px; font-size:0.85rem; display:none; padding:10px 12px; border-radius:6px;"></div>
 
-          <div style="display:flex; gap:10px; margin-top:20px;">
-            <button type="submit" id="cloudSyncSubmitBtn" class="btn" style="flex:1; padding:10px; background:#0284c7; border-color:#0369a1; color:#fff; font-weight:600;">Start Cloud Sync</button>
+          <div style="display:flex; gap:10px;">
+            <button type="submit" id="cloudSyncSubmitBtn" class="btn" style="flex:1; padding:10px; background:#0284c7; color:#fff; font-weight:700;">Start Cloud Sync</button>
             <button type="button" class="btn" onclick="closeCloudSyncModal()" style="flex:1; padding:10px;">Cancel</button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- Edit School Profile Modal -->
-    <div id="editSchoolModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; backdrop-filter:blur(8px); justify-content:center; align-items:center; padding:16px;">
-      <div class="card" style="max-width:680px; width:100%; max-height:90vh; overflow-y:auto; padding:28px; background:var(--card-bg, #1e293b); border:1px solid var(--border-color, #334155); border-radius:14px; box-shadow:0 24px 48px rgba(0,0,0,0.7);">
-        
-        <!-- Header -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #334155; padding-bottom:12px;">
-          <div>
-            <h3 style="margin:0; font-size:1.2rem; font-family:'Outfit',sans-serif; color:#f8fafc; display:flex; align-items:center; gap:8px;">
-              <span>✏️</span> Edit School Profile &amp; Registration
-            </h3>
-            <div id="editSchoolSubtitle" style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">Configuring School ID: #<span id="editSchoolIdLabel">—</span></div>
-          </div>
-          <button type="button" onclick="closeEditSchoolModal()" style="background:none; border:none; color:#94a3b8; font-size:1.3rem; cursor:pointer; padding:4px 8px; border-radius:6px;">✕</button>
-        </div>
+    <!-- Modal 5: Delete / Purge School Confirmation -->
+    <div class="modal" id="deleteSchoolModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+      <div class="modal-content" style="max-width:460px; width:90%; background:var(--sa-surface); border:1px solid var(--sa-danger); border-radius:12px; padding:24px;">
+        <h3 style="margin:0 0 10px 0; color:var(--sa-danger); font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+          <span>⚠️</span> Permanently Purge School
+        </h3>
+        <p style="font-size:0.85rem; line-height:1.45; margin-bottom:14px;">
+          You are about to permanently purge <strong id="deleteSchoolModalName" style="color:#fff;">...</strong>.
+        </p>
+        <form id="deleteSchoolForm" onsubmit="handleConfirmDeleteSchool(event)">
+          <input type="hidden" id="deleteSchoolModalId" />
+          <input type="hidden" id="deleteSchoolModalTargetCode" />
+          <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:6px;">
+            Type school code <code id="deleteSchoolModalCodePrompt" style="background:#090d16; padding:2px 6px; border-radius:4px; color:#f87171;">...</code> to confirm:
+          </label>
+          <input id="deleteSchoolConfirmInput" type="text" autocomplete="off" placeholder="Type school code exactly" required style="width:100%; box-sizing:border-box; padding:9px 12px; font-family:monospace; font-weight:700; background:#090d16; border:1px solid #475569; border-radius:6px; color:#fff;" oninput="onDeleteSchoolInput(this)" />
 
-        <form id="editSchoolForm" onsubmit="handleSaveEditSchool(event)">
-          <input type="hidden" id="editSchoolId" />
-
-          <!-- Row 1: Name & Code -->
-          <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px; margin-bottom:14px;">
-            <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px; color:#cbd5e1;">Official School Full Name *</label>
-              <input id="editSchoolName" type="text" required placeholder="e.g. Atwima Koforidua Islamic Basic School"
-                     style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:0.9rem; background:#0f172a; border:1px solid #475569; border-radius:8px; color:#fff;" />
-            </div>
-            <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px; color:#cbd5e1;">Code / Abbreviation *</label>
-              <input id="editSchoolCode" type="text" required placeholder="e.g. AKIBS"
-                     style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:0.9rem; background:#0f172a; border:1px solid #475569; border-radius:8px; color:#fff; text-transform:uppercase;" />
-            </div>
-          </div>
-
-          <!-- Row 2: Mode & Boarding Setup -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
-            <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px; color:#cbd5e1;">Academic School Mode *</label>
-              <select id="editSchoolMode" onchange="updateEditModeNotice()" style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:0.88rem; background:#0f172a; border:1px solid #6366f1; border-radius:8px; color:#fff; font-weight:600;">
-                <option value="BASIC_ONLY">🎯 Basic School (KG - JHS 3 Only)</option>
-                <option value="SHS_ONLY">🏛️ Senior High School (SHS 1 - 3 Only)</option>
-                <option value="COMBINED">🌐 Combined Institution (Basic + SHS)</option>
-              </select>
-            </div>
-            <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px; color:#cbd5e1;">Boarding / Residential Setup *</label>
-              <select id="editSchoolBoarding" style="width:100%; box-sizing:border-box; padding:10px 12px; font-size:0.88rem; background:#0f172a; border:1px solid #0891b2; border-radius:8px; color:#fff; font-weight:600;">
-                <option value="DAY_ONLY">☀️ Day School Only (No Boarding)</option>
-                <option value="BOARDING_AND_DAY">🏡 Boarding &amp; Day Facility</option>
-                <option value="BOARDING_ONLY">🏠 Pure Boarding School Only</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Dynamic Mode Impact Notice -->
-          <div id="editSchoolModeNotice" style="margin-bottom:16px; padding:10px 14px; border-radius:8px; font-size:0.8rem; line-height:1.45; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.25); color:#c7d2fe;">
-            <!-- Injected dynamically via updateEditModeNotice() -->
-          </div>
-
-          <!-- Row 3: Contact Phone & Email -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
-            <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px; color:#cbd5e1;">Contact Phone Number</label>
-              <input id="editSchoolPhone" type="text" placeholder="+233 24 123 4567"
-                     style="width:100%; box-sizing:border-box; padding:9px 12px; font-size:0.88rem; background:#0f172a; border:1px solid #475569; border-radius:8px; color:#fff;" />
-            </div>
-            <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px; color:#cbd5e1;">Official Email Address</label>
-              <input id="editSchoolEmail" type="email" placeholder="info@school.edu.gh"
-                     style="width:100%; box-sizing:border-box; padding:9px 12px; font-size:0.88rem; background:#0f172a; border:1px solid #475569; border-radius:8px; color:#fff;" />
-            </div>
-          </div>
-
-          <!-- Row 4: Address & Subdomain -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-            <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px; color:#cbd5e1;">Physical Campus Address</label>
-              <input id="editSchoolAddress" type="text" placeholder="e.g. Atwima Koforidua, Ashanti Region"
-                     style="width:100%; box-sizing:border-box; padding:9px 12px; font-size:0.88rem; background:#0f172a; border:1px solid #475569; border-radius:8px; color:#fff;" />
-            </div>
-            <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px; color:#cbd5e1;">Subdomain Slug</label>
-              <input id="editSchoolSubdomain" type="text" placeholder="e.g. akibs"
-                     style="width:100%; box-sizing:border-box; padding:9px 12px; font-size:0.88rem; background:#0f172a; border:1px solid #475569; border-radius:8px; color:#fff; text-transform:lowercase;" />
-            </div>
-          </div>
-
-          <!-- Row 5: School Logo / Crest Management -->
-          <div style="margin-bottom:18px; padding:14px; background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:10px;">
-            <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:8px; color:#cbd5e1;">School Crest &amp; Logo</label>
-            <div style="display:flex; gap:16px; align-items:center;">
-              <!-- Crest Preview -->
-              <div id="editSchoolLogoPreviewContainer" style="width:64px; height:64px; border-radius:12px; background:#1e293b; border:2px dashed #475569; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
-                <img id="editSchoolLogoImg" src="" alt="Crest Preview" style="width:100%; height:100%; object-fit:contain; display:none;" />
-                <span id="editSchoolDefaultCrest" style="font-size:1.8rem;">🏫</span>
-              </div>
-              <div style="flex:1;">
-                <input id="editSchoolLogoFile" type="file" accept="image/*" onchange="handleEditLogoFileSelect(event)" style="display:none;" />
-                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
-                  <button type="button" class="btn" style="padding:6px 12px; font-size:0.8rem; background:#334155; color:#fff;" onclick="document.getElementById('editSchoolLogoFile').click()">📤 Upload New Logo</button>
-                  <button type="button" id="btnRemoveEditLogo" class="btn danger" style="padding:6px 10px; font-size:0.8rem; display:none;" onclick="handleRemoveEditLogo()">🗑 Remove Logo (Use Default Crest)</button>
-                </div>
-                <input id="editSchoolLogoUrl" type="text" placeholder="Or paste Image URL / Base64" oninput="handleEditLogoUrlInput(this.value)"
-                       style="width:100%; box-sizing:border-box; padding:6px 10px; font-size:0.78rem; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#cbd5e1;" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Status Message Box -->
-          <div id="editSchoolStatusMsg" style="margin-bottom:14px; font-size:0.85rem; display:none; padding:10px 14px; border-radius:8px;"></div>
-
-          <!-- Actions -->
-          <div style="display:flex; gap:10px; border-top:1px solid #334155; padding-top:16px;">
-            <button type="submit" id="btnSaveEditSchool" class="btn primary" style="flex:1; padding:12px; font-weight:700; font-size:0.92rem; background:linear-gradient(135deg, #4f46e5, #6366f1);">
-              💾 Save Profile Changes
-            </button>
-            <button type="button" class="btn" onclick="closeEditSchoolModal()" style="flex:1; padding:12px; background:#334155; color:#fff;">Cancel</button>
+          <div style="display:flex; gap:10px; margin-top:18px;">
+            <button type="submit" id="deleteSchoolConfirmBtn" class="btn danger" style="flex:1; padding:10px; background:#dc2626; opacity:0.5;" disabled>Purge School</button>
+            <button type="button" class="btn" onclick="closeDeleteSchoolModal()" style="flex:1; padding:10px;">Cancel</button>
           </div>
         </form>
       </div>
     </div>
 
-    <script src="js/guard.js?v=9.8"></script>
-    <script src="js/super-admin.js?v=9.8"></script>
+    <!-- ── Core Scripts ─────────────────────────────────────────────────────── -->
+    <script src="js/guard.js?v=9.9"></script>
+    <script src="js/super-admin.js?v=9.9"></script>
   </body>
 </html>

@@ -171,7 +171,7 @@ def login(payload: dict, request: Request, db: Session = Depends(get_db)):
 
         user = db.query(User).filter(
             func.lower(User.username) == username.lower(),
-            User.is_active.is_(True)
+            (User.is_active == True) | (User.is_active == "1") | (User.is_active.is_(None))
         ).first()
 
         if not user:

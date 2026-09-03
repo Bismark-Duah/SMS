@@ -1256,17 +1256,23 @@ window.openEditSchoolModal = async function(schoolId) {
     }
     const school = await res.json();
 
-    document.getElementById('editSchoolId').value = school.id;
-    document.getElementById('editSchoolIdLabel').textContent = `${school.id} (${school.code})`;
-    document.getElementById('editSchoolName').value = school.name || '';
-    document.getElementById('editSchoolCode').value = school.code || '';
-    document.getElementById('editSchoolMode').value = school.school_mode || 'COMBINED';
-    document.getElementById('editSchoolBoarding').value = school.boarding_type || 'BOARDING_AND_DAY';
-    document.getElementById('editSchoolPhone').value = school.phone || '';
-    document.getElementById('editSchoolEmail').value = school.email || '';
-    document.getElementById('editSchoolAddress').value = school.address || '';
-    document.getElementById('editSchoolSubdomain').value = school.subdomain || '';
-    document.getElementById('editSchoolLogoUrl').value = school.logo_url || '';
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val !== undefined && val !== null ? val : '';
+    };
+
+    setVal('editSchoolId', school.id);
+    const labelEl = document.getElementById('editSchoolIdLabel');
+    if (labelEl) labelEl.textContent = `${school.id} (${school.code || ''})`;
+    setVal('editSchoolName', school.name);
+    setVal('editSchoolCode', school.code);
+    setVal('editSchoolMode', school.school_mode || 'COMBINED');
+    setVal('editSchoolBoarding', school.boarding_type || 'BOARDING_AND_DAY');
+    setVal('editSchoolPhone', school.phone);
+    setVal('editSchoolEmail', school.email);
+    setVal('editSchoolAddress', school.address);
+    setVal('editSchoolSubdomain', school.subdomain);
+    setVal('editSchoolLogoUrl', school.logo_url);
 
     // Update Crest Preview
     const imgEl = document.getElementById('editSchoolLogoImg');
@@ -1283,7 +1289,7 @@ window.openEditSchoolModal = async function(schoolId) {
       if (removeBtn) removeBtn.style.display = 'none';
     }
 
-    window.updateEditModeNotice();
+    if (window.updateEditModeNotice) window.updateEditModeNotice();
     if (modal) modal.style.display = 'flex';
 
   } catch (err) {

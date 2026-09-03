@@ -708,14 +708,45 @@
 
           <div id="editSchoolModeNotice" style="margin-bottom:14px; padding:10px 14px; border-radius:6px; font-size:0.8rem; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.25); color:#c7d2fe;"></div>
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
             <div>
               <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Contact Phone</label>
-              <input id="editSchoolPhone" type="text" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+              <input id="editSchoolPhone" type="text" placeholder="+233 24 123 4567" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
             </div>
             <div>
               <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Official Email</label>
-              <input id="editSchoolEmail" type="email" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+              <input id="editSchoolEmail" type="email" placeholder="info@school.edu.gh" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Campus Physical Address</label>
+              <input id="editSchoolAddress" type="text" placeholder="e.g. Antoa, Ashanti Region" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Subdomain Slug</label>
+              <input id="editSchoolSubdomain" type="text" placeholder="e.g. akibs" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; text-transform:lowercase;" />
+            </div>
+          </div>
+
+          <!-- Logo Management -->
+          <div style="margin-bottom:16px; padding:12px; background:rgba(15,23,42,0.6); border:1px solid var(--sa-card-border); border-radius:8px;">
+            <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:6px; color:var(--sa-text-muted);">School Crest &amp; Logo</label>
+            <div style="display:flex; gap:14px; align-items:center;">
+              <div id="editSchoolLogoPreviewContainer" style="width:54px; height:54px; border-radius:8px; background:#1e293b; border:1px dashed #475569; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+                <img id="editSchoolLogoImg" src="" alt="Crest Preview" style="width:100%; height:100%; object-fit:contain; display:none;" />
+                <span id="editSchoolDefaultCrest" style="font-size:1.6rem;">🏫</span>
+              </div>
+              <div style="flex:1;">
+                <input id="editSchoolLogoFile" type="file" accept="image/*" onchange="handleEditLogoFileSelect(event)" style="display:none;" />
+                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
+                  <button type="button" class="btn" style="padding:5px 10px; font-size:0.75rem; background:#334155; color:#fff;" onclick="document.getElementById('editSchoolLogoFile').click()">📤 Upload Logo</button>
+                  <button type="button" id="btnRemoveEditLogo" class="btn danger" style="padding:5px 8px; font-size:0.75rem; display:none;" onclick="handleRemoveEditLogo()">🗑 Remove</button>
+                </div>
+                <input id="editSchoolLogoUrl" type="text" placeholder="Or paste Logo URL / Data URI" oninput="handleEditLogoUrlInput(this.value)"
+                       style="width:100%; box-sizing:border-box; padding:6px 10px; font-size:0.75rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:4px; color:#cbd5e1;" />
+              </div>
             </div>
           </div>
 

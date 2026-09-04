@@ -49,10 +49,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.logoutSuperAdmin = function() {
+  const keysToPurge = [
+    'accessToken', 'token', 'user', 'userRole', 'activeRole', 'username', 'userId',
+    'logo_theme_colors', 'school_logo', 'system_theme', 'school_name',
+    'school_abbreviation', 'school_mode', 'school_id', 'is_super_admin',
+    'is_super_admin_viewing', 'is_impersonating', 'boarding_status',
+    'boarding_hierarchy_mode', 'user_roles', '_lastActivity'
+  ];
+  keysToPurge.forEach(k => {
+    localStorage.removeItem(k);
+    sessionStorage.removeItem(k);
+  });
   sessionStorage.clear();
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
   window.location.href = 'auth.html?msg=Logged+out+successfully';
 };
 

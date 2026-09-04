@@ -304,7 +304,6 @@
           </span>
           <button class="btn" style="padding:7px 12px; font-size:0.82rem;" onclick="window.loadSuperAdminDashboard()">⚡ Refresh</button>
           <a href="dashboard.html" class="btn" style="padding:7px 12px; font-size:0.82rem; text-decoration:none;">🏫 School View</a>
-          <button class="btn" style="padding:7px 12px; font-size:0.82rem; background:#334155;" onclick="window.logoutSuperAdmin()">🚪 Logout</button>
         </div>
       </header>
 
@@ -694,7 +693,7 @@
               </select>
             </div>
             <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Campus Address</label>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Campus Address <span style="font-weight:400; font-size:0.75rem; color:var(--sa-text-muted);">(Optional)</span></label>
               <input id="schoolAddress" name="no_autofill_sch_addr" placeholder="e.g. Antoa, Ashanti Region" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
             </div>
           </div>
@@ -773,29 +772,29 @@
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
             <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Contact Phone</label>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Contact Phone <span style="font-weight:400; font-size:0.75rem; color:var(--sa-text-muted);">(Optional)</span></label>
               <input id="editSchoolPhone" type="text" placeholder="+233 24 123 4567" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
             </div>
             <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Official Email</label>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Official Email <span style="font-weight:400; font-size:0.75rem; color:var(--sa-text-muted);">(Optional)</span></label>
               <input id="editSchoolEmail" type="email" placeholder="info@school.edu.gh" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
             <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Campus Physical Address</label>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Campus Physical Address <span style="font-weight:400; font-size:0.75rem; color:var(--sa-text-muted);">(Optional)</span></label>
               <input id="editSchoolAddress" type="text" placeholder="e.g. Antoa, Ashanti Region" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
             </div>
             <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Subdomain Slug</label>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Subdomain Slug <span style="font-weight:400; font-size:0.75rem; color:var(--sa-text-muted);">(Optional)</span></label>
               <input id="editSchoolSubdomain" type="text" placeholder="e.g. akibs" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; text-transform:lowercase;" />
             </div>
           </div>
 
           <!-- Logo Management -->
           <div style="margin-bottom:16px; padding:12px; background:rgba(15,23,42,0.6); border:1px solid var(--sa-card-border); border-radius:8px;">
-            <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:6px; color:var(--sa-text-muted);">School Crest &amp; Logo</label>
+            <label style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:6px; color:var(--sa-text-muted);">School Crest &amp; Logo <span style="font-weight:400; font-size:0.75rem; color:var(--sa-text-muted);">(Optional)</span></label>
             <div style="display:flex; gap:14px; align-items:center;">
               <div id="editSchoolLogoPreviewContainer" style="width:54px; height:54px; border-radius:8px; background:#1e293b; border:1px dashed #475569; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
                 <img id="editSchoolLogoImg" src="" alt="Crest Preview" style="width:100%; height:100%; object-fit:contain; display:none;" />

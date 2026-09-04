@@ -23,7 +23,7 @@ if (form) {
     };
 
     const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('button');
-    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Signing in…'; }
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '⏳ Authenticating...'; }
 
     try {
       const response = await fetch(`${API_BASE}/auth/login`, {
@@ -105,8 +105,9 @@ if (form) {
         localStorage.setItem(k, v);
       }
 
+      if (submitBtn) { submitBtn.innerHTML = '✔ Signing in...'; }
       if (msgEl) {
-        msgEl.textContent = `✔ Login successful. Redirecting…`;
+        msgEl.textContent = '✔ Signing in...';
         msgEl.style.color = '#4ade80';
       }
 

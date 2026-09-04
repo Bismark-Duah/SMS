@@ -159,9 +159,26 @@
         return () => { if (_subscribers.has(key)) _subscribers.get(key).delete(cb); };
       },
       setTheme(themeName, customColors) {
+        const root = document.documentElement;
+        // Public pages (auth.html, login.html, index.html) strictly enforce the neutral master theme
+        if (_publicPages.includes(_initialPage)) {
+          root.style.removeProperty('--primary');
+          root.style.removeProperty('--primary-hover');
+          root.style.removeProperty('--primary-light');
+          root.style.removeProperty('--secondary');
+          root.style.removeProperty('--bg');
+          root.style.removeProperty('--bg-gradient');
+          root.style.removeProperty('--card-bg');
+          root.style.removeProperty('--border-color');
+          root.style.removeProperty('--text-primary');
+          root.style.removeProperty('--text-secondary');
+          root.style.removeProperty('--input-bg');
+          root.setAttribute('data-theme', 'midnight');
+          return 'midnight';
+        }
+
         const selectedTheme = themeName || this.get('system_theme', 'midnight');
         this.set('system_theme', selectedTheme);
-        const root = document.documentElement;
         if (selectedTheme === 'auto') {
           let colors = customColors;
           if (!colors) { try { colors = JSON.parse(localStorage.getItem('logo_theme_colors')); } catch (_) {} }
@@ -204,10 +221,18 @@
       },
       broadcastLogout() {
         try {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('token');
-          localStorage.removeItem('userRole');
-          localStorage.removeItem('activeRole');
+          const keysToPurge = [
+            'accessToken', 'token', 'userRole', 'activeRole', 'username', 'userId',
+            'logo_theme_colors', 'school_logo', 'system_theme', 'school_name',
+            'school_abbreviation', 'school_mode', 'school_id', 'is_super_admin',
+            'is_super_admin_viewing', 'is_impersonating', 'boarding_status',
+            'boarding_hierarchy_mode', 'user_roles', '_lastActivity'
+          ];
+          keysToPurge.forEach(k => {
+            localStorage.removeItem(k);
+            sessionStorage.removeItem(k);
+          });
+          sessionStorage.clear();
         } catch (_) {}
         if (broadcastChannel) {
           try { broadcastChannel.postMessage({ type: 'AUTH_LOGOUT', timestamp: Date.now() }); } catch (_) {}

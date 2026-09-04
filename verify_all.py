@@ -154,7 +154,8 @@ def run_all():
         "tests/test_adversary_and_edge_rigor.py",
         "tests/test_performance_and_scalability.py",
         "tests/test_devops_and_infrastructure.py",
-        "tests/test_enterprise_sms_engine.py"
+        "tests/test_enterprise_sms_engine.py",
+        "tests/test_device_forensics_and_tiered_audit.py"
     ]
 
     server_proc = ensure_server()

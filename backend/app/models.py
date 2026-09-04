@@ -998,3 +998,45 @@ class SyncOutbox(Base):
     __table_args__ = (
         Index("ix_sync_outbox_pending", "school_id", "is_synced", "created_at"),
     )
+
+
+# ── Enterprise Dual-Tier Forensic Audit Ledger ───────────────────────────────
+
+class AuditLog(Base):
+    """
+    Enterprise Forensic Audit Log Ledger.
+    Captures complete client device forensics (phone model, OS, browser, IP),
+    actor identity, action summary, and dual-tier visibility flags.
+    """
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="SET NULL"), nullable=True, index=True)
+    actor_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    actor_username = Column(String(100), nullable=False, index=True)
+    actor_role = Column(String(50), nullable=False, index=True)
+    action = Column(String(100), nullable=False, index=True)  # e.g. "USER_LOGIN", "SCORE_UPDATE", "FEE_PAYMENT", "ENROLLMENT", "SETTINGS_UPDATE", "IMPERSONATION_VIEW"
+    entity_type = Column(String(100), nullable=False, index=True)  # "Student", "Score", "FeePayment", "School", "User", "System"
+    entity_id = Column(String(100), nullable=True)
+    details = Column(Text, nullable=True)
+
+    # Forensic Telemetry
+    ip_address = Column(String(64), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    device_category = Column(String(20), default="Desktop")  # "Mobile", "Tablet", "Desktop", "Bot"
+    device_brand = Column(String(100), default="Unknown Device")  # "TECNO Spark 10", "Infinix Hot 30", "Apple iPhone 14", "Windows 11 PC", etc.
+    browser_name = Column(String(100), default="Unknown Browser")  # "Chrome Mobile 122", "Safari 17", "Edge 121"
+    os_name = Column(String(100), default="Unknown OS")  # "Android 13", "iOS 17", "Windows 11", "macOS"
+
+    # Strict Tiered Scoping (Super Admin actions hidden from standard school admins)
+    is_super_admin_action = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    school = relationship("School")
+    actor = relationship("User", foreign_keys=[actor_id])
+
+    __table_args__ = (
+        Index("ix_audit_school_created", "school_id", "created_at"),
+        Index("ix_audit_action_created", "action", "created_at"),
+    )
+

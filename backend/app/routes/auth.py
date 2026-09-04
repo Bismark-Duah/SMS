@@ -55,6 +55,7 @@ except ImportError:
 from ..database import get_db
 from ..models import User, Role, School, ClassSection, House, Department
 from ..services.auth import create_jwt
+from ..services.audit_service import record_audit_event
 from .. import schemas
 from ..services.guardian_service import link_students_for_parent_user
 from ..dependencies import rate_limit_auth, get_current_user, get_school_id
@@ -282,6 +283,22 @@ def login(payload: dict, request: Request, db: Session = Depends(get_db)):
         except Exception as sess_err:
             print("Session registration warning:", sess_err)
         
+        # Record forensic audit event with client device detection
+        try:
+            record_audit_event(
+                db=db,
+                request=request,
+                actor=user,
+                action="USER_LOGIN",
+                details=f"User {user.username} successfully signed in ({primary_role})",
+                entity_type="User",
+                entity_id=str(user.id),
+                school_id=school_id,
+                is_super_admin_action=is_super_admin
+            )
+        except Exception as audit_err:
+            print("Audit event record warning:", audit_err)
+
         return JSONResponse(
             status_code=200,
             content={

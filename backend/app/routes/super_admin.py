@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from ..database import get_db
-from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog, Program, ActivityAuditLog, MessageLog
+from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog, Program, ActivityAuditLog, MessageLog, AuditLog
 from ..routes.auth import get_current_user, get_password_hash
 from ..ncca_seed import seed_ncca_curriculum
 from ..sms.gateway import sms_engine, mask_phone_number
@@ -1868,6 +1868,56 @@ def test_sms_gateway_dispatch(
         message_type="ADMIN_TEST"
     )
     return res
+
+
+@router.get("/audit-stream")
+def get_master_audit_stream(
+    action: Optional[str] = None,
+    school_id: Optional[int] = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Returns the Master Global Forensic Audit Stream across all schools with complete device telemetry.
+    """
+    query = db.query(AuditLog).order_by(AuditLog.created_at.desc())
+
+    if action:
+        query = query.filter(AuditLog.action == action)
+    if school_id:
+        query = query.filter(AuditLog.school_id == school_id)
+
+    logs = query.limit(limit).all()
+
+    # Preload school names for fast resolution
+    schools_map = {s.id: {"name": s.name, "code": s.code} for s in db.query(School).all()}
+
+    results = []
+    for log in logs:
+        sch_info = schools_map.get(log.school_id, {"name": "Master Platform", "code": "GLOBAL"}) if log.school_id else {"name": "Master Platform", "code": "GLOBAL"}
+        results.append({
+            "id": log.id,
+            "school_id": log.school_id,
+            "school_name": sch_info["name"],
+            "school_code": sch_info["code"],
+            "actor_username": log.actor_username,
+            "actor_role": log.actor_role,
+            "action": log.action,
+            "entity_type": log.entity_type,
+            "entity_id": log.entity_id,
+            "details": log.details,
+            "ip_address": log.ip_address or "127.0.0.1",
+            "device_category": log.device_category or "Desktop",
+            "device_brand": log.device_brand or "Personal Computer",
+            "browser_name": log.browser_name or "Web Browser",
+            "os_name": log.os_name or "Operating System",
+            "is_super_admin_action": log.is_super_admin_action,
+            "created_at": log.created_at.isoformat() if log.created_at else datetime.utcnow().isoformat()
+        })
+
+    return results
+
 
 
 

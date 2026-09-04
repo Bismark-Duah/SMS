@@ -8,6 +8,14 @@ function getHeaders(headers = {}) {
   return h;
 }
 
+function escapeHtml(text) {
+  if (text === null || text === undefined) return '';
+  const div = document.createElement('div');
+  div.textContent = String(text);
+  return div.innerHTML;
+}
+window.escapeHtml = escapeHtml;
+
 window.escapeJsQuotes = function(str) {
   if (!str) return '';
   return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');

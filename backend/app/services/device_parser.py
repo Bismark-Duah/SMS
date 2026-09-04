@@ -38,13 +38,16 @@ def parse_device_forensics(user_agent: Optional[str], headers: Optional[Dict[str
     }
     """
     headers = headers or {}
-    h_lower = {k.lower(): v for k, v in headers.items()}
+    h_lower = {str(k).lower(): str(v) for k, v in headers.items()}
 
-    # Extract client hint telemetry
+    # Extract client hint & hardware telemetry
     hint_model = _clean_header_val(h_lower.get("sec-ch-ua-model") or h_lower.get("x-client-device-model"))
+    if hint_model in ["K", "unknown", "none", "null"]: hint_model = ""
     hint_platform = _clean_header_val(h_lower.get("sec-ch-ua-platform") or h_lower.get("x-client-platform"))
     hint_mobile = _clean_header_val(h_lower.get("sec-ch-ua-mobile") or h_lower.get("x-client-mobile"))
     hint_touch = _clean_header_val(h_lower.get("x-client-touch"))
+    hint_gpu = _clean_header_val(h_lower.get("x-client-gpu"))
+    hint_screen = _clean_header_val(h_lower.get("x-client-screen"))
 
     ua = (user_agent or "").strip()
     ua_lower = ua.lower()
@@ -223,6 +226,21 @@ def parse_device_forensics(user_agent: Optional[str], headers: Optional[Dict[str
         device_brand = hint_model.title()
         if category != "Tablet":
             category = "Mobile"
+
+    elif hint_gpu and category in ["Mobile", "Tablet"]:
+        gpu_l = hint_gpu.lower()
+        if any(m in gpu_l for m in ["mali-g57", "mali-g52", "mali-g77", "mali-g76", "mali-g72", "mali-g68", "mali-t", "helio", "dimensity"]):
+            device_brand = f"TECNO / Infinix Mobile ({hint_gpu.split('(')[0].strip()})"
+        elif "adreno" in gpu_l:
+            adreno_match = re.search(r"adreno[^\d]*(\d+)", hint_gpu, re.IGNORECASE)
+            ad_num = adreno_match.group(1) if adreno_match else "Snapdragon"
+            device_brand = f"Snapdragon / Galaxy (Adreno {ad_num})"
+        elif "powervr" in gpu_l:
+            device_brand = "Itel Smartphone (PowerVR)"
+        elif "apple" in gpu_l:
+            device_brand = "Apple iPhone"
+        else:
+            device_brand = f"Android Smartphone ({hint_gpu.split('(')[0].strip()})"
 
     elif category == "Mobile":
         device_brand = "Android Smartphone"

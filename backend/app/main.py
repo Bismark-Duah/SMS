@@ -339,6 +339,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         duration_ms = round((time.time() - start_time) * 1000, 2)
         response.headers["X-Request-ID"] = req_id
+        response.headers["Accept-CH"] = "Sec-CH-UA-Model, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version, Sec-CH-UA-Mobile, Sec-CH-UA-Full-Version-List"
+        response.headers["Permissions-Policy"] = "ch-ua-model=*, ch-ua-platform=*, ch-ua-platform-version=*"
+        response.headers["Critical-CH"] = "Sec-CH-UA-Model, Sec-CH-UA-Platform"
 
         # Skip high-frequency health poll noise unless error
         if path not in ("/health", "/api/health") or response.status_code >= 400:

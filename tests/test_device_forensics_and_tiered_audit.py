@@ -141,6 +141,19 @@ class TestDeviceForensicsAndTieredAudit(unittest.TestCase):
         self.assertIn("TECNO", res["device_brand"].upper())
         self.assertEqual(res["os_name"], "Android")
 
+    def test_gpu_hardware_fallback(self):
+        # Android Chrome where model was reduced to "K" but WebGL GPU reveals MediaTek / Mali GPU
+        frozen_ua = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36"
+        gpu_headers = {
+            "x-client-gpu": "Mali-G57 MC2",
+            "x-client-touch": "true"
+        }
+        res = parse_device_forensics(frozen_ua, gpu_headers)
+        self.assertEqual(res["device_category"], "Mobile")
+        self.assertIn("TECNO / Infinix", res["device_brand"])
+        self.assertIn("Mali-G57", res["device_brand"])
+        self.assertIn("Android", res["os_name"])
+
     # ── 3. Desktop OS & Browser Forensics ────────────────────────────────────
 
     def test_desktop_forensics_detection(self):

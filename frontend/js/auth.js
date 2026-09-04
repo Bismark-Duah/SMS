@@ -30,13 +30,28 @@ if (form) {
       try {
         const isTouch = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
         if (isTouch) clientHeaders['X-Client-Touch'] = 'true';
+        if (window.screen) clientHeaders['X-Client-Screen'] = `${window.screen.width}x${window.screen.height}`;
+
+        // WebGL GPU Telemetry
+        try {
+          const canvas = document.createElement('canvas');
+          const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+          if (gl) {
+            const ext = gl.getExtension('WEBGL_debug_renderer_info');
+            if (ext) {
+              const gpu = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+              if (gpu) clientHeaders['X-Client-Gpu'] = gpu;
+            }
+          }
+        } catch (_) {}
+
         if (navigator.userAgentData) {
           if (navigator.userAgentData.platform) clientHeaders['X-Client-Platform'] = navigator.userAgentData.platform;
           if (navigator.userAgentData.mobile !== undefined) clientHeaders['X-Client-Mobile'] = navigator.userAgentData.mobile ? '?1' : '?0';
           if (navigator.userAgentData.getHighEntropyValues) {
             const entropy = await Promise.race([
-              navigator.userAgentData.getHighEntropyValues(['model', 'platform', 'platformVersion']),
-              new Promise(r => setTimeout(() => r(null), 120))
+              navigator.userAgentData.getHighEntropyValues(['model', 'platform', 'platformVersion', 'architecture']),
+              new Promise(r => setTimeout(() => r(null), 300))
             ]);
             if (entropy && entropy.model) clientHeaders['X-Client-Device-Model'] = entropy.model;
             if (entropy && entropy.platform) clientHeaders['X-Client-Platform'] = entropy.platform;

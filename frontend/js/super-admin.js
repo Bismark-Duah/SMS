@@ -443,84 +443,110 @@ window.renderSchoolsDirectory = function(schoolsList) {
 
 window.loadMasterAuditStream = async function() {
   const container = document.getElementById('masterAuditStreamContainer');
+  if (!container) return;
+
   const actionFilter = document.getElementById('auditActionFilter')?.value || '';
 
   try {
-    let url = `${API_BASE}/super-admin/audit-stream?limit=50`;
+    let url = `${API_BASE}/super-admin/audit-stream?limit=60`;
     if (actionFilter) url += `&action=${encodeURIComponent(actionFilter)}`;
 
     const res = await fetch(url, { headers: getHeaders() });
-    if (!res.ok) throw new Error('Failed to load audit stream');
-    const data = await res.json();
-
-    if (!container) return;
-
-    if (!data.logs || data.logs.length === 0) {
-      container.innerHTML = '<p style="opacity:0.6; font-size:0.85rem; text-align:center; padding:16px;">No security or administrative activity recorded yet.</p>';
+    if (!res.ok) {
+      container.innerHTML = `<p style="color:#f87171; text-align:center; padding:18px;">Could not load audit stream (HTTP ${res.status}).</p>`;
       return;
     }
 
-    container.innerHTML = data.logs.map(log => {
-      let actionBadgeColor = '#6366f1';
-      let actionIcon = '📝';
+    const data = await res.json();
+    const logs = Array.isArray(data) ? data : (Array.isArray(data.logs) ? data.logs : []);
 
-      if (log.action.includes('DELETE') || log.action.includes('DEPROVISION') || log.action.includes('PURGE')) {
-        actionBadgeColor = '#ef4444';
-        actionIcon = '⚠️';
-      } else if (log.action.includes('UPDATE') || log.action.includes('EDIT') || log.action.includes('SETTINGS')) {
-        actionBadgeColor = '#f59e0b';
-        actionIcon = '⚙️';
-      } else if (log.action.includes('PAYMENT') || log.action.includes('FEE')) {
-        actionBadgeColor = '#10b981';
-        actionIcon = '💳';
-      } else if (log.action.includes('LOGIN') || log.action.includes('AUTH')) {
-        actionBadgeColor = '#38bdf8';
-        actionIcon = '🔑';
-      } else if (log.action.includes('ENROLL')) {
-        actionBadgeColor = '#a855f7';
-        actionIcon = '🎓';
+    if (!logs || logs.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:30px; color:var(--sa-text-muted);">
+          <div style="font-size:2rem; margin-bottom:8px;">🛡️</div>
+          <p style="margin:0; font-size:0.9rem;">No security or operational events found matching the filter.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = logs.map(l => {
+      // Resolve action badge color
+      let actionBg = 'rgba(99, 102, 241, 0.15)';
+      let actionColor = '#a5b4fc';
+      let actionBorder = 'rgba(99, 102, 241, 0.3)';
+
+      const act = (l.action || '').toUpperCase();
+      if (act.includes('LOGIN')) {
+        actionBg = 'rgba(16, 185, 129, 0.15)'; actionColor = '#34d399'; actionBorder = 'rgba(16, 185, 129, 0.3)';
+      } else if (act.includes('PAYMENT') || act.includes('FEE')) {
+        actionBg = 'rgba(6, 182, 212, 0.15)'; actionColor = '#38bdf8'; actionBorder = 'rgba(6, 182, 212, 0.3)';
+      } else if (act.includes('SCORE') || act.includes('RESULT')) {
+        actionBg = 'rgba(168, 85, 247, 0.15)'; actionColor = '#c084fc'; actionBorder = 'rgba(168, 85, 247, 0.3)';
+      } else if (act.includes('PURGE') || act.includes('DELETE') || act.includes('SUSPEND')) {
+        actionBg = 'rgba(239, 68, 68, 0.15)'; actionColor = '#f87171'; actionBorder = 'rgba(239, 68, 68, 0.3)';
+      } else if (l.is_super_admin_action) {
+        actionBg = 'rgba(245, 158, 11, 0.15)'; actionColor = '#fbbf24'; actionBorder = 'rgba(245, 158, 11, 0.3)';
       }
 
-      const timeFormatted = log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Just now';
-      const dateFormatted = log.timestamp ? new Date(log.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+      // Device icon
+      let deviceIcon = '💻';
+      if (l.device_category === 'Mobile') deviceIcon = '📱';
+      else if (l.device_category === 'Tablet') deviceIcon = '📱';
+      else if (l.device_category === 'Bot') deviceIcon = '🤖';
 
-      // Clean, human-friendly details summary
-      let summaryText = log.details || 'Administrative mutation executed';
-      let jsonViewer = '';
+      const timeVal = l.created_at || l.timestamp;
+      const timeFormatted = timeVal ? new Date(timeVal).toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }) : 'Recent';
 
-      if (typeof summaryText === 'string' && (summaryText.startsWith('{') || summaryText.startsWith('['))) {
-        try {
-          const parsed = JSON.parse(summaryText);
-          const keys = Object.keys(parsed);
-          summaryText = `Updated ${keys.join(', ')} fields`;
-          jsonViewer = `<details style="margin-top:4px; font-size:0.75rem; color:#94a3b8; cursor:pointer;"><summary>View Raw JSON Payload</summary><pre style="background:rgba(0,0,0,0.4); padding:6px; border-radius:4px; overflow-x:auto; margin:4px 0 0 0;">${JSON.stringify(parsed, null, 2)}</pre></details>`;
-        } catch (_) {}
-      }
+      const schoolBadge = l.school_code ? `[ 🏫 ${escapeHtml(l.school_code)} ]` : `[ 🌐 PLATFORM ]`;
+      const actorName = l.actor_username || l.user_name || 'System Operator';
+      const actorRole = l.actor_role || l.user_role || 'user';
 
       return `
-        <div class="audit-card">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              <span style="font-size:1.1rem;">${actionIcon}</span>
-              <span class="audit-badge" style="background:${actionBadgeColor}22; color:${actionBadgeColor}; border:1px solid ${actionBadgeColor}44;">
-                ${log.action}
+        <div class="audit-card" style="display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="audit-badge" style="background:${actionBg}; color:${actionColor}; border:1px solid ${actionBorder};">
+                ${escapeHtml(l.action)}
               </span>
-              <span style="font-weight:700; color:#fff;">${log.user_name || 'System Operator'}</span>
-              <span style="color:#94a3b8; font-size:0.82rem;">${summaryText}</span>
-              ${log.school_code ? `<span style="background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; font-size:0.72rem; color:#cbd5e1;">${log.school_code}</span>` : ''}
+              <strong style="color:#f8fafc; font-size:0.85rem;">${escapeHtml(actorName)}</strong>
+              <span style="font-size:0.75rem; color:var(--sa-text-muted); background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:4px;">
+                ${escapeHtml(actorRole)}
+              </span>
+              <span style="font-size:0.75rem; color:#818cf8; font-weight:600;">
+                ${schoolBadge}
+              </span>
             </div>
-            <div style="font-size:0.75rem; color:#64748b; white-space:nowrap; text-align:right;">
-              <div>${timeFormatted}</div>
-              <div style="font-size:0.7rem;">${dateFormatted}</div>
+            <div style="font-size:0.75rem; color:var(--sa-text-muted); font-family:monospace;">
+              🕒 ${timeFormatted}
             </div>
           </div>
-          ${jsonViewer}
+
+          <div style="font-size:0.82rem; color:#cbd5e1; line-height:1.4;">
+            ${escapeHtml(l.details || l.action)}
+          </div>
+
+          <!-- Forensic Telemetry Badges -->
+          <div style="display:flex; flex-wrap:wrap; gap:6px; font-size:0.73rem; align-items:center; padding-top:4px; border-top:1px solid rgba(255,255,255,0.04);">
+            <span style="background:#090d16; color:#e2e8f0; padding:2px 8px; border-radius:4px; border:1px solid #334155; display:inline-flex; align-items:center; gap:4px;">
+              ${deviceIcon} <b>${escapeHtml(l.device_brand || 'Personal Computer')}</b> • ${escapeHtml(l.browser_name || 'Web Browser')}
+            </span>
+            <span style="background:#090d16; color:#94a3b8; padding:2px 6px; border-radius:4px; border:1px solid #1e293b;">
+              ${escapeHtml(l.os_name || 'Operating System')}
+            </span>
+            <span style="background:#090d16; color:#38bdf8; padding:2px 6px; border-radius:4px; border:1px solid rgba(14,165,233,0.3); font-family:monospace;">
+              📍 ${escapeHtml(l.ip_address || '127.0.0.1')}
+            </span>
+          </div>
         </div>
       `;
     }).join('');
 
   } catch (err) {
-    if (container) container.innerHTML = `<p style="color:#ef4444; font-size:0.85rem; padding:12px;">❌ Error loading audit stream: ${err.message}</p>`;
+    container.innerHTML = `<p style="color:#f87171; text-align:center; padding:18px;">Error loading audit feed: ${err.message}</p>`;
   }
 };
 
@@ -1727,111 +1753,6 @@ window.openTestSMSModal = async function() {
     window.loadSMSGatewayStatus();
   } catch (err) {
     alert(`❌ Test Dispatch Failed: ${err.message}`);
-  }
-};
-
-// ── Enterprise Forensic Audit Stream Handler ─────────────────────────────────
-
-window.loadMasterAuditStream = async function() {
-  const container = document.getElementById('masterAuditStreamContainer');
-  if (!container) return;
-
-  const actionFilter = document.getElementById('auditActionFilter')?.value || '';
-
-  try {
-    let url = `${API_BASE}/super-admin/audit-stream?limit=60`;
-    if (actionFilter) url += `&action=${encodeURIComponent(actionFilter)}`;
-
-    const res = await fetch(url, { headers: getHeaders() });
-    if (!res.ok) {
-      container.innerHTML = `<p style="color:#f87171; text-align:center; padding:18px;">Could not load audit stream (HTTP ${res.status}).</p>`;
-      return;
-    }
-
-    const logs = await res.json();
-    if (!logs || logs.length === 0) {
-      container.innerHTML = `
-        <div style="text-align:center; padding:30px; color:var(--sa-text-muted);">
-          <div style="font-size:2rem; margin-bottom:8px;">🛡️</div>
-          <p style="margin:0; font-size:0.9rem;">No security or operational events found matching the filter.</p>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = logs.map(l => {
-      // Resolve action badge color
-      let actionBg = 'rgba(99, 102, 241, 0.15)';
-      let actionColor = '#a5b4fc';
-      let actionBorder = 'rgba(99, 102, 241, 0.3)';
-
-      if (l.action.includes('LOGIN')) {
-        actionBg = 'rgba(16, 185, 129, 0.15)'; actionColor = '#34d399'; actionBorder = 'rgba(16, 185, 129, 0.3)';
-      } else if (l.action.includes('PAYMENT') || l.action.includes('FEE')) {
-        actionBg = 'rgba(6, 182, 212, 0.15)'; actionColor = '#38bdf8'; actionBorder = 'rgba(6, 182, 212, 0.3)';
-      } else if (l.action.includes('SCORE') || l.action.includes('RESULT')) {
-        actionBg = 'rgba(168, 85, 247, 0.15)'; actionColor = '#c084fc'; actionBorder = 'rgba(168, 85, 247, 0.3)';
-      } else if (l.action.includes('PURGE') || l.action.includes('DELETE') || l.action.includes('SUSPEND')) {
-        actionBg = 'rgba(239, 68, 68, 0.15)'; actionColor = '#f87171'; actionBorder = 'rgba(239, 68, 68, 0.3)';
-      } else if (l.is_super_admin_action) {
-        actionBg = 'rgba(245, 158, 11, 0.15)'; actionColor = '#fbbf24'; actionBorder = 'rgba(245, 158, 11, 0.3)';
-      }
-
-      // Device icon
-      let deviceIcon = '💻';
-      if (l.device_category === 'Mobile') deviceIcon = '📱';
-      else if (l.device_category === 'Tablet') deviceIcon = '📱';
-      else if (l.device_category === 'Bot') deviceIcon = '🤖';
-
-      const timeFormatted = new Date(l.created_at).toLocaleString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', second: '2-digit'
-      });
-
-      const schoolBadge = l.school_code ? `[ 🏫 ${escapeHtml(l.school_code)} ]` : `[ 🌐 PLATFORM ]`;
-
-      return `
-        <div class="audit-card" style="display:flex; flex-direction:column; gap:8px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span class="audit-badge" style="background:${actionBg}; color:${actionColor}; border:1px solid ${actionBorder};">
-                ${escapeHtml(l.action)}
-              </span>
-              <strong style="color:#f8fafc; font-size:0.85rem;">${escapeHtml(l.actor_username)}</strong>
-              <span style="font-size:0.75rem; color:var(--sa-text-muted); background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:4px;">
-                ${escapeHtml(l.actor_role)}
-              </span>
-              <span style="font-size:0.75rem; color:#818cf8; font-weight:600;">
-                ${schoolBadge}
-              </span>
-            </div>
-            <div style="font-size:0.75rem; color:var(--sa-text-muted); font-family:monospace;">
-              🕒 ${timeFormatted}
-            </div>
-          </div>
-
-          <div style="font-size:0.82rem; color:#cbd5e1; line-height:1.4;">
-            ${escapeHtml(l.details || l.action)}
-          </div>
-
-          <!-- Forensic Telemetry Badges -->
-          <div style="display:flex; flex-wrap:wrap; gap:6px; font-size:0.73rem; align-items:center; padding-top:4px; border-top:1px solid rgba(255,255,255,0.04);">
-            <span style="background:#090d16; color:#e2e8f0; padding:2px 8px; border-radius:4px; border:1px solid #334155; display:inline-flex; align-items:center; gap:4px;">
-              ${deviceIcon} <b>${escapeHtml(l.device_brand)}</b> • ${escapeHtml(l.browser_name)}
-            </span>
-            <span style="background:#090d16; color:#94a3b8; padding:2px 6px; border-radius:4px; border:1px solid #1e293b;">
-              ${escapeHtml(l.os_name)}
-            </span>
-            <span style="background:#090d16; color:#38bdf8; padding:2px 6px; border-radius:4px; border:1px solid rgba(14,165,233,0.3); font-family:monospace;">
-              📍 ${escapeHtml(l.ip_address)}
-            </span>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-  } catch (err) {
-    container.innerHTML = `<p style="color:#f87171; text-align:center; padding:18px;">Error loading audit feed: ${err.message}</p>`;
   }
 };
 

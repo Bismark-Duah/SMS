@@ -192,37 +192,80 @@ def get_super_admin_audit_stream(
     current_user: User = Depends(require_super_admin)
 ):
     """
-    Returns unified real-time security and administrative audit logs across all schools.
+    Returns unified real-time security and administrative audit logs across all schools with complete device telemetry.
     """
     schools_map = {s.id: {"name": s.name, "code": s.code} for s in db.query(School).all()}
     
-    query = db.query(ActivityAuditLog)
+    query = db.query(AuditLog)
     if school_id is not None:
-        query = query.filter(ActivityAuditLog.school_id == school_id)
+        query = query.filter(AuditLog.school_id == school_id)
     if action:
-        query = query.filter(ActivityAuditLog.action == action.upper())
+        query = query.filter(AuditLog.action == action.upper())
 
-    logs = query.order_by(ActivityAuditLog.timestamp.desc()).limit(limit).all()
+    logs = query.order_by(AuditLog.created_at.desc()).limit(limit).all()
 
-    return {
-        "total": len(logs),
-        "logs": [
-            {
+    results = []
+    for log in logs:
+        sch_info = schools_map.get(log.school_id, {"name": "Master Platform", "code": "GLOBAL"}) if log.school_id else {"name": "Master Platform", "code": "GLOBAL"}
+        results.append({
+            "id": log.id,
+            "school_id": log.school_id,
+            "school_name": sch_info["name"],
+            "school_code": sch_info["code"],
+            "user_name": log.actor_username,
+            "actor_username": log.actor_username,
+            "user_role": log.actor_role,
+            "actor_role": log.actor_role,
+            "action": log.action,
+            "entity_type": log.entity_type,
+            "entity_id": log.entity_id,
+            "details": log.details,
+            "ip_address": log.ip_address or "127.0.0.1",
+            "device_category": log.device_category or "Desktop",
+            "device_brand": log.device_brand or "Personal Computer",
+            "browser_name": log.browser_name or "Web Browser",
+            "os_name": log.os_name or "Operating System",
+            "is_super_admin_action": bool(log.is_super_admin_action),
+            "created_at": log.created_at.isoformat() if log.created_at else datetime.utcnow().isoformat(),
+            "timestamp": log.created_at.isoformat() if log.created_at else datetime.utcnow().isoformat()
+        })
+
+    # Legacy fallback if no AuditLog exists yet
+    if not results:
+        legacy_query = db.query(ActivityAuditLog)
+        if school_id is not None:
+            legacy_query = legacy_query.filter(ActivityAuditLog.school_id == school_id)
+        if action:
+            legacy_query = legacy_query.filter(ActivityAuditLog.action == action.upper())
+        legacy_logs = legacy_query.order_by(ActivityAuditLog.timestamp.desc()).limit(limit).all()
+        for log in legacy_logs:
+            sch_info = schools_map.get(log.school_id, {"name": "Master System", "code": "SYS"}) if log.school_id else {"name": "Master System", "code": "SYS"}
+            results.append({
                 "id": log.id,
                 "school_id": log.school_id,
-                "school_name": schools_map.get(log.school_id, {}).get("name", "Master System") if log.school_id else "Master System",
-                "school_code": schools_map.get(log.school_id, {}).get("code", "SYS") if log.school_id else "SYS",
+                "school_name": sch_info["name"],
+                "school_code": sch_info["code"],
                 "user_name": log.user_name or "System",
+                "actor_username": log.user_name or "System",
                 "user_role": log.user_role or "N/A",
+                "actor_role": log.user_role or "N/A",
                 "action": log.action,
                 "entity_type": log.entity_type,
                 "entity_id": log.entity_id,
                 "details": log.details,
-                "ip_address": log.ip_address,
-                "timestamp": log.timestamp.isoformat() if hasattr(log.timestamp, 'isoformat') else (str(log.timestamp) if log.timestamp else None)
-            }
-            for log in logs
-        ]
+                "ip_address": log.ip_address or "127.0.0.1",
+                "device_category": "Desktop",
+                "device_brand": "Personal Computer",
+                "browser_name": "Web Browser",
+                "os_name": "Operating System",
+                "is_super_admin_action": False,
+                "created_at": log.timestamp.isoformat() if hasattr(log.timestamp, 'isoformat') else (str(log.timestamp) if log.timestamp else datetime.utcnow().isoformat()),
+                "timestamp": log.timestamp.isoformat() if hasattr(log.timestamp, 'isoformat') else (str(log.timestamp) if log.timestamp else datetime.utcnow().isoformat())
+            })
+
+    return {
+        "total": len(results),
+        "logs": results
     }
 
 @router.get("/schools")
@@ -1868,57 +1911,4 @@ def test_sms_gateway_dispatch(
         message_type="ADMIN_TEST"
     )
     return res
-
-
-@router.get("/audit-stream")
-def get_master_audit_stream(
-    action: Optional[str] = None,
-    school_id: Optional[int] = None,
-    limit: int = 50,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_super_admin)
-):
-    """
-    Returns the Master Global Forensic Audit Stream across all schools with complete device telemetry.
-    """
-    query = db.query(AuditLog).order_by(AuditLog.created_at.desc())
-
-    if action:
-        query = query.filter(AuditLog.action == action)
-    if school_id:
-        query = query.filter(AuditLog.school_id == school_id)
-
-    logs = query.limit(limit).all()
-
-    # Preload school names for fast resolution
-    schools_map = {s.id: {"name": s.name, "code": s.code} for s in db.query(School).all()}
-
-    results = []
-    for log in logs:
-        sch_info = schools_map.get(log.school_id, {"name": "Master Platform", "code": "GLOBAL"}) if log.school_id else {"name": "Master Platform", "code": "GLOBAL"}
-        results.append({
-            "id": log.id,
-            "school_id": log.school_id,
-            "school_name": sch_info["name"],
-            "school_code": sch_info["code"],
-            "actor_username": log.actor_username,
-            "actor_role": log.actor_role,
-            "action": log.action,
-            "entity_type": log.entity_type,
-            "entity_id": log.entity_id,
-            "details": log.details,
-            "ip_address": log.ip_address or "127.0.0.1",
-            "device_category": log.device_category or "Desktop",
-            "device_brand": log.device_brand or "Personal Computer",
-            "browser_name": log.browser_name or "Web Browser",
-            "os_name": log.os_name or "Operating System",
-            "is_super_admin_action": log.is_super_admin_action,
-            "created_at": log.created_at.isoformat() if log.created_at else datetime.utcnow().isoformat()
-        })
-
-    return results
-
-
-
-
 

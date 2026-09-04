@@ -580,6 +580,69 @@
               Status: WAL Mode Active • PRAGMA Integrity OK
             </div>
           </div>
+
+          <!-- Operation 4: Enterprise SMS Multi-Gateway Matrix -->
+          <div class="sa-table-card" style="grid-column:1 / -1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
+              <div>
+                <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+                  <span>📱</span> Multi-Gateway SMS Engine &amp; Failover Matrix
+                </h3>
+                <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);">
+                  Configure your primary mNotify gateway and Hubtel secondary failover for student alerts, admission PINs &amp; fee receipts.
+                </p>
+              </div>
+              <div id="smsGatewayStatusPill" style="display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:700; padding:4px 10px; border-radius:20px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);">
+                🟢 Gateway Engine Ready
+              </div>
+            </div>
+
+            <form id="smsGatewayForm" onsubmit="window.handleSaveSMSGatewayConfig(event)">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px; margin-bottom:14px;">
+                <div>
+                  <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Primary Routing Gateway *</label>
+                  <select id="smsPrimaryGateway" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-primary); border-radius:6px; color:#fff; font-weight:600;">
+                    <option value="mnotify">mNotify Ghana (Recommended / Primary)</option>
+                    <option value="hubtel">Hubtel Ghana (Secondary / Standby)</option>
+                    <option value="auto">Auto-Failover (mNotify &rarr; Hubtel)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Master Sender ID Header (Max 11 Chars) *</label>
+                  <input id="smsMasterSenderId" type="text" maxlength="11" placeholder="EDUMANAGE" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; text-transform:uppercase; font-weight:700;" />
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px; margin-bottom:14px;">
+                <div>
+                  <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">mNotify API Key (Paste when ready)</label>
+                  <input id="mnotifyApiKey" type="password" placeholder="e.g. your_mnotify_api_key" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+                </div>
+                <div>
+                  <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Hubtel Client ID (Preserved)</label>
+                  <input id="hubtelClientId" type="text" placeholder="Hubtel Client ID" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+                </div>
+                <div>
+                  <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Hubtel Client Secret (Preserved)</label>
+                  <input id="hubtelClientSecret" type="password" placeholder="••••••••••••" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+                </div>
+              </div>
+
+              <div id="smsGatewayStatusMsg" style="margin-bottom:12px; display:none; padding:10px 14px; border-radius:6px; font-size:0.82rem;"></div>
+
+              <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+                <button type="submit" id="btnSaveSMSGateway" class="btn primary" style="padding:9px 18px; font-weight:700;">
+                  💾 Save Gateway Settings
+                </button>
+                <button type="button" class="btn" style="padding:9px 14px; background:#0284c7; color:#fff;" onclick="window.checkSMSBalance()">
+                  💳 Check Gateway Balance
+                </button>
+                <button type="button" class="btn" style="padding:9px 14px; background:rgba(99,102,241,0.2); border-color:#6366f1; color:#a5b4fc;" onclick="window.openTestSMSModal()">
+                  ⚡ Send Test Dispatch
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </section>
 

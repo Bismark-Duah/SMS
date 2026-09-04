@@ -11,9 +11,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from ..database import get_db
-from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog, Program, ActivityAuditLog
+from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog, Program, ActivityAuditLog, MessageLog
 from ..routes.auth import get_current_user, get_password_hash
 from ..ncca_seed import seed_ncca_curriculum
+from ..sms.gateway import sms_engine, mask_phone_number
 
 router = APIRouter(prefix="/super-admin", tags=["Super Admin Multi-School Portal"])
 
@@ -1741,6 +1742,133 @@ def get_super_admin_financial_summary(
         "total_sms_sent": total_sms_sent_global,
         "schools": school_breakdowns
     }
+
+
+# ── Enterprise SMS Multi-Gateway Management ──────────────────────────────────
+
+class SMSGatewayConfigSchema(BaseModel):
+    primary_gateway: Optional[str] = "mnotify"  # mnotify, hubtel, auto
+    mnotify_api_key: Optional[str] = None
+    mnotify_sender_id: Optional[str] = "EDUMANAGE"
+    hubtel_client_id: Optional[str] = None
+    hubtel_client_secret: Optional[str] = None
+    auto_failover: Optional[bool] = True
+
+
+@router.get("/sms-gateway/status")
+def get_sms_gateway_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Returns live SMS Multi-Gateway health, active provider, balance, and recent logs.
+    """
+    creds = sms_engine.resolve_credentials(db)
+
+    # Check mNotify balance if configured
+    mnotify_balance_info = {"status": "unconfigured", "balance": 0}
+    if creds.get("mnotify_api_key"):
+        mnotify_balance_info = sms_engine.mnotify.check_balance({"api_key": creds["mnotify_api_key"]})
+
+    # Recent SMS logs count
+    total_sent = db.query(MessageLog).filter(MessageLog.status == "SENT").count()
+    total_offline_queued = db.query(MessageLog).filter(MessageLog.status == "QUEUED_OFFLINE").count()
+    total_failed = db.query(MessageLog).filter(MessageLog.status == "FAILED").count()
+
+    recent_logs = db.query(MessageLog).order_by(MessageLog.created_at.desc()).limit(15).all()
+
+    return {
+        "status": "active",
+        "primary_gateway": creds.get("primary_gateway", "mnotify"),
+        "mnotify": {
+            "is_configured": bool(creds.get("mnotify_api_key")),
+            "sender_id": creds.get("mnotify_sender_id", "EDUMANAGE"),
+            "api_key_masked": f"{creds['mnotify_api_key'][:4]}****{creds['mnotify_api_key'][-4:]}" if len(creds.get("mnotify_api_key", "")) > 8 else ("Configured" if creds.get("mnotify_api_key") else "Missing"),
+            "balance_info": mnotify_balance_info
+        },
+        "hubtel": {
+            "is_configured": bool(creds.get("hubtel_client_id") and creds.get("hubtel_client_secret")),
+            "client_id_masked": f"{creds['hubtel_client_id'][:4]}****" if creds.get("hubtel_client_id") else "Missing"
+        },
+        "telemetry": {
+            "total_sent": total_sent,
+            "total_offline_queued": total_offline_queued,
+            "total_failed": total_failed
+        },
+        "recent_dispatches": [
+            {
+                "id": log.id,
+                "recipient": mask_phone_number(log.recipient_phone),
+                "type": log.message_type,
+                "status": log.status,
+                "created_at": log.created_at.isoformat() if log.created_at else None
+            }
+            for log in recent_logs
+        ]
+    }
+
+
+@router.put("/sms-gateway/config")
+def update_sms_gateway_config(
+    payload: SMSGatewayConfigSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Updates platform-wide SMS Gateway settings in the Setting table.
+    """
+    updates = {}
+    if payload.primary_gateway is not None:
+        updates["sms_primary_gateway"] = payload.primary_gateway.lower().strip()
+    if payload.mnotify_api_key is not None:
+        updates["mnotify_api_key"] = payload.mnotify_api_key.strip()
+    if payload.mnotify_sender_id is not None:
+        updates["mnotify_sender_id"] = payload.mnotify_sender_id.strip()[:11]
+    if payload.hubtel_client_id is not None:
+        updates["hubtel_client_id"] = payload.hubtel_client_id.strip()
+    if payload.hubtel_client_secret is not None:
+        updates["hubtel_client_secret"] = payload.hubtel_client_secret.strip()
+    if payload.auto_failover is not None:
+        updates["sms_auto_failover"] = "true" if payload.auto_failover else "false"
+
+    for k, v in updates.items():
+        s = db.query(Setting).filter(Setting.key == k).first()
+        if not s:
+            s = Setting(key=k, value=v)
+            db.add(s)
+        else:
+            s.value = v
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "SMS Multi-Gateway configuration updated successfully."
+    }
+
+
+class SMSTestPayload(BaseModel):
+    test_phone: str
+    message: Optional[str] = "eduManage360: Live test message from your SMS Gateway."
+
+
+@router.post("/sms-gateway/test")
+def test_sms_gateway_dispatch(
+    payload: SMSTestPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Dispatches a test message through the Multi-Gateway failover pipeline.
+    """
+    res = sms_engine.dispatch(
+        recipient_phone=payload.test_phone,
+        message_body=payload.message,
+        db=db,
+        recipient_name="Super Admin Tester",
+        message_type="ADMIN_TEST"
+    )
+    return res
+
 
 
 

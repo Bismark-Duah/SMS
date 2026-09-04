@@ -33,6 +33,10 @@ window.switchSuperAdminTab = function(tabName) {
       window.history.replaceState(null, '', `#${tabName}`);
     }
   } catch (_) {}
+
+  if (tabName === 'operations' && window.loadSMSGatewayStatus) {
+    window.loadSMSGatewayStatus();
+  }
 };
 
 // Initialize active tab from hash or localStorage
@@ -1567,6 +1571,151 @@ window.triggerAllSchoolsSync = async function() {
       btn.disabled = false;
       btn.textContent = '🔄 Sync All Network Nodes';
     }
+  }
+};
+
+// ── Enterprise SMS Multi-Gateway Handlers ────────────────────────────────────
+
+window.loadSMSGatewayStatus = async function() {
+  const statusPill = document.getElementById('smsGatewayStatusPill');
+  const primarySelect = document.getElementById('smsPrimaryGateway');
+  const senderInput = document.getElementById('smsMasterSenderId');
+  const mnotifyInput = document.getElementById('mnotifyApiKey');
+  const hubtelIdInput = document.getElementById('hubtelClientId');
+  const hubtelSecretInput = document.getElementById('hubtelClientSecret');
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/sms-gateway/status`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    if (primarySelect && data.primary_gateway) primarySelect.value = data.primary_gateway;
+    if (senderInput && data.mnotify?.sender_id) senderInput.value = data.mnotify.sender_id;
+    if (hubtelIdInput && data.hubtel?.client_id_masked && data.hubtel.client_id_masked !== 'Missing') {
+      hubtelIdInput.placeholder = data.hubtel.client_id_masked;
+    }
+    if (mnotifyInput && data.mnotify?.api_key_masked && data.mnotify.api_key_masked !== 'Missing') {
+      mnotifyInput.placeholder = `Configured (${data.mnotify.api_key_masked})`;
+    }
+
+    if (statusPill) {
+      if (data.mnotify?.is_configured) {
+        statusPill.innerHTML = '🟢 mNotify Active &bull; Hubtel Failover Ready';
+        statusPill.style.background = 'rgba(16, 185, 129, 0.15)';
+        statusPill.style.color = '#34d399';
+        statusPill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      } else if (data.hubtel?.is_configured) {
+        statusPill.innerHTML = '🟡 Hubtel Active &bull; mNotify Awaiting Key';
+        statusPill.style.background = 'rgba(245, 158, 11, 0.15)';
+        statusPill.style.color = '#fbbf24';
+        statusPill.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+      } else {
+        statusPill.innerHTML = '💾 Offline WAL Outbox Active (Plug Keys to Go Live)';
+        statusPill.style.background = 'rgba(99, 102, 241, 0.15)';
+        statusPill.style.color = '#a5b4fc';
+        statusPill.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load SMS gateway status:', err);
+  }
+};
+
+window.handleSaveSMSGatewayConfig = async function(event) {
+  event.preventDefault();
+  const btn = document.getElementById('btnSaveSMSGateway');
+  const statusMsg = document.getElementById('smsGatewayStatusMsg');
+
+  const payload = {
+    primary_gateway: document.getElementById('smsPrimaryGateway')?.value || 'mnotify',
+    mnotify_sender_id: (document.getElementById('smsMasterSenderId')?.value || 'EDUMANAGE').trim().toUpperCase(),
+    mnotify_api_key: document.getElementById('mnotifyApiKey')?.value?.trim() || undefined,
+    hubtel_client_id: document.getElementById('hubtelClientId')?.value?.trim() || undefined,
+    hubtel_client_secret: document.getElementById('hubtelClientSecret')?.value?.trim() || undefined,
+    auto_failover: true
+  };
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Saving Settings...';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/sms-gateway/config`, {
+      method: 'PUT',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Could not update SMS gateway configuration');
+
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(16, 185, 129, 0.15)';
+      statusMsg.style.border = '1px solid #10b981';
+      statusMsg.style.color = '#34d399';
+      statusMsg.innerHTML = `<strong>✔ Success:</strong> ${data.message}`;
+      setTimeout(() => { statusMsg.style.display = 'none'; }, 4000);
+    }
+
+    if (window.showToast) window.showToast('SMS Gateway settings updated successfully!', 'success');
+    window.loadSMSGatewayStatus();
+  } catch (err) {
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+      statusMsg.style.border = '1px solid #ef4444';
+      statusMsg.style.color = '#f87171';
+      statusMsg.innerHTML = `<strong>Update Failed:</strong> ${err.message}`;
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '💾 Save Gateway Settings';
+    }
+  }
+};
+
+window.checkSMSBalance = async function() {
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/sms-gateway/status`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Could not fetch balance');
+    const data = await res.json();
+
+    const mnotifyBal = data.mnotify?.balance_info?.sms_balance ?? 'N/A';
+    const msg = `📱 SMS Gateway Telemetry:\n\n• Primary Gateway: ${data.primary_gateway.toUpperCase()}\n• mNotify Live Balance: ${mnotifyBal} credits\n• Total Global Messages Sent: ${data.telemetry?.total_sent || 0}\n• Offline Outbox Queued: ${data.telemetry?.total_offline_queued || 0}`;
+    alert(msg);
+  } catch (err) {
+    alert(`Could not verify balance: ${err.message}`);
+  }
+};
+
+window.openTestSMSModal = async function() {
+  const phone = prompt('Enter a Ghanaian phone number (e.g. 0244123456) to send a test message:');
+  if (!phone) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/sms-gateway/test`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        test_phone: phone.trim(),
+        message: 'eduManage360: Live test dispatch from your Enterprise Multi-Gateway SMS Engine.'
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Test dispatch failed');
+
+    alert(`✔ Test Dispatch Result:\nStatus: ${data.status}\nGateway: ${data.gateway || 'OFFLINE_QUEUE'}\nRecipient: ${data.recipient}\nMessage ID: ${data.message_id}`);
+    window.loadSMSGatewayStatus();
+  } catch (err) {
+    alert(`❌ Test Dispatch Failed: ${err.message}`);
   }
 };
 

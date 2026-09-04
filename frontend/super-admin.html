@@ -526,7 +526,7 @@
                 <option value="DEPROVISION">⚠️ Deprovisioning &amp; Purge</option>
               </select>
               <button class="btn" style="padding:7px 12px; font-size:0.82rem;" onclick="window.loadMasterAuditStream(1)">🔄 Refresh Feed</button>
-              <button class="btn danger" style="padding:7px 12px; font-size:0.82rem; background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#f87171;" onclick="window.handlePurgeAuditStream()">🗑️ Clear Audit Trail</button>
+              <button class="btn danger" style="padding:7px 12px; font-size:0.82rem; background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#f87171;" onclick="window.openPurgeAuditModal()">🗑️ Clear Audit Trail</button>
             </div>
           </div>
 
@@ -948,6 +948,31 @@
             <button type="button" class="btn" onclick="closeDeleteSchoolModal()" style="flex:1; padding:10px;">Cancel</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Modal 6: Purge / Clear Audit Trail Modal -->
+    <div class="modal" id="purgeAuditModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+      <div class="modal-content" style="max-width:480px; width:90%; background:var(--sa-surface); border:1px solid var(--sa-danger); border-radius:12px; padding:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="margin:0; color:var(--sa-danger); font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+            <span>⚠️</span> Permanently Clear Audit Trail
+          </h3>
+          <button type="button" onclick="window.closePurgeAuditModal()" style="background:none; border:none; color:var(--sa-text-muted); font-size:1.2rem; cursor:pointer;">✕</button>
+        </div>
+
+        <p style="font-size:0.86rem; line-height:1.5; color:var(--sa-text-muted); margin-bottom:18px;">
+          You are about to permanently purge all activity and security audit records across all registered schools. This action is irreversible. A fresh immutable <strong style="color:#fbbf24;">AUDIT_LOG_PURGED</strong> security marker will be logged.
+        </p>
+
+        <div style="display:flex; gap:10px;">
+          <button type="button" id="btnConfirmPurgeAudit" class="btn danger" style="flex:1; padding:10px; background:#dc2626; color:#fff; font-weight:700;" onclick="window.executePurgeAuditStream()">
+            🗑️ Yes, Purge Audit Trail
+          </button>
+          <button type="button" class="btn" style="flex:1; padding:10px;" onclick="window.closePurgeAuditModal()">
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
 

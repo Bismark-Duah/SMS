@@ -620,9 +620,27 @@ window.renderAuditPagination = function(total, currentPage, totalPages) {
   btnsEl.innerHTML = btnsHtml;
 };
 
-window.handlePurgeAuditStream = async function() {
-  const confirmMsg = "⚠️ Are you sure you want to permanently clear all activity and security audit records?\n\nThis will purge the audit trail ledger across all schools and log an AUDIT_LOG_PURGED marker.";
-  if (!confirm(confirmMsg)) return;
+window.openPurgeAuditModal = function() {
+  const modal = document.getElementById('purgeAuditModal');
+  const btn = document.getElementById('btnConfirmPurgeAudit');
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '🗑️ Yes, Purge Audit Trail';
+  }
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closePurgeAuditModal = function() {
+  const modal = document.getElementById('purgeAuditModal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.executePurgeAuditStream = async function() {
+  const btn = document.getElementById('btnConfirmPurgeAudit');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Purging Audit Records...';
+  }
 
   try {
     const res = await fetch(`${API_BASE}/super-admin/audit-stream/purge`, {
@@ -632,10 +650,19 @@ window.handlePurgeAuditStream = async function() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Failed to clear audit trail');
 
-    alert(`✔ ${data.message || 'Audit trail successfully cleared.'}`);
+    window.closePurgeAuditModal();
+    if (window.showToast) {
+      window.showToast(data.message || 'Audit trail successfully cleared.', 'success');
+    } else {
+      alert(`✔ ${data.message || 'Audit trail successfully cleared.'}`);
+    }
     window.loadMasterAuditStream(1);
   } catch (err) {
     alert(`❌ Purge Failed: ${err.message}`);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '🗑️ Yes, Purge Audit Trail';
+    }
   }
 };
 

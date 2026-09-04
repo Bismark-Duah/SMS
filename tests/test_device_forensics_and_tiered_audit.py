@@ -117,6 +117,32 @@ class TestDeviceForensicsAndTieredAudit(unittest.TestCase):
         self.assertEqual(res3["device_category"], "Mobile")
         self.assertIn("Samsung Galaxy", res3["device_brand"])
 
+        # Samsung Galaxy A14 & S24
+        samsung_a14_res = parse_device_forensics("Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 Chrome/150.0 Mobile Safari/537.36", {"sec-ch-ua-model": "SM-A145F"})
+        self.assertEqual(samsung_a14_res["device_category"], "Mobile")
+        self.assertIn("Samsung Galaxy A14 (SM-A145F)", samsung_a14_res["device_brand"])
+
+        samsung_s24_res = parse_device_forensics("Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 Chrome/150.0 Mobile Safari/537.36", {"sec-ch-ua-model": "SM-S928B"})
+        self.assertIn("Samsung Galaxy S24 Ultra (SM-S928B)", samsung_s24_res["device_brand"])
+
+        # Xiaomi / Redmi
+        redmi_res = parse_device_forensics("Mozilla/5.0 (Linux; Android 13; K) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36", {"sec-ch-ua-model": "2312DRA50G"})
+        self.assertIn("Xiaomi Redmi Note 13", redmi_res["device_brand"])
+
+        # Oppo & Realme & Vivo
+        oppo_res = parse_device_forensics("Mozilla/5.0 (Linux; Android 13; K) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36", {"sec-ch-ua-model": "CPH2343"})
+        self.assertIn("Oppo Smartphone (CPH2343)", oppo_res["device_brand"])
+
+        realme_res = parse_device_forensics("Mozilla/5.0 (Linux; Android 13; K) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36", {"sec-ch-ua-model": "RMX3710"})
+        self.assertIn("Realme Smartphone (RMX3710)", realme_res["device_brand"])
+
+        vivo_res = parse_device_forensics("Mozilla/5.0 (Linux; Android 13; K) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36", {"sec-ch-ua-model": "V2250"})
+        self.assertIn("Vivo Smartphone (V2250)", vivo_res["device_brand"])
+
+        # Google Pixel
+        pixel_res = parse_device_forensics("Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36")
+        self.assertIn("Google Pixel 8 Pro", pixel_res["device_brand"])
+
         # Apple iPhone
         iphone_ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1"
         res4 = parse_device_forensics(iphone_ua)
@@ -142,16 +168,15 @@ class TestDeviceForensicsAndTieredAudit(unittest.TestCase):
         self.assertEqual(res["os_name"], "Android")
 
     def test_gpu_hardware_fallback(self):
-        # Android Chrome where model was reduced to "K" but WebGL GPU reveals MediaTek / Mali GPU
+        # Android Chrome where model was reduced to "K" but WebGL GPU reveals Mali GPU with ANGLE wrapper
         frozen_ua = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36"
         gpu_headers = {
-            "x-client-gpu": "Mali-G57 MC2",
+            "x-client-gpu": "ANGLE (ARM, Mali-G57 MC2, OpenGL ES 3.2)",
             "x-client-touch": "true"
         }
         res = parse_device_forensics(frozen_ua, gpu_headers)
         self.assertEqual(res["device_category"], "Mobile")
-        self.assertIn("TECNO / Infinix", res["device_brand"])
-        self.assertIn("Mali-G57", res["device_brand"])
+        self.assertEqual(res["device_brand"], "Android Smartphone (ARM Mali-G57 MC2)")
         self.assertIn("Android", res["os_name"])
 
     # ── 3. Desktop OS & Browser Forensics ────────────────────────────────────

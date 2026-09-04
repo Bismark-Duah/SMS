@@ -10,6 +10,38 @@ if (msgParam && msgEl) {
   msgEl.style.color = '#f59e0b';
 }
 
+// ── Instant Forensic Hardware Pre-Fetch Engine ───────────────────────
+const prefetchedHardware = {
+  model: '',
+  platform: '',
+  mobile: '',
+  gpu: '',
+  screen: window.screen ? `${window.screen.width}x${window.screen.height}` : '',
+  touch: (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)) ? 'true' : 'false'
+};
+
+try {
+  const canvas = document.createElement('canvas');
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (gl) {
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    if (ext) prefetchedHardware.gpu = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '';
+  }
+} catch (_) {}
+
+if (navigator.userAgentData) {
+  if (navigator.userAgentData.platform) prefetchedHardware.platform = navigator.userAgentData.platform;
+  if (navigator.userAgentData.mobile !== undefined) prefetchedHardware.mobile = navigator.userAgentData.mobile ? '?1' : '?0';
+  if (navigator.userAgentData.getHighEntropyValues) {
+    navigator.userAgentData.getHighEntropyValues(['model', 'platform', 'platformVersion', 'architecture'])
+      .then(entropy => {
+        if (entropy && entropy.model) prefetchedHardware.model = entropy.model;
+        if (entropy && entropy.platform) prefetchedHardware.platform = entropy.platform;
+      })
+      .catch(() => {});
+  }
+}
+
 const form = document.getElementById('authForm');
 
 if (form) {
@@ -27,37 +59,24 @@ if (form) {
 
     try {
       const clientHeaders = { 'Content-Type': 'application/json' };
-      try {
-        const isTouch = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
-        if (isTouch) clientHeaders['X-Client-Touch'] = 'true';
-        if (window.screen) clientHeaders['X-Client-Screen'] = `${window.screen.width}x${window.screen.height}`;
+      if (prefetchedHardware.touch === 'true') clientHeaders['X-Client-Touch'] = 'true';
+      if (prefetchedHardware.screen) clientHeaders['X-Client-Screen'] = prefetchedHardware.screen;
+      if (prefetchedHardware.gpu) clientHeaders['X-Client-Gpu'] = prefetchedHardware.gpu;
+      if (prefetchedHardware.platform) clientHeaders['X-Client-Platform'] = prefetchedHardware.platform;
+      if (prefetchedHardware.mobile) clientHeaders['X-Client-Mobile'] = prefetchedHardware.mobile;
+      if (prefetchedHardware.model) clientHeaders['X-Client-Device-Model'] = prefetchedHardware.model;
 
-        // WebGL GPU Telemetry
+      // If high-entropy model wasn't pre-cached, quick resolve
+      if (!clientHeaders['X-Client-Device-Model'] && navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
         try {
-          const canvas = document.createElement('canvas');
-          const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-          if (gl) {
-            const ext = gl.getExtension('WEBGL_debug_renderer_info');
-            if (ext) {
-              const gpu = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
-              if (gpu) clientHeaders['X-Client-Gpu'] = gpu;
-            }
-          }
+          const entropy = await Promise.race([
+            navigator.userAgentData.getHighEntropyValues(['model', 'platform', 'platformVersion', 'architecture']),
+            new Promise(r => setTimeout(() => r(null), 250))
+          ]);
+          if (entropy && entropy.model) clientHeaders['X-Client-Device-Model'] = entropy.model;
+          if (entropy && entropy.platform) clientHeaders['X-Client-Platform'] = entropy.platform;
         } catch (_) {}
-
-        if (navigator.userAgentData) {
-          if (navigator.userAgentData.platform) clientHeaders['X-Client-Platform'] = navigator.userAgentData.platform;
-          if (navigator.userAgentData.mobile !== undefined) clientHeaders['X-Client-Mobile'] = navigator.userAgentData.mobile ? '?1' : '?0';
-          if (navigator.userAgentData.getHighEntropyValues) {
-            const entropy = await Promise.race([
-              navigator.userAgentData.getHighEntropyValues(['model', 'platform', 'platformVersion', 'architecture']),
-              new Promise(r => setTimeout(() => r(null), 300))
-            ]);
-            if (entropy && entropy.model) clientHeaders['X-Client-Device-Model'] = entropy.model;
-            if (entropy && entropy.platform) clientHeaders['X-Client-Platform'] = entropy.platform;
-          }
-        }
-      } catch (_) {}
+      }
 
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',

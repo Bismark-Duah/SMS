@@ -2073,17 +2073,36 @@ async function loadExecutiveAnalytics() {
         `;
       }
 
-      // 5. Institutional Governance & System Audit Activity Stream
-      if (Array.isArray(adm.recent_audit_logs) && adm.recent_audit_logs.length > 0) {
-        let auditRows = adm.recent_audit_logs.map(al => `
-          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-            <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🛡️ ${al.action}</td>
-            <td style="padding:10px 12px; color:#38bdf8;">👤 ${al.user_name}</td>
-            <td style="padding:10px 12px; font-size:0.75rem; opacity:0.8;">${al.entity_type || 'System'}</td>
-            <td style="padding:10px 12px; color:#94a3b8; font-size:0.78rem;">${escapeHtml(al.details)}</td>
-            <td style="padding:10px 12px; font-size:0.75rem; opacity:0.7; white-space:nowrap;">⏰ ${al.timestamp}</td>
-          </tr>
-        `).join('');
+      // 5. Institutional Governance & System Audit Activity Stream (Super Admin actions 100% excluded)
+      const filteredAuditLogs = (Array.isArray(adm.recent_audit_logs) ? adm.recent_audit_logs : []).filter(al => {
+        const u = (al.user_name || '').toLowerCase();
+        const r = (al.user_role || '').toLowerCase();
+        return u !== 'superadmin' && r !== 'super_admin' && !al.is_super_admin_action;
+      });
+
+      if (filteredAuditLogs.length > 0) {
+        let auditRows = filteredAuditLogs.map(al => {
+          let timeFormatted = al.timestamp || 'Recent';
+          try {
+            if (al.timestamp && (al.timestamp.includes('T') || al.timestamp.includes('-') || al.timestamp.includes(':'))) {
+              timeFormatted = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Africa/Accra',
+                day: '2-digit', month: 'short',
+                hour: '2-digit', minute: '2-digit', hour12: true
+              }).format(new Date(al.timestamp));
+            }
+          } catch (_) {}
+
+          return `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px 12px; font-weight:600; color:#f8fafc;">🛡️ ${escapeHtml(al.action)}</td>
+              <td style="padding:10px 12px; color:#38bdf8;">👤 ${escapeHtml(al.user_name)}</td>
+              <td style="padding:10px 12px; font-size:0.75rem; opacity:0.8;">${escapeHtml(al.entity_type || 'System')}</td>
+              <td style="padding:10px 12px; color:#94a3b8; font-size:0.78rem;">${escapeHtml(al.details)}</td>
+              <td style="padding:10px 12px; font-size:0.75rem; opacity:0.7; white-space:nowrap;">⏰ ${timeFormatted}</td>
+            </tr>
+          `;
+        }).join('');
 
         cardsHtml += `
           <div class="card" style="grid-column: 1 / -1; border-top: 4px solid #8b5cf6; background: var(--card-bg, #1e293b); margin-top:8px;">

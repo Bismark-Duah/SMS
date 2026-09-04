@@ -32,14 +32,20 @@ def require_school_staff(current_user: User = Depends(get_current_user)):
 @router.get("/school-feed")
 def get_school_audit_feed(
     action: Optional[str] = None,
-    limit: int = 50,
+    page: int = 1,
+    limit: int = 15,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_school_staff)
 ):
     """
     Returns activity and device telemetry strictly scoped to the user's school.
-    Super Admin platform activities are strictly filtered out (is_super_admin_action == False).
+    Super Admin platform activities are strictly filtered out (is_super_admin_action == False and actor_role != 'super_admin').
     """
+    import math
+    page = max(1, page)
+    limit = max(1, min(100, limit))
+    offset = (page - 1) * limit
+
     user_roles = [r.name for r in current_user.roles]
     is_super = "super_admin" in user_roles
 
@@ -47,21 +53,24 @@ def get_school_audit_feed(
 
     if not is_super:
         if not current_user.school_id:
-            return []
+            return {"total": 0, "page": page, "limit": limit, "total_pages": 1, "logs": []}
         # Strict tenant boundary + hide Super Admin actions
         query = query.filter(
             AuditLog.school_id == current_user.school_id,
-            AuditLog.is_super_admin_action == False
+            AuditLog.is_super_admin_action == False,
+            AuditLog.actor_role != "super_admin",
+            AuditLog.actor_username != "superadmin"
         )
     else:
-        # If Super Admin visits this endpoint without school_id parameter, scope to their active school or all non-super
+        # If Super Admin visits this endpoint without school_id parameter, scope to their active school
         if current_user.school_id:
             query = query.filter(AuditLog.school_id == current_user.school_id)
 
     if action:
         query = query.filter(AuditLog.action == action)
 
-    logs = query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+    total_count = query.count()
+    logs = query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit).all()
 
     results = []
     for log in logs:
@@ -82,4 +91,10 @@ def get_school_audit_feed(
             "created_at": log.created_at.isoformat() if log.created_at else datetime.utcnow().isoformat()
         })
 
-    return results
+    return {
+        "total": total_count,
+        "page": page,
+        "limit": limit,
+        "total_pages": math.ceil(total_count / limit) if total_count > 0 else 1,
+        "logs": results
+    }

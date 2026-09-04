@@ -3,6 +3,7 @@ Super-Admin Multi-School Management Routes
 School Management System (SMS)
 """
 import os
+import math
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,6 +16,7 @@ from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolS
 from ..routes.auth import get_current_user, get_password_hash
 from ..ncca_seed import seed_ncca_curriculum
 from ..sms.gateway import sms_engine, mask_phone_number
+from ..services.audit_service import record_audit_event
 
 router = APIRouter(prefix="/super-admin", tags=["Super Admin Multi-School Portal"])
 
@@ -185,15 +187,20 @@ def get_super_admin_dashboard(
 
 @router.get("/audit-stream")
 def get_super_admin_audit_stream(
-    limit: int = 50,
+    page: int = 1,
+    limit: int = 15,
     school_id: Optional[int] = None,
     action: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_super_admin)
 ):
     """
-    Returns unified real-time security and administrative audit logs across all schools with complete device telemetry.
+    Returns unified real-time security and administrative audit logs across all schools with complete device telemetry and page navigation.
     """
+    page = max(1, page)
+    limit = max(1, min(100, limit))
+    offset = (page - 1) * limit
+
     schools_map = {s.id: {"name": s.name, "code": s.code} for s in db.query(School).all()}
     
     query = db.query(AuditLog)
@@ -202,7 +209,8 @@ def get_super_admin_audit_stream(
     if action:
         query = query.filter(AuditLog.action == action.upper())
 
-    logs = query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+    total_count = query.count()
+    logs = query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit).all()
 
     results = []
     for log in logs:
@@ -231,13 +239,14 @@ def get_super_admin_audit_stream(
         })
 
     # Legacy fallback if no AuditLog exists yet
-    if not results:
+    if not results and total_count == 0:
         legacy_query = db.query(ActivityAuditLog)
         if school_id is not None:
             legacy_query = legacy_query.filter(ActivityAuditLog.school_id == school_id)
         if action:
             legacy_query = legacy_query.filter(ActivityAuditLog.action == action.upper())
-        legacy_logs = legacy_query.order_by(ActivityAuditLog.timestamp.desc()).limit(limit).all()
+        total_count = legacy_query.count()
+        legacy_logs = legacy_query.order_by(ActivityAuditLog.timestamp.desc()).offset(offset).limit(limit).all()
         for log in legacy_logs:
             sch_info = schools_map.get(log.school_id, {"name": "Master System", "code": "SYS"}) if log.school_id else {"name": "Master System", "code": "SYS"}
             results.append({
@@ -263,9 +272,46 @@ def get_super_admin_audit_stream(
                 "timestamp": log.timestamp.isoformat() if hasattr(log.timestamp, 'isoformat') else (str(log.timestamp) if log.timestamp else datetime.utcnow().isoformat())
             })
 
+    total_pages = math.ceil(total_count / limit) if total_count > 0 else 1
+
     return {
-        "total": len(results),
+        "total": total_count,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages,
         "logs": results
+    }
+
+@router.delete("/audit-stream/purge")
+def purge_super_admin_audit_stream(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Super-Admin exclusive endpoint to purge historical audit logs.
+    Immediately records an immutable AUDIT_LOG_PURGED security event.
+    """
+    count_audit = db.query(AuditLog).count()
+    count_legacy = db.query(ActivityAuditLog).count()
+
+    db.query(AuditLog).delete(synchronize_session=False)
+    db.query(ActivityAuditLog).delete(synchronize_session=False)
+    db.commit()
+
+    # Record fresh security audit entry
+    record_audit_event(
+        db=db,
+        actor=current_user,
+        action="AUDIT_LOG_PURGED",
+        details=f"Master Super Admin cleared {count_audit + count_legacy} audit ledger records.",
+        entity_type="SecurityLedger",
+        is_super_admin_action=True
+    )
+
+    return {
+        "status": "success",
+        "message": f"Successfully cleared {count_audit + count_legacy} historical audit records.",
+        "purged_count": count_audit + count_legacy
     }
 
 @router.get("/schools")
@@ -551,20 +597,19 @@ def update_school_profile(
         changes["logo_url"] = {"old": "present" if school.logo_url else "none", "new": "present" if new_logo else "none"}
         school.logo_url = new_logo
 
-    # 7. Audit Log
+    # 7. Audit Log (Super Admin action strictly scoped)
     try:
         import json
-        audit = ActivityAuditLog(
-            school_id=school.id,
-            user_name=current_user.username,
-            user_role="super_admin",
+        record_audit_event(
+            db=db,
+            actor=current_user,
             action="SCHOOL_PROFILE_UPDATE",
             entity_type="School",
             entity_id=str(school.id),
+            school_id=school.id,
             details=json.dumps(changes) if changes else f"Updated profile metadata for {school.name}",
-            timestamp=datetime.utcnow()
+            is_super_admin_action=True
         )
-        db.add(audit)
     except Exception as audit_err:
         print(f"[AuditLogError] {audit_err}")
 

@@ -449,14 +449,18 @@ window.renderSchoolsDirectory = function(schoolsList) {
   }).join('');
 };
 
-window.loadMasterAuditStream = async function() {
+let currentAuditPage = 1;
+let totalAuditPages = 1;
+
+window.loadMasterAuditStream = async function(page = 1) {
   const container = document.getElementById('masterAuditStreamContainer');
   if (!container) return;
 
+  currentAuditPage = page;
   const actionFilter = document.getElementById('auditActionFilter')?.value || '';
 
   try {
-    let url = `${API_BASE}/super-admin/audit-stream?limit=60`;
+    let url = `${API_BASE}/super-admin/audit-stream?page=${currentAuditPage}&limit=15`;
     if (actionFilter) url += `&action=${encodeURIComponent(actionFilter)}`;
 
     const res = await fetch(url, { headers: getHeaders() });
@@ -467,6 +471,8 @@ window.loadMasterAuditStream = async function() {
 
     const data = await res.json();
     const logs = Array.isArray(data) ? data : (Array.isArray(data.logs) ? data.logs : []);
+    const totalCount = data.total !== undefined ? data.total : logs.length;
+    totalAuditPages = data.total_pages !== undefined ? data.total_pages : 1;
 
     if (!logs || logs.length === 0) {
       container.innerHTML = `
@@ -475,6 +481,7 @@ window.loadMasterAuditStream = async function() {
           <p style="margin:0; font-size:0.9rem;">No security or operational events found matching the filter.</p>
         </div>
       `;
+      window.renderAuditPagination(0, 1, 1);
       return;
     }
 
@@ -503,11 +510,21 @@ window.loadMasterAuditStream = async function() {
       else if (l.device_category === 'Tablet') deviceIcon = '📱';
       else if (l.device_category === 'Bot') deviceIcon = '🤖';
 
+      // Explicit Ghana GMT Timezone Formatting
       const timeVal = l.created_at || l.timestamp;
-      const timeFormatted = timeVal ? new Date(timeVal).toLocaleString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', second: '2-digit'
-      }) : 'Recent';
+      let timeFormatted = 'Recent';
+      try {
+        if (timeVal) {
+          timeFormatted = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Africa/Accra',
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: true
+          }).format(new Date(timeVal));
+        }
+      } catch (_) {
+        timeFormatted = timeVal || 'Recent';
+      }
 
       const schoolBadge = l.school_code ? `[ 🏫 ${escapeHtml(l.school_code)} ]` : `[ 🌐 PLATFORM ]`;
       const actorName = l.actor_username || l.user_name || 'System Operator';
@@ -516,7 +533,7 @@ window.loadMasterAuditStream = async function() {
       return `
         <div class="audit-card" style="display:flex; flex-direction:column; gap:8px;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <span class="audit-badge" style="background:${actionBg}; color:${actionColor}; border:1px solid ${actionBorder};">
                 ${escapeHtml(l.action)}
               </span>
@@ -553,8 +570,72 @@ window.loadMasterAuditStream = async function() {
       `;
     }).join('');
 
+    window.renderAuditPagination(totalCount, currentAuditPage, totalAuditPages);
+
   } catch (err) {
     container.innerHTML = `<p style="color:#f87171; text-align:center; padding:18px;">Error loading audit feed: ${err.message}</p>`;
+  }
+};
+
+window.renderAuditPagination = function(total, currentPage, totalPages) {
+  const infoEl = document.getElementById('auditPaginationInfo');
+  const btnsEl = document.getElementById('auditPaginationBtns');
+  if (!infoEl || !btnsEl) return;
+
+  if (total === 0) {
+    infoEl.textContent = 'No records';
+    btnsEl.innerHTML = '';
+    return;
+  }
+
+  infoEl.innerHTML = `Showing Page <strong>${currentPage}</strong> of <strong>${totalPages}</strong> (${total} total events)`;
+
+  let btnsHtml = `
+    <button class="btn" style="padding:5px 10px; font-size:0.78rem; opacity:${currentPage <= 1 ? '0.4' : '1'}; cursor:${currentPage <= 1 ? 'not-allowed' : 'pointer'};"
+            onclick="window.loadMasterAuditStream(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>
+      &laquo; Previous
+    </button>
+  `;
+
+  // Numeric page buttons
+  const startP = Math.max(1, currentPage - 2);
+  const endP = Math.min(totalPages, currentPage + 2);
+  for (let p = startP; p <= endP; p++) {
+    const isActive = p === currentPage;
+    btnsHtml += `
+      <button class="btn" style="padding:5px 10px; font-size:0.78rem; ${isActive ? 'background:#6366f1; color:#fff; font-weight:700;' : 'background:#090d16; color:#94a3b8;'}"
+              onclick="window.loadMasterAuditStream(${p})">
+        ${p}
+      </button>
+    `;
+  }
+
+  btnsHtml += `
+    <button class="btn" style="padding:5px 10px; font-size:0.78rem; opacity:${currentPage >= totalPages ? '0.4' : '1'}; cursor:${currentPage >= totalPages ? 'not-allowed' : 'pointer'};"
+            onclick="window.loadMasterAuditStream(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>
+      Next &raquo;
+    </button>
+  `;
+
+  btnsEl.innerHTML = btnsHtml;
+};
+
+window.handlePurgeAuditStream = async function() {
+  const confirmMsg = "⚠️ Are you sure you want to permanently clear all activity and security audit records?\n\nThis will purge the audit trail ledger across all schools and log an AUDIT_LOG_PURGED marker.";
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/audit-stream/purge`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed to clear audit trail');
+
+    alert(`✔ ${data.message || 'Audit trail successfully cleared.'}`);
+    window.loadMasterAuditStream(1);
+  } catch (err) {
+    alert(`❌ Purge Failed: ${err.message}`);
   }
 };
 

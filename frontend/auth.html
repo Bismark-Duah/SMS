@@ -498,9 +498,27 @@
         submitBtn.innerHTML = '⏳ Authenticating...';
 
         try {
+          const clientHeaders = { 'Content-Type': 'application/json' };
+          try {
+            const isTouch = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
+            if (isTouch) clientHeaders['X-Client-Touch'] = 'true';
+            if (navigator.userAgentData) {
+              if (navigator.userAgentData.platform) clientHeaders['X-Client-Platform'] = navigator.userAgentData.platform;
+              if (navigator.userAgentData.mobile !== undefined) clientHeaders['X-Client-Mobile'] = navigator.userAgentData.mobile ? '?1' : '?0';
+              if (navigator.userAgentData.getHighEntropyValues) {
+                const entropy = await Promise.race([
+                  navigator.userAgentData.getHighEntropyValues(['model', 'platform', 'platformVersion']),
+                  new Promise(r => setTimeout(() => r(null), 120))
+                ]);
+                if (entropy && entropy.model) clientHeaders['X-Client-Device-Model'] = entropy.model;
+                if (entropy && entropy.platform) clientHeaders['X-Client-Platform'] = entropy.platform;
+              }
+            }
+          } catch (_) {}
+
           const res = await fetch(`${API_BASE}/auth/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: clientHeaders,
             body: JSON.stringify({ username, password }),
           });
 

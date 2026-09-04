@@ -10,11 +10,9 @@ def get_client_ip(headers: Dict[str, str], fallback_ip: Optional[str] = None) ->
     """
     Extract the real client IP address from proxy / reverse proxy headers.
     """
-    # 1. Cloudflare / Render / Standard Reverse Proxies
     for header in ["cf-connecting-ip", "x-forwarded-for", "x-real-ip", "forwarded"]:
-        val = headers.get(header) or headers.get(header.title()) or headers.get(header.upper())
+        val = headers.get(header) or headers.get(header.title()) or headers.get(header.upper()) or headers.get(header.lower())
         if val:
-            # X-Forwarded-For can be a comma-separated list of IPs: "client, proxy1, proxy2"
             ips = [ip.strip() for ip in val.split(",") if ip.strip()]
             if ips:
                 return ips[0]
@@ -22,25 +20,33 @@ def get_client_ip(headers: Dict[str, str], fallback_ip: Optional[str] = None) ->
     return fallback_ip or "127.0.0.1"
 
 
-def parse_device_forensics(user_agent: Optional[str]) -> Dict[str, str]:
+def _clean_header_val(val: Optional[str]) -> str:
+    """Remove quotes and extra whitespace from Client Hint values."""
+    if not val:
+        return ""
+    return val.strip().strip('"').strip("'")
+
+
+def parse_device_forensics(user_agent: Optional[str], headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
     """
-    Parse a raw HTTP User-Agent string into structured forensic metadata.
+    Parse a raw HTTP User-Agent string and Client Hint headers into structured forensic metadata.
     Returns: {
         "device_category": "Mobile" | "Tablet" | "Desktop" | "Bot",
-        "device_brand": "TECNO Spark 10 Pro" | "Apple iPhone 14" | "Windows 11 PC" etc.,
+        "device_brand": "TECNO Spark 10 Pro" | "Apple iPhone 14" | "Samsung Galaxy" etc.,
         "os_name": "Android 14" | "iOS 17.2" | "Windows 11" | "macOS Sonoma",
         "browser_name": "Chrome Mobile 122" | "Safari 17" | "Edge 121"
     }
     """
-    if not user_agent or not user_agent.strip():
-        return {
-            "device_category": "Desktop",
-            "device_brand": "Unknown Client",
-            "os_name": "Unknown OS",
-            "browser_name": "Generic HTTP Client"
-        }
+    headers = headers or {}
+    h_lower = {k.lower(): v for k, v in headers.items()}
 
-    ua = user_agent.strip()
+    # Extract client hint telemetry
+    hint_model = _clean_header_val(h_lower.get("sec-ch-ua-model") or h_lower.get("x-client-device-model"))
+    hint_platform = _clean_header_val(h_lower.get("sec-ch-ua-platform") or h_lower.get("x-client-platform"))
+    hint_mobile = _clean_header_val(h_lower.get("sec-ch-ua-mobile") or h_lower.get("x-client-mobile"))
+    hint_touch = _clean_header_val(h_lower.get("x-client-touch"))
+
+    ua = (user_agent or "").strip()
     ua_lower = ua.lower()
 
     # ── 1. Bot / Crawler Detection ───────────────────────────────────────────
@@ -56,6 +62,13 @@ def parse_device_forensics(user_agent: Optional[str]) -> Dict[str, str]:
     is_tablet = bool(re.search(r"ipad|tablet|tab|sm-t|gt-p|mediapad", ua_lower))
     is_mobile = bool(re.search(r"mobi|android|iphone|ipod|blackberry|opera mini|iemobile|windows phone", ua_lower)) and not is_tablet
 
+    # Override with Client Hints or Touch Indicators
+    if hint_mobile == "?1" or hint_mobile.lower() == "true" or (hint_touch.lower() == "true" and "android" in hint_platform.lower()):
+        if not is_tablet:
+            is_mobile = True
+    elif hint_platform.lower() == "android" and not is_tablet:
+        is_mobile = True
+
     if is_tablet:
         category = "Tablet"
     elif is_mobile:
@@ -65,26 +78,26 @@ def parse_device_forensics(user_agent: Optional[str]) -> Dict[str, str]:
 
     # ── 3. Operating System Detection ────────────────────────────────────────
     os_name = "Unknown OS"
-    if "iphone" in ua_lower or "ipad" in ua_lower or "ipod" in ua_lower:
+    if "iphone" in ua_lower or "ipad" in ua_lower or "ipod" in ua_lower or "ios" in hint_platform.lower():
         ios_ver = re.search(r"os\s*([0-9_\.]+)", ua_lower)
         if ios_ver:
             ver_str = ios_ver.group(1).replace("_", ".")
             os_name = f"iOS {ver_str}"
         else:
             os_name = "iOS"
-    elif "android" in ua_lower:
+    elif "android" in ua_lower or "android" in hint_platform.lower():
         and_ver = re.search(r"android\s*([0-9\.]+)", ua_lower)
         if and_ver:
             os_name = f"Android {and_ver.group(1)}"
         else:
             os_name = "Android"
-    elif "windows nt 10.0" in ua_lower:
+    elif "windows nt 10.0" in ua_lower or "windows" in hint_platform.lower():
         os_name = "Windows 10 / 11"
     elif "windows nt 6.3" in ua_lower:
         os_name = "Windows 8.1"
     elif "windows nt 6.1" in ua_lower:
         os_name = "Windows 7"
-    elif "macintosh" in ua_lower or "mac os x" in ua_lower:
+    elif "macintosh" in ua_lower or "mac os x" in ua_lower or "macos" in hint_platform.lower():
         mac_ver = re.search(r"mac os x\s*([0-9_\.]+)", ua_lower)
         if mac_ver:
             ver_str = mac_ver.group(1).replace("_", ".")
@@ -94,56 +107,138 @@ def parse_device_forensics(user_agent: Optional[str]) -> Dict[str, str]:
     elif "cros" in ua_lower:
         os_name = "Chrome OS"
     elif "linux" in ua_lower:
-        os_name = "Linux"
-    elif "linux" in ua_lower:
-        os_name = "Linux"
+        # If touch or mobile hint indicates Android running in desktop site mode
+        if category in ["Mobile", "Tablet"] or hint_platform.lower() == "android" or hint_touch.lower() == "true":
+            os_name = "Android"
+            category = "Mobile"
+        else:
+            os_name = "Linux"
 
     # ── 4. Mobile Phone & Tablet Brand / Model Detection ─────────────────────
     device_brand = "Unknown Device"
 
-    # Popular African Mobile Brands (TECNO, Infinix, Itel, Samsung, Apple, etc.)
-    if "tecno" in ua_lower:
-        tecno_match = re.search(r"(tecno[ -]?[a-z0-9\+]+)", ua, re.IGNORECASE)
-        device_brand = tecno_match.group(1).upper() if tecno_match else "TECNO Mobile"
-    elif "infinix" in ua_lower:
-        infinix_match = re.search(r"(infinix[ -]?[a-z0-9\+]+)", ua, re.IGNORECASE)
-        device_brand = infinix_match.group(1).upper() if infinix_match else "Infinix Mobile"
-    elif "itel" in ua_lower:
-        itel_match = re.search(r"(itel[ -]?[a-z0-9\+]+)", ua, re.IGNORECASE)
-        device_brand = itel_match.group(1).upper() if itel_match else "Itel Mobile"
-    elif "samsung" in ua_lower or "sm-" in ua_lower:
-        sm_match = re.search(r"(sm-[a-z0-9]+)", ua, re.IGNORECASE)
+    # Check Hint Model first if provided and valid
+    raw_search_target = f"{ua} {hint_model}".strip()
+    target_lower = raw_search_target.lower()
+
+    # Decoding popular Ghanaian & African Phone Model Codes and Names
+    if "tecno" in target_lower or re.search(r"\b(ck[0-9]|lh[0-9]|kg[0-9]|kj[0-9]|bf[0-9]|bd[0-9]|ad[0-9]|ki[0-9]|lg[0-9]|ch[0-9])", target_lower):
+        tecno_match = re.search(r"(tecno[ -]?[a-z0-9\+ ]+)", raw_search_target, re.IGNORECASE)
+        model_code = re.search(r"\b(ck[0-9][a-z0-9]*|lh[0-9][a-z0-9]*|kg[0-9][a-z0-9]*|kj[0-9][a-z0-9]*|bf[0-9][a-z0-9]*|bd[0-9][a-z0-9]*|ki[0-9][a-z0-9]*)", raw_search_target, re.IGNORECASE)
+        if tecno_match and len(tecno_match.group(1).strip()) > 5:
+            device_brand = tecno_match.group(1).strip().upper()
+        elif model_code:
+            code_str = model_code.group(1).upper()
+            device_brand = f"TECNO Mobile ({code_str})"
+        else:
+            device_brand = "TECNO Smartphone"
+        category = "Mobile"
+        if os_name == "Unknown OS" or os_name == "Linux": os_name = "Android"
+
+    elif "infinix" in target_lower or re.search(r"\b(x68[0-9]+|x65[0-9]+|x67[0-9]+|x69[0-9]+)", target_lower):
+        infinix_match = re.search(r"(infinix[ -]?[a-z0-9\+ ]+)", raw_search_target, re.IGNORECASE)
+        model_code = re.search(r"\b(x68[0-9]+[a-z0-9]*|x65[0-9]+[a-z0-9]*|x67[0-9]+[a-z0-9]*)", raw_search_target, re.IGNORECASE)
+        if infinix_match and len(infinix_match.group(1).strip()) > 7:
+            device_brand = infinix_match.group(1).strip().upper()
+        elif model_code:
+            code_str = model_code.group(1).upper()
+            device_brand = f"Infinix ({code_str})"
+        else:
+            device_brand = "Infinix Mobile"
+        category = "Mobile"
+        if os_name == "Unknown OS" or os_name == "Linux": os_name = "Android"
+
+    elif "itel" in target_lower or re.search(r"\b(w65[0-9]+|s66[0-9]+|a66[0-9]+|p66[0-9]+|a58|a60|p40|s23)", target_lower):
+        itel_match = re.search(r"(itel[ -]?[a-z0-9\+ ]+)", raw_search_target, re.IGNORECASE)
+        model_code = re.search(r"\b(w65[0-9]+|s66[0-9]+|a66[0-9]+|p66[0-9]+|a58|a60|p40|s23)", raw_search_target, re.IGNORECASE)
+        if itel_match and len(itel_match.group(1).strip()) > 4:
+            device_brand = itel_match.group(1).strip().upper()
+        elif model_code:
+            code_str = model_code.group(1).upper()
+            device_brand = f"Itel ({code_str})"
+        else:
+            device_brand = "Itel Mobile"
+        category = "Mobile"
+        if os_name == "Unknown OS" or os_name == "Linux": os_name = "Android"
+
+    elif "samsung" in target_lower or "sm-" in target_lower:
+        sm_match = re.search(r"(sm-[a-z0-9]+)", raw_search_target, re.IGNORECASE)
         device_brand = f"Samsung Galaxy ({sm_match.group(1).upper()})" if sm_match else "Samsung Galaxy"
-    elif "iphone" in ua_lower:
+        category = "Mobile"
+        if os_name == "Unknown OS" or os_name == "Linux": os_name = "Android"
+
+    elif "iphone" in target_lower:
         device_brand = "Apple iPhone"
-    elif "ipad" in ua_lower:
+        category = "Mobile"
+        os_name = os_name if os_name != "Unknown OS" else "iOS"
+
+    elif "ipad" in target_lower:
         device_brand = "Apple iPad"
-    elif "redmi" in ua_lower:
-        redmi_match = re.search(r"(redmi[ -]?[a-z0-9\+]+)", ua, re.IGNORECASE)
-        device_brand = redmi_match.group(1).upper() if redmi_match else "Xiaomi Redmi"
-    elif "xiaomi" in ua_lower or "mi " in ua_lower:
+        category = "Tablet"
+        os_name = os_name if os_name != "Unknown OS" else "iPadOS"
+
+    elif "redmi" in target_lower:
+        redmi_match = re.search(r"(redmi[ -]?[a-z0-9\+ ]+)", raw_search_target, re.IGNORECASE)
+        device_brand = redmi_match.group(1).strip().upper() if redmi_match else "Xiaomi Redmi"
+        category = "Mobile"
+        if os_name == "Unknown OS" or os_name == "Linux": os_name = "Android"
+
+    elif "poco" in target_lower:
+        device_brand = "Xiaomi POCO Phone"
+        category = "Mobile"
+        if os_name == "Unknown OS" or os_name == "Linux": os_name = "Android"
+
+    elif "xiaomi" in target_lower or "mi " in target_lower:
         device_brand = "Xiaomi Smartphone"
-    elif "huawei" in ua_lower or "honor" in ua_lower:
+        category = "Mobile"
+        if os_name == "Unknown OS" or os_name == "Linux": os_name = "Android"
+
+    elif "huawei" in target_lower or "honor" in target_lower or re.search(r"\b(hma-|vog-|pot-|ele-)", target_lower):
         device_brand = "Huawei Smartphone"
-    elif "oppo" in ua_lower:
-        device_brand = "Oppo Smartphone"
-    elif "vivo" in ua_lower:
+        category = "Mobile"
+        if os_name == "Unknown OS" or os_name == "Linux": os_name = "Android"
+
+    elif "oppo" in target_lower or re.search(r"\b(cph[0-9]+)", target_lower):
+        cph_match = re.search(r"(cph[0-9]+)", raw_search_target, re.IGNORECASE)
+        device_brand = f"Oppo ({cph_match.group(1).upper()})" if cph_match else "Oppo Smartphone"
+        category = "Mobile"
+        if os_name == "Unknown OS" or os_name == "Linux": os_name = "Android"
+
+    elif "vivo" in target_lower or re.search(r"\b(v2[0-9]+)", target_lower):
         device_brand = "Vivo Smartphone"
-    elif "pixel" in ua_lower:
-        pixel_match = re.search(r"(pixel[ -]?[0-9a-z]+)", ua, re.IGNORECASE)
-        device_brand = f"Google {pixel_match.group(1).title()}" if pixel_match else "Google Pixel"
-    elif "nokia" in ua_lower:
+        category = "Mobile"
+        if os_name == "Unknown OS" or os_name == "Linux": os_name = "Android"
+
+    elif "pixel" in target_lower:
+        pixel_match = re.search(r"(pixel[ -]?[0-9a-z ]+)", raw_search_target, re.IGNORECASE)
+        device_brand = f"Google {pixel_match.group(1).strip().title()}" if pixel_match else "Google Pixel"
+        category = "Mobile"
+        if os_name == "Unknown OS" or os_name == "Linux": os_name = "Android"
+
+    elif "nokia" in target_lower:
         device_brand = "Nokia Mobile"
+        category = "Mobile"
+
+    elif hint_model:
+        device_brand = hint_model.title()
+        if category != "Tablet":
+            category = "Mobile"
+
     elif category == "Mobile":
         device_brand = "Android Smartphone"
+
     elif category == "Tablet":
         device_brand = "Android Tablet"
-    elif "windows" in ua_lower:
+
+    elif "windows" in target_lower or "windows" in os_name.lower():
         device_brand = "Windows PC / Laptop"
-    elif "macintosh" in ua_lower:
+
+    elif "macintosh" in target_lower or "macos" in os_name.lower():
         device_brand = "Apple Mac"
-    elif "linux" in ua_lower:
+
+    elif "linux" in target_lower and category == "Desktop":
         device_brand = "Linux Workstation"
+
     else:
         device_brand = "Personal Computer"
 

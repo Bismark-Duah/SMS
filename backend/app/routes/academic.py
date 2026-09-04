@@ -765,26 +765,51 @@ def get_executive_analytics(
     except Exception:
         pass
 
-    # Recent Audit Log Activity
+    # Recent Audit Log Activity (Strict Tenant Boundary: Super Admin actions are 100% excluded)
     recent_audit_logs = []
-    from ..models import ActivityAuditLog
+    from ..models import AuditLog, ActivityAuditLog
     try:
-        audit_query = db.query(ActivityAuditLog)
         if target_sch_id is not None:
-            audit_query = audit_query.filter(ActivityAuditLog.school_id == target_sch_id)
-        audit_records = audit_query.order_by(ActivityAuditLog.timestamp.desc()).limit(6).all()
-        for al in audit_records:
-            ts_str = al.timestamp.strftime("%d %b, %H:%M") if al.timestamp else "Recent"
-            recent_audit_logs.append({
-                "id": al.id,
-                "user_name": al.user_name or "System",
-                "action": al.action,
-                "entity_type": al.entity_type,
-                "details": al.details or "",
-                "timestamp": ts_str
-            })
-    except Exception:
-        pass
+            modern_logs = db.query(AuditLog).filter(
+                AuditLog.school_id == target_sch_id,
+                AuditLog.is_super_admin_action == False,
+                AuditLog.actor_role != "super_admin",
+                AuditLog.actor_username != "superadmin"
+            ).order_by(AuditLog.created_at.desc()).limit(8).all()
+
+            for al in modern_logs:
+                ts_str = al.created_at.isoformat() if al.created_at else "Recent"
+                recent_audit_logs.append({
+                    "id": al.id,
+                    "user_name": al.actor_username or "Staff Member",
+                    "action": al.action,
+                    "entity_type": al.entity_type or "System",
+                    "details": al.details or "",
+                    "timestamp": ts_str,
+                    "created_at": ts_str,
+                    "device_brand": al.device_brand,
+                    "browser_name": al.browser_name
+                })
+
+            if not recent_audit_logs:
+                legacy_query = db.query(ActivityAuditLog).filter(
+                    ActivityAuditLog.school_id == target_sch_id,
+                    ActivityAuditLog.user_role != "super_admin",
+                    ActivityAuditLog.user_name != "superadmin"
+                ).order_by(ActivityAuditLog.timestamp.desc()).limit(8).all()
+                for al in legacy_query:
+                    ts_str = al.timestamp.isoformat() if hasattr(al.timestamp, 'isoformat') else (str(al.timestamp) if al.timestamp else "Recent")
+                    recent_audit_logs.append({
+                        "id": al.id,
+                        "user_name": al.user_name or "Staff Member",
+                        "action": al.action,
+                        "entity_type": al.entity_type or "System",
+                        "details": al.details or "",
+                        "timestamp": ts_str,
+                        "created_at": ts_str
+                    })
+    except Exception as audit_err:
+        print("[ExecutiveAnalyticsAuditErr]", audit_err)
 
     # 4. HOD Departmental Analytics
     dept = None

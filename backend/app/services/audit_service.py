@@ -54,7 +54,7 @@ def record_audit_event(
         user_agent_str = user_agent_str or "Internal Engine / CLI"
 
         # Parse Device Forensics
-        forensics = parse_device_forensics(user_agent_str)
+        forensics = parse_device_forensics(user_agent_str, headers_dict)
 
         # Resolve Actor details
         actor_id = None

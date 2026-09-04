@@ -495,7 +495,7 @@
         }
 
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Signing in…';
+        submitBtn.innerHTML = '⏳ Authenticating...';
 
         try {
           const res = await fetch(`${API_BASE}/auth/login`, {
@@ -577,8 +577,9 @@
           }
           setStore('_lastActivity', Date.now().toString());
 
+          submitBtn.innerHTML = '✔ Signing in...';
           msgEl.className = 'auth-message success';
-          msgEl.innerHTML = `✔ Signed in as <strong>${data.username}</strong>. Redirecting…`;
+          msgEl.innerHTML = '✔ Signing in...';
 
           let dest = 'dashboard.html';
           if (data.is_super_admin) {
@@ -587,7 +588,7 @@
             const next = params.get('next');
             if (next) dest = decodeURIComponent(next);
           }
-          setTimeout(() => { window.location.href = dest; }, 500);
+          setTimeout(() => { window.location.href = dest; }, 300);
 
         } catch (err) {
           msgEl.className = 'auth-message error';

@@ -17,6 +17,8 @@ const prefetchedHardware = {
   mobile: '',
   gpu: '',
   screen: window.screen ? `${window.screen.width}x${window.screen.height}` : '',
+  dpr: window.devicePixelRatio ? String(window.devicePixelRatio) : '1',
+  physicalScreen: (window.screen && window.devicePixelRatio) ? `${Math.round(window.screen.width * window.devicePixelRatio)}x${Math.round(window.screen.height * window.devicePixelRatio)}` : '',
   touch: (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)) ? 'true' : 'false'
 };
 
@@ -61,6 +63,8 @@ if (form) {
       const clientHeaders = { 'Content-Type': 'application/json' };
       if (prefetchedHardware.touch === 'true') clientHeaders['X-Client-Touch'] = 'true';
       if (prefetchedHardware.screen) clientHeaders['X-Client-Screen'] = prefetchedHardware.screen;
+      if (prefetchedHardware.dpr) clientHeaders['X-Client-Dpr'] = prefetchedHardware.dpr;
+      if (prefetchedHardware.physicalScreen) clientHeaders['X-Client-Physical-Screen'] = prefetchedHardware.physicalScreen;
       if (prefetchedHardware.gpu) clientHeaders['X-Client-Gpu'] = prefetchedHardware.gpu;
       if (prefetchedHardware.platform) clientHeaders['X-Client-Platform'] = prefetchedHardware.platform;
       if (prefetchedHardware.mobile) clientHeaders['X-Client-Mobile'] = prefetchedHardware.mobile;

@@ -231,6 +231,126 @@ def _decode_xiaomi_model(code: str) -> Optional[str]:
     return None
 
 
+def _decode_apple_model(ua: str, screen_str: str, dpr_str: str, physical_str: str, os_name: str) -> str:
+    """
+    Forensically identify exact Apple iPhone & iPad models via display geometry,
+    device pixel ratio (DPR), physical pixel rendering, and iOS version constraints.
+    """
+    ua_lower = (ua or "").lower()
+    is_ipad = "ipad" in ua_lower or "ipad" in os_name.lower()
+
+    # Extract iOS major version number if available
+    ios_major = 0
+    ios_match = re.search(r"os\s*([0-9]+)", ua_lower) or re.search(r"ios\s*([0-9]+)", os_name.lower())
+    if ios_match:
+        try:
+            ios_major = int(ios_match.group(1))
+        except ValueError:
+            ios_major = 0
+
+    # Parse DPR
+    dpr = 0.0
+    if dpr_str:
+        try:
+            dpr = float(dpr_str)
+        except ValueError:
+            dpr = 0.0
+
+    # Parse dimensions
+    dims = []
+    for s in [screen_str, physical_str]:
+        if not s:
+            continue
+        m = re.search(r"(\d+)\s*[xX*]\s*(\d+)", s)
+        if m:
+            dims.append((int(m.group(1)), int(m.group(2))))
+
+    if not dims:
+        return "Apple iPad" if is_ipad else "Apple iPhone"
+
+    # Normalize CSS dimensions (sorted min_dim, max_dim)
+    w0, h0 = sorted(dims[0])
+    p_w, p_h = (0, 0)
+    if len(dims) > 1:
+        p_w, p_h = sorted(dims[1])
+    elif dpr > 0:
+        p_w, p_h = int(round(w0 * dpr)), int(round(h0 * dpr))
+
+    # iPad Forensics
+    if is_ipad or w0 >= 700:
+        if (w0, h0) == (1024, 1366) or (p_w, p_h) == (2048, 2732):
+            return "Apple iPad Pro 12.9\""
+        if (w0, h0) == (834, 1194) or (p_w, p_h) == (1668, 2388):
+            return "Apple iPad Pro 11\""
+        if (w0, h0) == (834, 1112) or (p_w, p_h) == (1668, 2224):
+            return "Apple iPad Pro 10.5\" / Air (3rd Gen)"
+        if (w0, h0) == (820, 1180) or (p_w, p_h) == (1640, 2360):
+            return "Apple iPad Air (4th/5th Gen) / iPad (10th Gen)"
+        if (w0, h0) == (810, 1080) or (p_w, p_h) == (1620, 2160):
+            return "Apple iPad (7th–9th Gen)"
+        if (w0, h0) == (768, 1024) or (p_w, p_h) == (1536, 2048):
+            return "Apple iPad 9.7\" / iPad mini"
+        return "Apple iPad"
+
+    # iPhone Forensics:
+    # 1. iPhone 16 Pro Max (440 x 956 @ 3x -> 1320 x 2868)
+    if (w0, h0) == (440, 956) or (p_w, p_h) == (1320, 2868):
+        return "Apple iPhone 16 Pro Max"
+
+    # 2. iPhone 16 Pro (402 x 874 @ 3x -> 1206 x 2622)
+    if (w0, h0) == (402, 874) or (p_w, p_h) == (1206, 2622):
+        return "Apple iPhone 16 Pro"
+
+    # 3. iPhone 14 Pro Max / 15 Plus / 15 Pro Max / 16 Plus (430 x 932 @ 3x -> 1290 x 2796)
+    if (w0, h0) == (430, 932) or (p_w, p_h) == (1290, 2796):
+        return "Apple iPhone 14 Pro Max / 15 Pro Max / 16 Plus"
+
+    # 4. iPhone 14 Pro / 15 / 15 Pro / 16 (393 x 852 @ 3x -> 1179 x 2556)
+    if (w0, h0) == (393, 852) or (p_w, p_h) == (1179, 2556):
+        return "Apple iPhone 14 Pro / 15 / 15 Pro / 16"
+
+    # 5. iPhone 12 Pro Max / 13 Pro Max / 14 Plus (428 x 926 @ 3x -> 1284 x 2778)
+    if (w0, h0) == (428, 926) or (p_w, p_h) == (1284, 2778):
+        return "Apple iPhone 12 Pro Max / 13 Pro Max / 14 Plus"
+
+    # 6. iPhone 12 / 12 Pro / 13 / 13 Pro / 14 (390 x 844 @ 3x -> 1170 x 2532)
+    if (w0, h0) == (390, 844) or (p_w, p_h) == (1170, 2532):
+        return "Apple iPhone 12 / 13 / 14 Series"
+
+    # 7. iPhone 12 mini / 13 mini (360 x 780 @ 3x -> 1080 x 2340)
+    if (w0, h0) == (360, 780) or (p_w, p_h) == (1080, 2340):
+        return "Apple iPhone 12 mini / 13 mini"
+
+    # 8. iPhone 11 / XR vs XS Max / 11 Pro Max (414 x 896)
+    if (w0, h0) == (414, 896):
+        if dpr >= 2.5 or (p_w, p_h) == (1242, 2688):
+            return "Apple iPhone XS Max / 11 Pro Max"
+        return "Apple iPhone 11 / iPhone XR"
+
+    # 9. iPhone X / XS / 11 Pro (375 x 812 @ 3x -> 1125 x 2436)
+    if (w0, h0) == (375, 812) or (p_w, p_h) == (1125, 2436):
+        if ios_major >= 17:
+            return "Apple iPhone XS / 11 Pro"
+        return "Apple iPhone X / XS / 11 Pro"
+
+    # 10. iPhone 6+ / 6s+ / 7+ / 8+ (414 x 736 @ 3x -> 1242 x 2208)
+    if (w0, h0) == (414, 736) or (p_w, p_h) == (1242, 2208):
+        return "Apple iPhone 7 Plus / 8 Plus / 6s Plus"
+
+    # 11. iPhone 6 / 6s / 7 / 8 / SE (2nd/3rd Gen) (375 x 667 @ 2x -> 750 x 1334)
+    if (w0, h0) == (375, 667) or (p_w, p_h) == (750, 1334):
+        if ios_major >= 17:
+            # iPhone 6, 6s, 7, 8 are capped at iOS <= 16
+            return "Apple iPhone SE (2nd / 3rd Gen)"
+        return "Apple iPhone 7 / 8 / SE (2nd Gen)"
+
+    # 12. iPhone 5 / 5s / 5c / SE (1st Gen) (320 x 568 @ 2x -> 640 x 1136)
+    if (w0, h0) == (320, 568) or (p_w, p_h) == (640, 1136):
+        return "Apple iPhone 5s / SE (1st Gen)"
+
+    return "Apple iPhone"
+
+
 def parse_device_forensics(user_agent: Optional[str], headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
     """
     Parse a raw HTTP User-Agent string, Client Hints, and WebGL GPU telemetry into structured forensic metadata.
@@ -252,6 +372,9 @@ def parse_device_forensics(user_agent: Optional[str], headers: Optional[Dict[str
     hint_touch = _clean_header_val(h_lower.get("x-client-touch"))
     hint_gpu_raw = _clean_header_val(h_lower.get("x-client-gpu"))
     hint_gpu = _clean_gpu_string(hint_gpu_raw)
+    hint_screen = _clean_header_val(h_lower.get("x-client-screen") or h_lower.get("x-client-screen-resolution"))
+    hint_dpr = _clean_header_val(h_lower.get("x-client-dpr") or h_lower.get("x-client-pixel-ratio"))
+    hint_physical_screen = _clean_header_val(h_lower.get("x-client-physical-screen") or h_lower.get("x-client-screen-physical"))
 
     ua = (user_agent or "").strip()
     ua_lower = ua.lower()
@@ -409,16 +532,14 @@ def parse_device_forensics(user_agent: Optional[str], headers: Optional[Dict[str
             break
 
         # 4.8 Apple iPhone & iPad
-        if "iphone" in t.lower():
-            device_brand = "Apple iPhone"
-            category = "Mobile"
-            if os_name == "Unknown OS": os_name = "iOS"
-            break
-        if "ipad" in t.lower():
-            device_brand = "Apple iPad"
-            category = "Tablet"
-            if os_name == "Unknown OS": os_name = "iPadOS"
-            break
+        if "iphone" in t.lower() or "ipad" in t.lower() or "ios" in os_name.lower():
+            apple_decoded = _decode_apple_model(ua, hint_screen, hint_dpr, hint_physical_screen, os_name)
+            if apple_decoded:
+                device_brand = apple_decoded
+                category = "Tablet" if "iPad" in apple_decoded else "Mobile"
+                if os_name == "Unknown OS":
+                    os_name = "iPadOS" if category == "Tablet" else "iOS"
+                break
 
         # 4.9 Google Pixel
         pix_match = re.search(r"\b(Pixel[ -]?[0-9a-zA-Z ]+)\b", t, re.IGNORECASE)

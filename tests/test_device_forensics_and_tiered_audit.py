@@ -143,13 +143,63 @@ class TestDeviceForensicsAndTieredAudit(unittest.TestCase):
         pixel_res = parse_device_forensics("Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36")
         self.assertIn("Google Pixel 8 Pro", pixel_res["device_brand"])
 
-        # Apple iPhone
+        # Apple iPhone & iPad Geometry Forensics
+        # Generic iPhone without screen headers
         iphone_ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1"
         res4 = parse_device_forensics(iphone_ua)
         self.assertEqual(res4["device_category"], "Mobile")
         self.assertEqual(res4["device_brand"], "Apple iPhone")
         self.assertIn("iOS", res4["os_name"])
         self.assertIn("Safari", res4["browser_name"])
+
+        # iPhone 14 Pro / 15 / 15 Pro / 16 (393x852 @ 3x)
+        iphone15_res = parse_device_forensics(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.7 Mobile/15E148 Safari/604.1",
+            {"x-client-screen": "393x852", "x-client-dpr": "3"}
+        )
+        self.assertEqual(iphone15_res["device_brand"], "Apple iPhone 14 Pro / 15 / 15 Pro / 16")
+
+        # iPhone 16 Pro Max (440x956 @ 3x)
+        iphone16_promax_res = parse_device_forensics(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Mobile/15E148 Safari/604.1",
+            {"x-client-screen": "440x956", "x-client-dpr": "3"}
+        )
+        self.assertEqual(iphone16_promax_res["device_brand"], "Apple iPhone 16 Pro Max")
+
+        # iPhone 12 / 13 / 14 (390x844 @ 3x)
+        iphone12_res = parse_device_forensics(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+            {"x-client-screen": "390x844", "x-client-dpr": "3"}
+        )
+        self.assertEqual(iphone12_res["device_brand"], "Apple iPhone 12 / 13 / 14 Series")
+
+        # iPhone 11 / XR (414x896 @ 2x) vs XS Max (414x896 @ 3x)
+        iphone11_res = parse_device_forensics(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            {"x-client-screen": "414x896", "x-client-dpr": "2"}
+        )
+        self.assertEqual(iphone11_res["device_brand"], "Apple iPhone 11 / iPhone XR")
+
+        iphonexs_max_res = parse_device_forensics(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            {"x-client-screen": "414x896", "x-client-dpr": "3"}
+        )
+        self.assertEqual(iphonexs_max_res["device_brand"], "Apple iPhone XS Max / 11 Pro Max")
+
+        # iPhone SE 2nd/3rd Gen on iOS 18 (375x667 @ 2x on iOS 18)
+        iphonese_res = parse_device_forensics(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1",
+            {"x-client-screen": "375x667", "x-client-dpr": "2"}
+        )
+        self.assertEqual(iphonese_res["device_brand"], "Apple iPhone SE (2nd / 3rd Gen)")
+
+        # Apple iPad Pro 12.9"
+        ipad_res = parse_device_forensics(
+            "Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+            {"x-client-screen": "1024x1366", "x-client-dpr": "2"}
+        )
+        self.assertEqual(ipad_res["device_category"], "Tablet")
+        self.assertEqual(ipad_res["device_brand"], "Apple iPad Pro 12.9\"")
 
     # ── 2. Client Hints & Desktop Mode on Android Recovery ───────────────────
 

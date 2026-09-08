@@ -390,6 +390,11 @@ async function loadSettings() {
             window.SMSStateBus.updateBranding(settings);
         }
 
+        const savedDensity = localStorage.getItem('sms_table_density') || 'comfortable';
+        setVal('setting_table_density', savedDensity);
+        if (window.setTableDensity) window.setTableDensity(savedDensity);
+        if (window.updateThemePreview) window.updateThemePreview();
+
         if (settings.grading_standard) {
             setVal('grading_standard', settings.grading_standard);
             toggleGradingSection(settings.grading_standard);
@@ -992,8 +997,42 @@ window.revokeOtherSessions = async function() {
   }
 };
 
+window.updateThemePreview = function() {
+  const themeSelect = document.getElementById('system_theme');
+  const themeVal = themeSelect ? themeSelect.value : 'midnight';
+  const schoolNameInput = document.getElementById('school_name');
+  const schoolName = schoolNameInput ? (schoolNameInput.value.trim() || 'Enterprise School Management') : 'Enterprise School Management';
+
+  const previewSchoolName = document.getElementById('previewSchoolName');
+  if (previewSchoolName) previewSchoolName.textContent = schoolName;
+
+  const previewCrestInitial = document.getElementById('previewCrestInitial');
+  if (previewCrestInitial) {
+    const logoVal = document.getElementById('school_logo')?.value;
+    if (logoVal && logoVal.startsWith('http')) {
+      previewCrestInitial.innerHTML = `<img src="${logoVal}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" onerror="this.parentNode.textContent='🏫'" />`;
+    } else {
+      previewCrestInitial.textContent = (schoolName[0] || '🏫').toUpperCase();
+    }
+  }
+
+  const previewThemeName = document.getElementById('previewThemeName');
+  if (previewThemeName && themeSelect) {
+    const selectedOption = themeSelect.options[themeSelect.selectedIndex];
+    previewThemeName.textContent = selectedOption ? `Theme: ${selectedOption.text.replace(/^[^\w]+/, '').trim()}` : `Theme: ${themeVal}`;
+  }
+};
+
+document.getElementById('school_name')?.addEventListener('input', () => {
+  if (window.updateThemePreview) window.updateThemePreview();
+});
+document.getElementById('school_logo')?.addEventListener('input', () => {
+  if (window.updateThemePreview) window.updateThemePreview();
+});
+
 loadSettings();
 if (window.loadSchoolSubaccount) window.loadSchoolSubaccount();
 if (window.loadSchoolSmsConfig) window.loadSchoolSmsConfig();
 if (window.loadActiveSessions) window.loadActiveSessions();
+setTimeout(() => { if (window.updateThemePreview) window.updateThemePreview(); }, 300);
 

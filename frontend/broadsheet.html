@@ -129,7 +129,13 @@
         <!-- Broadsheet Matrix Container -->
         <section class="card printable-content" style="max-width:100%; overflow-x:auto;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-            <h3 style="margin:0;" id="broadsheetTitle">Class Section Broadsheet</h3>
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+              <h3 style="margin:0;" id="broadsheetTitle">Class Section Broadsheet</h3>
+              <div class="table-density-switch no-print" title="Toggle Table Row Density">
+                <button type="button" class="table-density-btn active" data-density="comfortable" onclick="window.setTableDensity('comfortable')">⊞ Cozy</button>
+                <button type="button" class="table-density-btn" data-density="compact" onclick="window.setTableDensity('compact')">⊟ Compact</button>
+              </div>
+            </div>
             <div style="display:flex; gap:8px;">
               <button class="btn" style="background:#8b5cf6; color:white; font-weight:600;" onclick="autoGenerateRemarks()">⚡ Auto-Generate Remarks</button>
               <button class="btn" style="background:#10b981; color:white; font-weight:600;" onclick="saveBroadsheetRemarks()">💾 Save Remarks</button>

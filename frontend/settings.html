@@ -133,12 +133,18 @@
             </div>
           </label>
           <label>System Theme
-            <select id="system_theme" onchange="if(window.SMSStateBus) window.SMSStateBus.setTheme(this.value); else if(window.setTheme) window.setTheme(this.value);">
+            <select id="system_theme" onchange="if(window.SMSStateBus) window.SMSStateBus.setTheme(this.value); else if(window.setTheme) window.setTheme(this.value); if(window.updateThemePreview) window.updateThemePreview();">
               <option value="midnight">🌙 Midnight Dark (Default)</option>
               <option value="light">☀️ Light Executive</option>
               <option value="emerald">🌲 Emerald Oasis</option>
               <option value="ocean">🌊 Ocean Sapphire</option>
               <option value="auto">🎨 Auto Logo Theme (Extracted from Logo)</option>
+            </select>
+          </label>
+          <label>Data Table Density Preference
+            <select id="setting_table_density" onchange="if(window.setTableDensity) window.setTableDensity(this.value);">
+              <option value="comfortable">⊞ Comfortable Standard (Spacious 48px rows)</option>
+              <option value="compact">⊟ Compact Data Grid (High-Density 32px rows)</option>
             </select>
           </label>
           <label>Grading Standard
@@ -148,6 +154,36 @@
               <option value="CUSTOM">Custom Grading System</option>
             </select>
           </label>
+
+          <!-- 🎨 Live Theme & Enterprise Co-Branding Studio -->
+          <div id="themePreviewStudio" class="theme-preview-box" style="grid-column: 1 / -1; margin-top: 4px;">
+            <div class="theme-preview-header">
+              <div class="theme-preview-crest">
+                <span class="theme-preview-crest-badge" id="previewCrestInitial">🏫</span>
+                <span id="previewSchoolName">Enterprise School Management</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="status-pill success" id="previewStatusPill">Live System</span>
+                <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;" id="previewThemeName">Theme: Midnight Dark</span>
+              </div>
+            </div>
+
+            <div class="theme-preview-components">
+              <div class="theme-preview-card-item">
+                <span class="theme-preview-label">Active Students</span>
+                <span class="theme-preview-val kpi-val-indigo">1,248</span>
+              </div>
+              <div class="theme-preview-card-item">
+                <span class="theme-preview-label">Fee Collection</span>
+                <span class="theme-preview-val kpi-val-green">94.2%</span>
+              </div>
+              <div class="theme-preview-card-item">
+                <span class="theme-preview-label">Sample Action</span>
+                <button type="button" class="btn primary sm" style="font-size:0.75rem; padding:4px 10px; margin-top:2px;">Primary Button</button>
+              </div>
+            </div>
+          </div>
+
             <div style="grid-column: 1 / -1; padding-top:4px;">
               <button type="submit" class="btn primary" style="min-width:180px;">💾 Save Settings</button>
               <span id="settingsMsg" style="margin-left:14px;font-size:.9rem;"></span>

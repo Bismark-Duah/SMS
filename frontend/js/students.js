@@ -365,10 +365,10 @@ window.loadStudents = async function() {
   const tbody = document.getElementById('studentBody');
   if (!tbody) return;
   
-  if (window.renderSkeletonRows) {
-    window.renderSkeletonRows(tbody, 8, 5);
+  if (window.renderTableSkeleton) {
+    window.renderTableSkeleton(tbody, 8, 9);
   } else {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;opacity:.6">Loading students...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;opacity:.6">Loading students...</td></tr>';
   }
 
   try {

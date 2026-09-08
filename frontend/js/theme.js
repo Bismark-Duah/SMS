@@ -264,6 +264,52 @@
   };
   window.setTheme = window.applyTheme;
 
+  // ── 3B. Enterprise Table Density Controller & Skeleton Utilities ──────────
+  window.setTableDensity = function (density) {
+    const mode = (density === 'compact') ? 'compact' : 'comfortable';
+    document.documentElement.setAttribute('data-table-density', mode);
+    try { localStorage.setItem('sms_table_density', mode); } catch (_) {}
+    document.querySelectorAll('.table-density-btn').forEach(btn => {
+      if (btn && btn.dataset && btn.dataset.density) {
+        btn.classList.toggle('active', btn.dataset.density === mode);
+      }
+    });
+    window.dispatchEvent(new CustomEvent('sms:table_density', { detail: { density: mode } }));
+    return mode;
+  };
+
+  // Immediate table density restoration
+  try {
+    const _initialDensity = localStorage.getItem('sms_table_density') || 'comfortable';
+    document.documentElement.setAttribute('data-table-density', _initialDensity);
+  } catch (_) {}
+
+  // Shimmer Skeleton HTML Generators for Zero-Flicker Loading States
+  window.renderTableSkeleton = function (target, rows = 5, cols = 5) {
+    const el = typeof target === 'string' ? document.getElementById(target) : target;
+    if (!el) return;
+    let html = '';
+    for (let r = 0; r < rows; r++) {
+      html += '<tr class="skeleton-row">';
+      for (let c = 0; c < cols; c++) {
+        const widthPct = 50 + ((r * 17 + c * 23) % 45);
+        html += `<td><div class="skeleton skeleton-cell" style="width:${widthPct}%"></div></td>`;
+      }
+      html += '</tr>';
+    }
+    el.innerHTML = html;
+  };
+
+  window.renderCardSkeleton = function (target, count = 3) {
+    const el = typeof target === 'string' ? document.getElementById(target) : target;
+    if (!el) return;
+    let html = '';
+    for (let i = 0; i < count; i++) {
+      html += '<div class="card skeleton skeleton-card" style="margin-bottom:16px;"></div>';
+    }
+    el.innerHTML = html;
+  };
+
 
   // ── 4. Sidebar View Layout Controller & Navigation ────────────────────
   window.applyLayout = function (layoutMode) {

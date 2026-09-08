@@ -162,10 +162,10 @@ async function loadDepartments() {
           <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:6px;">
             ${item.subject_names.map(sName => {
               const isCore = sName.toLowerCase().includes('core') || sName.toLowerCase().includes('english') || sName.toLowerCase().includes('social');
-              const bg = isCore ? 'rgba(59,130,246,0.18)' : 'rgba(234,179,8,0.18)';
-              const color = isCore ? '#93c5fd' : '#fef08a';
+              const bg = isCore ? 'var(--badge-bg-blue, rgba(59,130,246,0.18))' : 'var(--badge-bg-amber, rgba(234,179,8,0.18))';
+              const color = isCore ? 'var(--kpi-blue, #2563eb)' : 'var(--kpi-amber, #d97706)';
               const border = isCore ? '1px solid rgba(59,130,246,0.3)' : '1px solid rgba(234,179,8,0.3)';
-              return `<span style="font-size:0.75rem; padding:2px 8px; border-radius:12px; background:${bg}; color:${color}; border:${border}; font-weight:500;">${sName}</span>`;
+              return `<span style="font-size:0.75rem; padding:2px 8px; border-radius:12px; background:${bg}; color:${color}; border:${border}; font-weight:600;">${sName}</span>`;
             }).join('')}
           </div>
         `;
@@ -179,11 +179,11 @@ async function loadDepartments() {
         <div style="border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 16px 0; display:flex; flex-direction:column; gap:10px;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
-              <h4 style="margin:0; font-size:1.1rem; color:#fff;">${item.name} (${item.code})</h4>
-              <p style="margin:4px 0 0 0; font-size:0.85rem; opacity:.8;">HOD: <strong style="color:#60a5fa;">${item.hod_name || 'Not assigned'}</strong></p>
+              <h4 style="margin:0; font-size:1.1rem; color:var(--text-primary);">${item.name} (${item.code})</h4>
+              <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--text-secondary);">HOD: <strong style="color:var(--kpi-blue, #2563eb);">${item.hod_name || 'Not assigned'}</strong></p>
               <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
-                <span style="font-size:0.72rem; padding:2px 7px; border-radius:10px; background:rgba(99,102,241,0.18); color:#a5b4fc; border:1px solid rgba(99,102,241,0.3); font-weight:600;">📊 ${item.subject_names ? item.subject_names.length : 0} Subjects</span>
-                <span style="font-size:0.72rem; padding:2px 7px; border-radius:10px; background:rgba(16,185,129,0.18); color:#6ee7b7; border:1px solid rgba(16,185,129,0.3); font-weight:600;">👨‍🏫 ${teacherCount} Teachers</span>
+                <span style="font-size:0.72rem; padding:2px 7px; border-radius:10px; background:var(--badge-bg-indigo, rgba(99,102,241,0.18)); color:var(--kpi-indigo, #4f46e5); border:1px solid rgba(99,102,241,0.3); font-weight:600;">📊 ${item.subject_names ? item.subject_names.length : 0} Subjects</span>
+                <span style="font-size:0.72rem; padding:2px 7px; border-radius:10px; background:var(--badge-bg-green, rgba(16,185,129,0.18)); color:var(--kpi-green, #059669); border:1px solid rgba(16,185,129,0.3); font-weight:600;">👨‍🏫 ${teacherCount} Teachers</span>
               </div>
             </div>
             ${isAdmin ? `
@@ -192,7 +192,7 @@ async function loadDepartments() {
               <button class="btn danger" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteDepartment(${item.id})">Delete</button>
             </div>` : ''}
           </div>
-          <div style="font-size: 0.82rem; opacity:.85; line-height:1.4;">
+          <div style="font-size: 0.82rem; line-height:1.4;">
             <div style="font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Departmental Subjects:</div>
             ${subjectsHtml}
           </div>
@@ -209,31 +209,31 @@ async function loadDepartments() {
           ? `<div style="display:flex; flex-direction:column; gap:10px;">
               ${hodDept.teachers.map(t => {
                 const wlStatus = t.workload_status || 'UNASSIGNED';
-                let wlColor = '#94a3b8';
+                let wlColor = 'var(--text-muted, #94a3b8)';
                 let wlBg = 'rgba(148,163,184,0.15)';
                 let wlBorder = 'rgba(148,163,184,0.3)';
                 if (wlStatus === 'BALANCED') {
-                  wlColor = '#34d399'; wlBg = 'rgba(16,185,129,0.15)'; wlBorder = 'rgba(16,185,129,0.3)';
+                  wlColor = 'var(--kpi-green, #059669)'; wlBg = 'var(--badge-bg-green, rgba(16,185,129,0.15))'; wlBorder = 'rgba(16,185,129,0.3)';
                 } else if (wlStatus === 'HEAVY') {
-                  wlColor = '#f87171'; wlBg = 'rgba(239,68,68,0.15)'; wlBorder = 'rgba(239,68,68,0.3)';
+                  wlColor = 'var(--kpi-red, #dc2626)'; wlBg = 'var(--badge-bg-red, rgba(239,68,68,0.15))'; wlBorder = 'rgba(239,68,68,0.3)';
                 } else if (wlStatus === 'LIGHT') {
-                  wlColor = '#60a5fa'; wlBg = 'rgba(59,130,246,0.15)'; wlBorder = 'rgba(59,130,246,0.3)';
+                  wlColor = 'var(--kpi-blue, #2563eb)'; wlBg = 'var(--badge-bg-blue, rgba(59,130,246,0.15))'; wlBorder = 'rgba(59,130,246,0.3)';
                 }
 
                 const subsPill = t.assigned_subjects && t.assigned_subjects.length > 0
-                  ? t.assigned_subjects.map(s => `<span style="font-size:0.68rem; background:rgba(99,102,241,0.2); color:#a5b4fc; padding:1px 5px; border-radius:4px;">${s}</span>`).join(' ')
+                  ? t.assigned_subjects.map(s => `<span style="font-size:0.68rem; background:var(--badge-bg-indigo, rgba(99,102,241,0.2)); color:var(--kpi-indigo, #4f46e5); padding:1px 5px; border-radius:4px; font-weight:600;">${s}</span>`).join(' ')
                   : '<span style="font-size:0.68rem; opacity:0.5; font-style:italic;">No subjects</span>';
 
                 const classesPill = t.assigned_classes && t.assigned_classes.length > 0
-                  ? `<div style="font-size:0.72rem; color:#cbd5e1; margin-top:3px;">🏫 ${t.assigned_classes.join(', ')}</div>`
+                  ? `<div style="font-size:0.72rem; color:var(--text-secondary); margin-top:3px;">🏫 ${t.assigned_classes.join(', ')}</div>`
                   : '';
 
                 return `
-                  <div style="padding:10px; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:4px;">
+                  <div style="padding:10px; border-radius:8px; background:var(--card-bg, rgba(255,255,255,0.03)); border:1px solid var(--border-color, rgba(255,255,255,0.08)); display:flex; flex-direction:column; gap:4px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                       <div>
-                        <strong style="color:#f8fafc; font-size:0.9rem;">${t.full_name || t.username}</strong>
-                        <div style="font-size:0.73rem; color:#94a3b8;">${t.email || 'Teacher Staff'}</div>
+                        <strong style="color:var(--text-primary); font-size:0.9rem;">${t.full_name || t.username}</strong>
+                        <div style="font-size:0.73rem; color:var(--text-muted);">${t.email || 'Teacher Staff'}</div>
                       </div>
                       <span style="font-size:0.68rem; font-weight:700; background:${wlBg}; color:${wlColor}; border:1px solid ${wlBorder}; padding:2px 7px; border-radius:10px; text-transform:uppercase;">
                         ${wlStatus} (${t.class_count || 0} Classes)

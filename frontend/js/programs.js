@@ -47,19 +47,19 @@ async function loadPrograms() {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
           <div>
             <div style="display:flex; align-items:center; gap:8px;">
-              <strong style="font-size:0.95rem; color:#f8fafc;">${item.name}</strong>
-              ${item.code ? `<span style="font-size:0.75rem; background:rgba(99,102,241,0.15); color:#818cf8; padding:2px 6px; border-radius:4px; font-family:monospace;">${item.code}</span>` : ''}
+              <strong style="font-size:0.95rem; color:var(--text-primary);">${item.name}</strong>
+              ${item.code ? `<span style="font-size:0.75rem; background:var(--badge-bg-indigo, rgba(99,102,241,0.15)); color:var(--kpi-indigo, #818cf8); padding:2px 6px; border-radius:4px; font-family:monospace; font-weight:600;">${item.code}</span>` : ''}
             </div>
-            <div style="font-size:0.8rem; color:#94a3b8; margin-top:4px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-              <span>📘 Cores: <strong style="color:#60a5fa;">${coreCount}</strong></span>
-              <span>📦 Elective Packages: <strong style="color:#facc15;">${pkgCount}</strong> <span style="font-size:0.75rem; color:#cbd5e1; opacity:0.9;">${pkgDetailText}</span></span>
+            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+              <span>📘 Cores: <strong style="color:var(--kpi-blue, #60a5fa);">${coreCount}</strong></span>
+              <span>📦 Elective Packages: <strong style="color:var(--kpi-amber, #facc15);">${pkgCount}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">${pkgDetailText}</span></span>
             </div>
           </div>
           <div style="display:flex; gap:6px;">
-            <button type="button" class="btn" style="padding:5px 12px; font-size:0.82rem; background:rgba(99,102,241,0.2); color:#a5b4fc; border:1px solid rgba(99,102,241,0.4);" onclick="openCurriculumModal(${item.id}, '${item.name.replace(/'/g, "\\'")}', '${item.code || ''}')">
+            <button type="button" class="btn primary sm" style="padding:5px 12px; font-size:0.82rem;" onclick="openCurriculumModal(${item.id}, '${item.name.replace(/'/g, "\\'")}', '${item.code || ''}')">
               ⚙ Curriculum & Packages
             </button>
-            <button type="button" data-delete="${item.id}" class="btn danger" style="padding:5px 10px; font-size:0.82rem;">Delete</button>
+            <button type="button" data-delete="${item.id}" class="btn danger sm" style="padding:5px 10px; font-size:0.82rem;">Delete</button>
           </div>
         </div>
       `;
@@ -305,19 +305,19 @@ function renderPackagesList(packages) {
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
         <div>
           <div style="display:flex; align-items:center; gap:8px;">
-            <strong style="color:#f8fafc; font-size:0.95rem;">${pkg.name}</strong>
-            ${pkg.code ? `<span style="font-size:0.72rem; background:rgba(234,179,8,0.15); color:#facc15; padding:2px 6px; border-radius:4px; font-family:monospace;">${pkg.code}</span>` : ''}
+            <strong style="color:var(--text-primary); font-size:0.95rem;">${pkg.name}</strong>
+            ${pkg.code ? `<span style="font-size:0.72rem; background:var(--badge-bg-amber, rgba(234,179,8,0.15)); color:var(--kpi-amber, #facc15); padding:2px 6px; border-radius:4px; font-family:monospace; font-weight:600;">${pkg.code}</span>` : ''}
           </div>
-          <div style="font-size:0.8rem; color:#94a3b8; margin-top:3px;">
-            Target Stream: <strong style="color:#60a5fa;">${pkg.class_section_name || 'Unassigned'}</strong> | Quota: <strong>${pkg.capacity || 'Unlimited'}</strong>
+          <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:3px;">
+            Target Stream: <strong style="color:var(--kpi-blue, #60a5fa);">${pkg.class_section_name || 'Unassigned'}</strong> | Quota: <strong>${pkg.capacity || 'Unlimited'}</strong>
           </div>
         </div>
         <div style="display:flex; gap:6px;">
-          <button type="button" class="btn danger" style="padding:3px 8px; font-size:0.75rem;" onclick="deleteElectivePackage(${pkg.id})">Delete</button>
+          <button type="button" class="btn danger sm" style="padding:3px 8px; font-size:0.75rem;" onclick="deleteElectivePackage(${pkg.id})">Delete</button>
         </div>
       </div>
       <div>
-        <span style="font-size:0.75rem; color:#94a3b8; margin-right:4px;">Subjects (${pkg.subjects.length}):</span>
+        <span style="font-size:0.75rem; color:var(--text-secondary); margin-right:4px;">Subjects (${pkg.subjects.length}):</span>
         ${pkg.subjects.map(s => `<span class="subject-pill">${s.name}</span>`).join('')}
       </div>
     </div>

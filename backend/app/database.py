@@ -342,7 +342,14 @@ def run_migrations():
             ("school_id", "INTEGER REFERENCES schools(id)"),
             ("phone_number", "VARCHAR"),
             ("is_first_login", "BOOLEAN DEFAULT TRUE"),
-            ("contact_verified", "BOOLEAN DEFAULT FALSE")
+            ("contact_verified", "BOOLEAN DEFAULT FALSE"),
+            ("responsibility_role", "VARCHAR(50) DEFAULT 'REGULAR_TEACHER'"),
+            ("max_weekly_periods", "INTEGER DEFAULT 28"),
+            ("is_teaching_exempt", "BOOLEAN DEFAULT FALSE"),
+            ("duty_exempt_periods", "TEXT")
+        ],
+        "timetable": [
+            ("room", "VARCHAR")
         ],
         "scores": [
             ("approval_status", "VARCHAR DEFAULT 'DRAFT'")
@@ -352,8 +359,11 @@ def run_migrations():
             ("end_date", "TIMESTAMP" if not is_sqlite else "DATETIME")
         ],
         "admission_vouchers": [
+            ("bece_index_number", "VARCHAR(64)"),
             ("purchased_by_phone", "VARCHAR(20)"),
-            ("amount_paid", "FLOAT DEFAULT 50.0")
+            ("amount_paid", "FLOAT DEFAULT 50.0"),
+            ("used_at", "TIMESTAMP" if not is_sqlite else "DATETIME"),
+            ("school_id", "INTEGER REFERENCES schools(id)")
         ],
         "payments": [
             ("receipt_number", "VARCHAR")

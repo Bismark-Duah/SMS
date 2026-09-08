@@ -810,9 +810,17 @@ def initialize_paystack_payment(
     reference = f"PSTK-FEE-{fee.id}-{student.id}-{timestamp}"
     amount_pesewas = int(round(payload.amount_paid * 100))
 
+    # Payer Email Sanitization for Paystack
+    payer_email = payload.email if (payload.email and "@" in payload.email and "." in payload.email.split("@")[-1] and not payload.email.endswith(".local")) else None
+    if not payer_email and current_user.email and "@" in current_user.email and "." in current_user.email.split("@")[-1] and not current_user.email.endswith(".local"):
+        payer_email = current_user.email
+    if not payer_email:
+        clean_code = (student.student_code or str(student.id)).replace("/", "_").replace(" ", "_").lower()
+        payer_email = f"student_{clean_code}@edumanage360.com"
+
     try:
         init_res = initialize_paystack_transaction(
-            email=payload.email or current_user.email or "parent@school.local",
+            email=payer_email,
             amount_pesewas=amount_pesewas,
             school_id=target_school_id,
             reference=reference,

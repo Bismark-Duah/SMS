@@ -132,6 +132,10 @@ class User(Base):
     gender = Column(String, nullable=True)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=None)
+    responsibility_role = Column(String(50), nullable=True, default="REGULAR_TEACHER")  # ASSISTANT_HEAD, HOD, HOUSEMASTER, COUNSELOR, SPORTS_MASTER, REGULAR_TEACHER
+    max_weekly_periods = Column(Integer, default=28, nullable=True)
+    is_teaching_exempt = Column(Boolean, default=False)
+    duty_exempt_periods = Column(Text, nullable=True)  # JSON string e.g. '[{"day": 2, "period": 1}]'
 
     school = relationship("School", back_populates="users")
     roles = relationship("Role", secondary=user_roles, back_populates="users")
@@ -567,6 +571,59 @@ class Timetable(Base):
     subject = relationship("Subject")
     teacher = relationship("User")
     semester = relationship("Semester")
+
+class TimetableConfig(Base):
+    __tablename__ = "timetable_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    school_profile = Column(String(50), default="SHS")  # PUBLIC_BASIC, PRIVATE_BASIC, SHS, COMBINED
+    start_time = Column(String(20), default="08:00")
+    period_duration_minutes = Column(Integer, default=45)
+    periods_per_day = Column(Integer, default=8)
+    friday_periods = Column(Integer, default=6)
+    days_of_week = Column(String(50), default="0,1,2,3,4")  # Mon to Fri
+    break_schedule = Column(Text, nullable=True)  # JSON array of breaks/worship slots
+    is_published = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    school = relationship("School")
+
+class TimetableReliefLog(Base):
+    __tablename__ = "timetable_relief_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    absent_teacher_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reliever_teacher_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    timetable_slot_id = Column(Integer, ForeignKey("timetable.id", ondelete="CASCADE"), nullable=False)
+    date = Column(String(20), nullable=False)  # "YYYY-MM-DD"
+    reason = Column(String(255), nullable=True)
+    status = Column(String(50), default="CONFIRMED")  # CONFIRMED, COMPLETED, CANCELLED
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    absent_teacher = relationship("User", foreign_keys=[absent_teacher_id])
+    reliever_teacher = relationship("User", foreign_keys=[reliever_teacher_id])
+    timetable_slot = relationship("Timetable")
+
+class TimetableSyllabusLog(Base):
+    __tablename__ = "timetable_syllabus_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    timetable_slot_id = Column(Integer, ForeignKey("timetable.id", ondelete="CASCADE"), nullable=True)
+    class_section_id = Column(Integer, ForeignKey("class_sections.id"), nullable=False)
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
+    teacher_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    topic_taught = Column(String(255), nullable=False)
+    subtopic = Column(String(255), nullable=True)
+    remarks = Column(Text, nullable=True)
+    recorded_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    class_section = relationship("ClassSection")
+    subject = relationship("Subject")
+    teacher = relationship("User")
 
 # ── Discipline Records ────────────────────────────────────────────────────────
 

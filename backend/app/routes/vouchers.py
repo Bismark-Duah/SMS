@@ -30,8 +30,18 @@ def generate_vouchers(
 ):
     """Batch generates admission serial & PIN vouchers for candidate online admissions."""
     school_id = get_school_id(current_user)
+    if school_id:
+        school = db.query(School).filter(School.id == school_id).first()
+        if school and school.school_mode == "BASIC_ONLY":
+            raise HTTPException(
+                status_code=400,
+                detail="Admission Vouchers and CSSPS enrollment portals are only applicable to Senior High / STEM / Technical institutions."
+            )
+
     count = max(1, min(data.count, 2000))
-    prefix = (data.prefix or "JAK-2026").strip().upper()
+    school_obj = db.query(School).filter(School.id == school_id).first() if school_id else None
+    school_code = (school_obj.code if school_obj and school_obj.code else "JAK").upper()
+    prefix = (data.prefix or f"{school_code}-2026").strip().upper()
 
     created_vouchers = []
     for _ in range(count):
@@ -67,6 +77,10 @@ def list_vouchers(
 ):
     """Returns list of generated vouchers for school secretariat."""
     school_id = get_school_id(current_user)
+    if school_id:
+        school = db.query(School).filter(School.id == school_id).first()
+        if school and school.school_mode == "BASIC_ONLY":
+            return []
     vouchers = db.query(AdmissionVoucher).filter(AdmissionVoucher.school_id == school_id).order_by(AdmissionVoucher.id.desc()).all()
     return [
         {
@@ -228,8 +242,14 @@ class VoucherPurchaseRequest(BaseModel):
 def get_admission_schools(db: Session = Depends(get_db)):
     """
     Public listing of SHS / STEM / Technical schools supporting candidate online admission.
+    Strictly filters out BASIC_ONLY schools by mode.
     """
-    schools = db.query(School).all()
+    schools = db.query(School).filter(
+        School.school_mode.in_(["SHS_ONLY", "COMBINED", "TECHNICAL", "SHS"]),
+        School.status != "SUSPENDED"
+    ).all()
+    price_setting = db.query(Setting).filter(Setting.key == "admission_voucher_price_ghs").first()
+    default_price = float(price_setting.value) if price_setting and price_setting.value else 1.00
     res = []
     for s in schools:
         mode = (s.school_mode or "COMBINED").upper()
@@ -241,10 +261,10 @@ def get_admission_schools(db: Session = Depends(get_db)):
             "slug": slug,
             "school_mode": mode,
             "logo_url": s.logo_url,
-            "voucher_price": 50.0,
-            "is_shs": mode in ["SHS_ONLY", "COMBINED"]
+            "voucher_price": default_price,
+            "is_shs": True
         })
-    res.sort(key=lambda x: (not x["is_shs"], x["name"]))
+    res.sort(key=lambda x: x["name"])
     return res
 
 
@@ -271,36 +291,43 @@ def purchase_voucher_online(
             detail="A valid Parent / Guardian Mobile Money phone number is required for SMS delivery."
         )
 
-    # 1. Resolve Target School
+    # 1. Resolve Target School (strictly enforcing SHS/Combined mode)
     school = None
     if data.school_id:
-        school = db.query(School).filter(School.id == data.school_id).first()
+        cand_school = db.query(School).filter(School.id == data.school_id).first()
+        if cand_school and cand_school.school_mode != "BASIC_ONLY":
+            school = cand_school
 
     # If student exists on placement list, check their placed school
     student = db.query(Student).filter(Student.bece_index_number == clean_bece).first()
     if student and student.school_id:
         student_school = db.query(School).filter(School.id == student.school_id).first()
-        if student_school:
+        if student_school and student_school.school_mode != "BASIC_ONLY":
             school = student_school
 
     if not school:
-        # Prioritize SHS institution
-        school = db.query(School).filter(School.school_mode.in_(["SHS_ONLY", "COMBINED"])).first()
+        # Dynamically prioritize active SHS institution
+        school = db.query(School).filter(
+            School.school_mode.in_(["SHS_ONLY", "COMBINED", "TECHNICAL"]),
+            School.status != "SUSPENDED"
+        ).first()
     if not school:
         school = db.query(School).first()
 
-    school_id = school.id if school else 1
-    school_name = school.name if school else "Ghana Senior High School"
+    school_id = school.id if school else 2
+    school_name = school.name if school else "J.A. Kufuor STEM Technical School"
     school_code = (school.code if school and school.code else "JAK").upper()
     prefix = f"{school_code}-2026"
 
-    setting_price = db.query(Setting).filter(Setting.key == "admission_voucher_price").first()
+    setting_price = db.query(Setting).filter(Setting.key == "admission_voucher_price_ghs").first()
+    if not setting_price or not setting_price.value:
+        setting_price = db.query(Setting).filter(Setting.key == "admission_voucher_price").first()
     try:
-        default_price = float(setting_price.value) if setting_price and setting_price.value else 0.10
+        default_price = float(setting_price.value) if setting_price and setting_price.value else 1.00
     except (ValueError, TypeError):
-        default_price = 0.10
+        default_price = 1.00
 
-    paid_amt = data.amount if data.amount is not None else default_price
+    paid_amt = max(1.00, data.amount if data.amount is not None else default_price)
 
     # 2. Live Paystack Gateway Integration (Checks Render Env Vars & Settings)
     import os
@@ -456,10 +483,14 @@ from ..middleware.cloudflare_guard import verify_turnstile_token
 def get_public_schools_for_vouchers(db: Session = Depends(get_db)):
     """
     Public directory of schools offering online admission voucher purchases.
+    Strictly filters out BASIC_ONLY schools.
     """
-    schools = db.query(School).filter(School.status != "SUSPENDED").all()
+    schools = db.query(School).filter(
+        School.school_mode.in_(["SHS_ONLY", "COMBINED", "TECHNICAL", "SHS"]),
+        School.status != "SUSPENDED"
+    ).all()
     price_setting = db.query(Setting).filter(Setting.key == "admission_voucher_price_ghs").first()
-    default_price = float(price_setting.value) if price_setting and price_setting.value else 100.0
+    default_price = float(price_setting.value) if price_setting and price_setting.value else 1.00
 
     return [
         {
@@ -475,12 +506,14 @@ def get_public_schools_for_vouchers(db: Session = Depends(get_db)):
 
 
 class PublicVoucherCheckoutRequest(BaseModel):
-    school_id: int
-    applicant_name: str
+    school_id: Optional[int] = None
+    applicant_name: Optional[str] = None
     applicant_phone: str
     applicant_email: Optional[str] = None
     gateway: Optional[str] = "PAYSTACK"
     turnstile_token: Optional[str] = None
+    momo_network: Optional[str] = "MTN"
+    bece_index_number: Optional[str] = None
 
 
 @router.post("/checkout/initiate")
@@ -498,21 +531,127 @@ def initiate_public_voucher_checkout(
     if not verify_turnstile_token(data.turnstile_token, client_ip):
         raise HTTPException(status_code=400, detail="Security challenge verification failed. Please refresh the page.")
 
-    # 2. Resolve voucher price
-    price_setting = db.query(Setting).filter(Setting.key == "admission_voucher_price_ghs").first()
-    voucher_price = float(price_setting.value) if price_setting and price_setting.value else 100.0
+    # 2. Resolve target school (ensure SHS mode, avoid BASIC_ONLY)
+    target_school = None
+    if data.school_id:
+        s = db.query(School).filter(School.id == data.school_id).first()
+        if s and s.school_mode != "BASIC_ONLY":
+            target_school = s
 
-    # 3. Initialize order with Paystack subaccount split
+    if not target_school:
+        target_school = db.query(School).filter(
+            School.school_mode.in_(["SHS_ONLY", "COMBINED", "TECHNICAL"]),
+            School.status != "SUSPENDED"
+        ).first()
+
+    if not target_school:
+        target_school = db.query(School).first()
+
+    school_id = target_school.id if target_school else 2
+
+    # 3. Resolve voucher price
+    price_setting = db.query(Setting).filter(Setting.key == "admission_voucher_price_ghs").first()
+    if not price_setting or not price_setting.value:
+        price_setting = db.query(Setting).filter(Setting.key == "admission_voucher_price").first()
+    try:
+        voucher_price = float(price_setting.value) if price_setting and price_setting.value else 1.00
+    except Exception:
+        voucher_price = 1.00
+    voucher_price = max(1.00, voucher_price)
+
+    # 4. Construct candidate name
+    candidate_name = (data.applicant_name or "").strip()
+    if not candidate_name and data.bece_index_number:
+        candidate_name = f"Candidate {data.bece_index_number.strip()}"
+    if not candidate_name:
+        candidate_name = "Admission Applicant"
+
+    # 5. Initialize order with direct Paystack Mobile Money charge
     result = initialize_voucher_checkout(
-        school_id=data.school_id,
-        applicant_name=data.applicant_name,
+        school_id=school_id,
+        applicant_name=candidate_name,
         applicant_phone=data.applicant_phone,
         applicant_email=data.applicant_email or "",
         amount=voucher_price,
         gateway=data.gateway or "PAYSTACK",
-        db=db
+        db=db,
+        momo_network=data.momo_network or "MTN"
     )
     return result
+
+
+class VoucherSubmitOTPRequest(BaseModel):
+    order_reference: str
+    otp: str
+    bece_index_number: Optional[str] = None
+
+
+@router.post("/submit-otp")
+def submit_voucher_otp(
+    data: VoucherSubmitOTPRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Submits 2FA Mobile Money SMS OTP to Paystack (/charge/submit_otp).
+    On success, atomically fulfills the voucher order, generates credentials, and sends SMS.
+    """
+    clean_ref = (data.order_reference or "").strip()
+    clean_otp = (data.otp or "").strip()
+
+    if not clean_ref:
+        raise HTTPException(status_code=400, detail="Order reference is required.")
+    if not clean_otp or len(clean_otp) < 4:
+        raise HTTPException(status_code=400, detail="Please enter a valid authorization code.")
+
+    from ..models import VoucherOrder, Voucher
+    order = db.query(VoucherOrder).filter(VoucherOrder.order_reference == clean_ref).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Voucher order reference not found.")
+
+    if order.status in ["CONFIRMED", "DELIVERED"] and order.voucher_id:
+        v = order.voucher
+        return {
+            "success": True,
+            "status": "CONFIRMED",
+            "message": "Payment verified and voucher unlocked.",
+            "serial_code": v.serial_code if v else None,
+            "pin_code": v.pin_code if v else None
+        }
+
+    # Submit to Paystack 2FA Charge API
+    from ..payments.paystack import submit_paystack_otp
+    res = submit_paystack_otp(clean_ref, clean_otp, db=db)
+
+    if res.get("status") == "success":
+        pstk_status = res.get("paystack_status")
+        if pstk_status == "success":
+            gateway_id = str(res.get("id") or "PAYSTACK_OTP_SUCCESS")
+            fulfillment = fulfill_voucher_order_atomic(clean_ref, gateway_id, db)
+            db.refresh(order)
+            voucher = order.voucher if order.voucher_id else None
+            serial = voucher.serial_code if voucher else fulfillment.get("serial_number")
+            pin = voucher.pin_code if voucher else fulfillment.get("pin")
+            return {
+                "success": True,
+                "status": "CONFIRMED",
+                "message": "Payment successful! Admission Voucher unlocked.",
+                "serial_code": serial,
+                "pin_code": pin,
+                "order_reference": clean_ref
+            }
+        elif pstk_status in ["processing", "pending", "pay_offline"]:
+            return {
+                "success": True,
+                "status": "processing",
+                "message": res.get("display_text") or "Authorization code received. Processing transaction...",
+                "order_reference": clean_ref
+            }
+        else:
+            msg = res.get("gateway_response") or res.get("display_text") or "Payment authorization failed."
+            raise HTTPException(status_code=400, detail=msg)
+    else:
+        err_msg = res.get("message", "Invalid authorization code. Please verify the SMS and try again.")
+        raise HTTPException(status_code=400, detail=err_msg)
 
 
 @router.post("/webhook/paystack")
@@ -596,40 +735,41 @@ def check_or_resend_voucher_status(
     from ..models import VoucherOrder, Voucher, School
     from ..services.messaging_service import send_sms_via_hubtel
 
-    clean_phone = "".join(filter(str.isdigit, data.applicant_phone or ""))
-    query = db.query(VoucherOrder).filter(VoucherOrder.applicant_phone.contains(clean_phone[-9:]))
+    order = None
     if data.order_reference:
-        query = query.filter(VoucherOrder.order_reference == data.order_reference.strip())
+        order = db.query(VoucherOrder).filter(VoucherOrder.order_reference == data.order_reference.strip()).first()
+    if not order and data.applicant_phone:
+        clean_phone = "".join(filter(str.isdigit, data.applicant_phone or ""))
+        if clean_phone:
+            order = db.query(VoucherOrder).filter(VoucherOrder.applicant_phone.contains(clean_phone[-9:])).order_by(VoucherOrder.id.desc()).first()
 
-    order = query.order_by(VoucherOrder.id.desc()).first()
     if not order:
-        raise HTTPException(status_code=404, detail="No voucher order found for this phone number.")
+        raise HTTPException(status_code=404, detail="No voucher order found for this reference or phone number.")
+
+    # Direct Paystack Verification Polling (for real-time fulfillment on localhost & cloud)
+    if order.status == "PENDING" and order.payment_gateway == "PAYSTACK":
+        from ..payments.paystack import verify_paystack_transaction
+        pstk_ver = verify_paystack_transaction(order.order_reference, db=db)
+        if pstk_ver.get("verified") and pstk_ver.get("status") == "success":
+            from ..services.payment_orchestrator import fulfill_voucher_order_atomic
+            fulfill_voucher_order_atomic(order.order_reference, "PAYSTACK_POLL_VERIFIED", db)
+            db.refresh(order)
 
     voucher = order.voucher if order.voucher_id else None
     school = db.query(School).filter(School.id == order.school_id).first()
     school_name = school.name if school else "School System"
 
-    # Resend SMS if voucher is assigned
-    if voucher:
-        msg = (
-            f"Dear Applicant, your {school_name} Admission Voucher details:\n"
-            f"Serial: {voucher.serial_number}\n"
-            f"PIN: {voucher.pin}\n"
-            f"Status: Confirmed."
-        )
-        send_sms_via_hubtel(
-            recipient_phone=order.applicant_phone,
-            message_body=msg,
-            school_id=order.school_id,
-            db=db
-        )
+    serial = getattr(voucher, 'serial_code', getattr(voucher, 'serial_number', None)) if voucher else None
+    pin = getattr(voucher, 'pin_code', getattr(voucher, 'pin', None)) if voucher else None
 
     return {
         "order_reference": order.order_reference,
         "status": order.status,
         "school_name": school_name,
-        "serial_number": voucher.serial_number if voucher else None,
-        "pin": voucher.pin if voucher else None,
+        "serial_number": serial,
+        "serial_code": serial,
+        "pin": pin,
+        "pin_code": pin,
         "applicant_name": order.applicant_name,
         "applicant_phone": order.applicant_phone,
         "amount": order.amount,

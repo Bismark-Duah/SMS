@@ -71,18 +71,20 @@ def create_paystack_subaccount(
         "primary_contact_name": school_name[:50]
     }
 
+    headers = {
+        "Authorization": f"Bearer {secret_key}",
+        "Content-Type": "application/json",
+        "User-Agent": "EduManage360-Platform/1.0 (Ghana EdTech SMS)"
+    }
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {secret_key}",
-            "Content-Type": "application/json"
-        },
+        headers=headers,
         method="POST"
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             if data.get("status"):
                 return {
@@ -92,6 +94,14 @@ def create_paystack_subaccount(
                     "data": data["data"]
                 }
             return {"status": "error", "message": data.get("message", "Paystack subaccount creation failed")}
+    except urllib.error.HTTPError as he:
+        err_body = he.read().decode("utf-8", errors="ignore")
+        try:
+            err_json = json.loads(err_body)
+            msg = err_json.get("message", f"HTTP {he.code}: {he.reason}")
+        except Exception:
+            msg = f"HTTP {he.code}: {err_body or he.reason}"
+        return {"status": "error", "message": msg}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -164,18 +174,20 @@ def initialize_paystack_transaction(
         payload["transaction_charge"] = platform_fee_pesewas
         payload["bearer"] = "subaccount"
 
+    headers = {
+        "Authorization": f"Bearer {secret_key}",
+        "Content-Type": "application/json",
+        "User-Agent": "EduManage360-Platform/1.0 (Ghana EdTech SMS)"
+    }
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {secret_key}",
-            "Content-Type": "application/json"
-        },
+        headers=headers,
         method="POST"
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             if data.get("status"):
                 return {
@@ -185,6 +197,14 @@ def initialize_paystack_transaction(
                     "reference": data["data"]["reference"]
                 }
             return {"status": "error", "message": data.get("message", "Paystack transaction initialize failed")}
+    except urllib.error.HTTPError as he:
+        err_body = he.read().decode("utf-8", errors="ignore")
+        try:
+            err_json = json.loads(err_body)
+            msg = err_json.get("message", f"HTTP {he.code}: {he.reason}")
+        except Exception:
+            msg = f"HTTP {he.code}: {err_body or he.reason}"
+        return {"status": "error", "message": msg}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -202,14 +222,18 @@ def verify_paystack_transaction(reference: str, db: Optional[Session] = None) ->
         }
 
     url = f"https://api.paystack.co/transaction/verify/{reference}"
+    headers = {
+        "Authorization": f"Bearer {secret_key}",
+        "User-Agent": "EduManage360-Platform/1.0 (Ghana EdTech SMS)"
+    }
     req = urllib.request.Request(
         url,
-        headers={"Authorization": f"Bearer {secret_key}"},
+        headers=headers,
         method="GET"
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             if data.get("status") and data.get("data", {}).get("status") == "success":
                 tx_data = data["data"]
@@ -228,5 +252,73 @@ def verify_paystack_transaction(reference: str, db: Optional[Session] = None) ->
                 "verified": False,
                 "message": data.get("data", {}).get("gateway_response", "Transaction not successful")
             }
+    except urllib.error.HTTPError as he:
+        err_body = he.read().decode("utf-8", errors="ignore")
+        try:
+            err_json = json.loads(err_body)
+            msg = err_json.get("message", f"HTTP {he.code}: {he.reason}")
+        except Exception:
+            msg = f"HTTP {he.code}: {err_body or he.reason}"
+        return {"status": "error", "verified": False, "message": msg}
     except Exception as e:
         return {"status": "error", "verified": False, "message": str(e)}
+
+
+def submit_paystack_otp(reference: str, otp: str, db: Optional[Session] = None) -> Dict[str, Any]:
+    """
+    Submits 2FA Mobile Money SMS OTP to Paystack (/charge/submit_otp).
+    """
+    secret_key = get_paystack_secret_key(db)
+    if not secret_key:
+        return {
+            "status": "error",
+            "message": "Paystack secret key is unconfigured."
+        }
+
+    url = "https://api.paystack.co/charge/submit_otp"
+    payload = {
+        "otp": str(otp).strip(),
+        "reference": str(reference).strip()
+    }
+    headers = {
+        "Authorization": f"Bearer {secret_key}",
+        "Content-Type": "application/json",
+        "User-Agent": "EduManage360-Platform/1.0 (Ghana EdTech SMS)"
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            if data.get("status"):
+                charge_data = data.get("data", {})
+                return {
+                    "status": "success",
+                    "paystack_status": charge_data.get("status"),
+                    "reference": charge_data.get("reference"),
+                    "amount": charge_data.get("amount", 0) / 100.0 if charge_data.get("amount") else None,
+                    "display_text": charge_data.get("display_text"),
+                    "gateway_response": charge_data.get("gateway_response"),
+                    "id": charge_data.get("id"),
+                    "data": charge_data
+                }
+            return {
+                "status": "failed",
+                "message": data.get("message", "Invalid authorization code.")
+            }
+    except urllib.error.HTTPError as he:
+        err_body = he.read().decode("utf-8", errors="ignore")
+        try:
+            err_json = json.loads(err_body)
+            msg = err_json.get("message", f"HTTP {he.code}: {he.reason}")
+        except Exception:
+            msg = f"HTTP {he.code}: {err_body or he.reason}"
+        return {"status": "error", "message": msg}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+

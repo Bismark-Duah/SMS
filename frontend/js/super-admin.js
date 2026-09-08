@@ -1872,6 +1872,93 @@ window.openTestSMSModal = async function() {
   }
 };
 
+// ── Super Admin Payout Subaccount Handlers ────────────────────────────────────
+
+window.openSubaccountModal = async function(schoolId, schoolName) {
+  const modal = document.getElementById('subaccountModal');
+  if (!modal) return;
+
+  document.getElementById('adminSubSchoolId').value = String(schoolId);
+  document.getElementById('subaccountModalSchoolTitle').textContent = `School: ${schoolName} (#${schoolId})`;
+
+  const statusMsg = document.getElementById('adminSubStatusMsg');
+  if (statusMsg) statusMsg.style.display = 'none';
+
+  modal.style.display = 'flex';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}/subaccount`, {
+      headers: getHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.settlement_bank) document.getElementById('adminSubBank').value = data.settlement_bank;
+      document.getElementById('adminSubAccountNum').value = data.account_number || '';
+      document.getElementById('adminSubAccountName').value = data.account_name || schoolName;
+      document.getElementById('adminSubSchoolSplit').value = data.percentage_split !== undefined ? data.percentage_split : 95.0;
+      document.getElementById('adminSubPlatformFee').value = data.platform_commission_percent !== undefined ? data.platform_commission_percent : 5.0;
+    }
+  } catch (_) {}
+};
+
+window.closeSubaccountModal = function() {
+  const modal = document.getElementById('subaccountModal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.handleSaveSchoolSubaccount = async function(event) {
+  event.preventDefault();
+  const schoolId = document.getElementById('adminSubSchoolId').value;
+  const statusMsg = document.getElementById('adminSubStatusMsg');
+  const btn = document.getElementById('btnSaveAdminSubaccount');
+
+  const payload = {
+    settlement_bank: document.getElementById('adminSubBank').value,
+    account_number: document.getElementById('adminSubAccountNum').value.trim(),
+    account_name: document.getElementById('adminSubAccountName').value.trim(),
+    percentage_split: parseFloat(document.getElementById('adminSubSchoolSplit').value || 95.0),
+    platform_commission_percent: parseFloat(document.getElementById('adminSubPlatformFee').value || 5.0)
+  };
+
+  btn.disabled = true;
+  btn.textContent = 'Saving Subaccount...';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}/subaccount`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Could not save subaccount');
+
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(16, 185, 129, 0.15)';
+      statusMsg.style.border = '1px solid #10b981';
+      statusMsg.style.color = '#34d399';
+      statusMsg.innerHTML = `<strong>✔ Subaccount Linked!</strong> Code: <code>${data.subaccount_code}</code>`;
+    }
+
+    if (window.showToast) window.showToast('Paystack Settlement Subaccount saved successfully!', 'success');
+    setTimeout(() => {
+      window.closeSubaccountModal();
+      window.loadSuperAdminDashboard();
+    }, 1600);
+  } catch (err) {
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+      statusMsg.style.border = '1px solid #ef4444';
+      statusMsg.style.color = '#f87171';
+      statusMsg.innerHTML = `<strong>Error:</strong> ${err.message}`;
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Save & Link Paystack Subaccount';
+  }
+};
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => window.loadSuperAdminDashboard());
 } else {

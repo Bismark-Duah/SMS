@@ -72,34 +72,47 @@ def get_public_branding(
         except ValueError:
             pass
 
+    school = None
+    is_shs_request = mode and mode.upper() in ["SHS", "SHS_ONLY", "CSSPS", "ADMISSION"]
+
     if target_school_id:
+        cand_school = db.query(School).filter(School.id == target_school_id).first()
+        if cand_school:
+            if is_shs_request and cand_school.school_mode == "BASIC_ONLY":
+                school = None
+            else:
+                school = cand_school
+
+    if not school and is_shs_request:
+        # Prioritize Senior High / STEM / Technical School for CSSPS admission portal
+        school = db.query(School).filter(
+            School.school_mode.in_(["SHS_ONLY", "COMBINED", "TECHNICAL", "SHS"]),
+            School.status != "SUSPENDED"
+        ).first()
+
+    if not school:
+        school = db.query(School).filter(School.status != "SUSPENDED").first() or db.query(School).first()
+
+    eff_school_id = school.id if school else target_school_id
+    if eff_school_id:
         settings_list = db.query(Setting).filter(
-            (Setting.school_id == target_school_id) | (Setting.school_id == None)
+            (Setting.school_id == eff_school_id) | (Setting.school_id == None)
         ).all()
     else:
         settings_list = db.query(Setting).all()
 
     res = {s.key: s.value for s in settings_list}
 
-    school = None
-    if target_school_id:
-        school = db.query(School).filter(School.id == target_school_id).first()
-
-    if not school and mode and mode.upper() in ["SHS", "SHS_ONLY", "CSSPS"]:
-        # Prioritize Senior High / STEM / Technical School for CSSPS admission portal
-        school = db.query(School).filter(School.school_mode.in_(["SHS_ONLY", "COMBINED"])).first()
-
-    if not school:
-        school = db.query(School).first()
-
     name = school.name if school else (res.get("school_name") or "GHANA SENIOR HIGH SCHOOL")
     logo = school.logo_url if school and school.logo_url else res.get("school_logo")
     smode = school.school_mode if school and school.school_mode else (res.get("school_mode") or "COMBINED")
 
+    price_val = res.get("admission_voucher_price_ghs") or res.get("admission_voucher_price", "1.00")
     try:
-        voucher_price = float(res.get("admission_voucher_price", "0.10"))
+        voucher_price = float(price_val)
     except (ValueError, TypeError):
-        voucher_price = 0.10
+        voucher_price = 1.00
+    voucher_price = max(1.00, voucher_price)
 
     momo_recipient_number = res.get("admission_momo_recipient_number", "0508929456")
     momo_recipient_name = res.get("admission_momo_recipient_name", "Duah Bismark")

@@ -612,32 +612,34 @@
     menu.id = 'guardPillMenu';
     menu.style.cssText = `
       display:none; position:absolute; top:calc(100% + 8px); right:0; z-index:9501;
-      background:#1e293b; border:1px solid #334155; border-radius:12px;
+      background:var(--card-bg, #1e293b); border:1px solid var(--border-color, #334155); border-radius:12px;
       padding:10px; min-width:230px;
-      box-shadow:0 12px 32px rgba(0,0,0,0.5);
+      box-shadow:0 12px 32px rgba(0,0,0,0.35);
+      backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+      color:var(--text-primary, #f8fafc);
       font-family:sans-serif;
     `;
 
     const roleSelectHtml = selectableRoles.length > 1 ? `
-      <div style="padding:4px 8px 2px; font-size:0.72rem; color:#818cf8; font-weight:700; text-transform:uppercase;">🎭 Switch Active Persona</div>
+      <div style="padding:4px 8px 2px; font-size:0.72rem; color:var(--primary, #818cf8); font-weight:700; text-transform:uppercase;">🎭 Switch Active Persona</div>
       <div style="padding:0 8px 8px;">
-        <select id="guardRoleSelect" style="width:100%; padding:6px 8px; font-size:0.82rem; background:#0f172a; color:#f8fafc; border:1px solid #6366f1; border-radius:6px; cursor:pointer; font-weight:600;">
+        <select id="guardRoleSelect" style="width:100%; padding:6px 8px; font-size:0.82rem; background:var(--input-bg, #0f172a); color:var(--text-primary, #f8fafc); border:1px solid var(--border-color, #6366f1); border-radius:6px; cursor:pointer; font-weight:600;">
           ${selectableRoles.map(r => `<option value="${r}" ${r===activeRole?'selected':''}>${ROLE_DISPLAY_NAMES[r]||r.toUpperCase()}</option>`).join('')}
         </select>
       </div>
-      <hr style="border:none; border-top:1px solid #334155; margin:6px 0;">
+      <hr style="border:none; border-top:1px solid var(--border-color, #334155); margin:6px 0;">
     ` : '';
 
     menu.innerHTML = `
-      <div style="padding:4px 8px 8px; font-size:0.72rem; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid #334155; margin-bottom:8px;">
+      <div style="padding:4px 8px 8px; font-size:0.72rem; color:var(--text-secondary, #94a3b8); font-weight:700; text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid var(--border-color, #334155); margin-bottom:8px;">
         👤 ${username} <span style="color:${color};">(${displayRoleName})</span>
       </div>
 
       ${roleSelectHtml}
 
-      <div style="padding:4px 8px 2px; font-size:0.72rem; color:#64748b; font-weight:700; text-transform:uppercase;">🎨 Color Theme</div>
+      <div style="padding:4px 8px 2px; font-size:0.72rem; color:var(--text-secondary, #64748b); font-weight:700; text-transform:uppercase;">🎨 Color Theme</div>
       <div style="padding:0 8px 8px;">
-        <select id="guardThemeSelect" style="width:100%; padding:6px 8px; font-size:0.82rem; background:#0f172a; color:#f8fafc; border:1px solid #334155; border-radius:6px; cursor:pointer;">
+        <select id="guardThemeSelect" style="width:100%; padding:6px 8px; font-size:0.82rem; background:var(--input-bg, #0f172a); color:var(--text-primary, #f8fafc); border:1px solid var(--border-color, #334155); border-radius:6px; cursor:pointer;">
           <option value="midnight" ${activeTheme==='midnight'?'selected':''}>🌙 Midnight Dark</option>
           <option value="light" ${activeTheme==='light'?'selected':''}>☀️ Clean Light</option>
           <option value="emerald" ${activeTheme==='emerald'?'selected':''}>🌲 Emerald Oasis</option>
@@ -645,16 +647,16 @@
         </select>
       </div>
 
-      <hr style="border:none; border-top:1px solid #334155; margin:6px 0;">
+      <hr style="border:none; border-top:1px solid var(--border-color, #334155); margin:6px 0;">
 
       <button id="guardChangePwBtn"
         style="display:block; width:100%; text-align:left; padding:8px 10px; border:none;
-               background:none; color:#f8fafc; font-size:0.85rem; border-radius:6px; cursor:pointer;">
+               background:none; color:var(--text-primary, #f8fafc); font-size:0.85rem; border-radius:6px; cursor:pointer;">
         🔑 Change Password
       </button>
       <button id="guardLogoutBtn"
         style="display:block; width:100%; text-align:left; padding:8px 10px; border:none;
-               background:none; color:#f87171; font-size:0.85rem; border-radius:6px; cursor:pointer; margin-top:2px;">
+               background:none; color:var(--danger, #f87171); font-size:0.85rem; border-radius:6px; cursor:pointer; margin-top:2px;">
         🚪 Logout
       </button>
     `;

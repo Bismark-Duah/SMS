@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from ..database import get_db
-from ..models import Student, StudentGuardian, StudentHealth, Program, House, ClassSection, User, ElectiveCombination, Subject
+from ..models import Student, StudentGuardian, StudentHealth, Program, House, ClassSection, User, ElectiveCombination, Subject, School
 from ..schemas import CSSPSEnrollmentCreate
 from ..services.allocation import allocate_student_house_and_dorm
 from ..services.admission_package import AdmissionPackageService
@@ -19,6 +19,13 @@ router = APIRouter(prefix="/api/cssps", tags=["CSSPS Enrollment"])
 @router.post("/enroll", status_code=status.HTTP_201_CREATED)
 def enroll_student(data: CSSPSEnrollmentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     school_id = get_school_id(current_user)
+    if school_id:
+        school = db.query(School).filter(School.id == school_id).first()
+        if school and school.school_mode == "BASIC_ONLY":
+            raise HTTPException(
+                status_code=400,
+                detail="CSSPS Enrollment and Online Candidate Admission are only applicable to Senior High / STEM / Technical institutions."
+            )
     clean_bece = data.bece_index_number.strip()
     # Validate 12-char BECE Index Number
     if len(clean_bece) != 12:
@@ -152,6 +159,13 @@ def verify_bece_index(index_number: str, db: Session = Depends(get_db)):
 @router.post("/import-csv", status_code=status.HTTP_201_CREATED)
 async def import_cssps_csv(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     school_id = get_school_id(current_user)
+    if school_id:
+        school = db.query(School).filter(School.id == school_id).first()
+        if school and school.school_mode == "BASIC_ONLY":
+            raise HTTPException(
+                status_code=400,
+                detail="CSSPS Enrollment and Online Candidate Admission are only applicable to Senior High / STEM / Technical institutions."
+            )
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Invalid file type. Only .csv files are supported.")
 

@@ -441,16 +441,30 @@ let momoPollingTimer = null;
 let momoCountdownInterval = null;
 let activeOrderRef = null;
 let activeParentPhone = null;
+let activeBeceIndex = null;
+let activeMomoNet = null;
+let activeAmount = null;
 
 function resetVoucherModal() {
+  if (otpVerificationTimer) clearInterval(otpVerificationTimer);
   if (momoPollingTimer) clearInterval(momoPollingTimer);
   if (momoCountdownInterval) clearInterval(momoCountdownInterval);
   const form = document.getElementById('buy-voucher-form');
-  const polling = document.getElementById('momo-polling-screen');
+  const authScreen = document.getElementById('momo-auth-screen');
   const btn = document.getElementById('btnPayVoucher');
+  const otpBtn = document.getElementById('btnSubmitMomoOtp');
+  const otpInput = document.getElementById('momo_otp_input');
+  const otpStatus = document.getElementById('momo-otp-status');
+
   if (form) form.style.display = 'block';
-  if (polling) polling.style.display = 'none';
+  if (authScreen) authScreen.style.display = 'none';
   if (btn) btn.disabled = false;
+  if (otpBtn) {
+    otpBtn.disabled = false;
+    otpBtn.textContent = '⚡ Verify Code & Get Voucher';
+  }
+  if (otpInput) otpInput.value = '';
+  if (otpStatus) otpStatus.textContent = '';
 }
 window.resetVoucherModal = resetVoucherModal;
 
@@ -461,6 +475,209 @@ function closeBuyVoucherModal() {
 }
 window.closeBuyVoucherModal = closeBuyVoucherModal;
 
+function showMomoAuthScreen(orderRef, phone, amount, beceIndex, momoNet, displayText) {
+  if (otpVerificationTimer) clearInterval(otpVerificationTimer);
+  if (momoPollingTimer) clearInterval(momoPollingTimer);
+  if (momoCountdownInterval) clearInterval(momoCountdownInterval);
+
+  activeOrderRef = orderRef;
+  activeParentPhone = phone;
+  activeBeceIndex = beceIndex;
+  activeMomoNet = momoNet;
+  activeAmount = amount;
+
+  const form = document.getElementById('buy-voucher-form');
+  const authScreen = document.getElementById('momo-auth-screen');
+
+  if (form) form.style.display = 'none';
+  if (authScreen) authScreen.style.display = 'block';
+
+  const phEl = document.getElementById('momoAuthPhone');
+  const amtEl = document.getElementById('momoAuthAmount');
+  const otpStatus = document.getElementById('momo-otp-status');
+  const otpInput = document.getElementById('momo_otp_input');
+  const countdownEl = document.getElementById('momoCountdown');
+
+  if (phEl) phEl.textContent = `${phone} (${momoNet || 'MoMo'})`;
+  if (amtEl) amtEl.textContent = `GHS ${parseFloat(amount || currentVoucherPrice).toFixed(2)}`;
+  if (otpStatus) {
+    otpStatus.style.color = '#38bdf8';
+    otpStatus.textContent = displayText || 'Enter code received via SMS, or approve prompt on phone.';
+  }
+  if (otpInput) {
+    otpInput.value = '';
+    setTimeout(() => otpInput.focus(), 150);
+  }
+
+  // 1. Live USSD Countdown in background
+  let remaining = 60;
+  momoCountdownInterval = setInterval(() => {
+    remaining--;
+    if (countdownEl) countdownEl.textContent = `Waiting for network confirmation... (${remaining}s)`;
+    if (remaining <= 0) {
+      clearInterval(momoCountdownInterval);
+      if (countdownEl) countdownEl.textContent = 'Still waiting for network? Click "I\'ve Approved on Phone" below.';
+    }
+  }, 1000);
+
+  // 2. Background Auto-Poll for instant USSD / Webhook fulfillment
+  momoPollingTimer = setInterval(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/vouchers/verify-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicant_phone: phone,
+          order_reference: orderRef
+        })
+      });
+      if (res.ok) {
+        const vData = await res.json();
+        if ((vData.status === 'CONFIRMED' || vData.status === 'DELIVERED') && vData.serial_code && vData.pin_code) {
+          clearInterval(momoPollingTimer);
+          if (momoCountdownInterval) clearInterval(momoCountdownInterval);
+          if (otpVerificationTimer) clearInterval(otpVerificationTimer);
+          localStorage.removeItem('pending_voucher_order');
+          onVoucherFulfilled(beceIndex, vData.serial_code, vData.pin_code, phone);
+        }
+      }
+    } catch (_) {}
+  }, 2500);
+}
+window.showMomoAuthScreen = showMomoAuthScreen;
+window.showMomoOtpScreen = showMomoAuthScreen;
+
+let otpVerificationTimer = null;
+
+function startOtpVerificationPolling(orderRef, phone, beceIndex) {
+  if (otpVerificationTimer) clearInterval(otpVerificationTimer);
+  if (momoPollingTimer) clearInterval(momoPollingTimer);
+
+  const otpStatus = document.getElementById('momo-otp-status');
+  const otpBtn = document.getElementById('btnSubmitMomoOtp');
+
+  let attempts = 0;
+  const maxAttempts = 20; // 30 seconds total (every 1.5s)
+
+  otpVerificationTimer = setInterval(async () => {
+    attempts++;
+    if (otpStatus) {
+      otpStatus.style.color = '#38bdf8';
+      otpStatus.textContent = `✔ Code submitted. Verifying debit with network (${attempts}/${maxAttempts})...`;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/vouchers/verify-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicant_phone: phone,
+          order_reference: orderRef
+        })
+      });
+
+      if (res.ok) {
+        const vData = await res.json();
+        if ((vData.status === 'CONFIRMED' || vData.status === 'DELIVERED') && vData.serial_code && vData.pin_code) {
+          clearInterval(otpVerificationTimer);
+          if (momoPollingTimer) clearInterval(momoPollingTimer);
+          localStorage.removeItem('pending_voucher_order');
+          if (otpStatus) {
+            otpStatus.style.color = '#4ade80';
+            otpStatus.textContent = '✔ Payment confirmed! Unlocking admission voucher...';
+          }
+          onVoucherFulfilled(beceIndex, vData.serial_code, vData.pin_code, phone);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    if (attempts >= maxAttempts) {
+      clearInterval(otpVerificationTimer);
+      if (otpStatus) {
+        otpStatus.style.color = '#fbbf24';
+        otpStatus.textContent = 'Network confirmation is taking a moment. Please check your SMS or click Verify again.';
+      }
+      if (otpBtn) {
+        otpBtn.disabled = false;
+        otpBtn.textContent = '⚡ Verify Code & Get Voucher';
+      }
+    }
+  }, 1500);
+}
+window.startOtpVerificationPolling = startOtpVerificationPolling;
+
+async function submitMomoOtp(event) {
+  if (event) event.preventDefault();
+  const otpInput = document.getElementById('momo_otp_input');
+  const otpStatus = document.getElementById('momo-otp-status');
+  const otpBtn = document.getElementById('btnSubmitMomoOtp');
+
+  const code = (otpInput ? otpInput.value : '').trim();
+  if (!code || code.length < 4) {
+    if (otpStatus) {
+      otpStatus.style.color = '#f87171';
+      otpStatus.textContent = 'Please enter the full 6-digit authorization code.';
+    }
+    return;
+  }
+
+  if (otpBtn) {
+    otpBtn.disabled = true;
+    otpBtn.textContent = '⏳ Verifying Code...';
+  }
+  if (otpStatus) {
+    otpStatus.style.color = '#38bdf8';
+    otpStatus.textContent = 'Submitting authorization code to Paystack & issuing voucher...';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/vouchers/submit-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_reference: activeOrderRef,
+        otp: code,
+        bece_index_number: activeBeceIndex
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || data.message || 'Invalid authorization code. Please try again.');
+    }
+
+    if (data.serial_code && data.pin_code) {
+      if (otpVerificationTimer) clearInterval(otpVerificationTimer);
+      if (momoPollingTimer) clearInterval(momoPollingTimer);
+      localStorage.removeItem('pending_voucher_order');
+      if (otpStatus) {
+        otpStatus.style.color = '#4ade80';
+        otpStatus.textContent = '✔ Code verified! Unlocking admission voucher...';
+      }
+      onVoucherFulfilled(activeBeceIndex, data.serial_code, data.pin_code, activeParentPhone);
+    } else if (data.status === 'processing' || data.status === 'pending') {
+      if (otpStatus) {
+        otpStatus.style.color = '#38bdf8';
+        otpStatus.textContent = '✔ Code accepted. Waiting for network debit confirmation...';
+      }
+      startOtpVerificationPolling(activeOrderRef, activeParentPhone, activeBeceIndex);
+    } else {
+      throw new Error(data.message || 'Payment could not be verified.');
+    }
+  } catch (err) {
+    if (otpStatus) {
+      otpStatus.style.color = '#f87171';
+      otpStatus.textContent = `❌ ${err.message}`;
+    }
+    if (otpBtn) {
+      otpBtn.disabled = false;
+      otpBtn.textContent = '⚡ Verify Code & Get Voucher';
+    }
+  }
+}
+window.submitMomoOtp = submitMomoOtp;
+
 async function handleBuyVoucher(event) {
   event.preventDefault();
   const statusEl = document.getElementById('buy-voucher-status');
@@ -469,14 +686,14 @@ async function handleBuyVoucher(event) {
   const beceIndex = document.getElementById('buy_bece_index').value.trim();
   const parentPhone = document.getElementById('buy_parent_phone').value.trim();
   const momoNet = document.getElementById('buy_momo_network').value;
-  const schoolId = currentActiveSchoolId ? parseInt(currentActiveSchoolId) : 1;
+  const schoolId = currentActiveSchoolId ? parseInt(currentActiveSchoolId) : 2;
 
   statusEl.style.color = '#38bdf8';
-  statusEl.textContent = `Dispatching MoMo prompt to ${parentPhone}...`;
+  statusEl.textContent = `Dispatching MoMo prompt of GHS ${currentVoucherPrice.toFixed(2)} to ${parentPhone}...`;
   btn.disabled = true;
 
   try {
-    // 1. Initiate purchase via subaccount checkout
+    // 1. Initiate purchase via direct checkout
     let data;
     try {
       const res = await fetch(`${API_BASE}/vouchers/checkout/initiate`, {
@@ -486,13 +703,15 @@ async function handleBuyVoucher(event) {
           school_id: schoolId,
           applicant_name: `Candidate ${beceIndex}`,
           applicant_phone: parentPhone,
+          bece_index_number: beceIndex,
+          momo_network: momoNet,
           gateway: 'PAYSTACK'
         })
       });
       if (res.ok) data = await res.json();
     } catch (_) {}
 
-    // Fallback to offline simulated purchase if checkout initiate fails
+    // Fallback to direct purchase endpoint if needed
     if (!data) {
       const fbRes = await fetch(`${API_BASE}/vouchers/purchase-online`, {
         method: 'POST',
@@ -509,19 +728,25 @@ async function handleBuyVoucher(event) {
     }
 
     if (data.serial_code && data.pin_code) {
-      // Instant fulfillment (offline or simulated)
+      // Instant fulfillment
       onVoucherFulfilled(beceIndex, data.serial_code, data.pin_code, parentPhone);
     } else if (data.order_reference) {
-      // Transition to animated 60s MoMo countdown polling
       activeOrderRef = data.order_reference;
       activeParentPhone = parentPhone;
+      activeBeceIndex = beceIndex;
+      activeMomoNet = momoNet;
+      activeAmount = data.amount || currentVoucherPrice;
+
       localStorage.setItem('pending_voucher_order', JSON.stringify({
         order_ref: data.order_reference,
         phone: parentPhone,
         bece: beceIndex,
+        network: momoNet,
         timestamp: Date.now()
       }));
-      startMomoPolling(data.order_reference, parentPhone, currentVoucherPrice, beceIndex);
+
+      // Directly show unified authorization & OTP screen
+      showMomoAuthScreen(data.order_reference, parentPhone, data.amount || currentVoucherPrice, beceIndex, momoNet, data.display_text);
     } else {
       throw new Error(data.detail || 'Could not initiate Mobile Money transaction.');
     }
@@ -533,59 +758,15 @@ async function handleBuyVoucher(event) {
 }
 window.handleBuyVoucher = handleBuyVoucher;
 
-function startMomoPolling(orderRef, phone, amount, beceIndex) {
-  const form = document.getElementById('buy-voucher-form');
-  const polling = document.getElementById('momo-polling-screen');
-  if (form) form.style.display = 'none';
-  if (polling) polling.style.display = 'block';
-
-  const amtEl = document.getElementById('momoPromptAmount');
-  const phEl = document.getElementById('momoPromptPhone');
-  if (amtEl) amtEl.textContent = `GHS ${amount.toFixed(2)}`;
-  if (phEl) phEl.textContent = phone;
-
-  let remaining = 60;
-  const countdownEl = document.getElementById('momoCountdown');
-  const pollMsgEl = document.getElementById('momoPollingMsg');
-
-  if (momoCountdownInterval) clearInterval(momoCountdownInterval);
-  momoCountdownInterval = setInterval(() => {
-    remaining--;
-    if (countdownEl) countdownEl.textContent = `${remaining}s`;
-    if (remaining <= 0) {
-      clearInterval(momoCountdownInterval);
-      if (pollMsgEl) pollMsgEl.textContent = 'Still waiting? Check status with button below.';
-    }
-  }, 1000);
-
-  if (momoPollingTimer) clearInterval(momoPollingTimer);
-  momoPollingTimer = setInterval(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/vouchers/verify-status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          applicant_phone: phone,
-          order_reference: orderRef
-        })
-      });
-      if (res.ok) {
-        const vData = await res.json();
-        if (vData.status === 'CONFIRMED' || vData.status === 'DELIVERED') {
-          clearInterval(momoPollingTimer);
-          clearInterval(momoCountdownInterval);
-          localStorage.removeItem('pending_voucher_order');
-          onVoucherFulfilled(beceIndex, vData.serial_code, vData.pin_code, phone);
-        }
-      }
-    } catch (_) {}
-  }, 3000);
-}
-
 async function checkVoucherStatusManually() {
   if (!activeOrderRef || !activeParentPhone) return;
-  const pollMsgEl = document.getElementById('momoPollingMsg');
-  if (pollMsgEl) pollMsgEl.textContent = 'Checking payment status...';
+  const otpStatus = document.getElementById('momo-otp-status');
+
+  if (otpStatus) {
+    otpStatus.style.color = '#38bdf8';
+    otpStatus.textContent = 'Verifying Mobile Money transaction status with Paystack...';
+  }
+
   try {
     const res = await fetch(`${API_BASE}/vouchers/verify-status`, {
       method: 'POST',
@@ -600,29 +781,33 @@ async function checkVoucherStatusManually() {
       if (vData.serial_code && vData.pin_code) {
         if (momoPollingTimer) clearInterval(momoPollingTimer);
         if (momoCountdownInterval) clearInterval(momoCountdownInterval);
+        if (otpVerificationTimer) clearInterval(otpVerificationTimer);
         localStorage.removeItem('pending_voucher_order');
-        const bece = document.getElementById('buy_bece_index') ? document.getElementById('buy_bece_index').value : '';
-        onVoucherFulfilled(bece, vData.serial_code, vData.pin_code, activeParentPhone);
+        onVoucherFulfilled(activeBeceIndex, vData.serial_code, vData.pin_code, activeParentPhone);
         return;
       }
     }
-    if (pollMsgEl) pollMsgEl.textContent = 'Payment not yet confirmed by network. Please approve prompt on your phone.';
+    if (otpStatus) {
+      otpStatus.style.color = '#fbbf24';
+      otpStatus.textContent = 'Payment not yet confirmed by network. Please enter the OTP or check your phone.';
+    }
   } catch (e) {
-    if (pollMsgEl) pollMsgEl.textContent = 'Network check failed. Retrying...';
+    if (otpStatus) otpStatus.textContent = 'Network check failed. Retrying...';
   }
 }
 window.checkVoucherStatusManually = checkVoucherStatusManually;
 
 function onVoucherFulfilled(beceIndex, serial, pin, phone) {
   const form = document.getElementById('buy-voucher-form');
-  const polling = document.getElementById('momo-polling-screen');
+  const authScreen = document.getElementById('momo-auth-screen');
+
   if (form) form.style.display = 'block';
-  if (polling) polling.style.display = 'none';
+  if (authScreen) authScreen.style.display = 'none';
 
   const statusEl = document.getElementById('buy-voucher-status');
   if (statusEl) {
     statusEl.style.color = '#4ade80';
-    statusEl.innerHTML = `✔ <strong>Voucher Purchased!</strong> Serial: <code>${serial}</code> | PIN: <code>${pin}</code> (Receipt sent to ${phone})`;
+    statusEl.innerHTML = `✔ <strong>Payment Approved!</strong> Serial: <code>${serial}</code> | PIN: <code>${pin}</code> (Receipt sent to ${phone})`;
   }
 
   const gateBece = document.getElementById('gate_bece_index');
@@ -635,7 +820,7 @@ function onVoucherFulfilled(beceIndex, serial, pin, phone) {
   const loginStatus = document.getElementById('voucher-login-status');
   if (loginStatus) {
     loginStatus.style.color = '#4ade80';
-    loginStatus.textContent = '✔ Credentials auto-filled! Click Verify & Access Form.';
+    loginStatus.textContent = '✔ Credentials verified and auto-filled! Entering admission docket...';
   }
 
   setTimeout(() => {
@@ -643,7 +828,13 @@ function onVoucherFulfilled(beceIndex, serial, pin, phone) {
     const btn = document.getElementById('btnPayVoucher');
     if (btn) btn.disabled = false;
     if (statusEl) statusEl.textContent = '';
-  }, 2200);
+    
+    // Auto-trigger verification and login into form
+    const loginForm = document.getElementById('voucher-login-form');
+    if (loginForm) {
+      handleVoucherLogin(new Event('submit'));
+    }
+  }, 1800);
 }
 
 

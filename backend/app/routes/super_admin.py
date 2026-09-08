@@ -1957,3 +1957,76 @@ def test_sms_gateway_dispatch(
     )
     return res
 
+
+# ── Super Admin Payout Subaccount Management ──────────────────────────────────
+
+class SchoolSubaccountAdminSchema(BaseModel):
+    settlement_bank: str
+    account_number: str
+    account_name: Optional[str] = None
+    percentage_split: Optional[float] = 95.0
+    platform_commission_percent: Optional[float] = 5.0
+
+
+@router.get("/schools/{school_id}/subaccount")
+def get_school_subaccount_admin(
+    school_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Super Admin endpoint to inspect a school's Paystack settlement subaccount and commission rate.
+    """
+    from ..models import SchoolSubaccount
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+
+    sub = db.query(SchoolSubaccount).filter(SchoolSubaccount.school_id == school_id).first()
+    return {
+        "school_id": school_id,
+        "school_name": school.name,
+        "has_subaccount": bool(sub and sub.paystack_subaccount_code),
+        "paystack_subaccount_code": sub.paystack_subaccount_code if sub else None,
+        "settlement_bank": sub.settlement_bank if sub else "MTN",
+        "account_number": sub.account_number if sub else "",
+        "account_name": sub.account_name if sub else "",
+        "percentage_split": sub.percentage_split if sub else 95.0,
+        "platform_commission_percent": school.platform_commission_percent if school.platform_commission_percent is not None else 5.0,
+        "is_verified": sub.is_verified if sub else False,
+        "updated_at": str(sub.updated_at)[:16] if sub and sub.updated_at else ""
+    }
+
+
+@router.post("/schools/{school_id}/subaccount")
+def update_school_subaccount_admin(
+    school_id: int,
+    payload: SchoolSubaccountAdminSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Super Admin endpoint to provision, link, or update a school's Paystack Subaccount and SaaS split.
+    """
+    from ..services.payment_orchestrator import create_or_update_paystack_subaccount
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+
+    # Update platform commission rate if provided
+    if payload.platform_commission_percent is not None:
+        school.platform_commission_percent = float(payload.platform_commission_percent)
+        db.commit()
+
+    business_name = payload.account_name or school.name
+    result = create_or_update_paystack_subaccount(
+        school_id=school_id,
+        business_name=business_name,
+        settlement_bank=payload.settlement_bank,
+        account_number=payload.account_number.strip(),
+        percentage_charge=payload.percentage_split or (100.0 - school.platform_commission_percent),
+        db=db
+    )
+    return result
+
+

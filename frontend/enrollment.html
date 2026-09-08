@@ -236,7 +236,7 @@
                   <h3 style="margin:0; color:#4ade80; font-size:1.05rem;">1. Need an Admission Voucher?</h3>
                 </div>
                 <p style="font-size:0.85rem; color:var(--text-secondary, #cbd5e1); line-height:1.5; margin-bottom:14px;">
-                  To access your official school admission form, prospectus, and dormitory reservation, candidates must first acquire an official admission voucher (<strong class="voucher-price-display">GHS 0.10</strong>).
+                  To access your official school admission form, prospectus, and dormitory reservation, candidates must first acquire an official admission voucher (<strong class="voucher-price-display">GHS 1.00</strong>).
                 </p>
                 <ul style="margin:0 0 18px; padding-left:18px; font-size:0.82rem; color:#94a3b8; line-height:1.6;">
                   <li>⚡ Instant SMS Token Delivery to your phone</li>
@@ -247,7 +247,7 @@
 
               <div>
                 <button type="button" onclick="openBuyVoucherModal()" class="btn primary" style="width:100%; padding:12px; font-weight:700; font-size:0.95rem; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35); cursor:pointer;">
-                  📱 Buy Voucher Online (<span class="voucher-price-display">GHS 0.10</span>)
+                  📱 Buy Voucher Online (<span class="voucher-price-display">GHS 1.00</span>)
                 </button>
                 <div style="font-size:0.75rem; color:#64748b; text-align:center; margin-top:8px;">
                   * Also available via physical scratch card at the School Admissions Office.
@@ -563,11 +563,11 @@
           <button type="button" onclick="closeBuyVoucherModal()" style="background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; padding:0 6px;">✕</button>
         </div>
 
-        <p style="font-size:0.84rem; color:#94a3b8; margin:0 0 16px; line-height:1.4;">
-          Your Admission Voucher credentials (Serial & Secret PIN) will be dispatched instantly via SMS to your phone and auto-filled on screen.
-        </p>
-
         <form id="buy-voucher-form" onsubmit="handleBuyVoucher(event)" autocomplete="off">
+          <p style="font-size:0.84rem; color:#94a3b8; margin:0 0 16px; line-height:1.4;">
+            Your Admission Voucher credentials (Serial & Secret PIN) will be dispatched instantly via SMS to your phone and auto-filled on screen.
+          </p>
+
           <div class="form-group">
             <label for="buy_bece_index">Candidate BECE Index Number (12 Digits) *</label>
             <input type="text" id="buy_bece_index" required maxlength="12" placeholder="e.g. 101000100124" autocomplete="off" />
@@ -591,7 +591,7 @@
           <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); padding:10px 14px; border-radius:8px; margin:14px 0; display:flex; justify-content:space-between; align-items:center;">
             <div>
               <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Voucher Fee</div>
-              <div style="font-size:1.25rem; font-weight:800; color:#4ade80;" id="modalVoucherFeeDisplay">GHS 0.10</div>
+              <div style="font-size:1.25rem; font-weight:800; color:#4ade80;" id="modalVoucherFeeDisplay">GHS 1.00</div>
               <div style="font-size:0.72rem; color:#94a3b8; margin-top:2px;" id="modalRecipientDisplay">Recipient: Duah Bismark (0508929456)</div>
             </div>
             <div style="font-size:0.72rem; color:#cbd5e1; text-align:right;">
@@ -609,27 +609,47 @@
           </div>
         </form>
 
-        <!-- ── ANIMATED MOMO AUTHORIZATION & POLLING SCREEN ──────────────────────── -->
-        <div id="momo-polling-screen" style="display:none; text-align:center; padding:16px 8px;">
-          <div style="width:64px; height:64px; border-radius:50%; background:rgba(56,189,248,0.15); border:3px solid #38bdf8; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; animation:pulse 1.8s infinite;">
-            <span style="font-size:1.8rem;">📲</span>
+        <!-- ── UNIFIED MOMO AUTHORIZATION & VERIFICATION SCREEN ────────────────── -->
+        <div id="momo-auth-screen" style="display:none; text-align:center; padding:12px 4px;">
+          <div style="width:60px; height:60px; border-radius:50%; background:rgba(56,189,248,0.15); border:3px solid #38bdf8; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; animation:pulse 1.8s infinite;">
+            <span style="font-size:1.7rem;">📲</span>
           </div>
-          <h4 style="color:#38bdf8; font-size:1.1rem; margin:0 0 8px;">Authorize Payment on Your Phone</h4>
-          <p style="font-size:0.86rem; color:#cbd5e1; line-height:1.45; margin:0 0 12px;">
-            A prompt of <strong id="momoPromptAmount" style="color:#4ade80;">GHS 0.10</strong> has been dispatched to <strong id="momoPromptPhone" style="color:#f8fafc;">...</strong>.<br/>
-            <span style="color:#fbbf24; font-weight:600;">Please enter your Mobile Money PIN on your phone now.</span><br/>
-            <small style="color:#94a3b8;">(If prompt didn't pop up: MTN dial *170# | Telecel dial *110#)</small>
+          <h4 style="color:#38bdf8; font-size:1.12rem; margin:0 0 6px;">Authorize Mobile Money Payment</h4>
+          <p style="font-size:0.84rem; color:#cbd5e1; line-height:1.4; margin:0 0 14px;">
+            Payment prompt of <strong id="momoAuthAmount" style="color:#4ade80;">GHS 1.00</strong> dispatched to <strong id="momoAuthPhone" style="color:#f8fafc;">...</strong>.
           </p>
-          <div id="momoCountdown" style="font-size:1.6rem; font-weight:800; color:#38bdf8; margin:10px 0; font-family:'Outfit', sans-serif;">60s</div>
-          <div id="momoPollingMsg" style="font-size:0.82rem; color:#94a3b8;">Waiting for network confirmation...</div>
-          <div style="display:flex; justify-content:center; gap:10px; margin-top:14px;">
-            <button type="button" onclick="resetVoucherModal()" class="btn" style="padding:7px 14px; font-size:0.8rem;">Cancel</button>
-            <button type="button" onclick="checkVoucherStatusManually()" class="btn primary" style="padding:7px 16px; font-size:0.8rem; background:#0284c7; border:none;">I've Approved PIN</button>
+
+          <!-- 1. SMS OTP Input Box (Always Visible) -->
+          <div style="background:rgba(15,23,42,0.75); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:14px; margin-bottom:14px; text-align:center;">
+            <div style="font-size:0.82rem; color:#94a3b8; margin-bottom:8px;">
+              Enter 6-digit code received via SMS (from <strong>ORION TECH</strong> / MoMo):
+            </div>
+            <form id="momo-otp-form" onsubmit="submitMomoOtp(event)" autocomplete="off">
+              <input type="text" id="momo_otp_input" maxlength="8" placeholder="• • • • • •" 
+                style="text-align:center; font-size:1.5rem; letter-spacing:8px; font-weight:800; font-family:monospace; padding:10px; width:100%; border-radius:8px; border:2px solid #38bdf8; background:rgba(2,6,23,0.9); color:#38bdf8; box-sizing:border-box; outline:none; margin-bottom:10px;" 
+                autocomplete="one-time-code" />
+
+              <div id="momo-otp-status" style="margin-bottom:10px; font-size:0.82rem; font-weight:600; min-height:1.1rem;"></div>
+
+              <button type="submit" id="btnSubmitMomoOtp" class="btn primary" style="width:100%; padding:10px; font-weight:700; font-size:0.9rem; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35); cursor:pointer;">
+                ⚡ Verify Code & Get Voucher
+              </button>
+            </form>
+          </div>
+
+          <!-- 2. USSD PIN Alternative & Auto-Polling Status -->
+          <div style="font-size:0.78rem; color:#94a3b8; line-height:1.45; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+            <div>Or approve the USSD prompt on your phone (MTN dial <strong>*170#</strong> | Telecel dial <strong>*110#</strong>)</div>
+            <div id="momoCountdown" style="font-size:0.85rem; font-weight:700; color:#38bdf8; margin:6px 0;">Waiting for network confirmation... (60s)</div>
+            <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
+              <button type="button" onclick="resetVoucherModal()" class="btn" style="padding:6px 14px; font-size:0.8rem; cursor:pointer;">Cancel</button>
+              <button type="button" onclick="checkVoucherStatusManually()" class="btn primary" style="padding:6px 16px; font-size:0.8rem; background:#0284c7; border:none; cursor:pointer;">I've Approved on Phone</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <script src="js/enrollment.js"></script>
+    <script src="js/enrollment.js?v=10.5"></script>
   </body>
 </html>

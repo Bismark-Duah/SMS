@@ -64,7 +64,8 @@ def create_or_update_paystack_subaccount(
             url = "https://api.paystack.co/subaccount"
             headers = {
                 "Authorization": f"Bearer {secret_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "User-Agent": "EduManage360-Platform/1.0 (Ghana EdTech SMS)"
             }
             body = json.dumps({
                 "business_name": business_name,
@@ -75,7 +76,7 @@ def create_or_update_paystack_subaccount(
             }).encode("utf-8")
 
             req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=5.0) as response:
+            with urllib.request.urlopen(req, timeout=10.0) as response:
                 res_data = json.loads(response.read().decode("utf-8"))
                 if res_data.get("status"):
                     subaccount_code = res_data["data"]["subaccount_code"]
@@ -83,10 +84,10 @@ def create_or_update_paystack_subaccount(
         except Exception as e:
             print(f"Paystack subaccount API call warning for school #{school_id}:", e)
 
-    # Fallback to local deterministic subaccount code
+    # Fallback to local deterministic subaccount code if offline
     if not subaccount_code:
         subaccount_code = f"ACCT_{school_id}_{settlement_bank[:4].upper()}_{account_number[-4:]}"
-        is_verified = True
+        is_verified = False
 
     # Persist or update in database
     sub = db.query(SchoolSubaccount).filter(SchoolSubaccount.school_id == school_id).first()
@@ -162,17 +163,30 @@ def initialize_voucher_checkout(
     applicant_email: str,
     amount: float,
     gateway: str,
-    db: Session
+    db: Session,
+    momo_network: str = "MTN"
 ) -> dict:
     """
-    Initializes a new Voucher Order and generates checkout parameters
-    including school subaccount split.
+    Initializes a new Voucher Order and dispatches a direct Paystack Mobile Money prompt to the phone.
     """
     order_ref = f"VCH-{datetime.now().strftime('%Y%m%d')}-{secrets.token_hex(4).upper()}"
     
     # Check school subaccount
     subaccount = db.query(SchoolSubaccount).filter(SchoolSubaccount.school_id == school_id).first()
-    subaccount_code = subaccount.paystack_subaccount_code if subaccount else None
+    subaccount_code = None
+    if subaccount and subaccount.is_verified and subaccount.paystack_subaccount_code:
+        # Guarantee it is not an unverified local mock pattern
+        if not subaccount.paystack_subaccount_code.startswith(f"ACCT_{school_id}_"):
+            subaccount_code = subaccount.paystack_subaccount_code
+
+    # Sanitize phone and email for Paystack
+    clean_digits = "".join(filter(str.isdigit, applicant_phone or ""))
+    payer_email = applicant_email if (applicant_email and "@" in applicant_email and "." in applicant_email.split("@")[-1] and not applicant_email.endswith(".local")) else None
+    if not payer_email:
+        payer_email = f"applicant_{clean_digits or secrets.token_hex(3)}@edumanage360.com"
+
+    # Enforce minimum live amount (1.00 GHS)
+    charge_amount = max(1.00, float(amount or 1.00))
 
     # Create pending order in ledger
     order = VoucherOrder(
@@ -180,8 +194,8 @@ def initialize_voucher_checkout(
         school_id=school_id,
         applicant_name=applicant_name,
         applicant_phone=applicant_phone,
-        applicant_email=applicant_email or f"{applicant_phone}@applicant.sms.local",
-        amount=amount,
+        applicant_email=payer_email,
+        amount=charge_amount,
         payment_gateway=gateway.upper(),
         status="PENDING"
     )
@@ -189,14 +203,75 @@ def initialize_voucher_checkout(
     db.commit()
     db.refresh(order)
 
+    # Dispatch direct Paystack MoMo charge
+    import requests
+    from ..payments.paystack import get_paystack_secret_key
+    paystack_sk = get_paystack_secret_key(db)
+
+    momo_net = (momo_network or "MTN").upper()
+    provider = "vod" if ("TELECEL" in momo_net or "VOD" in momo_net) else ("mtn" if "MTN" in momo_net else "tgo")
+
+    prompt_dispatched = False
+    display_text = f"MoMo payment prompt sent to {clean_digits} ({momo_net}). Please enter your PIN."
+
+    if paystack_sk and gateway.upper() == "PAYSTACK":
+        paystack_url = "https://api.paystack.co/charge"
+        headers = {
+            "Authorization": f"Bearer {paystack_sk}",
+            "Content-Type": "application/json",
+            "User-Agent": "EduManage360-Platform/1.0 (Ghana EdTech SMS)"
+        }
+        charge_body = {
+            "amount": int(round(charge_amount * 100)),
+            "email": payer_email,
+            "currency": "GHS",
+            "reference": order_ref,
+            "mobile_money": {
+                "phone": clean_digits,
+                "provider": provider
+            },
+            "metadata": {
+                "order_reference": order_ref,
+                "applicant_name": applicant_name,
+                "applicant_phone": applicant_phone,
+                "school_id": school_id,
+                "type": "ADMISSION_VOUCHER"
+            }
+        }
+        if subaccount_code:
+            charge_body["subaccount"] = subaccount_code
+            charge_body["bearer"] = "subaccount"
+
+        paystack_status = None
+        try:
+            resp = requests.post(paystack_url, json=charge_body, headers=headers, timeout=25)
+            res_json = resp.json()
+            if resp.status_code in [200, 201] and res_json.get("status"):
+                prompt_dispatched = True
+                charge_data = res_json.get("data", {})
+                paystack_status = charge_data.get("status")
+                display_text = charge_data.get("display_text") or display_text
+            else:
+                err_msg = res_json.get("message", "Could not dispatch MoMo prompt")
+                print(f"Paystack direct charge warning: {err_msg}")
+        except Exception as e:
+            print(f"Paystack direct charge error: {e}")
+
+    requires_otp = (paystack_status in ["send_otp", "send_pin", "otp_required"])
+
     return {
+        "status": "pending_momo_prompt" if prompt_dispatched else "order_created",
+        "paystack_status": paystack_status,
+        "requires_otp": requires_otp,
         "order_reference": order_ref,
-        "amount": amount,
+        "amount": charge_amount,
         "currency": "GHS",
         "subaccount_code": subaccount_code,
         "gateway": gateway.upper(),
         "applicant_phone": applicant_phone,
-        "applicant_email": order.applicant_email
+        "applicant_email": order.applicant_email,
+        "provider": provider,
+        "display_text": display_text
     }
 
 
@@ -206,7 +281,7 @@ def fulfill_voucher_order_atomic(order_reference: str, gateway_ref: str, db: Ses
     1. Locks order record to prevent race conditions.
     2. Atomically selects next available unassigned Voucher for the school.
     3. Links voucher to order and marks voucher SOLD.
-    4. Dispatches SMS with dynamic school Sender ID via Hubtel.
+    4. Dispatches SMS with dynamic school Sender ID via Hubtel/mNotify.
     5. Commits all changes in a single atomic transaction block.
     """
     try:
@@ -227,13 +302,19 @@ def fulfill_voucher_order_atomic(order_reference: str, gateway_ref: str, db: Ses
             Voucher.status == "AVAILABLE"
         ).with_for_update().first()
 
+        school = db.query(School).filter(School.id == order.school_id).first()
+        school_code = (school.code if school and school.code else "JAK").upper()
+        clean_bece = order.applicant_name.replace("Candidate ", "").strip() if order.applicant_name and "Candidate " in order.applicant_name else None
+
         # If no pre-generated voucher is available, generate one on the fly
         if not voucher:
-            serial_num = f"ADM-{datetime.now().year}-{secrets.token_hex(4).upper()}"
+            serial_suffix = "".join(secrets.choice("0123456789") for _ in range(6))
+            serial_num = f"{school_code}-2026-{serial_suffix}"
             pin_code = str(secrets.randbelow(900000) + 100000)  # 6-digit PIN
             voucher = Voucher(
                 serial_code=serial_num,
                 pin_code=pin_code,
+                bece_index_number=clean_bece,
                 school_id=order.school_id,
                 status="PURCHASED",
                 purchased_by_phone=order.applicant_phone,
@@ -245,6 +326,8 @@ def fulfill_voucher_order_atomic(order_reference: str, gateway_ref: str, db: Ses
             voucher.status = "PURCHASED"
             voucher.purchased_by_phone = order.applicant_phone
             voucher.amount_paid = order.amount
+            if clean_bece:
+                voucher.bece_index_number = clean_bece
             db.flush()
 
         order.voucher_id = voucher.id

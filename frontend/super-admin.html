@@ -827,6 +827,7 @@
               ⚡ Quick Operations for this School:
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; font-weight:700;" onclick="window.openSubaccountModal(document.getElementById('editSchoolId').value, document.getElementById('editSchoolName').value)">💳 Payout Subaccount</button>
               <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:rgba(99,102,241,0.2); border-color:#6366f1; color:#a5b4fc;" onclick="window.openAccreditationModal(document.getElementById('editSchoolId').value, document.getElementById('editSchoolName').value, document.getElementById('editSchoolMode').value)">⚙️ Accredit Subjects</button>
               <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:#0284c7; color:#fff;" onclick="window.downloadSchoolBackup(document.getElementById('editSchoolId').value, document.getElementById('editSchoolCode').value)">📥 Download Backup</button>
               <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:#d97706; color:#fff;" onclick="window.toggleSchoolStatus(document.getElementById('editSchoolId').value, 'ACTIVE')">⏸ Toggle Suspend</button>
@@ -839,6 +840,70 @@
               💾 Save Profile Changes
             </button>
             <button type="button" class="btn" onclick="closeEditSchoolModal()" style="flex:1; padding:10px;">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Paystack Settlement Subaccount Manager (Super Admin Only) -->
+    <div id="subaccountModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10001; backdrop-filter:blur(8px); justify-content:center; align-items:center; padding:16px;">
+      <div class="card" style="max-width:560px; width:100%; padding:24px; background:var(--sa-surface); border:1px solid var(--sa-card-border); border-radius:14px; box-shadow:0 24px 48px rgba(0,0,0,0.7);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem; color:#4ade80; display:flex; align-items:center; gap:8px;">
+              <span>💳</span> Manage Payout Subaccount
+            </h3>
+            <div id="subaccountModalSchoolTitle" style="font-size:0.8rem; color:var(--sa-text-muted); margin-top:2px;">School: ...</div>
+          </div>
+          <button type="button" onclick="closeSubaccountModal()" style="background:none; border:none; color:var(--sa-text-muted); font-size:1.3rem; cursor:pointer;">✕</button>
+        </div>
+
+        <form id="adminSubaccountForm" onsubmit="handleSaveSchoolSubaccount(event)">
+          <input type="hidden" id="adminSubSchoolId" />
+
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Settlement Bank / MoMo Provider *</label>
+            <select id="adminSubBank" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; font-weight:600;">
+              <option value="MTN">MTN Mobile Money</option>
+              <option value="TELECEL">Telecel Cash</option>
+              <option value="AT">AT Money</option>
+              <option value="GCB">GCB Bank PLC</option>
+              <option value="ECOBANK">Ecobank Ghana</option>
+              <option value="ABSA">Absa Bank Ghana</option>
+              <option value="CAL">CalBank PLC</option>
+              <option value="STANBIC">Stanbic Bank Ghana</option>
+              <option value="FIDELITY">Fidelity Bank Ghana</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Account Number / Merchant MoMo Phone *</label>
+            <input id="adminSubAccountNum" required placeholder="e.g. 0244123456 or 1002938481" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Verified Account Name *</label>
+            <input id="adminSubAccountName" required placeholder="e.g. Prempeh College PTA" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">School Split Share (%)</label>
+              <input id="adminSubSchoolSplit" type="number" step="0.1" min="0" max="100" value="95.0" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#34d399; font-weight:700;" />
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Platform SaaS Fee (%)</label>
+              <input id="adminSubPlatformFee" type="number" step="0.1" min="0" max="100" value="5.0" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#818cf8; font-weight:700;" />
+            </div>
+          </div>
+
+          <div id="adminSubStatusMsg" style="margin-bottom:12px; display:none; padding:10px 14px; border-radius:6px; font-size:0.82rem;"></div>
+
+          <div style="display:flex; gap:10px; border-top:1px solid var(--sa-card-border); padding-top:14px;">
+            <button type="submit" id="btnSaveAdminSubaccount" class="btn primary" style="flex:1; padding:10px; font-weight:700; background:linear-gradient(135deg, #10b981, #059669); border:none;">
+              💾 Save & Link Paystack Subaccount
+            </button>
+            <button type="button" class="btn" onclick="closeSubaccountModal()" style="flex:1; padding:10px;">Cancel</button>
           </div>
         </form>
       </div>

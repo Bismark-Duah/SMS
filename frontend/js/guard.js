@@ -576,12 +576,19 @@
       z-index: 9500;
     `;
 
-    // ── Universal Command Palette Trigger (Ctrl + K) ──
+    // ── Universal Command Palette Trigger (Ctrl + K) & Sync Engine ──
     if (!document.getElementById('cmdPaletteScript')) {
       const script = document.createElement('script');
       script.id = 'cmdPaletteScript';
       script.src = 'js/commandPalette.js?v=2.0';
       document.head.appendChild(script);
+    }
+
+    if (!document.getElementById('syncManagerScript') && !window.SyncManager) {
+      const sScript = document.createElement('script');
+      sScript.id = 'syncManagerScript';
+      sScript.src = 'js/syncManager.js?v=4.2';
+      document.head.appendChild(sScript);
     }
 
     const searchTrigger = document.createElement('button');

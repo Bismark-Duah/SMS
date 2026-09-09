@@ -262,6 +262,7 @@ async function loadSettings() {
         setVal('school_email',         settings.school_email);
         setVal('school_logo',          settings.school_logo);
         setVal('headmaster_signature', settings.headmaster_signature);
+        setVal('school_stamp',         settings.school_stamp);
         setVal('code_of_conduct_text', settings.code_of_conduct_text);
         setVal('student_pledge_text', settings.student_pledge_text);
         setVal('code_of_conduct_pdf_url', settings.code_of_conduct_pdf_url);
@@ -288,6 +289,15 @@ async function loadSettings() {
             const previewImg = document.getElementById('sig_preview');
             if (previewContainer && previewImg) {
                 previewImg.src = settings.headmaster_signature;
+                previewContainer.style.display = 'flex';
+            }
+        }
+
+        if (settings.school_stamp) {
+            const previewContainer = document.getElementById('stamp_preview_container');
+            const previewImg = document.getElementById('stamp_preview');
+            if (previewContainer && previewImg) {
+                previewImg.src = settings.school_stamp;
                 previewContainer.style.display = 'flex';
             }
         }
@@ -535,6 +545,7 @@ if (settingsForm) {
             report_publishing_mode:   reportPublishingMode,
             school_logo:              document.getElementById('school_logo').value,
             headmaster_signature:     document.getElementById('headmaster_signature').value,
+            school_stamp:             document.getElementById('school_stamp') ? document.getElementById('school_stamp').value : '',
             grading_rules:            JSON.stringify(gradingRules)
         };
 
@@ -752,6 +763,63 @@ window.resetSignature = function() {
     const previewImg = document.getElementById('sig_preview');
     const fileInput = document.getElementById('headmaster_signature_file');
     if (headmasterSigInput) headmasterSigInput.value = '';
+    if (previewImg) previewImg.src = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (fileInput) fileInput.value = '';
+};
+
+const schoolStampFile = document.getElementById('school_stamp_file');
+if (schoolStampFile) {
+    schoolStampFile.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Instant local preview
+        const previewContainer = document.getElementById('stamp_preview_container');
+        const previewImg = document.getElementById('stamp_preview');
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            if (previewImg) previewImg.src = ev.target.result;
+            if (previewContainer) previewContainer.style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch(`${API_BASE}/settings/upload-stamp`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: formData
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                alert(`Upload failed: ${err.detail || 'Unknown error'}`);
+                return;
+            }
+
+            const data = await res.json();
+            const schoolStampInput = document.getElementById('school_stamp');
+
+            if (schoolStampInput) schoolStampInput.value = data.stamp_url;
+            if (previewImg) previewImg.src = data.stamp_url;
+            if (previewContainer) previewContainer.style.display = 'flex';
+
+        } catch (error) {
+            console.error('Error uploading school stamp:', error);
+            alert('An error occurred while uploading the school stamp.');
+        }
+    });
+}
+
+window.resetSchoolStamp = function() {
+    const stampInput = document.getElementById('school_stamp');
+    const previewContainer = document.getElementById('stamp_preview_container');
+    const previewImg = document.getElementById('stamp_preview');
+    const fileInput = document.getElementById('school_stamp_file');
+    if (stampInput) stampInput.value = '';
     if (previewImg) previewImg.src = '';
     if (previewContainer) previewContainer.style.display = 'none';
     if (fileInput) fileInput.value = '';

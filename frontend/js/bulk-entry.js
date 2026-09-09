@@ -78,6 +78,8 @@ function switchDeskMode(mode) {
   }
 }
 
+let cachedSemesters = [];
+
 async function initFilters() {
   try {
     const schoolMode = (localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
@@ -91,6 +93,7 @@ async function initFilters() {
     cachedClasses = await resClasses.json();
     cachedSubjects = await resSubjects.json();
     const semesters = await resSemesters.json();
+    cachedSemesters = Array.isArray(semesters) ? semesters : [];
 
     document.getElementById('class_section_id').innerHTML = '<option value="">Select Class Section...</option>' + 
       cachedClasses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -98,8 +101,11 @@ async function initFilters() {
     document.getElementById('subject_id').innerHTML = '<option value="">Select Subject...</option>' + 
       cachedSubjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
 
-    document.getElementById('semester_id').innerHTML = '<option value="">Select Term...</option>' + 
-      semesters.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    const semSelect = document.getElementById('semester_id');
+    semSelect.innerHTML = '<option value="">Select Term...</option>' + 
+      cachedSemesters.map(s => `<option value="${s.id}" data-locked="${s.is_locked ? 'true' : 'false'}">${s.name} ${s.is_locked ? '🔒 (Locked)' : ''}</option>`).join('');
+
+    semSelect.addEventListener('change', checkTermLockStatus);
 
     // Default to broadsheet if school is basic only
     if (schoolMode === 'BASIC_ONLY') {
@@ -110,6 +116,63 @@ async function initFilters() {
     console.error('Error initializing filters:', error);
   }
 }
+
+function checkTermLockStatus() {
+  const semId = document.getElementById('semester_id')?.value;
+  const sem = cachedSemesters.find(s => String(s.id) === String(semId));
+  const container = document.getElementById('bulkEntrySection') || document.querySelector('.card');
+  let banner = document.getElementById('termLockBanner');
+
+  const rawRoles = sessionStorage.getItem('userRoles') || localStorage.getItem('userRoles') || '';
+  const isAdmin = rawRoles.includes('admin') || rawRoles.includes('headmaster') || rawRoles.includes('super_admin') || (localStorage.getItem('userRole') || '').includes('admin');
+
+  if (sem && sem.is_locked) {
+    if (!banner && container) {
+      banner = document.createElement('div');
+      banner.id = 'termLockBanner';
+      container.prepend(banner);
+    }
+    if (banner) {
+      banner.style.cssText = 'margin-bottom:12px; padding:12px 16px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;';
+      banner.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">🔒</span>
+          <div>
+            <strong style="color:var(--error-color, #ef4444);">Gradebook Officially Sealed & Locked</strong>
+            <p style="margin:2px 0 0; font-size:0.83rem; color:var(--text-secondary);">Marks for this academic term have been finalized by Administration. Edits are restricted.</p>
+          </div>
+        </div>
+        ${isAdmin ? `<button type="button" class="btn sm" onclick="window.toggleTermLock(${sem.id})" style="padding:4px 10px; font-size:0.82rem; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4);">🔓 Unlock Term</button>` : ''}
+      `;
+    }
+  } else {
+    if (banner) banner.remove();
+  }
+}
+
+window.toggleTermLock = async function(semId) {
+  try {
+    const res = await fetch(`${API_BASE}/academic/semesters/${semId}/toggle-lock`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (window.showToast) window.showToast(data.message, 'success');
+      else alert(data.message);
+      await initFilters();
+      const semSelect = document.getElementById('semester_id');
+      if (semSelect) {
+        semSelect.value = semId;
+        checkTermLockStatus();
+      }
+    } else {
+      alert(data.detail || 'Could not toggle term lock.');
+    }
+  } catch (e) {
+    alert('Network error toggling term lock.');
+  }
+};
 
 function handleClassChange(classId) {
   const selectedCls = cachedClasses.find(c => String(c.id) === String(classId));

@@ -207,6 +207,16 @@ function renderReportCard(data) {
     }
   }
 
+  const stampImg = document.getElementById("rc-school-stamp-img");
+  if (stampImg) {
+    if (data.school_stamp) {
+      stampImg.src = data.school_stamp;
+      stampImg.style.display = "inline-block";
+    } else {
+      stampImg.style.display = "none";
+    }
+  }
+
   renderLegend(data.grading_scale);
 }
 
@@ -440,6 +450,32 @@ function renderWAECTranscriptCard(data) {
     if (typeof window.generateStandardSvgQrCode === 'function') {
       qrContainer.innerHTML = window.generateStandardSvgQrCode(certPayload, 2, 1);
     }
+  }
+
+  // Endorsement & Certification (Signature and Stamp)
+  const headSigImg = document.getElementById("waec-headmaster-sig-img");
+  if (headSigImg) {
+    if (sch.signature) {
+      headSigImg.src = sch.signature;
+      headSigImg.style.display = "inline-block";
+    } else {
+      headSigImg.style.display = "none";
+    }
+  }
+
+  const stampImg = document.getElementById("waec-school-stamp-img");
+  if (stampImg) {
+    if (sch.stamp) {
+      stampImg.src = sch.stamp;
+      stampImg.style.display = "inline-block";
+    } else {
+      stampImg.style.display = "none";
+    }
+  }
+
+  const headNameEl = document.getElementById("waecHeadmasterName");
+  if (headNameEl && sch.headmaster) {
+    headNameEl.textContent = sch.headmaster.toUpperCase();
   }
 }
 

@@ -287,6 +287,7 @@ class ReportService:
             form_master_name = student.class_section.form_master.username
 
         headmaster_signature = _get_setting(db, "headmaster_signature", "")
+        school_stamp = _get_setting(db, "school_stamp", "")
 
         return {
             "school_name": school_name,
@@ -295,6 +296,7 @@ class ReportService:
             "headmaster_name": headmaster_name,
             "school_logo": school_logo,
             "headmaster_signature": headmaster_signature,
+            "school_stamp": school_stamp,
             "school_address": school_address,
             "school_phone": school_phone,
             "school_email": school_email,
@@ -1208,6 +1210,9 @@ class ReportService:
         school_address = _get_setting(db, "school_address", "")
         school_phone = _get_setting(db, "school_phone", "")
         headmaster_name = _get_setting(db, "report_headmaster", "")
+        school_logo = _get_setting(db, "school_logo", "")
+        headmaster_signature = _get_setting(db, "headmaster_signature", "")
+        school_stamp = _get_setting(db, "school_stamp", "")
 
         all_scores = db.query(Score)\
             .outerjoin(Score.semester)\
@@ -1270,7 +1275,10 @@ class ReportService:
                 "address": school_address,
                 "phone": school_phone,
                 "headmaster": headmaster_name,
-                "centre_number": "1090400"
+                "centre_number": "1090400",
+                "logo": school_logo,
+                "signature": headmaster_signature,
+                "stamp": school_stamp
             },
             "total_subjects_recorded": len(all_scores),
             "external_wassce_subjects": external_subjects,

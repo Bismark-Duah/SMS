@@ -229,6 +229,26 @@ with engine.connect() as conn:
         except Exception as alter_err:
             print("Failed to alter semesters table for start_date:", alter_err)
 
+    # Check/add is_locked column to semesters table dynamically for SQLite compatibility
+    try:
+        conn.execute(text("SELECT is_locked FROM semesters LIMIT 1"))
+    except Exception:
+        try:
+            conn.execute(text("ALTER TABLE semesters ADD COLUMN is_locked BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+        except Exception as alter_err:
+            print("Failed to alter semesters table for is_locked:", alter_err)
+
+    # Check/add locked_at column to semesters table dynamically for SQLite compatibility
+    try:
+        conn.execute(text("SELECT locked_at FROM semesters LIMIT 1"))
+    except Exception:
+        try:
+            conn.execute(text("ALTER TABLE semesters ADD COLUMN locked_at DATETIME"))
+            conn.commit()
+        except Exception as alter_err:
+            print("Failed to alter semesters table for locked_at:", alter_err)
+
     # Check/add end_date column to semesters table dynamically for SQLite compatibility
     try:
         conn.execute(text("SELECT end_date FROM semesters LIMIT 1"))

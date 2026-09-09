@@ -355,6 +355,8 @@ def run_migrations():
             ("approval_status", "VARCHAR DEFAULT 'DRAFT'")
         ],
         "semesters": [
+            ("is_locked", "BOOLEAN DEFAULT FALSE"),
+            ("locked_at", "TIMESTAMP" if not is_sqlite else "DATETIME"),
             ("start_date", "TIMESTAMP" if not is_sqlite else "DATETIME"),
             ("end_date", "TIMESTAMP" if not is_sqlite else "DATETIME")
         ],

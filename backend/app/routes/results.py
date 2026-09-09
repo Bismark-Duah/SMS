@@ -20,6 +20,16 @@ def _get_school_mode(db: Session, school_id: Optional[int] = None) -> str:
 
 
 def _check_score_lock(db: Session, semester_id: int, user: User):
+    from ..models import Semester
+    sem = db.query(Semester).filter(Semester.id == semester_id).first()
+    if sem and getattr(sem, "is_locked", False):
+        role_names = [r.name.lower() for r in user.roles] if user and user.roles else []
+        if not any(r in role_names for r in ["admin", "super_admin", "headmaster", "headmistress", "principal", "assistant_headmaster_academic", "assistant_head_academic"]):
+            raise HTTPException(
+                status_code=403,
+                detail="Access Denied: This academic term is officially sealed and locked by Administration. Contact Headmaster to unlock."
+            )
+
     locked_semesters_setting = db.query(Setting).filter(Setting.key == "locked_semester_ids").first()
     if locked_semesters_setting and locked_semesters_setting.value:
         import json

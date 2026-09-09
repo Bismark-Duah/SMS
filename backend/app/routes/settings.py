@@ -525,6 +525,110 @@ async def upload_signature(
     return {"signature_url": data_uri, "web_path": web_path}
 
 
+@router.delete("/signature")
+def delete_signature(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    role_names = [r.name for r in current_user.roles]
+    if "admin" not in role_names and "super_admin" not in role_names:
+        raise HTTPException(status_code=403, detail="Only administrators can remove signature")
+
+    target_sch_id = getattr(current_user, 'school_id', None)
+    setting_q = db.query(Setting).filter(Setting.key == "headmaster_signature")
+    if target_sch_id:
+        setting_q = setting_q.filter(Setting.school_id == target_sch_id)
+    setting = setting_q.first()
+    if setting:
+        setting.value = ""
+    db.commit()
+    return {"status": "success", "message": "Headmaster signature cleared"}
+
+
+@router.post("/upload-stamp")
+async def upload_stamp(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    role_names = [r.name for r in current_user.roles]
+    if "admin" not in role_names and "super_admin" not in role_names:
+        raise HTTPException(status_code=403, detail="Only administrators can upload official school stamps")
+
+    file_bytes = await file.read()
+    ext = _validate_image_bytes(file_bytes, file.filename or "stamp.png")
+
+    data_uri = _process_image_to_base64(file_bytes, file.filename, max_size=(320, 320))
+
+    # Determine paths
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    frontend_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "frontend"))
+    upload_dir = os.path.join(frontend_dir, "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+
+    # Delete existing stamp files in uploads to save space
+    try:
+        for filename in os.listdir(upload_dir):
+            if filename.startswith("school_stamp_"):
+                os.remove(os.path.join(upload_dir, filename))
+    except Exception as e:
+        print(f"Error cleaning old stamp files: {e}")
+
+    # Save new stamp with a timestamp to avoid caching
+    timestamp = int(time.time())
+    new_filename = f"school_stamp_{timestamp}{ext}"
+    file_path = os.path.join(upload_dir, new_filename)
+
+    try:
+        with open(file_path, "wb") as buffer:
+            buffer.write(file_bytes)
+    except Exception as e:
+        print(f"Warning saving local stamp cache: {e}")
+
+    web_path = f"/uploads/{new_filename}"
+
+    target_sch_id = getattr(current_user, 'school_id', None)
+    # Save/update setting
+    setting_q = db.query(Setting).filter(Setting.key == "school_stamp")
+    if target_sch_id:
+        setting_q = setting_q.filter(Setting.school_id == target_sch_id)
+    setting = setting_q.first()
+    if setting:
+        setting.value = data_uri
+    else:
+        new_setting = Setting(school_id=target_sch_id, key="school_stamp", value=data_uri)
+        db.add(new_setting)
+    db.commit()
+
+    return {"stamp_url": data_uri, "web_path": web_path}
+
+
+@router.delete("/stamp")
+def delete_stamp(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    role_names = [r.name for r in current_user.roles]
+    if "admin" not in role_names and "super_admin" not in role_names:
+        raise HTTPException(status_code=403, detail="Only administrators can remove school stamps")
+
+    target_sch_id = getattr(current_user, 'school_id', None)
+    setting_q = db.query(Setting).filter(Setting.key == "school_stamp")
+    if target_sch_id:
+        setting_q = setting_q.filter(Setting.school_id == target_sch_id)
+    setting = setting_q.first()
+    if setting:
+        setting.value = ""
+    db.commit()
+    return {"status": "success", "message": "School stamp cleared"}
+
+
 @router.post("/upload-code-of-conduct")
 async def upload_code_of_conduct(
     file: UploadFile = File(...),

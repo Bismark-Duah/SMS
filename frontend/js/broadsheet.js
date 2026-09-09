@@ -37,7 +37,8 @@ async function initBroadsheetPage() {
       semSelect.innerHTML = '<option value="">Current Term</option>';
       sems.forEach(s => {
         const curr = s.is_current ? " (Current)" : "";
-        semSelect.innerHTML += `<option value="${s.id}">${s.name}${curr}</option>`;
+        const lock = s.is_locked ? " 🔒 (Locked)" : "";
+        semSelect.innerHTML += `<option value="${s.id}">${s.name}${curr}${lock}</option>`;
       });
     }
   } catch (err) {

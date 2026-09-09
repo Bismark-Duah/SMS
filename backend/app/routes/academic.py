@@ -107,6 +107,8 @@ def list_semesters(db: Session = Depends(get_db)):
             "academic_year_id": s.academic_year_id,
             "academic_year": {"id": s.academic_year.id, "label": s.academic_year.label} if s.academic_year else None,
             "is_current": s.is_current,
+            "is_locked": bool(s.is_locked),
+            "locked_at": str(s.locked_at)[:19] if s.locked_at else None,
             "start_date": str(s.start_date)[:10] if s.start_date else None,
             "end_date": str(s.end_date)[:10] if s.end_date else None,
         }
@@ -125,6 +127,8 @@ def create_semester(payload: SemesterCreate, db: Session = Depends(get_db)):
         "name": db_semester.name,
         "academic_year_id": db_semester.academic_year_id,
         "is_current": db_semester.is_current,
+        "is_locked": bool(db_semester.is_locked),
+        "locked_at": str(db_semester.locked_at)[:19] if db_semester.locked_at else None,
         "start_date": str(db_semester.start_date)[:10] if db_semester.start_date else None,
         "end_date": str(db_semester.end_date)[:10] if db_semester.end_date else None,
     }
@@ -140,6 +144,39 @@ def set_current_semester(semester_id: int, db: Session = Depends(get_db)):
     semester.is_current = True
     db.commit()
     return {"message": f"'{semester.name}' is now the current semester."}
+
+
+@router.post("/semesters/{semester_id}/toggle-lock")
+def toggle_semester_lock(
+    semester_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from datetime import datetime
+    semester = db.query(Semester).filter(Semester.id == semester_id).first()
+    if not semester:
+        raise HTTPException(status_code=404, detail="Semester not found.")
+    
+    user_roles = [r.name.lower() for r in current_user.roles] if current_user.roles else []
+    is_exec = any(r in user_roles for r in [
+        "admin", "super_admin", "headmaster", "headmistress", "principal",
+        "assistant_headmaster_academic", "assistant_head_academic"
+    ]) or current_user.username == "superadmin"
+    
+    if not is_exec:
+        raise HTTPException(status_code=403, detail="Only School Executives (Headmaster / Academic Head / Admin) can lock or unlock the gradebook.")
+
+    semester.is_locked = not bool(semester.is_locked)
+    semester.locked_at = datetime.utcnow() if semester.is_locked else None
+    db.commit()
+    db.refresh(semester)
+    
+    action = "sealed and locked" if semester.is_locked else "unlocked for score entry"
+    return {
+        "message": f"Gradebook for '{semester.name}' has been {action}.",
+        "is_locked": semester.is_locked,
+        "locked_at": str(semester.locked_at)[:19] if semester.locked_at else None
+    }
 
 
 @router.delete("/semesters/{semester_id}")

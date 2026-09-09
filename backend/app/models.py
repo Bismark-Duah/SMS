@@ -167,6 +167,8 @@ class Semester(Base):
     name = Column(String, nullable=False)
     academic_year_id = Column(Integer, ForeignKey("academic_years.id"), nullable=False)
     is_current = Column(Boolean, default=False)
+    is_locked = Column(Boolean, default=False, server_default="0")
+    locked_at = Column(DateTime, nullable=True)
     start_date = Column(DateTime, nullable=True)
     end_date = Column(DateTime, nullable=True)
     

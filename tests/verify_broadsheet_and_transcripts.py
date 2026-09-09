@@ -54,6 +54,10 @@ def run_tests():
         sec = db.query(ClassSection).first()
         assert sec is not None, "ClassSection should exist from previous tests"
 
+        if admin_user.school_id != sec.school_id:
+            admin_user.school_id = sec.school_id
+            db.commit()
+
         # 3. Call get_class_broadsheet
         broadsheet = get_class_broadsheet(class_section_id=sec.id, semester_id=sem.id, db=db, current_user=admin_user)
         assert broadsheet is not None

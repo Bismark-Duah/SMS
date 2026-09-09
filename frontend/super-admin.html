@@ -591,7 +591,67 @@
             </div>
           </div>
 
-          <!-- Operation 4: Enterprise SMS Multi-Gateway Matrix -->
+          <!-- Operation 4: Master Paystack Fintech Gateway -->
+          <div class="sa-table-card" style="grid-column:1 / -1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
+              <div>
+                <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+                  <span>💳</span> Master Paystack Gateway &amp; Direct Multi-Tenant Settlement Engine
+                </h3>
+                <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);">
+                  Centralized platform keys for online admission voucher checkout and automated fee disbursements across all school subaccounts.
+                </p>
+              </div>
+              <div id="paystackMasterStatusPill" style="display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:700; padding:4px 10px; border-radius:20px; background:rgba(99,102,241,0.15); color:#a5b4fc; border:1px solid rgba(99,102,241,0.3);">
+                ⚪ Checking Gateway State...
+              </div>
+            </div>
+
+            <form id="paystackMasterGatewayForm" onsubmit="window.handleSaveMasterPaystackGateway(event)">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px; margin-bottom:14px;">
+                <div>
+                  <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Master Gateway State *</label>
+                  <select id="paystackMasterEnabled" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-primary); border-radius:6px; color:#fff; font-weight:600;">
+                    <option value="true">🟢 Online Checkout &amp; Settlements Active</option>
+                    <option value="false">🔴 Disabled / Offline &amp; Manual Verification Only</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Paystack Public Key (Live / Test) *</label>
+                  <input id="paystackMasterPublicKey" type="text" placeholder="pk_live_... or pk_test_..." required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; font-family:monospace;" />
+                </div>
+                <div>
+                  <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Paystack Secret Key (Live / Test) *</label>
+                  <div style="position:relative; display:flex; align-items:center;">
+                    <input id="paystackMasterSecretKey" type="password" placeholder="sk_live_... or sk_test_..." required style="width:100%; box-sizing:border-box; padding:9px 40px 9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; font-family:monospace;" />
+                    <button type="button" onclick="window.toggleMasterPaystackKeyVisibility()" style="position:absolute; right:8px; background:none; border:none; color:var(--sa-text-muted); cursor:pointer; font-size:0.9rem;" title="Toggle Visibility">👁️</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Webhook integration callout -->
+              <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.06); padding:10px 14px; border-radius:6px; margin-bottom:14px; font-size:0.78rem; color:var(--sa-text-muted); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div>
+                  <span style="color:#38bdf8; font-weight:600;">⚡ Instant Webhook Endpoint:</span>
+                  <code id="paystackWebhookUrlDisplay" style="color:#a5b4fc; margin-left:6px;">/api/admissions/paystack/webhook</code>
+                </div>
+                <span style="color:#10b981; font-weight:600;">✓ Auto-Verifies Admission PINs &amp; Direct Settlements</span>
+              </div>
+
+              <div id="paystackMasterGatewayStatusMsg" style="margin-bottom:12px; display:none; padding:10px 14px; border-radius:6px; font-size:0.82rem;"></div>
+
+              <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+                <button type="submit" id="btnSaveMasterPaystack" class="btn primary" style="padding:9px 18px; font-weight:700;">
+                  💾 Save Master Paystack Keys
+                </button>
+                <button type="button" class="btn" style="padding:9px 14px; background:rgba(99,102,241,0.2); border-color:#6366f1; color:#a5b4fc;" onclick="window.verifyMasterPaystackConnection()">
+                  ⚡ Verify Connection
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Operation 5: Enterprise SMS Multi-Gateway Matrix -->
           <div class="sa-table-card" style="grid-column:1 / -1;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
               <div>

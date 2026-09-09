@@ -42,8 +42,9 @@ window.switchSuperAdminTab = function(tabName) {
     }
   } catch (_) {}
 
-  if (tabName === 'operations' && window.loadSMSGatewayStatus) {
-    window.loadSMSGatewayStatus();
+  if (tabName === 'operations') {
+    if (window.loadMasterGatewaySettings) window.loadMasterGatewaySettings();
+    if (window.loadSMSGatewayStatus) window.loadSMSGatewayStatus();
   }
   if (tabName === 'security' && window.loadMasterAuditStream) {
     window.loadMasterAuditStream();
@@ -1736,6 +1737,144 @@ window.triggerAllSchoolsSync = async function() {
       btn.textContent = '🔄 Sync All Network Nodes';
     }
   }
+};
+
+// ── Master Paystack & SMS Gateway Controllers ───────────────────────────────
+
+window.toggleMasterPaystackKeyVisibility = function() {
+  const input = document.getElementById('paystackMasterSecretKey');
+  if (!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
+};
+
+window.loadMasterGatewaySettings = async function() {
+  const statusPill = document.getElementById('paystackMasterStatusPill');
+  const enabledSelect = document.getElementById('paystackMasterEnabled');
+  const pkInput = document.getElementById('paystackMasterPublicKey');
+  const skInput = document.getElementById('paystackMasterSecretKey');
+  const webhookEl = document.getElementById('paystackWebhookUrlDisplay');
+
+  if (webhookEl) {
+    const origin = window.location.origin.includes('http') ? window.location.origin : 'http://127.0.0.1:8000';
+    webhookEl.textContent = `${origin}/api/admissions/paystack/webhook`;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/gateways`, { headers: getHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    if (data.paystack) {
+      if (enabledSelect) enabledSelect.value = String(data.paystack.paystack_enabled || 'false');
+      if (pkInput) pkInput.value = data.paystack.paystack_public_key || '';
+      if (skInput) skInput.value = data.paystack.paystack_secret_key || '';
+
+      if (statusPill) {
+        const isEnabled = String(data.paystack.paystack_enabled) === 'true';
+        const hasKeys = !!(data.paystack.paystack_public_key && data.paystack.paystack_secret_key);
+
+        if (isEnabled && hasKeys) {
+          statusPill.innerHTML = '🟢 Paystack Live &bull; Direct Settlement Ready';
+          statusPill.style.background = 'rgba(16, 185, 129, 0.15)';
+          statusPill.style.color = '#34d399';
+          statusPill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        } else if (hasKeys) {
+          statusPill.innerHTML = '🟡 Keys Configured &bull; Gateway Disabled';
+          statusPill.style.background = 'rgba(245, 158, 11, 0.15)';
+          statusPill.style.color = '#fbbf24';
+          statusPill.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+        } else {
+          statusPill.innerHTML = '⚪ Awaiting Live/Test Keys';
+          statusPill.style.background = 'rgba(99, 102, 241, 0.15)';
+          statusPill.style.color = '#a5b4fc';
+          statusPill.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load master gateways:', err);
+  }
+};
+
+window.handleSaveMasterPaystackGateway = async function(event) {
+  event.preventDefault();
+  const btn = document.getElementById('btnSaveMasterPaystack');
+  const statusMsg = document.getElementById('paystackMasterGatewayStatusMsg');
+
+  const payload = {
+    paystack_enabled: document.getElementById('paystackMasterEnabled')?.value || 'false',
+    paystack_public_key: (document.getElementById('paystackMasterPublicKey')?.value || '').trim(),
+    paystack_secret_key: (document.getElementById('paystackMasterSecretKey')?.value || '').trim()
+  };
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Saving Master Keys...';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/gateways/paystack`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Could not save master Paystack keys');
+
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(16, 185, 129, 0.15)';
+      statusMsg.style.border = '1px solid #10b981';
+      statusMsg.style.color = '#34d399';
+      statusMsg.innerHTML = `<strong>✔ Success:</strong> ${data.message}`;
+      setTimeout(() => { statusMsg.style.display = 'none'; }, 4000);
+    }
+
+    if (window.showToast) window.showToast('Master Paystack credentials saved!', 'success');
+    window.loadMasterGatewaySettings();
+  } catch (err) {
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+      statusMsg.style.border = '1px solid #ef4444';
+      statusMsg.style.color = '#f87171';
+      statusMsg.innerHTML = `<strong>Error:</strong> ${err.message}`;
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '💾 Save Master Paystack Keys';
+    }
+  }
+};
+
+window.verifyMasterPaystackConnection = async function() {
+  const pk = (document.getElementById('paystackMasterPublicKey')?.value || '').trim();
+  const sk = (document.getElementById('paystackMasterSecretKey')?.value || '').trim();
+  const statusMsg = document.getElementById('paystackMasterGatewayStatusMsg');
+
+  if (!pk || !sk) {
+    alert('Please enter both Paystack Public and Secret keys first.');
+    return;
+  }
+
+  if (!pk.startsWith('pk_') || !sk.startsWith('sk_')) {
+    alert('⚠️ Invalid format: Public key must start with "pk_" and Secret key must start with "sk_".');
+    return;
+  }
+
+  const isTest = pk.startsWith('pk_test_') || sk.startsWith('sk_test_');
+  const envLabel = isTest ? 'TEST Sandbox Mode' : 'LIVE Production Mode';
+
+  if (statusMsg) {
+    statusMsg.style.display = 'block';
+    statusMsg.style.background = 'rgba(2, 132, 199, 0.15)';
+    statusMsg.style.border = '1px solid #0284c7';
+    statusMsg.style.color = '#38bdf8';
+    statusMsg.innerHTML = `<strong>Key Format Verified:</strong> ${envLabel} credentials detected. Ready for online transactions.`;
+  }
+  alert(`✔ Paystack Key Format Valid:\n\n• Environment: ${envLabel}\n• Public Key: ${pk.substring(0, 12)}••••••••\n• Secret Key: ${sk.substring(0, 12)}••••••••\n\nEnsure this key is saved to activate live webhook processing.`);
 };
 
 // ── Enterprise SMS Multi-Gateway Handlers ────────────────────────────────────

@@ -2106,3 +2106,87 @@ def update_school_subaccount_admin(
     return result
 
 
+class MasterPaystackSchema(BaseModel):
+    paystack_enabled: Optional[str] = "false"
+    paystack_public_key: Optional[str] = ""
+    paystack_secret_key: Optional[str] = ""
+
+class MasterSmsSchema(BaseModel):
+    sms_gateway_provider: Optional[str] = "MNOTIFY"
+    mnotify_api_key: Optional[str] = ""
+    hubtel_client_id: Optional[str] = ""
+    hubtel_client_secret: Optional[str] = ""
+
+@router.get("/gateways")
+def get_master_gateways(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Returns platform-wide master Paystack and SMS (mNotify / Hubtel) gateway configuration.
+    """
+    settings = {s.key: s.value for s in db.query(Setting).filter(Setting.school_id == None).all()}
+    return {
+        "paystack": {
+            "paystack_enabled": settings.get("paystack_enabled", "false"),
+            "paystack_public_key": settings.get("paystack_public_key", ""),
+            "paystack_secret_key": settings.get("paystack_secret_key", "")
+        },
+        "sms": {
+            "sms_gateway_provider": settings.get("sms_gateway_provider", "MNOTIFY"),
+            "mnotify_api_key": settings.get("mnotify_api_key", ""),
+            "hubtel_client_id": settings.get("hubtel_client_id", ""),
+            "hubtel_client_secret": settings.get("hubtel_client_secret", "")
+        }
+    }
+
+@router.post("/gateways/paystack")
+def update_master_paystack_gateway(
+    payload: MasterPaystackSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Super Admin endpoint to save platform master Paystack credentials.
+    """
+    data = {
+        "paystack_enabled": payload.paystack_enabled or "false",
+        "paystack_public_key": payload.paystack_public_key.strip() if payload.paystack_public_key else "",
+        "paystack_secret_key": payload.paystack_secret_key.strip() if payload.paystack_secret_key else ""
+    }
+    for key, val in data.items():
+        st = db.query(Setting).filter(Setting.key == key, Setting.school_id == None).first()
+        if st:
+            st.value = val
+        else:
+            db.add(Setting(key=key, value=val, school_id=None))
+    db.commit()
+    record_audit_event(db, current_user.id, "GATEWAY_UPDATE", "PAYSTACK", "Updated Master Paystack Credentials")
+    return {"status": "success", "message": "Master Paystack gateway credentials saved successfully"}
+
+@router.post("/gateways/sms")
+def update_master_sms_gateway(
+    payload: MasterSmsSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Super Admin endpoint to save platform master SMS credentials (mNotify / Hubtel).
+    """
+    data = {
+        "sms_gateway_provider": payload.sms_gateway_provider or "MNOTIFY",
+        "mnotify_api_key": payload.mnotify_api_key.strip() if payload.mnotify_api_key else "",
+        "hubtel_client_id": payload.hubtel_client_id.strip() if payload.hubtel_client_id else "",
+        "hubtel_client_secret": payload.hubtel_client_secret.strip() if payload.hubtel_client_secret else ""
+    }
+    for key, val in data.items():
+        st = db.query(Setting).filter(Setting.key == key, Setting.school_id == None).first()
+        if st:
+            st.value = val
+        else:
+            db.add(Setting(key=key, value=val, school_id=None))
+    db.commit()
+    record_audit_event(db, current_user.id, "GATEWAY_UPDATE", "SMS", "Updated Master SMS Gateways (Hubtel/mNotify)")
+    return {"status": "success", "message": "Master SMS gateway credentials saved successfully"}
+
+

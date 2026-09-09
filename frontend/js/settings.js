@@ -266,9 +266,13 @@ async function loadSettings() {
         setVal('code_of_conduct_text', settings.code_of_conduct_text);
         setVal('student_pledge_text', settings.student_pledge_text);
         setVal('code_of_conduct_pdf_url', settings.code_of_conduct_pdf_url);
-        setVal('paystack_public_key', settings.paystack_public_key);
-        setVal('paystack_secret_key', settings.paystack_secret_key);
-        setVal('paystack_enabled', settings.paystack_enabled || 'false');
+
+        const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true' || 
+          (sessionStorage.getItem('activeRole') || localStorage.getItem('activeRole') || '').toLowerCase() === 'super_admin';
+        const superAdminLink = document.getElementById('superAdminGatewayLinkCard');
+        if (superAdminLink) {
+          superAdminLink.style.display = isSuperAdmin ? 'block' : 'none';
+        }
 
         if (settings.report_publishing_mode) {
             const pubRadio = document.querySelector(`input[name="publishing_mode_radio"][value="${settings.report_publishing_mode}"]`);

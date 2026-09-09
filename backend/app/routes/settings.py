@@ -222,6 +222,14 @@ def get_settings(
     except Exception:
         res["exam_score_weight"] = 70
 
+    # Mask sensitive master gateway secrets for school-level administrators
+    role_names = [r.name for r in user.roles] if (user and hasattr(user, "roles")) else []
+    is_super = "super_admin" in role_names
+    if not is_super:
+        for secret_key in ["paystack_secret_key", "hubtel_client_secret", "mnotify_api_key"]:
+            if secret_key in res and res[secret_key]:
+                res[secret_key] = "••••••••••••••••"
+
     return res
 
 @router.put("/")
@@ -259,9 +267,14 @@ def update_settings(
             pass
 
     is_super_admin = "super_admin" in role_names
-    # If not a platform super-admin, strictly strip governance-level parameters so school admins cannot override them
+    # If not a platform super-admin, strictly strip governance-level parameters and gateway secrets
     if not is_super_admin:
-        for locked_key in ["school_name", "school_code", "school_abbreviation", "school_mode", "boarding_status", "boarding_hierarchy_mode"]:
+        for locked_key in [
+            "school_name", "school_code", "school_abbreviation", "school_mode",
+            "boarding_status", "boarding_hierarchy_mode",
+            "paystack_secret_key", "paystack_public_key", "paystack_enabled",
+            "hubtel_client_id", "hubtel_client_secret", "mnotify_api_key", "sms_gateway_provider"
+        ]:
             if locked_key in payload:
                 del payload[locked_key]
 

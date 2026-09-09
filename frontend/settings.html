@@ -356,38 +356,29 @@
           </form>
         </section>
 
-        <!-- SECTION 4: Paystack Ghana MoMo Payment Gateway Settings -->
+        <!-- SECTION 4: Enterprise Multi-Tenant Payment Settlement Status -->
         <section class="card" id="paystackSection" style="margin-bottom:20px; border-left: 4px solid #10b981;">
-          <h3 style="color:#10b981; margin-top:0;">💳 Paystack Ghana MoMo Payment Gateway Settings</h3>
-          <p style="opacity:.8; font-size:.85rem; margin-bottom:16px;">
-            Configure your school's Paystack API credentials for online Mobile Money fee collection (MTN MoMo, Telecel Cash, AT Money). If disabled or offline, the system seamlessly operates in 100% Offline Bursar Entry Mode.
-          </p>
-
-          <form id="paystackSettingsForm" onsubmit="savePaystackSettings(event)">
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px; margin-bottom:14px;">
-              <label>Enable Online Paystack Gateway
-                <select id="paystack_enabled">
-                  <option value="false">❌ Disabled / 100% Offline Mode Only</option>
-                  <option value="true">✅ Enabled (Online Paystack MoMo Active)</option>
-                </select>
-              </label>
-
-              <label>Paystack Public Key (PK)
-                <input id="paystack_public_key" type="text" placeholder="pk_live_... or pk_test_..." />
-              </label>
-
-              <label>Paystack Secret Key (SK)
-                <input id="paystack_secret_key" type="password" placeholder="sk_live_... or sk_test_..." />
-              </label>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div>
+              <h3 style="color:#10b981; margin:0;">💳 Online Payment & Settlement Status</h3>
+              <p style="opacity:.8; font-size:.85rem; margin:4px 0 0;">Mobile Money fee collection (MTN MoMo, Telecel Cash, AT Money) and direct bank settlement.</p>
             </div>
+            <span id="subaccountBadge" style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;">DIRECT SETTLEMENT READY</span>
+          </div>
 
-            <div style="font-size:0.8rem; background:rgba(16,185,129,0.08); padding:10px; border-radius:6px; border:1px solid rgba(16,185,129,0.2); margin-bottom:14px;">
-              <strong>Webhook Callback URL:</strong> <code style="color:#10b981; font-weight:800;">http://YOUR-SERVER-DOMAIN/api/fees/paystack/webhook</code>
+          <div style="background:rgba(15,23,42,0.6); padding:16px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px; align-items:center;">
+            <div>
+              <div style="font-size:0.85rem; font-weight:700; color:#f8fafc; margin-bottom:4px;">🏦 Automated Revenue Settlement</div>
+              <div style="font-size:0.8rem; color:#cbd5e1; line-height:1.5;">
+                Fees collected online via Mobile Money are automatically settled directly into your school's registered disbursement account. Platform gateway credentials and settlement subaccounts are securely managed centrally by the <strong>Platform Super Admin</strong>.
+              </div>
             </div>
-
-            <button type="submit" class="btn primary" style="background:#10b981; border-color:#059669; font-weight:700;">💾 Save Paystack Gateway Settings</button>
-            <span id="paystackMsg" style="margin-left:14px; font-size:.9rem;"></span>
-          </form>
+            <div id="superAdminGatewayLinkCard" style="display:none; text-align:right;">
+              <a href="super-admin.html#operations" class="btn" style="background:#0284c7; color:#fff; font-size:0.82rem; padding:8px 14px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                ⚙️ Master Gateway Controls ↗
+              </a>
+            </div>
+          </div>
         </section>
 
         <!-- SECTION: Admission Voucher & MoMo Settlement Configuration -->

@@ -163,6 +163,72 @@ window.saveNaccaCompetencies = async function(event) {
     }
 };
 
+window.highlightPublishingOptions = function() {
+    const cards = [
+        { id: 'card_pub_opt1', val: 'FORM_MASTER_DIRECT' },
+        { id: 'card_pub_opt2', val: 'ACADEMIC_HEAD_ONLY' },
+        { id: 'card_pub_opt3', val: 'HYBRID_BOTH' }
+    ];
+    const selectedRadio = document.querySelector('input[name="publishing_mode_radio"]:checked');
+    const selectedVal = selectedRadio ? selectedRadio.value : 'HYBRID_BOTH';
+
+    cards.forEach(item => {
+        const el = document.getElementById(item.id);
+        if (!el) return;
+        if (item.val === selectedVal) {
+            el.style.borderColor = '#6366f1';
+            el.style.background = 'rgba(99, 102, 241, 0.09)';
+            el.style.boxShadow = '0 0 0 1px #6366f1';
+        } else {
+            el.style.borderColor = 'var(--border-color, rgba(255,255,255,0.1))';
+            el.style.background = 'rgba(255, 255, 255, 0.03)';
+            el.style.boxShadow = 'none';
+        }
+    });
+};
+
+window.savePublishingPolicy = async function(event) {
+    if (event) event.preventDefault();
+    const msgEl = document.getElementById('publishingPolicyMsg');
+    if (msgEl) {
+        msgEl.style.color = '#38bdf8';
+        msgEl.textContent = 'Saving Publishing Policy...';
+    }
+
+    const selectedRadio = document.querySelector('input[name="publishing_mode_radio"]:checked');
+    const reportPublishingMode = selectedRadio ? selectedRadio.value : 'HYBRID_BOTH';
+
+    try {
+        const res = await fetch(`${API_BASE}/settings/`, {
+            method: 'PUT',
+            headers: getHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                report_publishing_mode: reportPublishingMode
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            if (msgEl) {
+                msgEl.style.color = '#34d399';
+                msgEl.textContent = '✔ Publishing policy saved successfully!';
+            }
+            if (window.showToast) {
+                window.showToast('Academic & Report Card Publishing Policy saved successfully!', 'success');
+            }
+        } else {
+            if (msgEl) {
+                msgEl.style.color = '#f87171';
+                msgEl.textContent = `❌ ${data.detail || 'Failed to save'}`;
+            }
+        }
+    } catch (err) {
+        if (msgEl) {
+            msgEl.style.color = '#f87171';
+            msgEl.textContent = `❌ ${err.message}`;
+        }
+    }
+};
+
 window.updateGradingStandardDropdown = function(mode) {
     const stdSel = document.getElementById('grading_standard');
     if (!stdSel) return;
@@ -270,6 +336,9 @@ async function loadSettings() {
         if (settings.report_publishing_mode) {
             const pubRadio = document.querySelector(`input[name="publishing_mode_radio"][value="${settings.report_publishing_mode}"]`);
             if (pubRadio) pubRadio.checked = true;
+        }
+        if (window.highlightPublishingOptions) {
+            window.highlightPublishingOptions();
         }
 
         if (settings.school_logo) {

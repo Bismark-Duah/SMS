@@ -24,7 +24,6 @@
       <!-- ACTIVE TENANT SCOPING BANNER -->
       <div id="settingsActiveSchoolBanner" style="display:none; margin-bottom:20px; padding:14px 18px; border-radius:10px; background:linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(168,85,247,0.12) 100%); border:1px solid rgba(99,102,241,0.3); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <div style="display:flex; align-items:center; gap:12px;">
-          <span style="font-size:1.6rem;">🏛️</span>
           <div>
             <div style="display:flex; align-items:center; gap:8px;">
               <strong style="font-size:1.05rem;" id="bannerSchoolName">Loading school profile...</strong>
@@ -34,7 +33,7 @@
           </div>
         </div>
         <div id="bannerSuperAdminSwitchNotice" style="display:none; font-size:0.8rem; color:#f59e0b; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); border-radius:6px; padding:6px 12px;">
-          ⚡ <strong>Super-Admin Mode:</strong> You are currently configuring this school. Use the topbar School Selector to switch tenants.
+          <strong>Super-Admin Mode:</strong> You are currently configuring this school. Use the topbar School Selector to switch tenants.
         </div>
       </div>
 
@@ -42,10 +41,10 @@
       <section class="card" style="margin-bottom:20px;">
         <h3>School Profile</h3>
         <form id="settingsForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px;">
-          <label>School Name <span style="font-size:0.72rem; color:#818cf8; font-weight:normal;">(🔒 Managed by Super-Admin)</span>
+          <label>School Name <span style="font-size:0.72rem; color:#818cf8; font-weight:normal;">(Managed by Super-Admin)</span>
             <input type="text" id="school_name" placeholder="E.g. J.A. Kuffour STEM Technical" />
           </label>
-          <label>School Abbreviation / Shortcut <span style="font-size:0.72rem; color:#818cf8; font-weight:normal;">(🔒 Managed by Super-Admin)</span>
+          <label>School Abbreviation / Shortcut <span style="font-size:0.72rem; color:#818cf8; font-weight:normal;">(Managed by Super-Admin)</span>
             <input type="text" id="school_abbreviation" placeholder="E.g. JAK STEM" />
           </label>
           <label>School Motto
@@ -70,8 +69,8 @@
             <label style="flex: 1; min-width: 280px; margin: 0;">School Logo / Crest
               <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
                 <input type="file" id="school_logo_file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display: none;" />
-                <button type="button" class="btn" style="white-space: nowrap; margin: 0; background: var(--primary);" onclick="document.getElementById('school_logo_file').click()">📁 Select Logo</button>
-                <button type="button" class="btn btn-secondary" style="white-space: nowrap; margin: 0; font-size: 0.8rem; padding: 6px 10px;" id="reset_logo_btn" onclick="window.resetSchoolLogo()" title="Reset to default monogram crest">🗑️ Clear</button>
+                <button type="button" class="btn" style="white-space: nowrap; margin: 0; background: var(--primary);" onclick="document.getElementById('school_logo_file').click()">Select Logo</button>
+                <button type="button" class="btn btn-secondary" style="white-space: nowrap; margin: 0; font-size: 0.8rem; padding: 6px 10px;" id="reset_logo_btn" onclick="window.resetSchoolLogo()" title="Reset to default monogram crest">Clear</button>
                 <input type="text" id="school_logo" placeholder="Auto-generated Data URI / Path" style="flex: 1; margin: 0; font-size: 0.8rem;" readonly />
               </div>
             </label>
@@ -83,8 +82,8 @@
             <label style="flex: 1; min-width: 280px; margin: 0;"><span id="lbl_headmaster_signature">Headmaster / Headteacher Signature</span>
               <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
                 <input type="file" id="headmaster_signature_file" accept="image/png,image/jpeg,image/webp" style="display: none;" />
-                <button type="button" class="btn" style="white-space: nowrap; margin: 0; background: var(--primary);" onclick="document.getElementById('headmaster_signature_file').click()">📁 Select Signature</button>
-                <button type="button" class="btn btn-secondary" style="white-space: nowrap; margin: 0; font-size: 0.8rem; padding: 6px 10px;" id="reset_sig_btn" onclick="window.resetSignature()" title="Clear signature">🗑️ Clear</button>
+                <button type="button" class="btn" style="white-space: nowrap; margin: 0; background: var(--primary);" onclick="document.getElementById('headmaster_signature_file').click()">Select Signature</button>
+                <button type="button" class="btn btn-secondary" style="white-space: nowrap; margin: 0; font-size: 0.8rem; padding: 6px 10px;" id="reset_sig_btn" onclick="window.resetSignature()" title="Clear signature">Clear</button>
                 <input type="text" id="headmaster_signature" placeholder="Auto-generated Data URI / Path" style="flex: 1; margin: 0; font-size: 0.8rem;" readonly />
               </div>
             </label>
@@ -96,8 +95,8 @@
             <label style="flex: 1; min-width: 280px; margin: 0;"><span>Official School Stamp / Seal</span>
               <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
                 <input type="file" id="school_stamp_file" accept="image/png,image/jpeg,image/webp" style="display: none;" />
-                <button type="button" class="btn" style="white-space: nowrap; margin: 0; background: var(--primary);" onclick="document.getElementById('school_stamp_file').click()">📁 Select Stamp / Seal</button>
-                <button type="button" class="btn btn-secondary" style="white-space: nowrap; margin: 0; font-size: 0.8rem; padding: 6px 10px;" id="reset_stamp_btn" onclick="window.resetSchoolStamp()" title="Clear school stamp">🗑️ Clear</button>
+                <button type="button" class="btn" style="white-space: nowrap; margin: 0; background: var(--primary);" onclick="document.getElementById('school_stamp_file').click()">Select Stamp / Seal</button>
+                <button type="button" class="btn btn-secondary" style="white-space: nowrap; margin: 0; font-size: 0.8rem; padding: 6px 10px;" id="reset_stamp_btn" onclick="window.resetSchoolStamp()" title="Clear school stamp">Clear</button>
                 <input type="text" id="school_stamp" placeholder="Auto-generated Data URI / Path" style="flex: 1; margin: 0; font-size: 0.8rem;" readonly />
               </div>
             </label>
@@ -105,20 +104,20 @@
               <img id="stamp_preview" src="" alt="School Stamp Preview" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.style.display='none';" onload="this.style.display='block';" />
             </div>
           </div>
-          <label>School Mode <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;" id="schoolModeLockNotice">(🔒 Managed by Super-Admin)</span>
+          <label>School Mode <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;" id="schoolModeLockNotice">(Managed by Super-Admin)</span>
             <select id="school_mode" onchange="if(window.onSettingsModeChange) window.onSettingsModeChange()">
               <option value="COMBINED">Combined School (Basic + SHS)</option>
               <option value="BASIC_ONLY">Basic School Only (Creche to JHS)</option>
               <option value="SHS_ONLY">Senior High School (SHS) Only</option>
             </select>
           </label>
-          <label>Boarding Status <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;" id="boardingStatusLockNotice">(🔒 Managed by Super-Admin)</span>
+          <label>Boarding Status <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;" id="boardingStatusLockNotice">(Managed by Super-Admin)</span>
             <select id="boarding_status" onchange="if(window.onSettingsModeChange) window.onSettingsModeChange()">
               <option value="BOARDING_AND_DAY">Boarding & Day (Mixed)</option>
               <option value="DAY_ONLY">Day Only (No Boarding Facilities)</option>
             </select>
           </label>
-          <label id="hierarchyModeLabel">Boarding Approval Hierarchy <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;">(⚡ Auto-Derived)</span>
+          <label id="hierarchyModeLabel">Boarding Approval Hierarchy <span style="font-size:0.75rem; color:#818cf8; font-weight:normal;">(Auto-Derived)</span>
             <select id="boarding_hierarchy_mode" disabled>
               <option value="SHS_THREE_TIER">SHS Standard (3-Tier: Housemaster → Senior In-Charge → Asst Head)</option>
               <option value="BASIC_TWO_TIER">Basic School (2-Tier: Housemaster/Matron → Headteacher directly)</option>
@@ -128,17 +127,17 @@
           <!-- 1-Click SBA Presets -->
           <div id="sbaPresetsContainer" style="grid-column: 1 / -1; background: rgba(59,130,246,0.06); padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(59,130,246,0.2); margin-top: 2px;">
             <div style="font-size:0.82rem; font-weight:700; color:var(--text-primary); margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-              <span>⚡ Continuous Assessment (SBA) &amp; Exam Weight Presets:</span>
+              <span>Continuous Assessment (SBA) &amp; Exam Weight Presets:</span>
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:8px;">
               <button type="button" class="btn sm" onclick="setSbaPreset(50, 50)" style="font-size:0.78rem; padding:4px 10px; background:rgba(16,185,129,0.18); color:#34d399; border:1px solid rgba(16,185,129,0.3);">
-                🇬🇭 50% SBA / 50% Exam (GES Basic Standard)
+                50% SBA / 50% Exam (GES Basic Standard)
               </button>
               <button type="button" class="btn sm" onclick="setSbaPreset(60, 40)" style="font-size:0.78rem; padding:4px 10px; background:rgba(234,179,8,0.18); color:#fde047; border:1px solid rgba(234,179,8,0.3);">
-                🧸 60% SBA / 40% Exam (KG / Lower Primary)
+                60% SBA / 40% Exam (KG / Lower Primary)
               </button>
               <button type="button" class="btn sm" onclick="setSbaPreset(30, 70)" style="font-size:0.78rem; padding:4px 10px; background:rgba(99,102,241,0.18); color:#818cf8; border:1px solid rgba(99,102,241,0.3);">
-                🎓 30% SBA / 70% Exam (JHS Mock / Upper)
+                30% SBA / 70% Exam (JHS Mock / Upper)
               </button>
             </div>
           </div>
@@ -159,22 +158,22 @@
               <option value="">Loading terms...</option>
             </select>
             <div style="margin-top:6px;">
-              <a href="academic.html" class="btn secondary" style="display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; padding:4px 10px;">📅 Manage Academic Calendar & Dates →</a>
+              <a href="academic.html" class="btn secondary" style="display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; padding:4px 10px;">Manage Academic Calendar &amp; Dates →</a>
             </div>
           </label>
           <label>System Theme
             <select id="system_theme" onchange="if(window.SMSStateBus) window.SMSStateBus.setTheme(this.value); else if(window.setTheme) window.setTheme(this.value); if(window.updateThemePreview) window.updateThemePreview();">
-              <option value="midnight">🌙 Midnight Dark (Default)</option>
-              <option value="light">☀️ Clean Light</option>
-              <option value="emerald">🌲 Emerald Oasis</option>
-              <option value="ocean">🌊 Ocean Sapphire</option>
-              <option value="auto">🎨 Auto Logo Theme (Extracted from Logo)</option>
+              <option value="midnight">Midnight Dark (Default)</option>
+              <option value="light">Clean Light</option>
+              <option value="emerald">Emerald Oasis</option>
+              <option value="ocean">Ocean Sapphire</option>
+              <option value="auto">Auto Logo Theme (Extracted from Logo)</option>
             </select>
           </label>
           <label>Data Table Density Preference
             <select id="setting_table_density" onchange="if(window.setTableDensity) window.setTableDensity(this.value);">
-              <option value="comfortable">⊞ Comfortable Standard (Spacious 48px rows)</option>
-              <option value="compact">⊟ Compact Data Grid (High-Density 32px rows)</option>
+              <option value="comfortable">Comfortable Standard (Spacious 48px rows)</option>
+              <option value="compact">Compact Data Grid (High-Density 32px rows)</option>
             </select>
           </label>
           <label>Grading Standard
@@ -185,11 +184,11 @@
             </select>
           </label>
 
-          <!-- 🎨 Live Theme & Enterprise Co-Branding Studio -->
+          <!-- Live Theme & Enterprise Co-Branding Studio -->
           <div id="themePreviewStudio" class="theme-preview-box" style="grid-column: 1 / -1; margin-top: 4px;">
             <div class="theme-preview-header">
               <div class="theme-preview-crest">
-                <span class="theme-preview-crest-badge" id="previewCrestInitial">🏫</span>
+                <span class="theme-preview-crest-badge" id="previewCrestInitial">SM</span>
                 <span id="previewSchoolName">Enterprise School Management</span>
               </div>
               <div style="display:flex; align-items:center; gap:8px;">
@@ -215,7 +214,7 @@
           </div>
 
             <div style="grid-column: 1 / -1; padding-top:4px;">
-              <button type="submit" class="btn primary" style="min-width:180px;">💾 Save Settings</button>
+              <button type="submit" class="btn primary" style="min-width:180px;">Save Settings</button>
               <span id="settingsMsg" style="margin-left:14px;font-size:.9rem;"></span>
             </div>
           </form>
@@ -225,7 +224,7 @@
         <section class="card" id="naccaCompetenciesCard" style="margin-bottom:20px; border-left: 4px solid #10b981;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
             <div>
-              <h3 style="margin:0; color:#34d399;">🌟 NaCCA Core Competencies &amp; Behavioral Domain Hub</h3>
+              <h3 style="margin:0; color:#34d399;">NaCCA Core Competencies &amp; Behavioral Domain Hub</h3>
               <p style="margin:4px 0 0; opacity:.8; font-size:.85rem;">
                 Select which official NaCCA Core Competencies and Character Traits are rated by Class Teachers and printed on Pupil Terminal Report Cards.
               </p>
@@ -238,7 +237,7 @@
               <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
                 <input type="checkbox" id="comp_critical_thinking" checked />
                 <div>
-                  <strong style="font-size:0.88rem; color:var(--text-primary);">🧠 Critical Thinking &amp; Problem Solving</strong>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">Critical Thinking &amp; Problem Solving</strong>
                   <div style="font-size:0.75rem; opacity:0.7;">Analytical ability, inquiry, and reasoning</div>
                 </div>
               </label>
@@ -246,7 +245,7 @@
               <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
                 <input type="checkbox" id="comp_creativity" checked />
                 <div>
-                  <strong style="font-size:0.88rem; color:var(--text-primary);">💡 Creativity &amp; Innovation</strong>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">Creativity &amp; Innovation</strong>
                   <div style="font-size:0.75rem; opacity:0.7;">Original thinking, artistic expression, craft</div>
                 </div>
               </label>
@@ -254,7 +253,7 @@
               <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
                 <input type="checkbox" id="comp_collaboration" checked />
                 <div>
-                  <strong style="font-size:0.88rem; color:var(--text-primary);">🤝 Communication &amp; Collaboration</strong>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">Communication &amp; Collaboration</strong>
                   <div style="font-size:0.75rem; opacity:0.7;">Teamwork, group participation, articulation</div>
                 </div>
               </label>
@@ -262,7 +261,7 @@
               <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
                 <input type="checkbox" id="comp_cultural_identity" checked />
                 <div>
-                  <strong style="font-size:0.88rem; color:var(--text-primary);">🇬🇭 Cultural Identity &amp; Global Citizenship</strong>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">Cultural Identity &amp; Global Citizenship</strong>
                   <div style="font-size:0.75rem; opacity:0.7;">Civic responsibility, respect, cultural appreciation</div>
                 </div>
               </label>
@@ -270,7 +269,7 @@
               <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
                 <input type="checkbox" id="comp_personal_dev" checked />
                 <div>
-                  <strong style="font-size:0.88rem; color:var(--text-primary);">👤 Personal Development &amp; Leadership</strong>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">Personal Development &amp; Leadership</strong>
                   <div style="font-size:0.75rem; opacity:0.7;">Self-discipline, initiative, moral integrity</div>
                 </div>
               </label>
@@ -278,56 +277,79 @@
               <label style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); cursor:pointer;">
                 <input type="checkbox" id="comp_conduct_punctuality" checked />
                 <div>
-                  <strong style="font-size:0.88rem; color:var(--text-primary);">⏱️ General Conduct, Attendance &amp; Punctuality</strong>
+                  <strong style="font-size:0.88rem; color:var(--text-primary);">General Conduct, Attendance &amp; Punctuality</strong>
                   <div style="font-size:0.75rem; opacity:0.7;">Regularity, classroom behavior, cleanliness</div>
                 </div>
               </label>
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-              <button type="submit" class="btn primary" style="background:#10b981; border-color:#059669; font-weight:700;">💾 Save Core Competencies</button>
+              <button type="submit" class="btn primary" style="background:#10b981; border-color:#059669; font-weight:700;">Save Core Competencies</button>
               <span id="naccaCompMsg" style="font-size:0.85rem;"></span>
             </div>
           </form>
         </section>
 
-        <!-- SECTION 2: Academic & Report Card Publishing Policy -->
-        <section class="card" style="margin-bottom:20px; border-left: 4px solid var(--primary);">
-          <h3>📜 Academic &amp; Report Card Publishing Policy</h3>
-          <p style="opacity:.8; font-size:.85rem; margin-bottom:16px;">
-            Choose how terminal report cards are approved and published to guardians across your school.
-          </p>
-
-          <div style="display:flex; flex-direction:column; gap:12px;">
-            <label style="display:flex; align-items:start; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
-              <input type="radio" name="publishing_mode_radio" value="FORM_MASTER_DIRECT" style="margin-top:3px;" />
-              <div>
-                <strong style="color:#818cf8;" id="lbl_pub_opt1">Option 1: Direct Class Teacher / Form Master Publishing</strong>
-                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Class Teachers can directly publish and send terminal report cards to guardians for their class as soon as their assessment broadsheet is complete.</div>
-              </div>
-            </label>
-
-            <label style="display:flex; align-items:start; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
-              <input type="radio" name="publishing_mode_radio" value="ACADEMIC_HEAD_ONLY" style="margin-top:3px;" />
-              <div>
-                <strong style="color:#f59e0b;" id="lbl_pub_opt2">Option 2: Centralized Executive Headteacher Approval</strong>
-                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Class Teachers submit class broadsheets for review. Only the Headteacher can approve and publish terminal reports to guardians.</div>
-              </div>
-            </label>
-
-            <label style="display:flex; align-items:start; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
-              <input type="radio" name="publishing_mode_radio" value="HYBRID_BOTH" style="margin-top:3px;" checked />
-              <div>
-                <strong style="color:#10b981;" id="lbl_pub_opt3">Option 3: Hybrid Dual Mode (Default)</strong>
-                <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Both Class Teachers AND the Headteacher have publishing &amp; overriding capability. Class Teachers can publish their own class, and the Headteacher has master publish controls over all classes.</div>
-              </div>
-            </label>
+        <!-- SECTION: Academic & Report Card Publishing Policy -->
+        <section class="card" id="publishingPolicyCard" style="margin-bottom:20px; border-left: 4px solid var(--primary, #6366f1);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
+            <div>
+              <h3 style="margin:0; font-size:1.1rem; color:var(--text-primary);">Academic &amp; Report Card Publishing Policy</h3>
+              <p style="margin:3px 0 0; opacity:.8; font-size:.84rem; color:var(--text-secondary);">
+                Choose how terminal report cards are approved and published to guardians across your institution.
+              </p>
+            </div>
+            <span style="font-size:0.75rem; font-weight:700; color:var(--primary-light, #818cf8); background:rgba(99,102,241,0.12); padding:3px 10px; border-radius:12px; border:1px solid rgba(99,102,241,0.3);">GOVERNANCE &amp; APPROVALS</span>
           </div>
+
+          <form id="publishingPolicyForm" onsubmit="savePublishingPolicy(event)">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:14px; margin-bottom:16px;">
+              
+              <label class="publishing-option-card" id="card_pub_opt1" style="display:flex; flex-direction:column; justify-content:space-between; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:16px; border-radius:10px; border:1px solid var(--border-color); transition:all 0.2s ease;">
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                    <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#818cf8; background:rgba(99,102,241,0.15); padding:2px 8px; border-radius:6px;">Direct Publishing</span>
+                    <input type="radio" name="publishing_mode_radio" value="FORM_MASTER_DIRECT" onchange="highlightPublishingOptions()" style="margin:0; cursor:pointer;" />
+                  </div>
+                  <strong style="display:block; font-size:0.92rem; color:var(--text-primary); margin-bottom:4px;" id="lbl_pub_opt1">Class Teacher / Form Master Direct</strong>
+                  <div style="font-size:0.81rem; color:var(--text-secondary); line-height:1.4;">Class Teachers directly approve and dispatch terminal report cards to guardians immediately upon broadsheet completion.</div>
+                </div>
+              </label>
+
+              <label class="publishing-option-card" id="card_pub_opt2" style="display:flex; flex-direction:column; justify-content:space-between; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:16px; border-radius:10px; border:1px solid var(--border-color); transition:all 0.2s ease;">
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                    <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#f59e0b; background:rgba(245,158,11,0.15); padding:2px 8px; border-radius:6px;">Executive Approval</span>
+                    <input type="radio" name="publishing_mode_radio" value="ACADEMIC_HEAD_ONLY" onchange="highlightPublishingOptions()" style="margin:0; cursor:pointer;" />
+                  </div>
+                  <strong style="display:block; font-size:0.92rem; color:var(--text-primary); margin-bottom:4px;" id="lbl_pub_opt2">Centralized Headteacher Approval</strong>
+                  <div style="font-size:0.81rem; color:var(--text-secondary); line-height:1.4;">Teachers submit broadsheets for administrative review. Only the Headteacher or Principal can approve and release reports.</div>
+                </div>
+              </label>
+
+              <label class="publishing-option-card" id="card_pub_opt3" style="display:flex; flex-direction:column; justify-content:space-between; gap:10px; cursor:pointer; background:rgba(255,255,255,0.03); padding:16px; border-radius:10px; border:1px solid var(--border-color); transition:all 0.2s ease;">
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                    <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#10b981; background:rgba(16,185,129,0.15); padding:2px 8px; border-radius:6px;">Hybrid Dual Mode</span>
+                    <input type="radio" name="publishing_mode_radio" value="HYBRID_BOTH" onchange="highlightPublishingOptions()" checked style="margin:0; cursor:pointer;" />
+                  </div>
+                  <strong style="display:block; font-size:0.92rem; color:var(--text-primary); margin-bottom:4px;" id="lbl_pub_opt3">Hybrid Dual Mode (Default)</strong>
+                  <div style="font-size:0.81rem; color:var(--text-secondary); line-height:1.4;">Both Class Teachers and the Headteacher retain publishing capability with administrative override authority.</div>
+                </div>
+              </label>
+
+            </div>
+
+            <div style="display:flex; align-items:center; gap:12px; justify-content:flex-start;">
+              <button type="submit" class="btn primary" style="min-width:180px; font-weight:700;">Save Publishing Policy</button>
+              <span id="publishingPolicyMsg" style="font-size:0.85rem; font-weight:600;"></span>
+            </div>
+          </form>
         </section>
 
-        <!-- SECTION 3: School Code of Conduct & Student Honor Pledge Hub (SHS & Combined Only) -->
+        <!-- SECTION: School Code of Conduct & Student Honor Pledge Hub (SHS & Combined Only) -->
         <section class="card shs-only-feature" id="conductSection" data-feature="showConductHub" style="margin-bottom:20px; border-left: 4px solid #0284c7;">
-          <h3 style="color:#0284c7; margin-top:0;">📜 School Code of Conduct &amp; Student Honor Pledge Hub</h3>
+          <h3 style="color:#0284c7; margin-top:0;">School Code of Conduct &amp; Student Honor Pledge Hub</h3>
           <p style="opacity:.8; font-size:.85rem; margin-bottom:16px;">
             Customize your school's official Code of Conduct, Behavioral Rules, and Student Honor Pledge. These rules and undertaking signature blocks are automatically attached to all new student Prospectus &amp; Admission packages during enrollment.
           </p>
@@ -342,16 +364,16 @@
             </label>
 
             <div style="margin-bottom:16px; background:rgba(2,132,199,0.06); padding:12px; border-radius:8px; border:1px solid rgba(2,132,199,0.2);">
-              <label style="font-weight:700; color:#0369a1;">📁 Upload Scanned Code of Conduct PDF / Document (Optional)
+              <label style="font-weight:700; color:#0369a1;">Upload Scanned Code of Conduct PDF / Document (Optional)
                 <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
                   <input type="file" id="conduct_pdf_file" accept=".pdf,image/*" style="display:none;" onchange="uploadConductPDF(event)" />
-                  <button type="button" class="btn" style="background:#0284c7; color:#fff; font-weight:700;" onclick="document.getElementById('conduct_pdf_file').click()">📁 Select PDF / Document File</button>
+                  <button type="button" class="btn" style="background:#0284c7; color:#fff; font-weight:700;" onclick="document.getElementById('conduct_pdf_file').click()">Select PDF / Document File</button>
                   <input type="text" id="code_of_conduct_pdf_url" placeholder="Optional: Uploaded document URL" style="flex:1;" readonly />
                 </div>
               </label>
             </div>
 
-            <button type="submit" class="btn primary" style="background:#0284c7; border-color:#0369a1; font-weight:700;">💾 Save Code of Conduct &amp; Pledge</button>
+            <button type="submit" class="btn primary" style="background:#0284c7; border-color:#0369a1; font-weight:700;">Save Code of Conduct &amp; Pledge</button>
             <span id="conductMsg" style="margin-left:14px; font-size:.9rem;"></span>
           </form>
         </section>
@@ -405,11 +427,11 @@
       <section class="card" style="margin-top:20px; border-left:4px solid #ef4444;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
           <div>
-            <h3 style="margin:0; color:#f87171;">🛡️ Active Logged-in Devices & Security Sessions</h3>
+            <h3 style="margin:0; color:#f87171;">Active Logged-in Devices &amp; Security Sessions</h3>
             <p style="margin:4px 0 0; opacity:.75; font-size:.85rem;">Zero-trust session tracking. Staff accounts enforce a single active device policy.</p>
           </div>
           <button type="button" class="btn" onclick="revokeOtherSessions()" style="font-size:0.8rem; padding:6px 12px; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3);">
-            🔒 Revoke All Other Devices
+            Revoke All Other Devices
           </button>
         </div>
 
@@ -434,7 +456,7 @@
       <section class="card" style="margin-top:20px;">
         <h3>End-of-Term Rollover Wizard</h3>
         <p style="color:var(--text-muted);font-size:.9rem;">Safely rollover the current term/semester: archive completed report cards, carry over outstanding arrears, and transition the active academic period.</p>
-        <a class="btn primary" href="rollover.html">🚀 Open Rollover Wizard</a>
+        <a class="btn primary" href="rollover.html">Open Rollover Wizard</a>
       </section>
     </main>
 

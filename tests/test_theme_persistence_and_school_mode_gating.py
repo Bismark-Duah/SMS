@@ -129,8 +129,22 @@ def test_theme_persistence_and_student_import_gating():
 
         print("  [OK] data-tools.html streamlined; duplicate legacy student import removed.")
 
+        # 5. Verify settings.html cleanup & conductSection gating
+        print("\n[Step 4] Auditing settings.html conductSection gating & payment removal...")
+        settings_html_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'settings.html'))
+        with open(settings_html_path, 'r', encoding='utf-8') as f:
+            st_content = f.read()
+
+        assert "data-feature=\"showConductHub\"" in st_content, "conductSection must have data-feature='showConductHub'"
+        assert "shs-only-feature" in st_content, "conductSection must have shs-only-feature class"
+        assert "id=\"paystackSection\"" not in st_content, "paystackSection should be completely removed from settings.html"
+        assert "id=\"voucherSection\"" not in st_content, "voucherSection should be completely removed from settings.html"
+        assert "PAYSTACK SPLIT READY" not in st_content, "PAYSTACK SPLIT card should be removed from settings.html"
+
+        print("  [OK] settings.html verified: conductSection gated to SHS-only, and all payment/settlement cards removed.")
+
         print("\n==================================================================")
-        print("ALL TESTS PASSED: Theme Persistence & School Mode Gating Verified!")
+        print("ALL TESTS PASSED: Theme Persistence, Conduct Hub & School Mode Gating Verified!")
         print("==================================================================\n")
 
     finally:
@@ -138,3 +152,4 @@ def test_theme_persistence_and_student_import_gating():
 
 if __name__ == "__main__":
     test_theme_persistence_and_student_import_gating()
+

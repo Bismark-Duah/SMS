@@ -193,6 +193,8 @@ window.checkAndToggleCSSPSFields = function() {
   const kpiDayCard = document.getElementById('kpiDayCard');
   const chipBoarders = document.getElementById('chipBoarders');
   const chipDay = document.getElementById('chipDay');
+  const continuingTemplateBtn = document.getElementById('continuingTemplateBtn');
+  const continuingImportBtn = document.getElementById('continuingImportBtn');
   const csspsTemplateBtn = document.getElementById('csspsTemplateBtn');
   const csspsImportBtn = document.getElementById('csspsImportBtn');
 
@@ -222,6 +224,8 @@ window.checkAndToggleCSSPSFields = function() {
   if (chipDay) chipDay.style.display = isBoarding ? '' : 'none';
 
   // Action buttons
+  if (continuingTemplateBtn) continuingTemplateBtn.style.display = (F ? F.showCsvImport : true) ? 'inline-block' : 'none';
+  if (continuingImportBtn) continuingImportBtn.style.display = (F ? F.showCsvImport : true) ? 'inline-block' : 'none';
   if (csspsTemplateBtn) csspsTemplateBtn.style.display = (F ? F.showCsspsEnrollment : !isBasicOnly) ? 'inline-block' : 'none';
   if (csspsImportBtn) csspsImportBtn.style.display = (F ? F.showCsspsEnrollment : !isBasicOnly) ? 'inline-block' : 'none';
 
@@ -466,9 +470,14 @@ function renderCurrentPage() {
 
   tbody.innerHTML = pageSlice.map(s => {
     const isInactive = s.is_active === false || s.status === 'INACTIVE';
-    const boardingBadge = s.residential_status === 'B' 
-      ? '<span style="color:#10b981; font-weight:600;">Boarding</span>' 
-      : '<span style="opacity:0.7;">Day</span>';
+    let boardingBadge = '<span style="opacity:0.7;">Day</span>';
+    if (s.residential_status === 'B') {
+      const houseInfo = [s.house_name, s.dormitory_name ? `(${s.dormitory_name})` : ''].filter(Boolean).join(' ');
+      boardingBadge = `<div>
+        <span style="color:#10b981; font-weight:600;">🏠 Boarding</span>
+        ${houseInfo ? `<div style="font-size:0.75rem; color:var(--text-muted, #94a3b8); margin-top:2px;">${escapeHtml(houseInfo)}</div>` : ''}
+      </div>`;
+    }
 
     const schoolCell = isSuperAdmin 
       ? `<td style="font-weight:600; color:#818cf8;">${escapeHtml(s.school_name || 'System Default')}</td>` 

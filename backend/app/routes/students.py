@@ -7,7 +7,7 @@ import re
 import uuid
 from datetime import datetime
 from ..database import get_db
-from ..models import Student, TeacherAssignment, User, ClassSection, Program, Setting, SchoolStage, StudentHealth, School
+from ..models import Student, TeacherAssignment, User, ClassSection, Program, Setting, SchoolStage, StudentHealth, School, House, Dormitory
 from ..schemas import StudentCreate
 from ..dependencies import get_current_user, get_school_id, get_user_assigned_scope
 from ..services.guardian_service import auto_link_guardian_for_student, auto_link_all_guardians
@@ -484,7 +484,7 @@ async def import_students_csv(
     skipped_count = 0
     errors = []
 
-    # Cache programs and classes for fast resolution
+    # Cache programs, classes, houses, and dormitories for fast resolution
     programs_by_name = {p.name.lower(): p.id for p in db.query(Program).filter(
         (Program.school_id == school_id) | (Program.school_id == None)
     ).all() if p.name}
@@ -495,6 +495,15 @@ async def import_students_csv(
     classes_by_name = {c.name.lower(): c for c in db.query(ClassSection).filter(
         (ClassSection.school_id == school_id) | (ClassSection.school_id == None)
     ).all() if c.name}
+
+    houses_by_name = {h.name.lower(): h for h in db.query(House).filter(
+        (House.school_id == school_id) | (House.school_id == None)
+    ).all() if h.name}
+    dorms_by_name = {d.name.lower(): d for d in db.query(Dormitory).join(House, Dormitory.house_id == House.id).filter(
+        (House.school_id == school_id) | (House.school_id == None)
+    ).all() if d.name}
+
+    boarding_status = _get_boarding_status(db, school_id)
 
     for row_idx, raw_row in enumerate(reader, start=2):
         if not raw_row or not any(v for v in raw_row.values() if v and str(v).strip()):
@@ -569,6 +578,39 @@ async def import_students_csv(
         res_raw = (row.get("residential_status") or row.get("boarding_status") or "D").strip().upper()
         residential_status = "B" if (res_raw.startswith("B") or "BOARD" in res_raw) else "D"
 
+        # Resolve House and Dormitory
+        house_id = None
+        dormitory_id = None
+        house_input = (row.get("house_name") or row.get("house") or "").strip().lower()
+        if house_input:
+            if house_input in houses_by_name:
+                house_id = houses_by_name[house_input].id
+            else:
+                for h_name, h_obj in houses_by_name.items():
+                    if house_input in h_name or h_name in house_input:
+                        house_id = h_obj.id
+                        break
+        elif row.get("house_id") and str(row.get("house_id")).isdigit():
+            house_id = int(row.get("house_id"))
+
+        dorm_input = (row.get("dormitory_name") or row.get("dormitory") or row.get("dorm") or row.get("room") or "").strip().lower()
+        if dorm_input:
+            if dorm_input in dorms_by_name:
+                dormitory_id = dorms_by_name[dorm_input].id
+            else:
+                for d_name, d_obj in dorms_by_name.items():
+                    if dorm_input in d_name or d_name in dorm_input:
+                        dormitory_id = d_obj.id
+                        break
+        elif row.get("dormitory_id") and str(row.get("dormitory_id")).isdigit():
+            dormitory_id = int(row.get("dormitory_id"))
+
+        # Day-Only School Policy Enforcement
+        if boarding_status == "DAY_ONLY":
+            residential_status = "D"
+            house_id = None
+            dormitory_id = None
+
         guardian_name = row.get("guardian_name") or row.get("parent_name") or row.get("guardian")
         phone = row.get("phone") or row.get("primary_phone") or row.get("guardian_phone")
         address = row.get("address") or row.get("residential_address")
@@ -585,6 +627,8 @@ async def import_students_csv(
                     form=form_level,
                     gender=gender,
                     residential_status=residential_status,
+                    house_id=house_id,
+                    dormitory_id=dormitory_id,
                     enrollment_status="Fully Registered",
                     status="ACTIVE",
                     school_type="SHS",
@@ -596,8 +640,23 @@ async def import_students_csv(
                 db.add(db_student)
                 db.flush()
 
+                # Fallback Auto-allocate if student is Boarding but no house was assigned
+                if residential_status == "B" and not db_student.house_id:
+                    allocate_student_house_and_dorm(db, db_student)
+
                 if guardian_name or phone:
                     auto_link_guardian_for_student(db, db_student, auto_create=True)
+
+                log_sync_change(db, school_id or 1, "student", db_student.student_code, "INSERT", {
+                    "student_code": db_student.student_code,
+                    "full_name": db_student.full_name,
+                    "gender": db_student.gender,
+                    "residential_status": db_student.residential_status,
+                    "house_id": db_student.house_id,
+                    "dormitory_id": db_student.dormitory_id,
+                    "status": db_student.status
+                })
+
                 imported_count += 1
         except Exception as e:
             errors.append(f"Row {row_idx} ({full_name}): {str(e)}")

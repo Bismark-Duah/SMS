@@ -76,15 +76,17 @@ window.downloadContinuingStudentsTemplate = function() {
     'program_name',
     'gender',
     'residential_status',
+    'house_name',
+    'dormitory_name',
     'guardian_name',
     'phone',
     'address'
   ];
 
   const sampleRows = [
-    'Kwame Mensah,SHS-2024-001,2,SHS 2 Science 1,General Science,Male,Boarding,Mr. Ebenezer Mensah,0244123456,"House 12, Kumasi"',
-    'Abena Serwaa,SHS-2023-089,3,SHS 3 General Arts 2,General Arts,Female,Day,Madam Grace Serwaa,0501234567,"Plot 4, Sunyani"',
-    'Kofi Boateng,SHS-2024-045,2,SHS 2 Business A,Business,Male,Boarding,Opanin Yaw Boateng,0209876543,"Accra Enclave"'
+    'Kwame Mensah,SHS-2024-001,2,SHS 2 Science 1,General Science,Male,Boarding,Kwame Nkrumah House,Block A Room 1,Mr. Ebenezer Mensah,0244123456,"House 12, Kumasi"',
+    'Abena Serwaa,SHS-2023-089,3,SHS 3 General Arts 2,General Arts,Female,Day,,,Madam Grace Serwaa,0501234567,"Plot 4, Sunyani"',
+    'Kofi Boateng,SHS-2024-045,2,SHS 2 Business A,Business,Male,Boarding,Aggrey House,Room 4,Opanin Yaw Boateng,0209876543,"Accra Enclave"'
   ];
 
   const csvContent = [headers.join(','), ...sampleRows].join('\n');

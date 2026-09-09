@@ -73,7 +73,7 @@ const cardsByRole = {
   ],
   ict_coordinator: [
     { label: 'Staff & Passwords',       icon: '👤',   href: 'users.html' },
-    { label: 'CSSPS & Data Tools',      icon: '🔧',   href: 'data-tools.html' },
+    { label: 'Data Tools & Backup',     icon: '🔧',   href: 'data-tools.html' },
     { label: 'System Settings',         icon: '⚙️',   href: 'settings.html' },
     { label: 'Students',                icon: '👨‍🎓', href: 'students.html' },
     { label: 'Timetable',               icon: '🕐',   href: 'timetable.html' },
@@ -287,7 +287,7 @@ function renderDailyShortcuts(activeRole) {
     if (heading) heading.innerHTML = '⚡ Technical & Data Systems Shortcuts';
     shortcuts = [
       { label: '👥 Onboard Staff & Reset Passwords', href: 'users.html' },
-      { label: '🔧 CSSPS & Excel Raw Data Import', href: 'data-tools.html' },
+      { label: '🔧 Data Tools & Cloud Backup', href: 'data-tools.html' },
       { label: '⚙️ System Settings & Offline Sync', href: 'settings.html' },
       { label: '🕐 Manage Timetables & Schedules', href: 'timetable.html' },
       { label: '📊 Student Database Indexing', href: 'students.html' },

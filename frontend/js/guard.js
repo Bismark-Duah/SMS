@@ -731,13 +731,37 @@
     // Theme selector handler
     const themeSelect = document.getElementById('guardThemeSelect');
     if (themeSelect) {
-      themeSelect.addEventListener('change', (e) => {
+      themeSelect.addEventListener('change', async (e) => {
+        const val = e.target.value;
         if (window.SMSStateBus && window.SMSStateBus.setTheme) {
-          window.SMSStateBus.setTheme(e.target.value);
+          window.SMSStateBus.setTheme(val);
         } else if (window.setTheme) {
-          window.setTheme(e.target.value);
+          window.setTheme(val);
         } else if (window.applyTheme) {
-          window.applyTheme(e.target.value);
+          window.applyTheme(val);
+        }
+        localStorage.setItem('system_theme', val);
+        sessionStorage.setItem('system_theme', val);
+
+        // Sync with any other theme selectors on the page (e.g. in settings.html)
+        document.querySelectorAll('#guardThemeSelect, #system_theme, select[name="theme"]').forEach(sel => {
+          if (sel && sel !== e.target && sel.value !== val) sel.value = val;
+        });
+
+        // Persist immediately to backend database for the current tenant
+        const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+        if (token) {
+          try {
+            const apiBase = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
+            await fetch(`${apiBase}/settings/`, {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ system_theme: val })
+            });
+          } catch (_) {}
         }
       });
     }

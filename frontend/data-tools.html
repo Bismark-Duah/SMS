@@ -20,12 +20,21 @@
           <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
-      <section class="card">
-        <h3>Import Students (CSV)</h3>
-        <p style="color:var(--text-muted);font-size:.9rem;">Upload a CSV with columns: full_name, student_code, gender, date_of_birth, parent_name, parent_phone, address, class_id</p>
-        <input type="file" id="studentCsvFile" accept=".csv" />
-        <button class="btn primary" onclick="importStudentCSV()">Import Students</button>
-        <div id="importStudentResult" style="margin-top:12px;"></div>
+      <!-- ── Student Batch Enrollment Quick-Desk ── -->
+      <section class="card" style="border-left: 4px solid var(--primary, #4f46e5); background: linear-gradient(135deg, rgba(79, 70, 229, 0.06) 0%, rgba(30, 41, 59, 0.4) 100%);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="margin:0 0 4px; display:flex; align-items:center; gap:8px;">
+              <span>🎓</span> Student Admissions &amp; Batch Enrollment Desk
+            </h3>
+            <p style="color:var(--text-muted); font-size:.85rem; margin:0;">
+              Specialized CSV templates, continuing student onboarding, and fresh CSSPS placement lists are managed under the Student Directory.
+            </p>
+          </div>
+          <a class="btn primary" href="students.html" style="text-decoration:none; padding:8px 16px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+            <span>👥</span> Open Student Directory &amp; Import Hub &rarr;
+          </a>
+        </div>
       </section>
       <section class="card">
         <h3>Import Users (CSV)</h3>

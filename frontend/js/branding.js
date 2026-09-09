@@ -341,10 +341,15 @@ window.applySchoolModeVisibility = function(mode, bStatus) {
 window.handleThemeSelectChange = async function(val) {
   if (window.applyTheme) window.applyTheme(val);
   localStorage.setItem('system_theme', val);
-  const token = localStorage.getItem('accessToken');
+  sessionStorage.setItem('system_theme', val);
+  document.querySelectorAll('#guardThemeSelect, #system_theme, select[name="theme"]').forEach(sel => {
+    if (sel && sel.value !== val) sel.value = val;
+  });
+  const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
   if (token) {
     try {
-      await fetch(`${API_BASE}/settings/`, {
+      const apiBase = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
+      await fetch(`${apiBase}/settings/`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ system_theme: val })

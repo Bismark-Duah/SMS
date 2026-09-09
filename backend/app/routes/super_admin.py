@@ -63,6 +63,13 @@ class SchoolAccreditationUpdateSchema(BaseModel):
     program_ids: Optional[List[int]] = None
     subject_ids: Optional[List[int]] = None
 
+class SchoolSubscriptionUpdateSchema(BaseModel):
+    subscription_plan: Optional[str] = None  # FREE, BASIC, STANDARD, ENTERPRISE
+    subscription_status: Optional[str] = None  # ACTIVE, TRIAL, SUSPENDED, EXPIRED
+    sms_balance: Optional[int] = None
+    sms_topup_amount: Optional[int] = None
+    platform_commission_percent: Optional[float] = None
+
 @router.get("/dashboard")
 def get_super_admin_dashboard(
     db: Session = Depends(get_db),
@@ -633,6 +640,75 @@ def update_school_profile(
             "email": school.email,
             "logo_url": school.logo_url,
             "status": school.status
+        }
+    }
+
+@router.put("/schools/{school_id}/subscription")
+def update_school_subscription(
+    school_id: int,
+    payload: SchoolSubscriptionUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Updates a school's licensing tier, subscription status, SMS balance, or platform commission.
+    """
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+
+    changes = []
+    if payload.subscription_plan is not None:
+        new_plan = payload.subscription_plan.strip().upper()
+        if new_plan in ["FREE", "BASIC", "STANDARD", "ENTERPRISE"]:
+            old_plan = school.subscription_plan or "STANDARD"
+            school.subscription_plan = new_plan
+            changes.append(f"Plan: {old_plan} -> {new_plan}")
+
+    if payload.subscription_status is not None:
+        new_status = payload.subscription_status.strip().upper()
+        if new_status in ["ACTIVE", "TRIAL", "SUSPENDED", "EXPIRED"]:
+            old_status = school.subscription_status or "ACTIVE"
+            school.subscription_status = new_status
+            changes.append(f"Status: {old_status} -> {new_status}")
+
+    if payload.sms_topup_amount is not None and payload.sms_topup_amount > 0:
+        current_bal = school.sms_balance if school.sms_balance is not None else 0
+        school.sms_balance = current_bal + int(payload.sms_topup_amount)
+        changes.append(f"SMS Top-up: +{payload.sms_topup_amount} (New Balance: {school.sms_balance})")
+    elif payload.sms_balance is not None:
+        school.sms_balance = max(0, int(payload.sms_balance))
+        changes.append(f"SMS Balance set to: {school.sms_balance}")
+
+    if payload.platform_commission_percent is not None:
+        school.platform_commission_percent = max(0.0, min(100.0, float(payload.platform_commission_percent)))
+        changes.append(f"Commission: {school.platform_commission_percent}%")
+
+    db.commit()
+    db.refresh(school)
+
+    # Record forensic audit event
+    record_audit_event(
+        db=db,
+        actor=current_user,
+        action="SUBSCRIPTION_UPDATED",
+        details=f"Updated subscription for {school.name} ({school.code}): {', '.join(changes)}",
+        entity_type="SchoolSubscription",
+        entity_id=school.id,
+        is_super_admin_action=True
+    )
+
+    return {
+        "status": "success",
+        "message": f"Subscription updated for {school.name}.",
+        "school": {
+            "id": school.id,
+            "name": school.name,
+            "code": school.code,
+            "subscription_plan": school.subscription_plan,
+            "subscription_status": school.subscription_status,
+            "sms_balance": school.sms_balance,
+            "platform_commission_percent": school.platform_commission_percent
         }
     }
 

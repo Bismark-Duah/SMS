@@ -553,7 +553,7 @@
           items: [
             { href: 'super-admin.html#operations', icon: '🔄', label: 'Cloud Mirror & Sync' },
             { href: 'data-tools.html', icon: '🛠️', label: 'Database Tools' },
-            { href: 'settings.html', icon: '⚙️', label: 'Gateway Config' }
+            { href: 'super-admin.html#operations', icon: '📱', label: 'SMS & Cloud Gateways' }
           ]
         }
       ];
@@ -562,7 +562,7 @@
         id: 'group-config',
         title: 'MASTER CONFIGURATION',
         items: [
-          { href: 'settings.html', icon: '⚙️', label: 'Platform Settings' }
+          { href: 'settings.html', icon: '⚙️', label: 'School Settings (Tenant Config)' }
         ]
       };
     } else {

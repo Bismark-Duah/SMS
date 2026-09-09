@@ -48,6 +48,9 @@ window.switchSuperAdminTab = function(tabName) {
   if (tabName === 'security' && window.loadMasterAuditStream) {
     window.loadMasterAuditStream();
   }
+  if (tabName === 'subscriptions' && window.loadSubscriptionsTab) {
+    window.loadSubscriptionsTab();
+  }
 };
 
 // Initialize active tab from hash or localStorage
@@ -1964,6 +1967,207 @@ window.handleSaveSchoolSubaccount = async function(event) {
   } finally {
     btn.disabled = false;
     btn.textContent = '💾 Save & Link Paystack Subaccount';
+  }
+};
+
+// ── Licensing & Subscriptions Hub ───────────────────────────────────────────
+let _globalSubscriptionSchools = [];
+
+window.loadSubscriptionsTab = async function() {
+  const tbody = document.getElementById('subscriptionsTableBody');
+  if (!tbody) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools/matrix`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load subscription matrix');
+    const data = await res.json();
+
+    _globalSubscriptionSchools = data.schools || [];
+
+    // KPI 1: Active Tenants Count
+    const totalCount = data.total_schools_count || _globalSubscriptionSchools.length;
+    const activeCount = _globalSubscriptionSchools.filter(s => (s.subscription_status || 'ACTIVE').toUpperCase() === 'ACTIVE').length;
+    const kpiActive = document.getElementById('kpiSubActiveCount');
+    if (kpiActive) kpiActive.textContent = `${activeCount} / ${totalCount}`;
+
+    // KPI 2: Enterprise Tier Tenants
+    const entCount = _globalSubscriptionSchools.filter(s => (s.subscription_plan || 'STANDARD').toUpperCase() === 'ENTERPRISE').length;
+    const stdCount = _globalSubscriptionSchools.filter(s => ['STANDARD', 'BASIC', 'FREE'].includes((s.subscription_plan || 'STANDARD').toUpperCase())).length;
+    const kpiEnt = document.getElementById('kpiSubEnterpriseCount');
+    if (kpiEnt) kpiEnt.textContent = `${entCount} Enterprise`;
+    const kpiStd = document.getElementById('kpiSubStandardMeta');
+    if (kpiStd) kpiStd.textContent = `${stdCount} Standard / Basic Institutions`;
+
+    // KPI 3: Revenue & Commission
+    const kpiRev = document.getElementById('kpiSubPlatformRevenue');
+    if (kpiRev) kpiRev.textContent = `GHS ${(data.total_platform_commission_ghs || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const kpiVouchers = document.getElementById('kpiSubVouchersMeta');
+    if (kpiVouchers) kpiVouchers.textContent = `${data.total_vouchers_sold || 0} Vouchers Sold (Gross: GHS ${(data.gross_platform_revenue_ghs || 0).toFixed(2)})`;
+
+    // KPI 4: Global SMS Pool
+    const totalSmsPool = _globalSubscriptionSchools.reduce((acc, s) => acc + (s.sms_balance || 0), 0);
+    const kpiSms = document.getElementById('kpiSubGlobalSms');
+    if (kpiSms) kpiSms.textContent = `${totalSmsPool.toLocaleString()} SMS`;
+    const kpiSmsSent = document.getElementById('kpiSubSmsSentMeta');
+    if (kpiSmsSent) kpiSmsSent.textContent = `${data.total_sms_sent || 0} Messages Delivered`;
+
+    window.renderSubscriptionsTable(_globalSubscriptionSchools);
+
+  } catch (err) {
+    console.error('Error loading subscriptions:', err);
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:#f87171;">❌ Failed to load subscription matrix: ${err.message}</td></tr>`;
+  }
+};
+
+window.renderSubscriptionsTable = function(schools) {
+  const tbody = document.getElementById('subscriptionsTableBody');
+  if (!tbody) return;
+
+  if (!schools || schools.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--sa-text-muted);">No subscription records found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = schools.map(s => {
+    const plan = (s.subscription_plan || 'STANDARD').toUpperCase();
+    const status = (s.subscription_status || 'ACTIVE').toUpperCase();
+
+    const planBadge = plan === 'ENTERPRISE'
+      ? `<span style="background:rgba(99,102,241,0.2); color:#818cf8; border:1px solid rgba(99,102,241,0.4); padding:3px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">👑 ENTERPRISE</span>`
+      : plan === 'STANDARD'
+      ? `<span style="background:rgba(2,132,199,0.2); color:#38bdf8; border:1px solid rgba(2,132,199,0.4); padding:3px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">🏛️ STANDARD</span>`
+      : plan === 'BASIC'
+      ? `<span style="background:rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.4); padding:3px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">📘 BASIC</span>`
+      : `<span style="background:rgba(148,163,184,0.2); color:#94a3b8; border:1px solid rgba(148,163,184,0.4); padding:3px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">🌱 FREE</span>`;
+
+    const statusBadge = status === 'ACTIVE'
+      ? `<span style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">🟢 ACTIVE</span>`
+      : status === 'TRIAL'
+      ? `<span style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); padding:3px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">🟡 TRIAL</span>`
+      : `<span style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:3px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">🔴 ${status}</span>`;
+
+    const smsColor = (s.sms_balance || 0) < 100 ? '#f87171' : '#38bdf8';
+
+    return `
+      <tr style="border-bottom:1px solid var(--sa-card-border);">
+        <td style="padding:12px 14px;">
+          <div style="font-weight:700; color:#fff;">${escapeHtml(s.name)}</div>
+          <div style="font-size:0.75rem; color:#818cf8; font-weight:600;">${escapeHtml(s.code)}</div>
+        </td>
+        <td style="padding:12px 14px; font-size:0.8rem; color:var(--sa-text-muted);">${escapeHtml(s.school_mode || 'COMBINED')}</td>
+        <td style="padding:12px 14px;">${planBadge}</td>
+        <td style="padding:12px 14px;">${statusBadge}</td>
+        <td style="padding:12px 14px; font-weight:700; color:#fff;">${s.vouchers_sold || 0}</td>
+        <td style="padding:12px 14px;">
+          <div style="font-weight:700; color:#34d399;">GHS ${(s.school_net_share_ghs || 0).toFixed(2)}</div>
+          <div style="font-size:0.72rem; color:var(--sa-text-muted);">Fee: GHS ${(s.platform_fee_ghs || 0).toFixed(2)} (${s.commission_percent || 5}%)</div>
+        </td>
+        <td style="padding:12px 14px;">
+          <strong style="color:${smsColor}; font-size:0.95rem;">${(s.sms_balance !== undefined ? s.sms_balance : 500).toLocaleString()}</strong>
+          <span style="font-size:0.72rem; color:var(--sa-text-muted); display:block;">units</span>
+        </td>
+        <td style="padding:12px 14px;">
+          <button type="button" class="btn sm" style="padding:5px 10px; font-size:0.78rem; background:rgba(99,102,241,0.15); border:1px solid #6366f1; color:#a5b4fc;" onclick="window.openManageSubscriptionModal(${s.school_id})">
+            ⚙️ Manage License
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+};
+
+window.filterSubscriptionTable = function() {
+  const query = (document.getElementById('subscriptionSearchInput')?.value || '').toLowerCase().trim();
+  if (!query) {
+    window.renderSubscriptionsTable(_globalSubscriptionSchools);
+    return;
+  }
+  const filtered = _globalSubscriptionSchools.filter(s =>
+    (s.name || '').toLowerCase().includes(query) ||
+    (s.code || '').toLowerCase().includes(query) ||
+    (s.subscription_plan || '').toLowerCase().includes(query) ||
+    (s.subscription_status || '').toLowerCase().includes(query)
+  );
+  window.renderSubscriptionsTable(filtered);
+};
+
+window.openManageSubscriptionModal = function(schoolId) {
+  const school = _globalSubscriptionSchools.find(s => s.school_id === schoolId);
+  if (!school) return;
+
+  const modal = document.getElementById('manageSubscriptionModal');
+  if (!modal) return;
+
+  document.getElementById('subModalSchoolId').value = school.school_id;
+  document.getElementById('subModalSchoolName').textContent = school.name;
+  document.getElementById('subModalSchoolCode').textContent = `${school.code} • ${school.school_mode}`;
+  document.getElementById('subModalPlan').value = (school.subscription_plan || 'STANDARD').toUpperCase();
+  document.getElementById('subModalStatus').value = (school.subscription_status || 'ACTIVE').toUpperCase();
+  document.getElementById('subModalCurrentSms').textContent = `${(school.sms_balance || 0).toLocaleString()} SMS`;
+  document.getElementById('subModalSmsTopup').value = '';
+  document.getElementById('subModalCommission').value = school.commission_percent || 5.0;
+
+  const statusMsg = document.getElementById('subModalStatusMsg');
+  if (statusMsg) statusMsg.style.display = 'none';
+
+  modal.style.display = 'flex';
+};
+
+window.closeManageSubscriptionModal = function() {
+  const modal = document.getElementById('manageSubscriptionModal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.handleSaveSubscription = async function(event) {
+  event.preventDefault();
+  const schoolId = document.getElementById('subModalSchoolId').value;
+  const statusMsg = document.getElementById('subModalStatusMsg');
+  const btn = document.getElementById('btnSaveSubscription');
+
+  const payload = {
+    subscription_plan: document.getElementById('subModalPlan').value,
+    subscription_status: document.getElementById('subModalStatus').value,
+    sms_topup_amount: parseInt(document.getElementById('subModalSmsTopup').value || 0),
+    platform_commission_percent: parseFloat(document.getElementById('subModalCommission').value || 5.0)
+  };
+
+  btn.disabled = true;
+  btn.textContent = 'Saving Changes...';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools/${schoolId}/subscription`, {
+      method: 'PUT',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Could not update subscription');
+
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(16, 185, 129, 0.15)';
+      statusMsg.style.border = '1px solid #10b981';
+      statusMsg.style.color = '#34d399';
+      statusMsg.innerHTML = `<strong>✔ Saved!</strong> ${data.message}`;
+    }
+
+    if (window.showToast) window.showToast('Subscription & License updated successfully!', 'success');
+    setTimeout(() => {
+      window.closeManageSubscriptionModal();
+      window.loadSubscriptionsTab();
+    }, 1200);
+
+  } catch (err) {
+    if (statusMsg) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.background = 'rgba(239, 68, 68, 0.15)';
+      statusMsg.style.border = '1px solid #ef4444';
+      statusMsg.style.color = '#f87171';
+      statusMsg.innerHTML = `<strong>Error:</strong> ${err.message}`;
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Save Subscription & Tier';
   }
 };
 

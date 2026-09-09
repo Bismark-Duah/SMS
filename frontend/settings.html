@@ -21,6 +21,23 @@
         </div>
       </header>
 
+      <!-- ACTIVE TENANT SCOPING BANNER -->
+      <div id="settingsActiveSchoolBanner" style="display:none; margin-bottom:20px; padding:14px 18px; border-radius:10px; background:linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(168,85,247,0.12) 100%); border:1px solid rgba(99,102,241,0.3); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-size:1.6rem;">🏛️</span>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <strong style="font-size:1.05rem;" id="bannerSchoolName">Loading school profile...</strong>
+              <span id="bannerSchoolBadge" style="font-size:0.75rem; padding:2px 8px; border-radius:12px; background:rgba(99,102,241,0.25); color:#818cf8; font-weight:600;">ACTIVE TENANT SCOPE</span>
+            </div>
+            <p style="margin:2px 0 0 0; font-size:0.82rem; color:var(--text-muted, #94a3b8);" id="bannerSchoolSubtitle">Tenant Configuration & System Preferences</p>
+          </div>
+        </div>
+        <div id="bannerSuperAdminSwitchNotice" style="display:none; font-size:0.8rem; color:#f59e0b; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); border-radius:6px; padding:6px 12px;">
+          ⚡ <strong>Super-Admin Mode:</strong> You are currently configuring this school. Use the topbar School Selector to switch tenants.
+        </div>
+      </div>
+
       <!-- SECTION 1: School Profile -->
       <section class="card" style="margin-bottom:20px;">
         <h3>School Profile</h3>

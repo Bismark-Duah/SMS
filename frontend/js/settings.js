@@ -340,6 +340,22 @@ async function loadSettings() {
             bLockNotice.textContent = isSuperAdmin ? '(⭐ Super-Admin Editable)' : '(🔒 Managed by Super-Admin)';
         }
 
+        // Active Tenant Scoping Banner
+        const banner = document.getElementById('settingsActiveSchoolBanner');
+        const bannerName = document.getElementById('bannerSchoolName');
+        const bannerSubtitle = document.getElementById('bannerSchoolSubtitle');
+        const bannerNotice = document.getElementById('bannerSuperAdminSwitchNotice');
+        if (banner && bannerName) {
+            banner.style.display = 'flex';
+            bannerName.textContent = settings.school_name || 'Active School';
+            if (bannerSubtitle) {
+                bannerSubtitle.textContent = `School Code / Alias: ${settings.school_abbreviation || 'N/A'} • Academic Mode: ${settings.school_mode || 'COMBINED'}`;
+            }
+            if (bannerNotice) {
+                bannerNotice.style.display = isSuperAdmin ? 'block' : 'none';
+            }
+        }
+
         const bStatus = settings.boarding_status || 'BOARDING_AND_DAY';
         setVal('boarding_status', bStatus);
         localStorage.setItem('boarding_status', bStatus);

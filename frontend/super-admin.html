@@ -323,6 +323,9 @@
         <button class="sa-tab-btn" onclick="window.switchSuperAdminTab('operations')">
           <span>⚙️</span> System Operations &amp; Tools
         </button>
+        <button class="sa-tab-btn" onclick="window.switchSuperAdminTab('subscriptions')">
+          <span>💳</span> Licensing &amp; Subscriptions
+        </button>
       </nav>
 
       <!-- ══════════════════════════════════════════════════════════════════════ -->
@@ -649,6 +652,73 @@
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════════════════════════════ -->
+      <!-- TAB 5: LICENSING & SUBSCRIPTIONS                                       -->
+      <!-- ══════════════════════════════════════════════════════════════════════ -->
+      <section class="sa-tab-pane" id="tab-subscriptions">
+        <!-- KPI Summary Row -->
+        <div class="kpi-grid">
+          <div class="kpi-card" style="border-left:4px solid #10b981;">
+            <div class="kpi-label">Active Tenant Licenses</div>
+            <div class="kpi-value" id="kpiSubActiveCount" style="color:#10b981;">...</div>
+            <div class="kpi-meta" id="kpiSubActiveMeta">100% Operational Compliance</div>
+          </div>
+          <div class="kpi-card" style="border-left:4px solid #6366f1;">
+            <div class="kpi-label">Enterprise Tier Tenants</div>
+            <div class="kpi-value" id="kpiSubEnterpriseCount" style="color:#818cf8;">...</div>
+            <div class="kpi-meta" id="kpiSubStandardMeta">Loading tier metrics...</div>
+          </div>
+          <div class="kpi-card" style="border-left:4px solid #f59e0b;">
+            <div class="kpi-label">Total Platform Revenue &amp; Fees</div>
+            <div class="kpi-value" id="kpiSubPlatformRevenue" style="color:#fbbf24;">GHS 0.00</div>
+            <div class="kpi-meta" id="kpiSubVouchersMeta">From admission vouchers &amp; platform commissions</div>
+          </div>
+          <div class="kpi-card" style="border-left:4px solid #0284c7;">
+            <div class="kpi-label">Global SMS Allocation Pool</div>
+            <div class="kpi-value" id="kpiSubGlobalSms" style="color:#38bdf8;">...</div>
+            <div class="kpi-meta" id="kpiSubSmsSentMeta">Messages delivered across all schools</div>
+          </div>
+        </div>
+
+        <!-- Tenant Subscriptions Matrix Card -->
+        <div class="sa-table-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div>
+              <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+                <span>💳</span> Multi-Tenant Licensing &amp; Subscription Matrix
+              </h3>
+              <p style="margin:4px 0 0 0; font-size:0.82rem; color:var(--sa-text-muted);">
+                Govern active license tiers, admission voucher commission rates, and SMS credits across all schools.
+              </p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <input type="text" id="subscriptionSearchInput" placeholder="🔍 Filter school or plan..." oninput="window.filterSubscriptionTable()" style="padding:7px 12px; font-size:0.82rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; min-width:220px;" />
+              <button class="btn" style="padding:7px 12px; font-size:0.82rem;" onclick="window.loadSubscriptionsTab()">🔄 Refresh</button>
+            </div>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table class="sa-table">
+              <thead>
+                <tr>
+                  <th>School Name &amp; Code</th>
+                  <th>Mode</th>
+                  <th>Tier Plan</th>
+                  <th>License Status</th>
+                  <th>Vouchers Sold</th>
+                  <th>School Net / Gross</th>
+                  <th>SMS Credits</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="subscriptionsTableBody">
+                <tr><td colspan="8" style="text-align:center; padding:24px; color:var(--sa-text-muted);">Loading subscription records...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -1039,6 +1109,71 @@
             Cancel
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Modal 7: Manage School Subscription & License -->
+    <div class="modal" id="manageSubscriptionModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+      <div class="modal-content" style="max-width:540px; width:90%; background:var(--sa-surface); border:1px solid var(--sa-primary); border-radius:12px; padding:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
+          <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+            <span>💳</span> Manage School License &amp; Tier
+          </h3>
+          <button type="button" onclick="window.closeManageSubscriptionModal()" style="background:none; border:none; color:var(--sa-text-muted); font-size:1.3rem; cursor:pointer;">✕</button>
+        </div>
+
+        <form id="manageSubscriptionForm" onsubmit="window.handleSaveSubscription(event)">
+          <input type="hidden" id="subModalSchoolId" />
+
+          <div style="margin-bottom:14px; background:rgba(99,102,241,0.08); padding:10px 14px; border-radius:8px; border:1px solid rgba(99,102,241,0.2);">
+            <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--sa-text-muted);">Target Institution</div>
+            <div id="subModalSchoolName" style="font-size:1rem; font-weight:800; color:#fff; margin-top:2px;">...</div>
+            <div id="subModalSchoolCode" style="font-size:0.8rem; color:#818cf8; font-weight:600;">...</div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Subscription Tier Plan *</label>
+              <select id="subModalPlan" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; font-weight:700;">
+                <option value="FREE">🌱 Free Community Plan</option>
+                <option value="BASIC">📘 Basic School Plan</option>
+                <option value="STANDARD">🏛️ Standard Pro Plan</option>
+                <option value="ENTERPRISE">👑 Enterprise Multi-Campus</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">License Status *</label>
+              <select id="subModalStatus" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; font-weight:700;">
+                <option value="ACTIVE">🟢 Active Licensed</option>
+                <option value="TRIAL">🟡 Evaluation / Trial</option>
+                <option value="SUSPENDED">🔴 Suspended / Past Due</option>
+                <option value="EXPIRED">⚫ Expired License</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Top-Up SMS Units</label>
+              <input type="number" id="subModalSmsTopup" min="0" step="50" placeholder="+500 SMS" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+              <span style="font-size:0.72rem; color:var(--sa-text-muted);">Current: <strong id="subModalCurrentSms" style="color:#38bdf8;">0</strong></span>
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Platform Commission (%)</label>
+              <input type="number" id="subModalCommission" min="0" max="100" step="0.5" placeholder="5.0" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+              <span style="font-size:0.72rem; color:var(--sa-text-muted);">From voucher sales</span>
+            </div>
+          </div>
+
+          <div id="subModalStatusMsg" style="margin-bottom:12px; display:none; padding:10px 12px; border-radius:6px; font-size:0.82rem;"></div>
+
+          <div style="display:flex; gap:10px; margin-top:16px;">
+            <button type="submit" id="btnSaveSubscription" class="btn primary" style="flex:1; padding:10px; font-weight:700;">
+              💾 Save Subscription &amp; Tier
+            </button>
+            <button type="button" class="btn" onclick="window.closeManageSubscriptionModal()" style="flex:1; padding:10px;">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
 

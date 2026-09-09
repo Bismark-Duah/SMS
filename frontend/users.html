@@ -30,9 +30,9 @@
           </div>
           
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <input type="text" id="userSearchInput" name="no_autofill_staff_search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="🔍 Search staff by name, email, role..." 
+            <input type="text" id="userSearchInput" name="no_autofill_staff_search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="Search staff by name, email, role, Staff ID..." 
                    oninput="filterUserDirectory()"
-                   style="padding:7px 12px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary); width:240px;" />
+                   style="padding:7px 12px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary); width:260px;" />
             
             <select id="userRoleFilter" onchange="filterUserDirectory()"
                     style="padding:7px 10px; font-size:0.85rem; border-radius:6px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-primary); cursor:pointer;">
@@ -52,8 +52,8 @@
           <div id="superAdminTenantFilter" style="display:none; align-items:center; gap:8px; width:100%; margin-top:8px;">
             <label style="font-size:0.78rem; font-weight:700; margin:0; text-transform:uppercase; color:var(--text-secondary);">School / Tenant Scope:</label>
             <select id="tenantSelect" onchange="onTenantFilterChange(this.value)" style="padding:6px 12px; font-size:0.83rem; font-weight:600; border-radius:6px; background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary); cursor:pointer;">
-              <option value="system_only" selected>👑 System & Super-Admins Only</option>
-              <option value="all">🌐 All Accounts (Global System View)</option>
+              <option value="system_only" selected>System & Super-Admins Only</option>
+              <option value="all">All Accounts (Global System View)</option>
             </select>
           </div>
         </div>
@@ -87,8 +87,13 @@
             </label>
 
             <label style="font-size:0.83rem; font-weight:600; margin:0;">
-              Ghana Phone Number <span style="font-weight:400; opacity:0.7;">(Optional)</span>
-              <input id="phoneNumber" name="no_autofill_new_phone" type="tel" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="e.g. 0244123456" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+              Contact <span style="font-weight:400; opacity:0.7;">(Optional)</span>
+              <input id="phoneNumber" name="no_autofill_new_phone" type="tel" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="0244123456" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+            </label>
+
+            <label style="font-size:0.83rem; font-weight:600; margin:0;">
+              Staff ID <span style="font-weight:400; opacity:0.7;">(Optional)</span>
+              <input id="staffId" name="no_autofill_new_staff_id" autocomplete="off" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');" placeholder="Staff ID" style="margin-top:4px; width:100%; box-sizing:border-box;" />
             </label>
 
             <label style="font-size:0.83rem; font-weight:600; margin:0;">
@@ -134,7 +139,7 @@
       <!-- ── Link Parent & Student Section ──────────────────────────────── -->
       <section class="card">
         <div style="margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
-          <h3 style="margin:0; font-size:1.05rem;">👨‍👩‍👧 Link Parent to Student</h3>
+          <h3 style="margin:0; font-size:1.05rem;">Link Parent to Student</h3>
           <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--text-secondary);">Grant parent portal access to view real-time results, attendance, and bills.</p>
         </div>
         <form id="linkForm" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; align-items:flex-end;">
@@ -154,7 +159,7 @@
       <div id="editRolesModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); z-index:1000; align-items:center; justify-content:center;">
         <div style="background:var(--card-bg, #1e293b); border:1px solid rgba(255,255,255,0.15); padding:24px; border-radius:12px; max-width:560px; width:92%; max-height:85vh; overflow-y:auto; box-shadow:0 15px 40px rgba(0,0,0,0.6);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
-            <h3 id="editUserModalTitle" style="margin:0; font-size:1.15rem;">✏️ Edit User Roles</h3>
+            <h3 id="editUserModalTitle" style="margin:0; font-size:1.15rem;">Edit User Roles</h3>
             <button type="button" onclick="closeEditRolesModal()" style="background:none; border:none; color:var(--text-secondary); font-size:1.4rem; cursor:pointer;">&times;</button>
           </div>
           <input type="hidden" id="editUserId" />
@@ -175,7 +180,7 @@
       <div id="resetPasswordModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); z-index:1000; align-items:center; justify-content:center;">
         <div style="background:var(--card-bg, #1e293b); border:1px solid rgba(255,255,255,0.15); padding:24px; border-radius:12px; max-width:400px; width:90%; box-shadow:0 15px 40px rgba(0,0,0,0.6);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
-            <h3 style="margin:0; font-size:1.15rem;">🔑 Reset Password</h3>
+            <h3 style="margin:0; font-size:1.15rem;">Reset Password</h3>
             <button type="button" onclick="closeResetPasswordModal()" style="background:none; border:none; color:var(--text-secondary); font-size:1.4rem; cursor:pointer;">&times;</button>
           </div>
           <input type="hidden" id="resetUserId" />

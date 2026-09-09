@@ -314,7 +314,9 @@ def login(payload: dict, request: Request, db: Session = Depends(get_db)):
                 "is_super_admin": is_super_admin,
                 "is_first_login": bool(getattr(user, "is_first_login", False)),
                 "phone_number": user.phone_number or "",
+                "staff_id": getattr(user, "staff_id", None) or "",
                 "email": user.email or "",
+                "ownership_type": school.ownership_type if (not is_super_admin and school) else "PRIVATE",
                 "contact_verified": bool(getattr(user, "contact_verified", False)),
                 "access_token": token,
                 "token_type": "bearer"
@@ -346,6 +348,7 @@ def get_current_user_profile(current_user: User = Depends(get_current_user), db:
         "username": current_user.username,
         "email": current_user.email or "",
         "phone_number": current_user.phone_number or "",
+        "staff_id": getattr(current_user, "staff_id", None) or "",
         "is_first_login": bool(getattr(current_user, "is_first_login", False)),
         "contact_verified": bool(getattr(current_user, "contact_verified", False)),
         "primary_role": primary_role,
@@ -610,6 +613,8 @@ def create_user(
     email = raw_email if raw_email else None
     raw_phone = (payload.get("phone_number") or "").strip()
     phone_number = raw_phone if raw_phone else None
+    raw_staff_id = (payload.get("staff_id") or "").strip()
+    staff_id = raw_staff_id if raw_staff_id else None
     password = payload.get("password") or "Staff@123"
     gender = payload.get("gender")
     role_names = payload.get("roles", ["teacher"])
@@ -642,6 +647,7 @@ def create_user(
         username=username,
         email=email,
         phone_number=phone_number,
+        staff_id=staff_id,
         password_hash=_hash_password(password),
         gender=gender,
         is_active=True,
@@ -997,10 +1003,11 @@ def complete_onboarding(
     phone = (payload.get("phone_number") or "").strip()
     raw_email = (payload.get("email") or "").strip()
     email = raw_email if raw_email else None
+    raw_staff_id = (payload.get("staff_id") or "").strip()
     new_password = (payload.get("new_password") or "").strip()
 
     if not phone:
-        raise HTTPException(status_code=400, detail="Ghana Mobile Phone Number is required to secure your account.")
+        raise HTTPException(status_code=400, detail="Mobile Phone Number is required to secure your account.")
 
     # Validate phone format: digits, plus, length 9-15
     cleaned_phone = re.sub(r"[^\d+]", "", phone)
@@ -1014,6 +1021,9 @@ def complete_onboarding(
         if existing_email_user:
             raise HTTPException(status_code=400, detail="This email address is already in use by another account.")
         current_user.email = email
+
+    if raw_staff_id:
+        current_user.staff_id = raw_staff_id
 
     if new_password:
         if len(new_password) < 6:
@@ -1033,6 +1043,7 @@ def complete_onboarding(
             "username": current_user.username,
             "email": current_user.email or "",
             "phone_number": current_user.phone_number or "",
+            "staff_id": current_user.staff_id or "",
             "is_first_login": False,
             "contact_verified": True
         }

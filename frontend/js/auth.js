@@ -130,8 +130,10 @@ if (form) {
         'userRoles': JSON.stringify(rolesList),
         'is_first_login': data.is_first_login ? 'true' : 'false',
         'phone_number': data.phone_number || '',
+        'staff_id': data.staff_id || '',
         'email': data.email || '',
         'contact_verified': data.contact_verified ? 'true' : 'false',
+        'ownership_type': data.ownership_type || 'PRIVATE',
         '_lastActivity': Date.now().toString()
       };
 

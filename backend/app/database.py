@@ -341,6 +341,7 @@ def run_migrations():
             ("department_id", "INTEGER REFERENCES departments(id)"),
             ("school_id", "INTEGER REFERENCES schools(id)"),
             ("phone_number", "VARCHAR"),
+            ("staff_id", "VARCHAR(50)"),
             ("is_first_login", "BOOLEAN DEFAULT TRUE"),
             ("contact_verified", "BOOLEAN DEFAULT FALSE"),
             ("responsibility_role", "VARCHAR(50) DEFAULT 'REGULAR_TEACHER'"),

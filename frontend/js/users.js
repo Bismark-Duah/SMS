@@ -13,33 +13,33 @@ function getHeaders(headers = {}) {
 
 const UNIFIED_ROLES = [
   // 1. Executive Leadership (Delegated sub-administrators)
-  { id: 'proprietor', category: 'executive', icon: '🏛️', male: 'Proprietor / School Owner', female: 'Proprietress / School Owner', defaultChecked: false, privateOnly: true },
-  { id: 'headmaster', category: 'executive', icon: '👔', male: 'Headmaster / Principal', female: 'Headmistress / Principal', defaultChecked: false },
-  { id: 'assistant_headmaster_academic', category: 'executive', icon: '📘', male: 'Assistant Head (Academic)', female: 'Assistant Head (Academic)', defaultChecked: false },
-  { id: 'assistant_headmaster_admin', category: 'executive', icon: '🏢', male: 'Assistant Head (Administration)', female: 'Assistant Head (Administration)', defaultChecked: false },
-  { id: 'assistant_headmaster_domestic', category: 'executive', icon: '🏡', male: 'Assistant Head (Domestic / Boarding)', female: 'Assistant Head (Domestic / Boarding)', defaultChecked: false, boardingOnly: true },
+  { id: 'proprietor', category: 'executive', icon: '', male: 'Proprietor / School Owner', female: 'Proprietress / School Owner', defaultChecked: false, privateOnly: true },
+  { id: 'headmaster', category: 'executive', icon: '', male: 'Headmaster / Principal', female: 'Headmistress / Principal', defaultChecked: false },
+  { id: 'assistant_headmaster_academic', category: 'executive', icon: '', male: 'Assistant Head (Academic)', female: 'Assistant Head (Academic)', defaultChecked: false },
+  { id: 'assistant_headmaster_admin', category: 'executive', icon: '', male: 'Assistant Head (Administration)', female: 'Assistant Head (Administration)', defaultChecked: false },
+  { id: 'assistant_headmaster_domestic', category: 'executive', icon: '', male: 'Assistant Head (Domestic / Boarding)', female: 'Assistant Head (Domestic / Boarding)', defaultChecked: false, boardingOnly: true },
 
   // 2. Academic Faculty
-  { id: 'teacher', category: 'academic', icon: '📚', male: 'Teacher', female: 'Teacher', defaultChecked: true },
-  { id: 'hod', category: 'academic', icon: '🔬', male: 'Head of Department (HOD)', female: 'Head of Department (HOD)', defaultChecked: false },
-  { id: 'form_master', category: 'academic', icon: '🎓', male: 'Form Master', female: 'Form Mistress', defaultChecked: false },
+  { id: 'teacher', category: 'academic', icon: '', male: 'Teacher', female: 'Teacher', defaultChecked: true },
+  { id: 'hod', category: 'academic', icon: '', male: 'Head of Department (HOD)', female: 'Head of Department (HOD)', defaultChecked: false },
+  { id: 'form_master', category: 'academic', icon: '', male: 'Form Master', female: 'Form Mistress', defaultChecked: false },
 
   // 3. Boarding & Pastoral Care
-  { id: 'senior_house_master', category: 'boarding', icon: '🏠', male: 'Senior Housemaster', female: 'Senior Housemistress', defaultChecked: false, boardingOnly: true },
-  { id: 'house_master', category: 'boarding', icon: '🛌', male: 'Housemaster', female: 'Housemistress', defaultChecked: false, boardingOnly: true },
-  { id: 'assistant_house_master', category: 'boarding', icon: '🚪', male: 'Assistant Housemaster', female: 'Assistant Housemistress', defaultChecked: false, boardingOnly: true },
+  { id: 'senior_house_master', category: 'boarding', icon: '', male: 'Senior Housemaster', female: 'Senior Housemistress', defaultChecked: false, boardingOnly: true },
+  { id: 'house_master', category: 'boarding', icon: '', male: 'Housemaster', female: 'Housemistress', defaultChecked: false, boardingOnly: true },
+  { id: 'assistant_house_master', category: 'boarding', icon: '', male: 'Assistant Housemaster', female: 'Assistant Housemistress', defaultChecked: false, boardingOnly: true },
 
   // 4. Operations, IT & Administration
-  { id: 'school_administrator', category: 'operations', icon: '🏢', male: 'School Administrator / Admin Officer', female: 'School Administrator / Admin Officer', defaultChecked: false },
-  { id: 'ict_coordinator', category: 'operations', icon: '🖥️', male: 'ICT Coordinator / IT Officer', female: 'ICT Coordinator / IT Officer', defaultChecked: false },
-  { id: 'secretary', category: 'operations', icon: '📋', male: 'School Secretary / Registrar', female: 'School Secretary / Registrar', defaultChecked: false },
-  { id: 'bursar', category: 'operations', icon: '💰', male: 'School Accountant / Bursar', female: 'School Accountant / Bursar', defaultChecked: false },
-  { id: 'storekeeper', category: 'operations', icon: '📦', male: 'Storekeeper (Assets & Inventory)', female: 'Storekeeper (Assets & Inventory)', defaultChecked: false },
-  { id: 'security_officer', category: 'operations', icon: '🛡️', male: 'Security Officer (Gate & Exeats)', female: 'Security Officer (Gate & Exeats)', defaultChecked: false, boardingOnly: true },
+  { id: 'school_administrator', category: 'operations', icon: '', male: 'School Administrator / Admin Officer', female: 'School Administrator / Admin Officer', defaultChecked: false },
+  { id: 'ict_coordinator', category: 'operations', icon: '', male: 'ICT Coordinator / IT Officer', female: 'ICT Coordinator / IT Officer', defaultChecked: false },
+  { id: 'secretary', category: 'operations', icon: '', male: 'School Secretary / Registrar', female: 'School Secretary / Registrar', defaultChecked: false },
+  { id: 'bursar', category: 'operations', icon: '', male: 'School Accountant / Bursar', female: 'School Accountant / Bursar', defaultChecked: false },
+  { id: 'storekeeper', category: 'operations', icon: '', male: 'Storekeeper (Assets & Inventory)', female: 'Storekeeper (Assets & Inventory)', defaultChecked: false },
+  { id: 'security_officer', category: 'operations', icon: '', male: 'Security Officer (Gate & Exeats)', female: 'Security Officer (Gate & Exeats)', defaultChecked: false, boardingOnly: true },
 
   // 5. Stakeholder Portals
-  { id: 'parent', category: 'portal', icon: '👨‍👩‍👧', male: 'Parent / Guardian', female: 'Parent / Guardian', defaultChecked: false },
-  { id: 'student', category: 'portal', icon: '🎒', male: 'Student', female: 'Student', defaultChecked: false },
+  { id: 'parent', category: 'portal', icon: '', male: 'Parent / Guardian', female: 'Parent / Guardian', defaultChecked: false },
+  { id: 'student', category: 'portal', icon: '', male: 'Student', female: 'Student', defaultChecked: false },
 ];
 
 const GENDER_ROLE_ALIASES = {
@@ -89,12 +89,7 @@ function formatRoleTitle(name, gender = 'Male') {
 }
 
 function getRoleIcon(name) {
-  const clean = (name || '').toLowerCase();
-  const canonical = GENDER_ROLE_ALIASES[clean] || clean;
-  const found = UNIFIED_ROLES.find(r => r.id === canonical);
-  if (found) return found.icon;
-  if (clean === 'admin' || clean === 'super_admin') return '👑';
-  return '🏷️';
+  return '';
 }
 
 let allRawRoles = [];
@@ -132,12 +127,12 @@ async function loadRoles() {
     );
 
     const groups = {
-      executive: { title: '🏛️ School Executive & Leadership', items: [] },
-      academic: { title: '👨‍🏫 Teaching Faculty & Academics', items: [] },
-      boarding: { title: '🏡 Boarding & Pastoral Care', items: [] },
-      operations: { title: '💼 Operations, IT & Administration', items: [] },
-      portal: { title: '👥 Stakeholder Portals', items: [] },
-      custom: { title: '🌟 Custom Privileges', items: [] }
+      executive: { title: 'School Executive & Leadership', items: [] },
+      academic: { title: 'Teaching Faculty & Academics', items: [] },
+      boarding: { title: 'Boarding & Pastoral Care', items: [] },
+      operations: { title: 'Operations, IT & Administration', items: [] },
+      portal: { title: 'Stakeholder Portals', items: [] },
+      custom: { title: 'Custom Privileges', items: [] }
     };
 
     UNIFIED_ROLES.forEach(r => {
@@ -150,7 +145,7 @@ async function loadRoles() {
       groups[r.category].items.push({
         id: r.id,
         title,
-        icon: r.icon,
+        icon: '',
         isChecked: isChecked ? 'checked' : ''
       });
     });
@@ -171,7 +166,7 @@ async function loadRoles() {
         groups.custom.items.push({
           id: r.name,
           title,
-          icon: '🏷️',
+          icon: '',
           isChecked
         });
       }
@@ -188,7 +183,6 @@ async function loadRoles() {
               <label class="role-tile-card">
                 <input type="checkbox" name="user_role" value="${item.id}" ${item.isChecked} />
                 <div>
-                  <span style="font-size:1.05rem; margin-right:4px;">${item.icon}</span>
                   <span class="role-tile-title">${item.title}</span>
                 </div>
               </label>
@@ -343,7 +337,7 @@ function renderUserTable(users) {
     if (isParent) {
       const linked = allStudentsData.filter(s => String(s.parent_id) === String(u.id));
       childrenInfo = linked.length 
-        ? `<div style="font-size:0.75rem; color:#10b981; font-weight:600; margin-top:3px;">👨‍👩‍👧 Linked: ${linked.map(c=>c.full_name).join(', ')}</div>`
+        ? `<div style="font-size:0.75rem; color:#10b981; font-weight:600; margin-top:3px;">Linked: ${linked.map(c=>c.full_name).join(', ')}</div>`
         : `<div style="font-size:0.72rem; color:var(--text-secondary); margin-top:2px;">(No students linked)</div>`;
     }
 
@@ -364,14 +358,13 @@ function renderUserTable(users) {
     const rolePills = uniqueRolePills.length 
       ? uniqueRolePills.map(r => {
           const title = r.displayTitle;
-          const icon = getRoleIcon(r.name);
           const clean = (r.name || '').toLowerCase();
           const isExec = clean === 'admin' || clean === 'super_admin' || clean.includes('assistant_head') || clean.includes('headmaster') || clean.includes('headmistress');
           const bg = isExec ? 'rgba(239, 68, 68, 0.15)' : 'rgba(99, 102, 241, 0.15)';
           const border = isExec ? 'rgba(239, 68, 68, 0.4)' : 'rgba(99, 102, 241, 0.4)';
           const color = isExec ? '#fca5a5' : '#a5b4fc';
-          return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:${bg}; border:1px solid ${border}; color:${color}; margin:2px 4px 2px 0;">
-            <span>${icon}</span> ${title}
+          return `<span style="display:inline-flex; align-items:center; font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:${bg}; border:1px solid ${border}; color:${color}; margin:2px 4px 2px 0;">
+            ${title}
           </span>`;
         }).join('')
       : '<span style="font-size:0.75rem; color:var(--text-secondary);">No Role Assigned</span>';
@@ -388,7 +381,7 @@ function renderUserTable(users) {
       <button type="button" onclick="impersonateUser(${u.id}, '${escapeHtml(u.username)}')" 
               style="background:rgba(14, 165, 233, 0.2); border:1px solid rgba(14, 165, 233, 0.4); color:#38bdf8; padding:4px 9px; border-radius:5px; font-size:0.75rem; font-weight:600; cursor:pointer;" 
               title="Preview portal as ${u.username}">
-        👤 View As
+        View As
       </button>
     ` : '';
 
@@ -396,7 +389,7 @@ function renderUserTable(users) {
       <button type="button" onclick="openEditRolesModal(${u.id})" 
               style="background:rgba(99, 102, 241, 0.2); border:1px solid rgba(99, 102, 241, 0.4); color:#a5b4fc; padding:4px 9px; border-radius:5px; font-size:0.75rem; font-weight:600; cursor:pointer;" 
               title="Edit Assigned Roles">
-        ✏️ Roles
+        Roles
       </button>
     `;
 
@@ -404,7 +397,7 @@ function renderUserTable(users) {
       <button type="button" onclick="openResetPasswordModal(${u.id}, '${escapeHtml(u.username)}')" 
               style="background:rgba(234, 179, 8, 0.2); border:1px solid rgba(234, 179, 8, 0.4); color:#fde047; padding:4px 9px; border-radius:5px; font-size:0.75rem; font-weight:600; cursor:pointer;" 
               title="Reset Password">
-        🔑 Reset
+        Reset
       </button>
     `;
 
@@ -412,9 +405,11 @@ function renderUserTable(users) {
       <button type="button" onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')" 
               style="background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.35); color:#fca5a5; padding:4px 8px; border-radius:5px; font-size:0.75rem; font-weight:600; cursor:pointer;" 
               title="Delete Account">
-        🗑️
+        Delete
       </button>
     ` : '';
+
+    const staffIdBadge = u.staff_id ? `<div style="font-size:0.75rem; color:var(--primary-light, #818cf8); font-weight:600; margin-top:3px;">Staff ID: ${escapeHtml(u.staff_id)}</div>` : '';
 
     tableHtml += `
       <tr>
@@ -428,8 +423,9 @@ function renderUserTable(users) {
           </div>
         </td>
         <td>
-          <div style="font-size:0.83rem; color:var(--text-primary); font-weight:600;">${u.phone_number ? '📱 ' + escapeHtml(u.phone_number) : '<span style="opacity:0.5; font-weight:400;">No phone</span>'}</div>
-          <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:2px;">${u.email ? '📧 ' + escapeHtml(u.email) : '<span style="opacity:0.5;">No email</span>'}</div>
+          <div style="font-size:0.83rem; color:var(--text-primary); font-weight:600;">${u.phone_number ? escapeHtml(u.phone_number) : '<span style="opacity:0.5; font-weight:400;">No contact</span>'}</div>
+          <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:2px;">${u.email ? escapeHtml(u.email) : '<span style="opacity:0.5;">No email</span>'}</div>
+          ${staffIdBadge}
         </td>
         <td>
           <div style="display:flex; flex-wrap:wrap; align-items:center;">${rolePills}</div>
@@ -474,9 +470,11 @@ window.filterUserDirectory = function() {
     // Keyword match
     const usernameMatch = (u.username || '').toLowerCase().includes(query);
     const emailMatch = (u.email || '').toLowerCase().includes(query);
+    const staffIdMatch = (u.staff_id || '').toLowerCase().includes(query);
+    const phoneMatch = (u.phone_number || '').toLowerCase().includes(query);
     const roleMatchText = u.roles.some(r => formatRoleTitle(r.name, u.gender).toLowerCase().includes(query));
 
-    const matchesQuery = !query || usernameMatch || emailMatch || roleMatchText;
+    const matchesQuery = !query || usernameMatch || emailMatch || staffIdMatch || phoneMatch || roleMatchText;
 
     // Role filter match
     let matchesRole = true;
@@ -507,11 +505,13 @@ if (userForm) {
     }
 
     const phoneInput = document.getElementById('phoneNumber');
+    const staffIdInput = document.getElementById('staffId');
     const emailInput = document.getElementById('email');
 
     const payload = {
       username: document.getElementById('username').value.trim(),
       phone_number: phoneInput && phoneInput.value.trim() ? phoneInput.value.trim() : null,
+      staff_id: staffIdInput && staffIdInput.value.trim() ? staffIdInput.value.trim() : null,
       email: emailInput && emailInput.value.trim() ? emailInput.value.trim() : null,
       password: document.getElementById('password').value,
       gender: document.getElementById('userGender') ? document.getElementById('userGender').value : 'Male',
@@ -555,7 +555,7 @@ window.openEditRolesModal = function(userId) {
   if (!modal || !container) return;
 
   idInput.value = user.id;
-  if (title) title.textContent = `✏️ Edit Roles: ${user.username}`;
+  if (title) title.textContent = `Edit Roles: ${user.username}`;
   if (subtitle) subtitle.textContent = `Configure assigned permissions for ${user.username} (${user.email || 'No email'}) • ${user.gender || 'Male'}`;
 
   const isFemale = String(user.gender).toLowerCase().startsWith('f');
@@ -574,10 +574,12 @@ window.openEditRolesModal = function(userId) {
 
   const isBoarding = F ? F.showBoardingRoles : ((localStorage.getItem('boarding_status') || 'BOARDING_AND_DAY').toUpperCase() === 'BOARDING_AND_DAY');
   const isBasicOnly = F ? F.isBasicOnly : (localStorage.getItem('school_mode') === 'BASIC_ONLY');
+  const isPublicSchool = F ? F.isPublicSchool : ((localStorage.getItem('ownership_type') || 'PRIVATE').toUpperCase() === 'PUBLIC');
 
   const visibleUnified = UNIFIED_ROLES.filter(r => {
     if (r.boardingOnly && !isBoarding) return false;
     if (isBasicOnly && r.id === 'hod') return false;
+    if (r.privateOnly && isPublicSchool) return false;
     return true;
   });
 
@@ -595,7 +597,7 @@ window.openEditRolesModal = function(userId) {
   if (customRoles.length) {
     customHtml = `
       <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px;">
-        <div style="font-size:0.8rem; font-weight:700; color:var(--primary-light,#818cf8); margin-bottom:8px;">🌟 Custom Privileges</div>
+        <div style="font-size:0.8rem; font-weight:700; color:var(--primary-light,#818cf8); margin-bottom:8px;">Custom Privileges</div>
         <div class="role-tile-grid">
           ${customRoles.map(r => {
             const isChecked = userRoleNames.has(r.name.toLowerCase()) ? 'checked' : '';
@@ -603,7 +605,6 @@ window.openEditRolesModal = function(userId) {
               <label class="role-tile-card">
                 <input type="checkbox" name="edit_user_role" value="${r.name}" ${isChecked} />
                 <div>
-                  <span style="font-size:1.05rem; margin-right:4px;">🏷️</span>
                   <span class="role-tile-title">${formatRoleTitle(r.name, user.gender)}</span>
                 </div>
               </label>
@@ -623,7 +624,6 @@ window.openEditRolesModal = function(userId) {
           <label class="role-tile-card">
             <input type="checkbox" name="edit_user_role" value="${r.id}" ${isChecked} />
             <div>
-              <span style="font-size:1.05rem; margin-right:4px;">${r.icon}</span>
               <span class="role-tile-title">${roleTitle}</span>
             </div>
           </label>
@@ -724,7 +724,7 @@ window.saveNewPassword = async function() {
 
 window.deleteUser = async function(userId, username) {
   const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
-    '🗑️ Delete User Account',
+    'Delete User Account',
     `Are you sure you want to permanently delete user account "${username}"? This action cannot be undone.`,
     'Delete User',
     'Cancel',

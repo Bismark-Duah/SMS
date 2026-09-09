@@ -124,6 +124,7 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=True)
     phone_number = Column(String, nullable=True, index=True, default=None)
+    staff_id = Column(String(50), nullable=True, index=True, default=None)
     password_hash = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     is_first_login = Column(Boolean, default=True)

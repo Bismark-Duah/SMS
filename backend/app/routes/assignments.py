@@ -9,7 +9,12 @@ from ..dependencies import get_current_user, get_school_id
 
 router = APIRouter()
 
-def _get_school_mode(db: Session) -> str:
+def _get_school_mode(db: Session, school_id: Optional[int] = None) -> str:
+    if school_id:
+        from ..models import School
+        sch = db.query(School).filter(School.id == school_id).first()
+        if sch and sch.school_mode:
+            return sch.school_mode
     setting = db.query(Setting).filter(Setting.key == "school_mode").first()
     return setting.value if setting and setting.value else "COMBINED"
 
@@ -34,11 +39,14 @@ def _check_admin(current_user: User, allow_view: bool = False):
         raise HTTPException(status_code=403, detail="Only administrators or HODs can manage teacher assignments")
 
 @router.get("/", response_model=List[TeacherAssignmentDetail])
-def list_assignments(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_assignments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+):
     _check_admin(current_user, allow_view=True)
-    school_id = get_school_id(current_user)
     
-    mode = _get_school_mode(db)
+    mode = _get_school_mode(db, school_id)
     query = db.query(TeacherAssignment)
     if school_id is not None:
         query = query.join(TeacherAssignment.teacher).filter(User.school_id == school_id)
@@ -82,9 +90,13 @@ def list_assignments(db: Session = Depends(get_db), current_user: User = Depends
     return results
 
 @router.post("/", response_model=TeacherAssignmentDetail)
-def create_assignment(payload: TeacherAssignmentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_assignment(
+    payload: TeacherAssignmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+):
     _check_admin(current_user)
-    school_id = get_school_id(current_user)
     
     teacher_query = db.query(User).filter(User.id == payload.teacher_id)
     if school_id is not None:
@@ -232,9 +244,12 @@ def delete_assignment(assignment_id: int, db: Session = Depends(get_db), current
     return {"status": "success", "message": "Assignment removed"}
 
 @router.get("/privileges", response_model=List[TeacherPrivilegeDetail])
-def list_privileges(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_privileges(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+):
     _check_admin(current_user, allow_view=True)
-    school_id = get_school_id(current_user)
     
     results = []
 
@@ -386,7 +401,12 @@ def _helper_remove_role_if_unused(db: Session, user: User, role_name: str, check
             user.roles.remove(role)
 
 @router.post("/privilege", response_model=TeacherPrivilegeDetail)
-def create_privilege(payload: TeacherPrivilegeCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_privilege(
+    payload: TeacherPrivilegeCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+):
     _check_admin(current_user)
     
     teacher = db.query(User).filter(User.id == payload.teacher_id).first()

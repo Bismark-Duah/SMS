@@ -6,8 +6,11 @@ if (!token) {
 }
 
 function getHeaders(headers = {}) {
+  const currentToken = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') || localStorage.getItem('token');
   const h = { ...headers };
-  if (token) h['Authorization'] = `Bearer ${token}`;
+  if (currentToken) h['Authorization'] = `Bearer ${currentToken}`;
+  const schId = sessionStorage.getItem('selectedSchoolId') || sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+  if (schId && schId !== 'all') h['X-School-Id'] = String(schId);
   return h;
 }
 

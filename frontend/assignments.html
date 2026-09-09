@@ -17,19 +17,31 @@
           <p style="margin:0;opacity:.7;font-size:.85rem;">Manage teacher subject allocations, class sections, and leadership roles.</p>
         </div>
         <div style="display:flex; gap:10px; align-items:center; margin-left:auto; flex-wrap:wrap;">
-          <button type="button" id="btnOpenPrimaryFastAssign" class="btn" onclick="openPrimaryFastAssignModal()" style="font-size:0.85rem; padding:6px 14px; background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; font-weight:600; display:none;">⚡ 1-Click Primary Class Allocation</button>
-          <button type="button" class="btn" onclick="printStaffWorkloadRegister()" style="font-size:0.85rem; padding:6px 12px;">🖨️ Print Workload Roster</button>
-          <button type="button" class="btn" onclick="openCopyWorkloadModal()" style="font-size:0.85rem; padding:6px 12px;">🔄 Copy to Next Term</button>
+          <button type="button" id="btnOpenPrimaryFastAssign" class="btn" onclick="openPrimaryFastAssignModal()" style="font-size:0.85rem; padding:6px 14px; background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; font-weight:600; display:none;">1-Click Primary Class Allocation</button>
+          <button type="button" class="btn" onclick="printStaffWorkloadRegister()" style="font-size:0.85rem; padding:6px 12px;">Print Workload Roster</button>
+          <button type="button" class="btn" onclick="openCopyWorkloadModal()" style="font-size:0.85rem; padding:6px 12px;">Copy to Next Term</button>
           <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
+
+      <!-- Super Admin Multi-Tenant Filter Bar -->
+      <div id="assignmentSchoolFilterContainer" style="display:none; margin-top:16px; margin-bottom:4px; padding:12px 16px; background:rgba(99,102,241,0.08); border-radius:8px; border:1px solid rgba(99,102,241,0.2); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:0.88rem; font-weight:700; color:var(--text-primary);">Active School Scope:</span>
+          <span id="activeSchoolModeBadge" style="font-size:0.75rem; padding:2px 8px; border-radius:12px; background:rgba(99,102,241,0.2); color:#818cf8; font-weight:600;">Loading Scope...</span>
+        </div>
+        <select id="assignmentSchoolFilterSelect" onchange="window.onAssignmentSchoolFilterChange(this.value)" style="padding:6px 12px; font-size:0.82rem; font-weight:600; border-radius:6px; background:var(--input-bg, #ffffff); border:1px solid var(--border-color); color:var(--text-primary); cursor:pointer;">
+          <option value="">Select School...</option>
+        </select>
+      </div>
+
       <!-- Main Content Container -->
       <div style="display: flex; flex-direction: column; gap: 24px; margin-top: 16px;">
         
         <!-- Top Creation Form Card -->
         <section class="card" style="width: 100%;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-            <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary);">➕ Assign Teacher or Administrative Privilege</h3>
+            <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary);">Assign Teacher or Administrative Privilege</h3>
             <span style="font-size: 0.8rem; opacity: 0.7;">Select a staff member and assign teaching subjects or leadership roles</span>
           </div>
 
@@ -42,9 +54,9 @@
 
             <label>Assignment Category
               <select id="assignmentTypeSelect">
-                <option value="teaching">📘 Subject Teaching Assignment</option>
-                <option value="privilege">🎗️ Administrative / Co-curricular Privilege</option>
-                <option value="both">⚡ Both (Teaching & Administrative Privilege)</option>
+                <option value="teaching">Subject Teaching Assignment</option>
+                <option value="privilege">Administrative / Co-curricular Privilege</option>
+                <option value="both">Both (Teaching &amp; Administrative Privilege)</option>
               </select>
             </label>
 
@@ -55,7 +67,7 @@
             <!-- Multi-Class Checkbox Container -->
             <div id="multiClassWrapper" style="grid-column: 1 / -1; background: rgba(255,255,255,0.02); padding: 14px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.08);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">
-                <strong style="font-size: 0.92rem; color: var(--text-primary);">🏫 Select Target Class Section(s)</strong>
+                <strong style="font-size: 0.92rem; color: var(--text-primary);">Select Target Class Section(s)</strong>
                 <div style="display: flex; gap: 8px;">
                   <button type="button" id="selectAllClassesBtn" class="btn sm" style="padding: 2px 8px; font-size: 0.78rem;">Select All</button>
                   <button type="button" id="clearAllClassesBtn" class="btn sm" style="padding: 2px 8px; font-size: 0.78rem;">Clear All</button>
@@ -72,11 +84,11 @@
               <div id="multiSubjectWrapper" style="grid-column: 1 / -1; background: rgba(255,255,255,0.02); padding: 14px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.08);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; flex-wrap:wrap; gap:8px;">
                   <div style="display:flex; align-items:center; gap:8px;">
-                    <strong style="font-size: 0.92rem; color: var(--text-primary);">📚 Select Teaching Subject(s)</strong>
+                    <strong style="font-size: 0.92rem; color: var(--text-primary);">Select Teaching Subject(s)</strong>
                     <span id="deptFilterIndicator" style="display:none; font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.3); color:#38bdf8;"></span>
                   </div>
                   <div style="display: flex; gap: 8px; align-items:center;">
-                    <button type="button" id="toggleAllSubjectsBtn" class="btn sm" style="display:none; padding: 3px 9px; font-size: 0.78rem; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);" onclick="toggleSubjectDeptFilter()">🌐 Show All Subjects</button>
+                    <button type="button" id="toggleAllSubjectsBtn" class="btn sm" style="display:none; padding: 3px 9px; font-size: 0.78rem; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);" onclick="toggleSubjectDeptFilter()">Show All Subjects</button>
                     <button type="button" id="selectAllSubjectsBtn" class="btn sm" style="padding: 2px 8px; font-size: 0.78rem;">Select All</button>
                     <button type="button" id="clearAllSubjectsBtn" class="btn sm" style="padding: 2px 8px; font-size: 0.78rem;">Clear All</button>
                   </div>
@@ -126,8 +138,8 @@
             </div>
 
             <div style="grid-column: 1 / -1; display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px;">
-              <button type="button" class="btn" onclick="resetEntireForm()">🧹 Reset Form</button>
-              <button type="submit" class="btn primary" style="min-width: 200px;">⚡ Save All Assignments</button>
+              <button type="button" class="btn" onclick="resetEntireForm()">Reset Form</button>
+              <button type="submit" class="btn primary" style="min-width: 200px;">Save All Assignments</button>
             </div>
           </form>
         </section>
@@ -137,19 +149,19 @@
           <!-- Filter Navigation Pills -->
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button id="filterRoleAll" class="btn primary sm" onclick="setWorkloadRoleFilter('all')" style="font-size: 0.85rem; padding: 4px 12px;">👥 All Staff</button>
-              <button id="filterRoleHod" class="btn sm" onclick="setWorkloadRoleFilter('hod')" style="font-size: 0.85rem; padding: 4px 12px;">🏢 Heads of Dept (HODs)</button>
-              <button id="filterRoleFormMaster" class="btn sm" onclick="setWorkloadRoleFilter('form_master')" style="font-size: 0.85rem; padding: 4px 12px;">⭐ Form Masters / Tutors</button>
-              <button id="filterRoleHouseMaster" class="btn sm" onclick="setWorkloadRoleFilter('house_master')" style="font-size: 0.85rem; padding: 4px 12px;">🏠 House Supervisors</button>
-              <button id="filterRoleUnassigned" class="btn sm" onclick="setWorkloadRoleFilter('unassigned')" style="font-size: 0.85rem; padding: 4px 12px;">⚠️ Unassigned Staff</button>
+              <button id="filterRoleAll" class="btn primary sm" onclick="setWorkloadRoleFilter('all')" style="font-size: 0.85rem; padding: 4px 12px;">All Staff</button>
+              <button id="filterRoleHod" class="btn sm" onclick="setWorkloadRoleFilter('hod')" style="font-size: 0.85rem; padding: 4px 12px;">Heads of Dept (HODs)</button>
+              <button id="filterRoleFormMaster" class="btn sm" onclick="setWorkloadRoleFilter('form_master')" style="font-size: 0.85rem; padding: 4px 12px;">Form Masters / Tutors</button>
+              <button id="filterRoleHouseMaster" class="btn sm" onclick="setWorkloadRoleFilter('house_master')" style="font-size: 0.85rem; padding: 4px 12px;">House Supervisors</button>
+              <button id="filterRoleUnassigned" class="btn sm" onclick="setWorkloadRoleFilter('unassigned')" style="font-size: 0.85rem; padding: 4px 12px;">Unassigned Staff</button>
             </div>
-            <button id="tabPrivilegesBtn" class="btn sm" onclick="toggleAssignmentTab()" style="font-size: 0.82rem; padding: 4px 10px; opacity: 0.85;">🎗️ View Raw Privileges Table</button>
+            <button id="tabPrivilegesBtn" class="btn sm" onclick="toggleAssignmentTab()" style="font-size: 0.82rem; padding: 4px 10px; opacity: 0.85;">View Raw Privileges Table</button>
           </div>
           
           <!-- Teaching Assignments Tab Pane -->
           <div id="tabTeachingPane">
             <div style="display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap;">
-              <input type="text" id="filterAssignmentSearch" name="search_assignment_no_autofill" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" value="" placeholder="🔍 Search teacher name, subject, or class section..." style="flex: 1; min-width: 240px; padding: 8px 14px; font-size: 0.88rem; border-radius: 6px; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary);" oninput="filterTeachingAssignments()" />
+              <input type="text" id="filterAssignmentSearch" name="search_assignment_no_autofill" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" value="" placeholder="Search teacher name, subject, or class section..." style="flex: 1; min-width: 240px; padding: 8px 14px; font-size: 0.88rem; border-radius: 6px; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary);" oninput="filterTeachingAssignments()" />
             </div>
             <div id="assignmentsList">Loading consolidated teacher workloads...</div>
           </div>
@@ -171,7 +183,7 @@
         <div style="flex-shrink:0; padding:20px 24px 16px 24px; border-bottom:1px solid rgba(255,255,255,0.1); background:#1e293b;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
-              <h3 style="margin:0 0 4px 0; font-size:1.1rem; color:#f8fafc; font-weight:600;" id="editModalTeacherName">✏ Edit Teacher Workload</h3>
+              <h3 style="margin:0 0 4px 0; font-size:1.1rem; color:#f8fafc; font-weight:600;" id="editModalTeacherName">Edit Teacher Workload</h3>
               <span style="font-size:0.8rem; color:#94a3b8;" id="editModalTeacherSub">Manage all subject &amp; class section allocations for staff member</span>
             </div>
             <button class="btn sm" onclick="closeEditAssignmentModal()" style="padding:4px 10px; flex-shrink:0; margin-left:16px;">✕ Close</button>
@@ -185,7 +197,7 @@
 
           <!-- Section 1: Active Workload Table -->
           <div style="margin-bottom:24px;">
-            <h4 style="margin:0 0 10px 0; font-size:0.9rem; font-weight:600; color:#60a5fa; text-transform:uppercase; letter-spacing:0.05em;">📘 Current Teaching Allocations</h4>
+            <h4 style="margin:0 0 10px 0; font-size:0.9rem; font-weight:600; color:#60a5fa; text-transform:uppercase; letter-spacing:0.05em;">Current Teaching Allocations</h4>
             <div id="modalActiveWorkloadContainer" style="background:rgba(15,23,42,0.5); border-radius:8px; border:1px solid rgba(255,255,255,0.08); overflow:hidden;">
               Loading allocations...
             </div>
@@ -195,7 +207,7 @@
 
           <!-- Section 2: Add New Allocations -->
           <div>
-            <h4 style="margin:0 0 14px 0; font-size:0.9rem; font-weight:600; color:#f8fafc; text-transform:uppercase; letter-spacing:0.05em;">➕ Add New Teaching Allocations</h4>
+            <h4 style="margin:0 0 14px 0; font-size:0.9rem; font-weight:600; color:#f8fafc; text-transform:uppercase; letter-spacing:0.05em;">Add New Teaching Allocations</h4>
             <form id="editModalAddForm" onsubmit="submitAddWorkloadInModal(event)" style="display:flex; flex-direction:column; gap:16px;">
 
               <div style="display:flex; flex-direction:column; gap:6px;">
@@ -217,7 +229,7 @@
 
               <div style="display:flex; justify-content:flex-end; gap:10px; padding-top:4px;">
                 <button type="button" class="btn" onclick="closeEditAssignmentModal()">Cancel</button>
-                <button type="submit" class="btn primary" style="min-width:170px;">➕ Add Selected Allocations</button>
+                <button type="submit" class="btn primary" style="min-width:170px;">Add Selected Allocations</button>
               </div>
 
             </form>
@@ -231,11 +243,11 @@
     <div id="copyWorkloadModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
       <div class="modal-content" style="background:var(--card-bg, #1e293b); width:90%; max-width:480px; border-radius:12px; padding:24px; border:1px solid var(--border-color); box-shadow:0 10px 40px rgba(0,0,0,0.5);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
-          <h3 style="margin:0; font-size:1.1rem; color:var(--text-primary);">🔄 Copy Workload to Next Term</h3>
+          <h3 style="margin:0; font-size:1.1rem; color:var(--text-primary);">Copy Workload to Next Term</h3>
           <button class="btn sm" onclick="closeCopyWorkloadModal()" style="padding:2px 8px;">✕</button>
         </div>
         <form id="copyWorkloadForm" onsubmit="submitCopyWorkload(event)" style="display:flex; flex-direction:column; gap:14px;">
-          <p style="font-size:0.85rem; opacity:0.85; margin:0;">Select the source term and the target term to automatically copy all teacher subject & class allocations forward.</p>
+          <p style="font-size:0.85rem; opacity:0.85; margin:0;">Select the source term and the target term to automatically copy all teacher subject &amp; class allocations forward.</p>
 
           <label style="font-size:0.85rem; display:flex; flex-direction:column; gap:4px;">Source Term (Copy From)
             <select id="copyFromSemesterSelect" required style="width:100%; padding:8px; border-radius:6px; background:var(--bg-dark); border:1px solid var(--border-color); color:var(--text-primary);"></select>
@@ -257,12 +269,9 @@
     <div id="primaryFastAssignModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
       <div class="modal-content" style="background:var(--card-bg, #1e293b); width:92%; max-width:540px; border-radius:14px; padding:24px; border:1px solid rgba(16,185,129,0.3); box-shadow:0 12px 40px rgba(0,0,0,0.5);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:1.4rem;">⚡</span>
-            <div>
-              <h3 style="margin:0; font-size:1.1rem; color:#34d399;">1-Click Primary Class Teacher Allocation</h3>
-              <p style="margin:2px 0 0; font-size:0.78rem; opacity:0.75;">Assign a teacher as Class Teacher and bind them to all class subjects in one click.</p>
-            </div>
+          <div>
+            <h3 style="margin:0; font-size:1.1rem; color:#34d399;">1-Click Primary Class Teacher Allocation</h3>
+            <p style="margin:2px 0 0; font-size:0.78rem; opacity:0.75;">Assign a teacher as Class Teacher and bind them to all class subjects in one click.</p>
           </div>
           <button class="btn sm" onclick="closePrimaryFastAssignModal()" style="padding:2px 8px;">✕</button>
         </div>
@@ -281,7 +290,7 @@
           </label>
 
           <div id="fastAssignNotice" style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); padding:10px 12px; border-radius:8px; font-size:0.8rem; color:#a7f3d0;">
-            💡 <strong>How this works:</strong> This teacher will be designated as the official <strong>Class Teacher</strong> and automatically assigned to teach all active subjects (English, Maths, Science, OWOP, RME, Computing, etc.) for this stream.
+            <strong>How this works:</strong> This teacher will be designated as the official <strong>Class Teacher</strong> and automatically assigned to teach all active subjects (English, Maths, Science, OWOP, RME, Computing, etc.) for this stream.
           </div>
 
           <div id="fastAssignMsg" style="font-size:0.85rem;"></div>
@@ -289,7 +298,7 @@
           <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
             <button type="button" class="btn" onclick="closePrimaryFastAssignModal()">Cancel</button>
             <button type="submit" id="btnRunFastAssign" class="btn primary" style="background:linear-gradient(135deg, #10b981, #059669); border:none; font-weight:700; min-width:180px;">
-              ⚡ Assign to All Subjects
+              Assign to All Subjects
             </button>
           </div>
         </form>

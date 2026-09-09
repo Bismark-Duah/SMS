@@ -5,12 +5,92 @@ if (!token) {
   window.location.href = 'auth.html';
 }
 
+let selectedSchoolFilter = sessionStorage.getItem('selectedSchoolId') || sessionStorage.getItem('school_id') || localStorage.getItem('school_id') || '';
+
 function getHeaders(headers = {}) {
-  const currentToken = localStorage.getItem('accessToken');
+  const currentToken = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
   const h = { ...headers };
   if (currentToken) h['Authorization'] = `Bearer ${currentToken}`;
+  if (selectedSchoolFilter && selectedSchoolFilter !== 'all') {
+    h['X-School-Id'] = String(selectedSchoolFilter);
+  } else {
+    const schId = sessionStorage.getItem('selectedSchoolId') || sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+    if (schId && schId !== 'all') h['X-School-Id'] = String(schId);
+  }
   return h;
 }
+
+async function setupSuperAdminSchoolFilter() {
+  const rawRolesStr = sessionStorage.getItem('userRoles') || localStorage.getItem('userRoles');
+  const userRoles = rawRolesStr ? JSON.parse(rawRolesStr).map(r => r.toLowerCase()) : [(localStorage.getItem('userRole') || '').toLowerCase()];
+  const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin' || userRoles.includes('super_admin');
+  
+  const filterContainer = document.getElementById('assignmentSchoolFilterContainer');
+  const filterSelect = document.getElementById('assignmentSchoolFilterSelect');
+  const modeBadge = document.getElementById('activeSchoolModeBadge');
+
+  if (!isSuperAdmin || !filterContainer || !filterSelect) return;
+
+  filterContainer.style.display = 'flex';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools`, {
+      headers: getHeaders()
+    });
+    if (res.ok) {
+      const schools = await res.json();
+      if (schools && schools.length > 0) {
+        if (!selectedSchoolFilter || selectedSchoolFilter === 'all') {
+          selectedSchoolFilter = String(schools[0].id);
+          sessionStorage.setItem('school_id', selectedSchoolFilter);
+          sessionStorage.setItem('selectedSchoolId', selectedSchoolFilter);
+          localStorage.setItem('school_id', selectedSchoolFilter);
+        }
+        let optionsHtml = '';
+        schools.forEach(s => {
+          optionsHtml += `<option value="${s.id}" ${String(selectedSchoolFilter) === String(s.id) ? 'selected' : ''}>${s.name} (${s.code || 'SCH'})</option>`;
+        });
+        filterSelect.innerHTML = optionsHtml;
+
+        const activeSch = schools.find(s => String(s.id) === String(selectedSchoolFilter)) || schools[0];
+        if (modeBadge && activeSch) {
+          const modeLabel = activeSch.school_mode === 'BASIC_ONLY' ? 'Basic School Mode' : (activeSch.school_mode === 'SHS_ONLY' ? 'SHS Mode' : 'Combined Mode');
+          modeBadge.textContent = modeLabel;
+        }
+      }
+    }
+  } catch (_) {}
+}
+
+window.onAssignmentSchoolFilterChange = async function(val) {
+  selectedSchoolFilter = val;
+  sessionStorage.setItem('school_id', val);
+  sessionStorage.setItem('selectedSchoolId', val);
+  localStorage.setItem('school_id', val);
+
+  const filterSelect = document.getElementById('assignmentSchoolFilterSelect');
+  const modeBadge = document.getElementById('activeSchoolModeBadge');
+  if (modeBadge) {
+    modeBadge.textContent = 'Updating Scope...';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools`, { headers: getHeaders() });
+    if (res.ok) {
+      const schools = await res.json();
+      const activeSch = schools.find(s => String(s.id) === String(val));
+      if (modeBadge && activeSch) {
+        const modeLabel = activeSch.school_mode === 'BASIC_ONLY' ? 'Basic School Mode' : (activeSch.school_mode === 'SHS_ONLY' ? 'SHS Mode' : 'Combined Mode');
+        modeBadge.textContent = modeLabel;
+      }
+    }
+  } catch (_) {}
+
+  await loadDropdowns();
+  await loadAssignments();
+  await loadPrivileges();
+  filterTeachingAssignments();
+};
 
 const _ADMIN_ROLES = new Set([
   'admin', 'super_admin', 'headmaster', 'headmistress',
@@ -72,7 +152,7 @@ async function loadDropdowns() {
       const assignTypeSelect = document.getElementById('assignmentTypeSelect');
       if (assignTypeSelect) {
         assignTypeSelect.innerHTML = `
-          <option value="teaching" selected>📘 Subject Teaching Assignment (HOD Scope)</option>
+          <option value="teaching" selected>Subject Teaching Assignment (HOD Scope)</option>
         `;
         assignTypeSelect.disabled = true;
       }
@@ -117,7 +197,7 @@ function renderClassCheckboxes() {
   if (!cbClassContainer) return;
 
   if (allClasses.length === 0) {
-    cbClassContainer.innerHTML = '<span style="opacity:0.6; font-style:italic; font-size:0.85rem;">No class sections available.</span>';
+    cbClassContainer.innerHTML = '<span style="opacity:0.6; font-style:italic; font-size:0.85rem;">No class sections available for selected school.</span>';
     return;
   }
 
@@ -130,7 +210,7 @@ function renderClassCheckboxes() {
                  cursor:pointer; transition:all 0.15s ease; user-select:none;">
           <input type="checkbox" class="assign-class-cb" value="${c.id}" data-name="${c.name}" style="display:none;" />
           <span class="assign-chip-check" style="width:14px; height:14px; border-radius:3px; border:1.5px solid rgba(255,255,255,0.3); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px; transition:all 0.15s;"></span>
-          <span style="font-size:0.82rem; font-weight:500; color:#f1f5f9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🏫 ${c.name}</span>
+          <span style="font-size:0.82rem; font-weight:500; color:#f1f5f9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</span>
         </label>
       `).join('')}
     </div>
@@ -1231,7 +1311,7 @@ function openEditTeacherWorkloadModal(teacherId) {
   const teacherName = teacher ? (teacher.full_name || teacher.username) : 'Staff Member';
 
   document.getElementById('editModalTeacherId').value = teacherId;
-  document.getElementById('editModalTeacherName').textContent = `✏ Edit Workload — ${teacherName}`;
+  document.getElementById('editModalTeacherName').textContent = `Edit Workload — ${teacherName}`;
   document.getElementById('editModalTeacherSub').textContent = `Managing all subject & class section allocations for ${teacherName}`;
 
   // Populate semester select in modal
@@ -1258,7 +1338,7 @@ function openEditTeacherWorkloadModal(teacherId) {
             <label class="modal-chip-label" onclick="handleModalChipToggle(this, 'modal-class-cb', handleModalClassCheckboxChange)" style="display:flex; align-items:center; gap:6px; padding:7px 10px; border-radius:7px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); cursor:pointer; transition:all 0.15s ease; user-select:none;">
               <input type="checkbox" class="modal-class-cb" value="${c.id}" style="display:none;" />
               <span class="chip-check" style="width:14px; height:14px; border-radius:3px; border:1.5px solid rgba(255,255,255,0.3); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px; transition:all 0.15s;"></span>
-              <span style="font-size:0.8rem; font-weight:500; color:#f1f5f9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🏫 ${c.name}</span>
+              <span style="font-size:0.8rem; font-weight:500; color:#f1f5f9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</span>
             </label>
           `).join('')}
         </div>
@@ -1303,11 +1383,11 @@ function renderModalActiveWorkload(teacherId) {
         <tbody>
           ${tAsgns.map(a => `
             <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-              <td style="padding:8px 10px;"><strong>📘 ${a.subject_name}</strong></td>
+              <td style="padding:8px 10px;"><strong>${a.subject_name}</strong></td>
               <td style="padding:8px 10px;"><span style="background:rgba(59,130,246,0.15); color:var(--text-primary); padding:2px 8px; border-radius:4px; border:1px solid rgba(59,130,246,0.3);">${a.class_section_name}</span></td>
               <td style="padding:8px 10px; opacity:0.85;">${a.semester_name || 'General'}</td>
               <td style="padding:8px 10px; text-align:center;">
-                <button type="button" class="btn sm danger" onclick="deleteAssignmentFromModal(${a.id}, ${teacherId})" style="padding:2px 8px; font-size:0.75rem;">🗑 Remove</button>
+                <button type="button" class="btn sm danger" onclick="deleteAssignmentFromModal(${a.id}, ${teacherId})" style="padding:2px 8px; font-size:0.75rem;">Remove</button>
               </td>
             </tr>
           `).join('')}
@@ -1319,7 +1399,7 @@ function renderModalActiveWorkload(teacherId) {
 
 async function deleteAssignmentFromModal(assignmentId, teacherId) {
   const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
-    '🗑️ Remove Allocation',
+    'Remove Allocation',
     'Are you sure you want to remove this teaching allocation?',
     'Remove Allocation',
     'Cancel',
@@ -1382,7 +1462,7 @@ async function handleModalClassCheckboxChange() {
             <input type="checkbox" class="modal-subject-cb" value="${s.id}" style="display:none;" />
             <span class="chip-check" style="margin-top:2px; width:14px; height:14px; border-radius:3px; border:1.5px solid rgba(255,255,255,0.3); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px; transition:all 0.15s;"></span>
             <div>
-              <div style="font-size:0.8rem; font-weight:600; color:#f1f5f9; line-height:1.3;">📘 ${s.name}</div>
+              <div style="font-size:0.8rem; font-weight:600; color:#f1f5f9; line-height:1.3;">${s.name}</div>
               <div style="font-size:0.72rem; color:#64748b; margin-top:1px;">${s.code || 'Core'}</div>
             </div>
           </label>
@@ -1681,6 +1761,7 @@ window.closePrimaryFastAssignModal = closePrimaryFastAssignModal;
 window.submitPrimaryFastAssign = submitPrimaryFastAssign;
 
 async function initAssignmentsPage() {
+  await setupSuperAdminSchoolFilter();
   await loadDropdowns();
   await loadAssignments();
   await loadPrivileges();

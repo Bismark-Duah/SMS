@@ -21,8 +21,8 @@ def _get_school_mode(db: Session, school_id: Optional[int] = None) -> str:
 def list_stages(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
-    school_id = get_school_id(current_user)
     mode = _get_school_mode(db, school_id)
     query = db.query(SchoolStage)
     if school_id is not None and hasattr(SchoolStage, "school_id"):
@@ -38,8 +38,8 @@ def create_stage(
     payload: SchoolStageCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
-    school_id = get_school_id(current_user)
     data = payload.dict()
     if school_id is not None and hasattr(SchoolStage, "school_id"):
         data["school_id"] = school_id
@@ -54,11 +54,12 @@ def create_stage(
 def get_my_classes(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
     from ..dependencies import get_user_assigned_scope
     scope = get_user_assigned_scope(current_user, db)
     if scope["is_admin"]:
-        return list_sections(db=db, current_user=current_user)
+        return list_sections(db=db, current_user=current_user, school_id=school_id)
     if not scope["class_ids"]:
         return []
     sections = db.query(ClassSection).filter(ClassSection.id.in_(scope["class_ids"])).all()
@@ -82,6 +83,7 @@ def get_my_classes(
 def get_my_form_classes(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
     """
     Returns only the class sections where the logged-in user is assigned as Form Master.
@@ -93,7 +95,7 @@ def get_my_form_classes(
 
     # Admins get all classes
     if form_class_ids is None:
-        return list_sections(db=db, current_user=current_user)
+        return list_sections(db=db, current_user=current_user, school_id=school_id)
 
     if not form_class_ids:
         return []
@@ -119,10 +121,10 @@ def get_my_form_classes(
 def list_sections(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
     from ..dependencies import get_user_assigned_scope
 
-    school_id = get_school_id(current_user)
     mode = _get_school_mode(db, school_id)
     query = db.query(ClassSection).join(ClassSection.stage)
     if school_id is not None and hasattr(ClassSection, "school_id"):
@@ -168,8 +170,8 @@ def create_section(
     payload: ClassSectionCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
-    school_id = get_school_id(current_user)
     section_kwargs = {
         "name": payload.name,
         "stage_id": payload.stage_id,
@@ -199,8 +201,8 @@ def get_section(
     section_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
-    school_id = get_school_id(current_user)
     query = db.query(ClassSection).filter(ClassSection.id == section_id)
     if school_id is not None and hasattr(ClassSection, "school_id"):
         query = query.filter(ClassSection.school_id == school_id)
@@ -225,8 +227,8 @@ def update_section(
     payload: ClassSectionCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
-    school_id = get_school_id(current_user)
     query = db.query(ClassSection).filter(ClassSection.id == section_id)
     if school_id is not None and hasattr(ClassSection, "school_id"):
         query = query.filter(ClassSection.school_id == school_id)
@@ -258,8 +260,8 @@ def get_class_subjects(
     raw: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
-    school_id = get_school_id(current_user)
     query = db.query(ClassSection).filter(ClassSection.id == section_id)
     if school_id is not None and hasattr(ClassSection, "school_id"):
         query = query.filter(ClassSection.school_id == school_id)
@@ -309,8 +311,8 @@ def set_class_subjects(
     payload: list[int],
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
-    school_id = get_school_id(current_user)
     query = db.query(ClassSection).filter(ClassSection.id == section_id)
     if school_id is not None and hasattr(ClassSection, "school_id"):
         query = query.filter(ClassSection.school_id == school_id)
@@ -370,8 +372,8 @@ def delete_section(
     section_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
-    school_id = get_school_id(current_user)
     query = db.query(ClassSection).filter(ClassSection.id == section_id)
     if school_id is not None and hasattr(ClassSection, "school_id"):
         query = query.filter(ClassSection.school_id == school_id)
@@ -409,12 +411,12 @@ def batch_create_arms(
     payload: BatchArmCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
     """
     Enterprise Batch Class & Arm Provisioner.
     Generates multiple arms for a stage/program in 1 click (e.g. Form 1 Science 1, 2, 3 or KG 1A, 1B).
     """
-    school_id = get_school_id(current_user)
     stage = db.query(SchoolStage).filter(SchoolStage.id == payload.stage_id).first()
     if not stage:
         raise HTTPException(status_code=404, detail="Selected stage not found")
@@ -495,13 +497,13 @@ def smart_class_preview(
     naming_style: str = "AUTO",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
     """
     Simulates and previews capacity-driven class allocations based on real student enrollment counts,
     active school mode, programs, and elective combinations.
     """
     from ..models import Student, Program
-    school_id = get_school_id(current_user)
     mode = _get_school_mode(db, school_id)
 
     students_query = db.query(Student)
@@ -629,6 +631,7 @@ def smart_class_generate(
     payload: SmartGenerateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
     """
     Executes the capacity-driven and elective-combination-aware class generator.
@@ -638,10 +641,10 @@ def smart_class_generate(
         target_capacity=payload.target_capacity,
         naming_style=payload.naming_style,
         db=db,
-        current_user=current_user
+        current_user=current_user,
+        school_id=school_id
     )
 
-    school_id = get_school_id(current_user)
     proposals = preview_data["proposals"]
 
     created_classes_total = 0
@@ -798,14 +801,15 @@ class ProvisionBasicStreamsRequest(BaseModel):
 def provision_ges_basic_streams(
     payload: ProvisionBasicStreamsRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
 ):
     """
     Auto-provisions standard GES Basic School stages (Creche, Nursery, KG, Primary, JHS),
     creates stream sections (Single stream vs. Arms A, B, C, D), and automatically binds
     standard NaCCA curriculum core subjects.
     """
-    target_sch_id = payload.school_id or get_school_id(current_user)
+    target_sch_id = payload.school_id or school_id
 
     # 1. Resolve or create Standard GES Basic stages for this school
     stages_to_ensure = [

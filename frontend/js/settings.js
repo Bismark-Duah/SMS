@@ -652,12 +652,11 @@ if (schoolLogoFile) {
 
             localStorage.setItem('school_logo', data.logo_url);
 
-            // Update Topbar and Sidebar live in DOM
+            // Update Sidebar live in DOM (and clean up any header logo)
             const schAbbr = localStorage.getItem('school_abbreviation') || 'SMS';
             const topbarLogoContainer = document.getElementById('topbarLogoContainer');
-            if (topbarLogoContainer) {
-                topbarLogoContainer.innerHTML = `<img src="${data.logo_url}" alt="${schAbbr}" class="topbar-logo-img" style="height:34px; width:34px; object-fit:cover; border-radius:8px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15);" onerror="this.outerHTML = window.createDefaultCrestSvg ? window.createDefaultCrestSvg('${schAbbr}', 34) : '';" />`;
-            }
+            if (topbarLogoContainer) topbarLogoContainer.remove();
+
             const sidebarHeader = document.querySelector('.sidebar-header');
             if (sidebarHeader) {
                 const existingSidebarLogo = sidebarHeader.querySelector('.sidebar-logo-img, .school-crest-svg, .sidebar-header > span:first-child');
@@ -713,9 +712,8 @@ window.resetSchoolLogo = async function() {
 
             const schAbbr = localStorage.getItem('school_abbreviation') || 'SMS';
             const topbarLogoContainer = document.getElementById('topbarLogoContainer');
-            if (topbarLogoContainer && window.createDefaultCrestSvg) {
-                topbarLogoContainer.innerHTML = window.createDefaultCrestSvg(schAbbr, 34);
-            }
+            if (topbarLogoContainer) topbarLogoContainer.remove();
+
             const sidebarHeader = document.querySelector('.sidebar-header');
             if (sidebarHeader && window.createDefaultCrestSvg) {
                 const existing = sidebarHeader.querySelector('.sidebar-logo-img, .school-crest-svg');

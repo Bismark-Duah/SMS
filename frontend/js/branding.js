@@ -104,26 +104,10 @@ window.applyBranding = async function(overrideSettings) {
         }
       }
 
-      // Clean up any legacy or duplicate .topbar-logo elements
-      topbar.querySelectorAll('.topbar-logo').forEach(el => el.remove());
-
-      if (!logoContainer && nameEl && nameEl.parentElement) {
-        const lDiv = document.createElement('div');
-        lDiv.id = 'topbarLogoContainer';
-        lDiv.className = 'topbar-brand-logo';
-        nameEl.parentElement.prepend(lDiv);
-        logoContainer = lDiv;
-      }
-
-      if (logoContainer) {
-        if (isSuperAdmin && !isViewing) {
-          logoContainer.innerHTML = `<span style="font-size:1.4rem; flex-shrink:0;" title="Master System Portal">🌐</span>`;
-        } else if (s.school_logo) {
-          logoContainer.innerHTML = `<img src="${s.school_logo}" alt="${currentSchoolAbbr || 'School Logo'}" class="topbar-logo-img" style="height:34px; width:34px; object-fit:cover; border-radius:8px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15);" onerror="this.outerHTML = window.createDefaultCrestSvg('${currentSchoolAbbr}', 34);" />`;
-        } else {
-          logoContainer.innerHTML = window.createDefaultCrestSvg(currentSchoolAbbr, 34);
-        }
-      }
+      // Clean up any legacy or duplicate .topbar-logo or #topbarLogoContainer elements from topbar header
+      topbar.querySelectorAll('.topbar-logo, #topbarLogoContainer, .topbar-brand-logo').forEach(el => el.remove());
+      const existingLogoContainer = document.getElementById('topbarLogoContainer');
+      if (existingLogoContainer) existingLogoContainer.remove();
 
       // Clean up duplicate legacy topbar pill and ensure single master banner
       const existingViewingBanner = document.getElementById('topbarViewingModeBanner');
@@ -144,11 +128,15 @@ window.applyBranding = async function(overrideSettings) {
     if (sidebarHeader) {
       const existingSidebarLogo = sidebarHeader.querySelector('.sidebar-logo-img, .school-crest-svg, .sidebar-header > span:first-child');
       if (isSuperAdmin && !isViewing) {
-        if (existingSidebarLogo && existingSidebarLogo.tagName !== 'SPAN') {
-          const globalIcon = document.createElement('span');
-          globalIcon.style.cssText = 'font-size:1.3rem; flex-shrink:0;';
-          globalIcon.textContent = '🌐';
-          existingSidebarLogo.replaceWith(globalIcon);
+        if (!existingSidebarLogo || existingSidebarLogo.tagName !== 'IMG' || !existingSidebarLogo.src.includes('logo_compact')) {
+          const sysImg = document.createElement('img');
+          sysImg.src = 'assets/logo_compact.png';
+          sysImg.className = 'sidebar-logo-img';
+          sysImg.style.cssText = 'height:28px; width:28px; object-fit:cover; border-radius:6px; flex-shrink:0;';
+          sysImg.alt = 'eduManage360';
+          sysImg.onerror = function() { this.src = 'frontend/assets/logo_compact.png'; };
+          if (existingSidebarLogo) existingSidebarLogo.replaceWith(sysImg);
+          else sidebarHeader.prepend(sysImg);
         }
       } else if (s.school_logo) {
         const newImg = document.createElement('img');

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from ..database import get_db
-from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog, Program, ActivityAuditLog, MessageLog, AuditLog
+from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog, Program, ActivityAuditLog, MessageLog, AuditLog, VoucherOrder
 from ..routes.auth import get_current_user, get_password_hash
 from ..ncca_seed import seed_ncca_curriculum
 from ..sms.gateway import sms_engine, mask_phone_number
@@ -319,6 +319,67 @@ def purge_super_admin_audit_stream(
         "status": "success",
         "message": f"Successfully cleared {count_audit + count_legacy} historical audit records.",
         "purged_count": count_audit + count_legacy
+    }
+
+@router.get("/schools/matrix")
+def get_subscription_matrix(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Returns multi-tenant licensing tiers, voucher sales, gross/net splits, and SMS credit telemetry.
+    """
+    schools = db.query(School).order_by(School.id.asc()).all()
+    schools_data = []
+
+    total_platform_commission_ghs = 0.0
+    gross_platform_revenue_ghs = 0.0
+    total_vouchers_sold = 0
+
+    for s in schools:
+        # Calculate voucher sales & splits for this school
+        orders = db.query(VoucherOrder).filter(
+            VoucherOrder.school_id == s.id,
+            VoucherOrder.status.in_(["CONFIRMED", "DELIVERED", "PAID", "FULFILLED", "SUCCESS"])
+        ).all()
+        
+        vouchers_sold_cnt = len(orders)
+        school_gross = sum(float(o.amount or 0.0) for o in orders)
+        comm_pct = float(s.platform_commission_percent if s.platform_commission_percent is not None else 5.0)
+        platform_fee = round(school_gross * (comm_pct / 100.0), 2)
+        school_net = round(school_gross - platform_fee, 2)
+
+        total_vouchers_sold += vouchers_sold_cnt
+        gross_platform_revenue_ghs += school_gross
+        total_platform_commission_ghs += platform_fee
+
+        schools_data.append({
+            "school_id": s.id,
+            "name": s.name,
+            "code": s.code,
+            "school_mode": s.school_mode or "COMBINED",
+            "subscription_plan": (s.subscription_plan or "STANDARD").upper(),
+            "subscription_status": (s.subscription_status or "ACTIVE").upper(),
+            "vouchers_sold": vouchers_sold_cnt,
+            "gross_revenue_ghs": school_gross,
+            "school_net_share_ghs": school_net,
+            "platform_fee_ghs": platform_fee,
+            "commission_percent": comm_pct,
+            "sms_balance": s.sms_balance if s.sms_balance is not None else 500
+        })
+
+    # Total SMS delivered across the platform
+    total_sms_sent = db.query(MessageLog).filter(
+        MessageLog.status.in_(["DELIVERED", "SENT", "SUCCESS", "CONFIRMED"])
+    ).count()
+
+    return {
+        "total_schools_count": len(schools),
+        "total_vouchers_sold": total_vouchers_sold,
+        "gross_platform_revenue_ghs": round(gross_platform_revenue_ghs, 2),
+        "total_platform_commission_ghs": round(total_platform_commission_ghs, 2),
+        "total_sms_sent": total_sms_sent,
+        "schools": schools_data
     }
 
 @router.get("/schools")

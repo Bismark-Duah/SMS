@@ -234,15 +234,9 @@
         if (schoolName) sidebarNameEl.title = schoolName;
       }
 
-      // 3. Update Topbar Logo & Sidebar Logo
+      // 3. Update Sidebar Logo & Clean Up Header Topbar Logo
       const logoContainer = document.getElementById('topbarLogoContainer');
-      if (logoContainer) {
-        if (schoolLogo) {
-          logoContainer.innerHTML = `<img src="${schoolLogo}" alt="${sanitizeText(schoolAbbr)}" class="topbar-logo-img" style="height:34px; width:34px; object-fit:cover; border-radius:8px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15);" onerror="this.outerHTML = (window.createDefaultCrestSvg ? window.createDefaultCrestSvg('${sanitizeText(schoolAbbr)}', 34) : '');" />`;
-        } else if (window.createDefaultCrestSvg) {
-          logoContainer.innerHTML = window.createDefaultCrestSvg(schoolAbbr, 34);
-        }
-      }
+      if (logoContainer) logoContainer.remove();
 
       const sidebarHeader = document.querySelector('.sidebar-header');
       if (sidebarHeader) {

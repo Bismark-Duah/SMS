@@ -690,7 +690,7 @@
     };
 
     const logoHtml = (isSuperAdmin && !isViewing)
-      ? `<div style="width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg, #6366f1, #06b6d4); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; box-shadow:0 2px 8px rgba(99,102,241,0.3);">👑</div>`
+      ? `<img src="assets/logo_compact.png" class="sidebar-logo-img" style="height:28px; width:28px; object-fit:cover; border-radius:6px; flex-shrink:0;" onerror="this.onerror=null;this.src='frontend/assets/logo_compact.png';" alt="eduManage360" />`
       : (schoolLogo 
           ? `<img src="${schoolLogo}" class="sidebar-logo-img" style="height:30px; width:30px; object-fit:cover; border-radius:8px; flex-shrink:0;" onerror="this.outerHTML = window.createDefaultCrestSvg('${schoolAbbr}', 30);" />` 
           : window.createDefaultCrestSvg(schoolAbbr, 30));

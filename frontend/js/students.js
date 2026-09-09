@@ -107,6 +107,8 @@ function applyStudentUIRestrictions() {
   const tabNav = document.getElementById('studentTabNav') || document.querySelector('.tab-nav');
   const tabFormBtn = document.getElementById('tabFormBtn');
   const autoLinkBtn = document.getElementById('autoLinkBtn');
+  const continuingTemplateBtn = document.getElementById('continuingTemplateBtn');
+  const continuingImportBtn = document.getElementById('continuingImportBtn');
   const csspsTemplateBtn = document.getElementById('csspsTemplateBtn');
   const csspsImportBtn = document.getElementById('csspsImportBtn');
   
@@ -114,12 +116,16 @@ function applyStudentUIRestrictions() {
     if (tabNav) tabNav.style.display = 'none';
     if (tabFormBtn) tabFormBtn.style.display = 'none';
     if (autoLinkBtn) autoLinkBtn.style.display = 'none';
+    if (continuingTemplateBtn) continuingTemplateBtn.style.display = 'none';
+    if (continuingImportBtn) continuingImportBtn.style.display = 'none';
     if (csspsTemplateBtn) csspsTemplateBtn.style.display = 'none';
     if (csspsImportBtn) csspsImportBtn.style.display = 'none';
   } else {
     if (tabNav) tabNav.style.display = 'flex';
     if (tabFormBtn) tabFormBtn.style.display = 'inline-flex';
     if (autoLinkBtn) autoLinkBtn.style.display = 'inline-flex';
+    if (continuingTemplateBtn) continuingTemplateBtn.style.display = 'inline-flex';
+    if (continuingImportBtn) continuingImportBtn.style.display = 'inline-flex';
     if (csspsTemplateBtn) csspsTemplateBtn.style.display = 'inline-flex';
     if (csspsImportBtn) csspsImportBtn.style.display = 'inline-flex';
   }

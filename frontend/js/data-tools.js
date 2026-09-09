@@ -66,6 +66,97 @@ window.triggerCSSPSCSVUpload = function() {
   if (input) input.click();
 };
 
+// ── Continuing Students CSV Template & Direct Instant Enrollment ───────────
+window.downloadContinuingStudentsTemplate = function() {
+  const headers = [
+    'full_name',
+    'student_code',
+    'form',
+    'class_name',
+    'program_name',
+    'gender',
+    'residential_status',
+    'guardian_name',
+    'phone',
+    'address'
+  ];
+
+  const sampleRows = [
+    'Kwame Mensah,SHS-2024-001,2,SHS 2 Science 1,General Science,Male,Boarding,Mr. Ebenezer Mensah,0244123456,"House 12, Kumasi"',
+    'Abena Serwaa,SHS-2023-089,3,SHS 3 General Arts 2,General Arts,Female,Day,Madam Grace Serwaa,0501234567,"Plot 4, Sunyani"',
+    'Kofi Boateng,SHS-2024-045,2,SHS 2 Business A,Business,Male,Boarding,Opanin Yaw Boateng,0209876543,"Accra Enclave"'
+  ];
+
+  const csvContent = [headers.join(','), ...sampleRows].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('href', url);
+  a.setAttribute('download', `Continuing_Students_Direct_Enrollment_Template.csv`);
+  a.click();
+};
+
+window.triggerContinuingStudentsCSVUpload = function() {
+  const input = document.getElementById('continuingStudentsCsvFileInput');
+  if (input) input.click();
+};
+
+window.handleContinuingStudentsCSVSelected = async function(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  if (window.showToast) window.showToast('Enrolling continuing students into active classes...', 'info');
+
+  try {
+    const res = await fetch(`${API_BASE}/students/import-csv`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: formData
+    });
+
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      const textErr = await res.text().catch(() => '');
+      throw new Error(`Server returned ${res.status}: ${textErr || res.statusText}`);
+    }
+
+    if (res.ok && data.status !== 'error') {
+      if (window.showCSSPSImportResultsModal) {
+        window.showCSSPSImportResultsModal({
+          imported: data.imported,
+          skipped: data.skipped || 0,
+          errors: data.errors || []
+        });
+      } else {
+        let msg = `✔ Successfully enrolled ${data.imported} continuing students!`;
+        if (data.skipped > 0) msg += ` (${data.skipped} skipped/already existing)`;
+        if (window.showToast) window.showToast(msg, data.imported > 0 ? 'success' : 'warning');
+      }
+
+      if (window.loadStudents) window.loadStudents();
+    } else {
+      let errMsg = 'Continuing student import failed';
+      if (data.errors && data.errors.length > 0) {
+        errMsg = data.errors.slice(0, 5).join('\n');
+      } else if (data.detail) {
+        errMsg = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+      }
+      if (window.showToast) window.showToast(`Import Notice:\n${errMsg}`, 'error');
+      else alert(`Import Notice:\n${errMsg}`);
+    }
+  } catch (error) {
+    if (window.showToast) window.showToast("Import error: " + error.message, 'error');
+    else alert("Import error: " + error.message);
+  } finally {
+    event.target.value = '';
+  }
+};
+
 window.showCSSPSImportResultsModal = function(data) {
   const existing = document.getElementById('cssps-import-result-modal');
   if (existing) existing.remove();

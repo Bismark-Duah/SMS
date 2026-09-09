@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 import csv
 import io
+import re
+import uuid
 from datetime import datetime
 from ..database import get_db
 from ..models import Student, TeacherAssignment, User, ClassSection, Program, Setting, SchoolStage, StudentHealth, School
@@ -479,31 +481,136 @@ async def import_students_csv(
     reader = csv.DictReader(stream)
 
     imported_count = 0
+    skipped_count = 0
     errors = []
 
-    for row in reader:
+    # Cache programs and classes for fast resolution
+    programs_by_name = {p.name.lower(): p.id for p in db.query(Program).filter(
+        (Program.school_id == school_id) | (Program.school_id == None)
+    ).all() if p.name}
+    programs_by_code = {p.code.lower(): p.id for p in db.query(Program).filter(
+        (Program.school_id == school_id) | (Program.school_id == None)
+    ).all() if p.code}
+
+    classes_by_name = {c.name.lower(): c for c in db.query(ClassSection).filter(
+        (ClassSection.school_id == school_id) | (ClassSection.school_id == None)
+    ).all() if c.name}
+
+    for row_idx, raw_row in enumerate(reader, start=2):
+        if not raw_row or not any(v for v in raw_row.values() if v and str(v).strip()):
+            continue
+
+        # Clean row keys
+        row = {}
+        for k, v in raw_row.items():
+            if k is not None:
+                clean_k = re.sub(r'[^a-z0-9_]', '_', k.strip().lstrip('\ufeff').replace('"', '').replace("'", "").strip().lower())
+                clean_k = re.sub(r'_+', '_', clean_k).strip('_')
+                row[clean_k] = v.strip() if isinstance(v, str) else v
+
+        full_name = row.get("full_name") or row.get("name") or row.get("student_name")
+        first_name = row.get("first_name") or row.get("firstname")
+        last_name = row.get("last_name") or row.get("lastname") or row.get("surname")
+        if not full_name:
+            if first_name or last_name:
+                full_name = f"{first_name or ''} {last_name or ''}".strip()
+            else:
+                errors.append(f"Row {row_idx}: Student Name is required.")
+                skipped_count += 1
+                continue
+
+        student_code = row.get("student_code") or row.get("code") or row.get("student_id") or row.get("bece_index_number")
+        if not student_code:
+            student_code = f"SHS-{uuid.uuid4().hex[:8].upper()}"
+
+        # Check existing by student_code
+        existing = db.query(Student).filter(
+            Student.student_code == student_code,
+            Student.school_id == school_id
+        ).first()
+        if existing:
+            errors.append(f"Row {row_idx}: Student with code '{student_code}' already exists ({existing.full_name}).")
+            skipped_count += 1
+            continue
+
+        # Resolve Class Section
+        class_sec_id = None
+        form_level = 1
+        class_input = row.get("class_name") or row.get("class") or row.get("section") or row.get("class_section")
+        if class_input and str(class_input).lower() in classes_by_name:
+            matched_cls = classes_by_name[str(class_input).lower()]
+            class_sec_id = matched_cls.id
+            if "3" in matched_cls.name: form_level = 3
+            elif "2" in matched_cls.name: form_level = 2
+        elif row.get("class_section_id") and str(row.get("class_section_id")).isdigit():
+            class_sec_id = int(row.get("class_section_id"))
+
+        # Explicit form column override
+        form_raw = row.get("form") or row.get("year") or row.get("grade")
+        if form_raw and str(form_raw).isdigit():
+            form_level = int(form_raw)
+
+        # Resolve Academic Program
+        prog_id = None
+        prog_input = (row.get("program_name") or row.get("program") or row.get("course") or "").lower()
+        if prog_input:
+            prog_id = programs_by_name.get(prog_input) or programs_by_code.get(prog_input)
+            if not prog_id:
+                for p_name, p_val in programs_by_name.items():
+                    if prog_input in p_name or p_name in prog_input:
+                        prog_id = p_val
+                        break
+        if not prog_id and row.get("program_id") and str(row.get("program_id")).isdigit():
+            prog_id = int(row.get("program_id"))
+
+        gender_raw = (row.get("gender") or row.get("sex") or "Male").strip().upper()
+        gender = "Female" if gender_raw.startswith("F") else "Male"
+
+        res_raw = (row.get("residential_status") or row.get("boarding_status") or "D").strip().upper()
+        residential_status = "B" if (res_raw.startswith("B") or "BOARD" in res_raw) else "D"
+
+        guardian_name = row.get("guardian_name") or row.get("parent_name") or row.get("guardian")
+        phone = row.get("phone") or row.get("primary_phone") or row.get("guardian_phone")
+        address = row.get("address") or row.get("residential_address")
+
         try:
-            db_student = Student(
-                full_name=row.get("full_name"),
-                student_code=row.get("student_code"),
-                class_section_id=int(row["class_section_id"]) if row.get("class_section_id") else None,
-                program_id=int(row["program_id"]) if row.get("program_id") else None,
-                form=int(row["form"]) if row.get("form") else None,
-                gender=row.get("gender"),
-                guardian_name=row.get("guardian_name"),
-                phone=row.get("phone"),
-                address=row.get("address"),
-                school_id=school_id,
-            )
-            db.add(db_student)
-            db.flush()
-            auto_link_guardian_for_student(db, db_student, auto_create=True)
-            imported_count += 1
+            with db.begin_nested():
+                db_student = Student(
+                    full_name=full_name,
+                    first_name=first_name or (full_name.split()[0] if full_name else "Student"),
+                    last_name=last_name or (full_name.split()[-1] if len(full_name.split()) > 1 else ""),
+                    student_code=student_code,
+                    class_section_id=class_sec_id,
+                    program_id=prog_id,
+                    form=form_level,
+                    gender=gender,
+                    residential_status=residential_status,
+                    enrollment_status="Fully Registered",
+                    status="ACTIVE",
+                    school_type="SHS",
+                    guardian_name=guardian_name,
+                    phone=phone,
+                    address=address,
+                    school_id=school_id,
+                )
+                db.add(db_student)
+                db.flush()
+
+                if guardian_name or phone:
+                    auto_link_guardian_for_student(db, db_student, auto_create=True)
+                imported_count += 1
         except Exception as e:
-            errors.append(f"Row {reader.line_num}: {str(e)}")
+            errors.append(f"Row {row_idx} ({full_name}): {str(e)}")
+            skipped_count += 1
 
     db.commit()
-    return {"status": "success", "imported": imported_count, "errors": errors}
+    return {
+        "status": "success",
+        "imported": imported_count,
+        "skipped": skipped_count,
+        "total": imported_count + skipped_count,
+        "errors": errors
+    }
 
 
 @router.get("/{student_id}/admission-package-pdf")

@@ -92,8 +92,11 @@ def list_programs(
                 "subjects": sub_names
             })
             
+        sch = p.school if hasattr(p, "school") and p.school else None
         result.append({
             "id": p.id,
+            "school_id": getattr(p, "school_id", None),
+            "school_name": sch.name if sch else None,
             "name": p.name,
             "code": p.code,
             "core_count": len(cores),

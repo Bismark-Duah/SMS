@@ -5,11 +5,51 @@ if (!token) {
   window.location.href = 'auth.html';
 }
 
+let selectedSchoolFilter = sessionStorage.getItem('school_id') || localStorage.getItem('school_id') || 'all';
+
 function getHeaders(headers = {}) {
   const h = { ...headers };
   if (token) h['Authorization'] = `Bearer ${token}`;
+  if (selectedSchoolFilter && selectedSchoolFilter !== 'all') {
+    h['X-School-Id'] = String(selectedSchoolFilter);
+  } else {
+    const schoolId = localStorage.getItem('school_id');
+    if (schoolId) h['X-School-Id'] = schoolId;
+  }
   return h;
 }
+
+async function setupSuperAdminSchoolFilter() {
+  const rawRolesStr = sessionStorage.getItem('userRoles') || localStorage.getItem('userRoles');
+  const userRoles = rawRolesStr ? JSON.parse(rawRolesStr).map(r => r.toLowerCase()) : [(localStorage.getItem('userRole') || '').toLowerCase()];
+  const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin' || userRoles.includes('super_admin');
+  
+  const filterContainer = document.getElementById('subjectSchoolFilterContainer');
+  const filterSelect = document.getElementById('subjectSchoolFilterSelect');
+
+  if (!isSuperAdmin || !filterContainer || !filterSelect) return;
+
+  filterContainer.style.display = 'flex';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const schools = await res.json();
+      let optionsHtml = `<option value="all" ${selectedSchoolFilter === 'all' ? 'selected' : ''}>🌐 All Schools (Global System View)</option>`;
+      (schools || []).forEach(s => {
+        optionsHtml += `<option value="${s.id}" ${String(selectedSchoolFilter) === String(s.id) ? 'selected' : ''}>🏫 ${s.name} (${s.code || 'SCH'})</option>`;
+      });
+      filterSelect.innerHTML = optionsHtml;
+    }
+  } catch (_) {}
+}
+
+window.onSubjectSchoolFilterChange = function(val) {
+  selectedSchoolFilter = val;
+  loadSubjects();
+};
 
 const _ADMIN_ROLES = new Set([
   'admin', 'super_admin', 'headmaster', 'headmistress',
@@ -113,6 +153,7 @@ async function loadSubjects() {
     }
 
     const isAdmin = _userIsAdmin();
+    const isGlobalView = selectedSchoolFilter === 'all';
 
     container.innerHTML = `<ul style="list-style:none; padding:0; margin:0;">${data.map((item) => {
       const level = item.school_level || 'SHS';
@@ -127,6 +168,7 @@ async function loadSubjects() {
       <li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom: 1px solid var(--border-color, #eee); padding: 8px 4px; opacity:${opacityStyle}; transition:all 0.2s;">
         <div>
           <strong style="${!isActive ? 'text-decoration:line-through; opacity:0.8;' : ''}">${item.name}</strong> 
+          ${isGlobalView && item.school_name ? `<small style="font-size:0.75rem; background:rgba(2,132,199,0.12); color:var(--kpi-blue, #0284c7); border:1px solid rgba(2,132,199,0.25); padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:600;">🏛️ ${item.school_name}</small>` : ''}
           ${item.code ? `<span style="opacity:0.8; font-size:0.85rem;">(${item.code})</span>` : ''}
           <span style="font-size:0.75rem; background-color:${levelColor}; color:#fff; padding:2px 6px; border-radius:10px; margin-left:6px;">${level}</span>
           <span style="font-size:0.8rem; opacity:0.8; margin-left:4px;">• ${item.is_core ? 'Core' : 'Elective'}</span>
@@ -333,4 +375,5 @@ if (!_userIsAdmin()) {
   }
 }
 
+setupSuperAdminSchoolFilter();
 loadSubjects();

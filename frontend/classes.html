@@ -33,6 +33,17 @@
             <a href="#classFormCard" class="btn" style="font-size:0.85rem;">+ Add Single Class</a>
           </div>
         </div>
+        <!-- Super Admin Multi-Tenant Filter Bar -->
+        <div id="classSchoolFilterContainer" style="display:none; margin-bottom:14px; padding:10px 14px; background:rgba(99,102,241,0.08); border-radius:8px; border:1px solid rgba(99,102,241,0.2); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1rem;">🏫</span>
+            <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary);">School Scope:</span>
+          </div>
+          <select id="classSchoolFilterSelect" onchange="window.onClassSchoolFilterChange(this.value)" style="padding:6px 12px; font-size:0.82rem; font-weight:600; border-radius:6px; background:var(--input-bg, #ffffff); border:1px solid var(--border-color); color:var(--text-primary); cursor:pointer;">
+            <option value="all">🌐 All Schools (Global System View)</option>
+          </select>
+        </div>
+
         <div id="classList">Loading classes...</div>
       </section>
 

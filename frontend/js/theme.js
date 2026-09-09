@@ -523,32 +523,77 @@
       return true;
     });
 
-    const groups = [
-      { id: 'group-academic', title: 'ACADEMIC MANAGEMENT', items: filterItems(academicItems) },
-      { id: 'group-student-life', title: 'STUDENT AFFAIRS & SCHOOL LIFE', items: filterItems(studentLifeItems) },
-      { id: 'group-assessments', title: 'ASSESSMENTS & GRADING', items: filterItems(assessmentItems) },
-      { id: 'group-finance', title: 'FINANCE & OPERATIONS', items: filterItems([
-        { href: 'fees.html', icon: '💰', label: 'Fee Management' },
-        { href: 'assets.html', icon: '🗄️', label: 'Asset Management' }
-      ]) },
-      { id: 'group-communications', title: 'COMMUNICATIONS', items: filterItems([
-          { href: 'messaging.html', icon: '💬', label: 'Bulk Messaging' },
-          { href: 'parent-view.html', icon: '👨‍👩‍👧', label: 'Parent Portal' }
-        ])
-      }
-    ].filter(g => g.items.length > 0);
+    const isSuperAdminPlatform = (localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin' || activeRole === 'super_admin' || userRoles.includes('super_admin')) && !(sessionStorage.getItem('is_super_admin_viewing') === 'true' || localStorage.getItem('is_super_admin_viewing') === 'true');
 
-    const configItemsFiltered = filterItems([
-      { href: 'users.html', icon: '👤', label: 'Users' },
-      { href: 'data-tools.html', icon: '🛠️', label: 'Data Tools' },
-      { href: 'settings.html', icon: '⚙️', label: 'Settings' }
-    ]);
+    let groups = [];
+    let configGroup = null;
 
-    const configGroup = {
-      id: 'group-config',
-      title: 'SYSTEM CONFIGURATION',
-      items: configItemsFiltered
-    };
+    if (isSuperAdminPlatform) {
+      // 👑 Master Platform Management Sidebar
+      groups = [
+        {
+          id: 'group-sa-tenants',
+          title: 'TENANTS & PLATFORM',
+          items: [
+            { href: 'super-admin.html', icon: '🏫', label: 'Schools & Tenants' },
+            { href: 'users.html', icon: '👥', label: 'Master User Directory' }
+          ]
+        },
+        {
+          id: 'group-sa-governance',
+          title: 'SECURITY & GOVERNANCE',
+          items: [
+            { href: 'super-admin.html#security', icon: '🛡️', label: 'Master Forensic Audit' },
+            { href: 'super-admin.html#subscriptions', icon: '💳', label: 'Licensing & Subscriptions' }
+          ]
+        },
+        {
+          id: 'group-sa-ops',
+          title: 'SYSTEM & DATA TOOLS',
+          items: [
+            { href: 'super-admin.html#operations', icon: '🔄', label: 'Cloud Mirror & Sync' },
+            { href: 'data-tools.html', icon: '🛠️', label: 'Database Tools' },
+            { href: 'settings.html', icon: '⚙️', label: 'Gateway Config' }
+          ]
+        }
+      ];
+
+      configGroup = {
+        id: 'group-config',
+        title: 'MASTER CONFIGURATION',
+        items: [
+          { href: 'settings.html', icon: '⚙️', label: 'Platform Settings' }
+        ]
+      };
+    } else {
+      // 🏫 Standard School Operational Sidebar
+      groups = [
+        { id: 'group-academic', title: 'ACADEMIC MANAGEMENT', items: filterItems(academicItems) },
+        { id: 'group-student-life', title: 'STUDENT AFFAIRS & SCHOOL LIFE', items: filterItems(studentLifeItems) },
+        { id: 'group-assessments', title: 'ASSESSMENTS & GRADING', items: filterItems(assessmentItems) },
+        { id: 'group-finance', title: 'FINANCE & OPERATIONS', items: filterItems([
+          { href: 'fees.html', icon: '💰', label: 'Fee Management' },
+          { href: 'assets.html', icon: '🗄️', label: 'Asset Management' }
+        ]) },
+        { id: 'group-communications', title: 'COMMUNICATIONS', items: filterItems([
+            { href: 'messaging.html', icon: '💬', label: 'Bulk Messaging' },
+            { href: 'parent-view.html', icon: '👨‍👩‍👧', label: 'Parent Portal' }
+          ])
+        }
+      ].filter(g => g.items.length > 0);
+
+      const configItemsFiltered = filterItems([
+        { href: 'users.html', icon: '👤', label: 'Users' },
+        { href: 'data-tools.html', icon: '🛠️', label: 'Data Tools' },
+        { href: 'settings.html', icon: '⚙️', label: 'Settings' }
+      ]);
+
+      configGroup = {
+        id: 'group-config',
+        title: 'SYSTEM CONFIGURATION',
+        items: configItemsFiltered
+      };
+    }
 
     // Determine auto-expanded group based on active page
     let activeGroupId = null;
@@ -615,7 +660,7 @@
     }
 
     const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true' && (localStorage.getItem('userRole') === 'super_admin' || localStorage.getItem('username') === 'superadmin') && !localStorage.getItem('is_super_admin_viewing');
-    const isViewing = localStorage.getItem('is_super_admin_viewing') === 'true';
+    const isViewing = (sessionStorage.getItem('is_super_admin_viewing') === 'true' || localStorage.getItem('is_super_admin_viewing') === 'true');
     if (isSuperAdmin && !isViewing) {
       localStorage.removeItem('school_logo');
     }
@@ -645,10 +690,18 @@
     };
 
     const logoHtml = (isSuperAdmin && !isViewing)
-      ? '<img src="assets/logo_compact.png" class="sidebar-logo-img" style="height:28px; width:28px; object-fit:cover; border-radius:6px; flex-shrink:0;" onerror="this.outerHTML=\'<span style=\\\'font-size:1.3rem; flex-shrink:0;\\\'>🌐</span>\';" />'
+      ? `<div style="width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg, #6366f1, #06b6d4); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; box-shadow:0 2px 8px rgba(99,102,241,0.3);">👑</div>`
       : (schoolLogo 
           ? `<img src="${schoolLogo}" class="sidebar-logo-img" style="height:30px; width:30px; object-fit:cover; border-radius:8px; flex-shrink:0;" onerror="this.outerHTML = window.createDefaultCrestSvg('${schoolAbbr}', 30);" />` 
           : window.createDefaultCrestSvg(schoolAbbr, 30));
+
+    const exitBannerHtml = isViewing
+      ? `<div style="padding:4px 12px 8px;">
+          <button onclick="window.exitSchoolView ? window.exitSchoolView() : (sessionStorage.removeItem('is_super_admin_viewing'), sessionStorage.removeItem('school_id'), localStorage.removeItem('is_super_admin_viewing'), localStorage.removeItem('school_id'), localStorage.setItem('school_name','Master System Portal'), localStorage.setItem('school_abbreviation','SUPER ADMIN'), window.location.href='super-admin.html')" style="width:100%; font-size:0.75rem; padding:6px 8px; border-radius:6px; background:rgba(99,102,241,0.18); border:1px solid rgba(99,102,241,0.35); color:#a5b4fc; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <span>←</span> Return to Master Portal
+          </button>
+        </div>`
+      : '';
 
     sidebar.innerHTML = `
       <div class="sidebar-header" style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
@@ -659,9 +712,11 @@
         </button>
       </div>
 
+      ${exitBannerHtml}
+
       <!-- Quick Filter Search Input (Anti-Autofill Protected) -->
       <div style="padding: 8px 12px 4px;">
-        <input type="search" placeholder="🔍 Filter menu..." id="sidebarFilterInput" name="search_menu_no_autofill" value="" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" oninput="window.filterSidebarMenu(this.value)" style="width:100%; padding:6px 10px; font-size:0.78rem; background:rgba(15,23,42,0.6); color:var(--text-primary); border:1px solid var(--border-color); border-radius:6px; outline:none;" />
+        <input type="search" placeholder="🔍 Filter menu..." id="sidebarFilterInput" name="search_menu_no_autofill" value="" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" oninput="window.filterSidebarMenu(this.value)" style="width:100%; padding:6px 10px; font-size:0.78rem; background:var(--input-bg, #ffffff); color:var(--text-primary); border:1px solid var(--border-color); border-radius:6px; outline:none;" />
       </div>
 
       <div class="sidebar-nav" style="flex: 1; overflow-y: auto;">

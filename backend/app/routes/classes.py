@@ -148,6 +148,8 @@ def list_sections(
     return [
         {
             "id": s.id,
+            "school_id": getattr(s, "school_id", None),
+            "school_name": s.school.name if hasattr(s, "school") and s.school else None,
             "name": s.name,
             "stage_id": s.stage_id,
             "stage_name": s.stage.name if s.stage else None,

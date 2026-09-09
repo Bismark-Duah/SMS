@@ -82,7 +82,24 @@ def list_subjects(
         else:
             return []
 
-    return query.all()
+    subs = query.order_by(Subject.name.asc()).all()
+    result = []
+    for s in subs:
+        sch = s.school if hasattr(s, "school") and s.school else None
+        result.append({
+            "id": s.id,
+            "school_id": getattr(s, "school_id", None),
+            "school_name": sch.name if sch else None,
+            "name": s.name,
+            "code": s.code,
+            "is_core": s.is_core,
+            "is_active": s.is_active,
+            "category": s.category,
+            "group_code": s.group_code,
+            "assessment_type": s.assessment_type,
+            "school_level": s.school_level,
+        })
+    return result
 
 
 @router.get("/my-assignments")

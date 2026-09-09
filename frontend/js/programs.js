@@ -5,9 +5,15 @@ if (!token) {
   window.location.href = 'auth.html';
 }
 
+let allProgramsData = [];
+let selectedSchoolFilter = sessionStorage.getItem('school_id') || localStorage.getItem('school_id') || 'all';
+
 function getHeaders(headers = {}) {
   const h = { ...headers };
   if (token) h['Authorization'] = `Bearer ${token}`;
+  if (selectedSchoolFilter && selectedSchoolFilter !== 'all') {
+    h['X-School-Id'] = String(selectedSchoolFilter);
+  }
   return h;
 }
 
@@ -17,8 +23,41 @@ const container = document.getElementById('programList');
 let currentCurriculumData = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  setupSuperAdminSchoolFilter();
   loadPrograms();
 });
+
+async function setupSuperAdminSchoolFilter() {
+  const rawRolesStr = sessionStorage.getItem('userRoles') || localStorage.getItem('userRoles');
+  const userRoles = rawRolesStr ? JSON.parse(rawRolesStr).map(r => r.toLowerCase()) : [(localStorage.getItem('userRole') || '').toLowerCase()];
+  const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin' || userRoles.includes('super_admin');
+  
+  const filterContainer = document.getElementById('programSchoolFilterContainer');
+  const filterSelect = document.getElementById('programSchoolFilterSelect');
+
+  if (!isSuperAdmin || !filterContainer || !filterSelect) return;
+
+  filterContainer.style.display = 'flex';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const schools = await res.json();
+      let optionsHtml = `<option value="all" ${selectedSchoolFilter === 'all' ? 'selected' : ''}>🌐 All Schools (Global System View)</option>`;
+      (schools || []).forEach(s => {
+        optionsHtml += `<option value="${s.id}" ${String(selectedSchoolFilter) === String(s.id) ? 'selected' : ''}>🏫 ${s.name} (${s.code || 'SCH'})</option>`;
+      });
+      filterSelect.innerHTML = optionsHtml;
+    }
+  } catch (_) {}
+}
+
+window.onProgramSchoolFilterChange = function(val) {
+  selectedSchoolFilter = val;
+  loadPrograms();
+};
 
 async function loadPrograms() {
   try {
@@ -29,6 +68,10 @@ async function loadPrograms() {
       container.innerHTML = '<p style="opacity:.6">No academic programs registered yet. Add your first program below.</p>';
       return;
     }
+
+    allProgramsData = data;
+
+    const isGlobalView = selectedSchoolFilter === 'all';
 
     const listHtml = data.map((item) => {
       const coreCount = item.core_count !== undefined ? item.core_count : (item.core_subjects ? item.core_subjects.length : 0);
@@ -43,12 +86,17 @@ async function loadPrograms() {
         pkgDetailText = `(${item.packages_summary.length} Option${item.packages_summary.length > 1 ? 's' : ''}, ${allSubs.length} Elective${allSubs.length === 1 ? '' : 's'}: ${allSubs.slice(0, 4).join(', ')}${allSubs.length > 4 ? '...' : ''})`;
       }
 
+      const schoolBadge = (isGlobalView && item.school_name)
+        ? `<span style="font-size:0.75rem; background:rgba(2,132,199,0.12); color:var(--kpi-blue, #0284c7); border:1px solid rgba(2,132,199,0.25); padding:2px 8px; border-radius:10px; font-weight:600;">🏛️ ${item.school_name}</span>`
+        : '';
+
       return `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
           <div>
-            <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <strong style="font-size:0.95rem; color:var(--text-primary);">${item.name}</strong>
               ${item.code ? `<span style="font-size:0.75rem; background:var(--badge-bg-indigo, rgba(99,102,241,0.15)); color:var(--kpi-indigo, #818cf8); padding:2px 6px; border-radius:4px; font-family:monospace; font-weight:600;">${item.code}</span>` : ''}
+              ${schoolBadge}
             </div>
             <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
               <span>📘 Cores: <strong style="color:var(--kpi-blue, #60a5fa);">${coreCount}</strong></span>

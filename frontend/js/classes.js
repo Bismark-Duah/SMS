@@ -19,14 +19,54 @@ function _userIsAdmin() {
   } catch { return false; }
 }
 
+let selectedSchoolFilter = sessionStorage.getItem('school_id') || localStorage.getItem('school_id') || 'all';
+
 function getHeaders(headers = {}) {
   const token = localStorage.getItem('accessToken');
   const h = { ...headers };
   if (token) h['Authorization'] = `Bearer ${token}`;
-  const schoolId = localStorage.getItem('school_id');
-  if (schoolId) h['X-School-Id'] = schoolId;
+  if (selectedSchoolFilter && selectedSchoolFilter !== 'all') {
+    h['X-School-Id'] = String(selectedSchoolFilter);
+  } else {
+    const schoolId = localStorage.getItem('school_id');
+    if (schoolId) h['X-School-Id'] = schoolId;
+  }
   return h;
 }
+
+async function setupSuperAdminSchoolFilter() {
+  const rawRolesStr = sessionStorage.getItem('userRoles') || localStorage.getItem('userRoles');
+  const userRoles = rawRolesStr ? JSON.parse(rawRolesStr).map(r => r.toLowerCase()) : [(localStorage.getItem('userRole') || '').toLowerCase()];
+  const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin' || userRoles.includes('super_admin');
+  
+  const filterContainer = document.getElementById('classSchoolFilterContainer');
+  const filterSelect = document.getElementById('classSchoolFilterSelect');
+
+  if (!isSuperAdmin || !filterContainer || !filterSelect) return;
+
+  filterContainer.style.display = 'flex';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const schools = await res.json();
+      let optionsHtml = `<option value="all" ${selectedSchoolFilter === 'all' ? 'selected' : ''}>🌐 All Schools (Global System View)</option>`;
+      (schools || []).forEach(s => {
+        optionsHtml += `<option value="${s.id}" ${String(selectedSchoolFilter) === String(s.id) ? 'selected' : ''}>🏫 ${s.name} (${s.code || 'SCH'})</option>`;
+      });
+      filterSelect.innerHTML = optionsHtml;
+    }
+  } catch (_) {}
+}
+
+window.onClassSchoolFilterChange = function(val) {
+  selectedSchoolFilter = val;
+  loadStages();
+  loadPrograms();
+  loadClasses();
+};
 
 const form = document.getElementById('classForm');
 const container = document.getElementById('classList');
@@ -127,6 +167,7 @@ function filterClasses(query) {
 
 function renderClassList(data) {
   const isAdmin = _userIsAdmin();
+  const isGlobalView = selectedSchoolFilter === 'all';
 
   if (!Array.isArray(data) || data.length === 0) {
     if (allClassesData.length === 0) {
@@ -155,6 +196,7 @@ function renderClassList(data) {
     <li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom: 1px solid var(--border-color); padding: 8px 4px;">
       <span>
         <strong>${item.name}</strong> 
+        ${isGlobalView && item.school_name ? `<small style="font-size:0.75rem; background:rgba(2,132,199,0.12); color:var(--kpi-blue, #0284c7); border:1px solid rgba(2,132,199,0.25); padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:600;">🏛️ ${item.school_name}</small>` : ''}
         <small style="opacity:.65; margin-left:8px; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px;">${item.stage_name || 'N/A'}</small>
         ${item.program_name ? `<small style="opacity:.8; margin-left:6px; color:#818cf8; font-weight:600;">• ${item.program_name}</small>` : ''}
         <small style="opacity:.7; margin-left:8px; color:#22d3ee;">👤 Form Master: ${item.form_master_name || 'Unassigned'}</small>
@@ -553,6 +595,7 @@ async function loadTeachers() {
   }
 }
 
+setupSuperAdminSchoolFilter();
 loadStages();
 loadPrograms();
 if (_userIsAdmin()) {

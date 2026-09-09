@@ -41,13 +41,17 @@ def run_tests():
         # Create or find Class Sections
         sec_sci_1 = db.query(ClassSection).filter(ClassSection.name == "Form 1 Science 1").first()
         if not sec_sci_1:
-            sec_sci_1 = ClassSection(name="Form 1 Science 1", stage_id=stage.id)
+            sec_sci_1 = ClassSection(name="Form 1 Science 1", stage_id=stage.id, school_id=school.id)
             db.add(sec_sci_1)
+        else:
+            sec_sci_1.school_id = school.id
 
         sec_sci_2 = db.query(ClassSection).filter(ClassSection.name == "Form 1 Science 2").first()
         if not sec_sci_2:
-            sec_sci_2 = ClassSection(name="Form 1 Science 2", stage_id=stage.id)
+            sec_sci_2 = ClassSection(name="Form 1 Science 2", stage_id=stage.id, school_id=school.id)
             db.add(sec_sci_2)
+        else:
+            sec_sci_2.school_id = school.id
         db.commit()
         db.refresh(sec_sci_1)
         db.refresh(sec_sci_2)

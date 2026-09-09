@@ -749,7 +749,111 @@
       console.error('Error in injectUserPill:', err);
     }
 
+    // Inject Universal Topbar School Switcher for Super Admins
+    injectSuperAdminSchoolSwitcher();
   }
+
+  async function injectSuperAdminSchoolSwitcher() {
+    const rawRolesStr = sessionStorage.getItem('userRoles') || localStorage.getItem('userRoles');
+    const userRoles = rawRolesStr ? JSON.parse(rawRolesStr).map(r => r.toLowerCase()) : [(localStorage.getItem('userRole') || '').toLowerCase()];
+    const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin' || userRoles.includes('super_admin');
+    
+    if (!isSuperAdmin) return;
+
+    const topbar = document.querySelector('.topbar') || document.querySelector('header');
+    if (!topbar) return;
+
+    let actionsContainer = topbar.querySelector('div[style*="margin-left:auto"]') || (topbar.children.length > 1 ? topbar.children[topbar.children.length - 1] : null);
+    if (!actionsContainer) {
+      actionsContainer = document.createElement('div');
+      actionsContainer.style.cssText = 'display:flex; gap:10px; align-items:center; margin-left:auto;';
+      topbar.appendChild(actionsContainer);
+    }
+
+    let switcher = document.getElementById('guardSchoolSwitcherWrapper');
+    if (!switcher) {
+      switcher = document.createElement('div');
+      switcher.id = 'guardSchoolSwitcherWrapper';
+      switcher.style.cssText = 'display:flex; align-items:center; margin-right:4px;';
+      actionsContainer.insertBefore(switcher, actionsContainer.firstChild);
+    }
+
+    const isViewing = (sessionStorage.getItem('is_super_admin_viewing') === 'true' || localStorage.getItem('is_super_admin_viewing') === 'true');
+    const activeSchoolId = sessionStorage.getItem('school_id') || localStorage.getItem('school_id') || '';
+
+    try {
+      const res = await fetch(`${API_BASE}/super-admin/schools`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      if (res.ok) {
+        const schools = await res.json();
+        if (Array.isArray(schools)) {
+          switcher.innerHTML = `
+            <select id="guardGlobalSchoolSelect" style="padding:6px 10px; font-size:0.78rem; font-weight:600; border-radius:8px; background:var(--card-bg, #1e293b); border:1px solid var(--border-color, #6366f1); color:var(--text-primary, #fff); cursor:pointer; box-shadow:var(--shadow-sm); outline:none; max-width:210px; text-overflow:ellipsis;">
+              <option value="master" ${!isViewing ? 'selected' : ''}>👑 Scope: Master Platform</option>
+              ${schools.map(s => `
+                <option value="${s.id}" data-name="${escapeHtml(s.name)}" data-mode="${s.school_mode || 'COMBINED'}" data-code="${escapeHtml(s.code || '')}" ${isViewing && String(activeSchoolId) === String(s.id) ? 'selected' : ''}>
+                  🏫 ${s.name} (${s.code || 'SCH'})
+                </option>
+              `).join('')}
+            </select>
+          `;
+
+          const selectEl = document.getElementById('guardGlobalSchoolSelect');
+          if (selectEl) {
+            selectEl.addEventListener('change', (e) => {
+              const val = e.target.value;
+              if (val === 'master') {
+                window.exitSchoolView();
+              } else {
+                const opt = e.target.selectedOptions[0];
+                const sName = opt.getAttribute('data-name') || 'School View';
+                const sMode = opt.getAttribute('data-mode') || 'COMBINED';
+                const sCode = opt.getAttribute('data-code') || '';
+                window.enterSchoolView(val, sName, sMode, sCode);
+              }
+            });
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  window.exitSchoolView = function() {
+    sessionStorage.removeItem('school_id');
+    sessionStorage.removeItem('school_name');
+    sessionStorage.removeItem('school_mode');
+    sessionStorage.removeItem('school_abbreviation');
+    sessionStorage.removeItem('is_super_admin_viewing');
+
+    localStorage.removeItem('school_id');
+    localStorage.removeItem('school_name');
+    localStorage.removeItem('school_mode');
+    localStorage.removeItem('school_abbreviation');
+    localStorage.removeItem('is_super_admin_viewing');
+
+    injectSuperAdminBanner();
+    if (window.mountSidebarNav) window.mountSidebarNav();
+    window.location.reload();
+  };
+
+  window.enterSchoolView = function(schoolId, schoolName, schoolMode, schoolCode) {
+    sessionStorage.setItem('school_id', String(schoolId));
+    sessionStorage.setItem('school_name', schoolName);
+    sessionStorage.setItem('school_mode', schoolMode || 'COMBINED');
+    if (schoolCode) sessionStorage.setItem('school_abbreviation', schoolCode);
+    sessionStorage.setItem('is_super_admin_viewing', 'true');
+
+    localStorage.setItem('school_id', String(schoolId));
+    localStorage.setItem('school_name', schoolName);
+    localStorage.setItem('school_mode', schoolMode || 'COMBINED');
+    if (schoolCode) localStorage.setItem('school_abbreviation', schoolCode);
+    localStorage.setItem('is_super_admin_viewing', 'true');
+
+    injectSuperAdminBanner();
+    if (window.mountSidebarNav) window.mountSidebarNav();
+    window.location.reload();
+  };
 
   function injectSuperAdminBanner() {
     const isViewing = (sessionStorage.getItem('is_super_admin_viewing') || localStorage.getItem('is_super_admin_viewing')) === 'true';
@@ -764,7 +868,7 @@
       banner.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; width: 100vw !important; height: 38px !important; background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: #ffffff; text-align: center; padding: 6px 16px; font-size: 0.85rem; font-weight: 600; z-index: 999999 !important; display: flex; justify-content: center; align-items: center; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.3); box-sizing: border-box !important;';
       banner.innerHTML = `
         <span>👁️ Viewing <strong>${escapeHtml(schoolName)}</strong> as Platform Super-Admin</span>
-        <button onclick="window.exitSchoolView ? window.exitSchoolView() : (sessionStorage.removeItem('is_super_admin_viewing'), sessionStorage.removeItem('school_id'), localStorage.removeItem('is_super_admin_viewing'), localStorage.removeItem('school_id'), localStorage.setItem('school_name','Master System Portal'), localStorage.setItem('school_abbreviation','SUPER ADMIN'), window.location.href='super-admin.html')" style="background: rgba(255,255,255,0.25); color: #fff; padding: 3px 12px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.4); font-size: 0.8rem; font-weight: 700; cursor: pointer;">← Return to Master Portal</button>
+        <button onclick="window.exitSchoolView()" style="background: rgba(255,255,255,0.25); color: #fff; padding: 3px 12px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.4); font-size: 0.8rem; font-weight: 700; cursor: pointer;">← Return to Master Portal</button>
       `;
       document.body.classList.add('has-superadmin-banner');
     } else {

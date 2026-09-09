@@ -54,9 +54,17 @@ window.switchSuperAdminTab = function(tabName) {
 document.addEventListener('DOMContentLoaded', () => {
   const hashTab = (window.location.hash || '').replace('#', '');
   const storedTab = localStorage.getItem('superadmin_active_tab');
-  const validTabs = ['overview', 'schools', 'security', 'operations'];
+  const validTabs = ['overview', 'schools', 'security', 'operations', 'subscriptions'];
   const activeTab = validTabs.includes(hashTab) ? hashTab : (validTabs.includes(storedTab) ? storedTab : 'overview');
   window.switchSuperAdminTab(activeTab);
+});
+
+window.addEventListener('hashchange', () => {
+  const hashTab = (window.location.hash || '').replace('#', '');
+  const validTabs = ['overview', 'schools', 'security', 'operations', 'subscriptions'];
+  if (validTabs.includes(hashTab)) {
+    window.switchSuperAdminTab(hashTab);
+  }
 });
 
 window.logoutSuperAdmin = function() {

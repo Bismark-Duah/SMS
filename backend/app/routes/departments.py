@@ -108,9 +108,12 @@ def list_departments(db: Session = Depends(get_db), current_user: User = Depends
                 "workload_status": workload_status
             })
         
+        sch = d.school if hasattr(d, "school") and d.school else None
         results.append(
             DepartmentResponse(
                 id=d.id,
+                school_id=getattr(d, "school_id", None),
+                school_name=sch.name if sch else None,
                 name=d.name,
                 code=d.code,
                 hod_id=d.hod_id,

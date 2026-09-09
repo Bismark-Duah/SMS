@@ -5,9 +5,14 @@ if (!token) {
   window.location.href = 'auth.html';
 }
 
+let selectedSchoolFilter = sessionStorage.getItem('school_id') || localStorage.getItem('school_id') || 'all';
+
 function getHeaders(headers = {}) {
   const h = { ...headers };
   if (token) h['Authorization'] = `Bearer ${token}`;
+  if (selectedSchoolFilter && selectedSchoolFilter !== 'all') {
+    h['X-School-Id'] = String(selectedSchoolFilter);
+  }
   return h;
 }
 
@@ -20,6 +25,38 @@ const deptMsg = document.getElementById('deptMsg');
 
 let allSubjects = [];
 let allTeachers = [];
+
+async function setupSuperAdminSchoolFilter() {
+  const rawRolesStr = sessionStorage.getItem('userRoles') || localStorage.getItem('userRoles');
+  const userRoles = rawRolesStr ? JSON.parse(rawRolesStr).map(r => r.toLowerCase()) : [(localStorage.getItem('userRole') || '').toLowerCase()];
+  const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin' || userRoles.includes('super_admin');
+  
+  const filterContainer = document.getElementById('deptSchoolFilterContainer');
+  const filterSelect = document.getElementById('deptSchoolFilterSelect');
+
+  if (!isSuperAdmin || !filterContainer || !filterSelect) return;
+
+  filterContainer.style.display = 'flex';
+
+  try {
+    const res = await fetch(`${API_BASE}/super-admin/schools`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const schools = await res.json();
+      let optionsHtml = `<option value="all" ${selectedSchoolFilter === 'all' ? 'selected' : ''}>🌐 All Schools (Global System View)</option>`;
+      (schools || []).forEach(s => {
+        optionsHtml += `<option value="${s.id}" ${String(selectedSchoolFilter) === String(s.id) ? 'selected' : ''}>🏫 ${s.name} (${s.code || 'SCH'})</option>`;
+      });
+      filterSelect.innerHTML = optionsHtml;
+    }
+  } catch (_) {}
+}
+
+window.onDeptSchoolFilterChange = function(val) {
+  selectedSchoolFilter = val;
+  loadInitialData();
+};
 
 async function loadInitialData() {
   const mode = localStorage.getItem('school_mode') || 'COMBINED';
@@ -155,6 +192,8 @@ async function loadDepartments() {
 
     const isAdmin = _userIsAdmin();
 
+    const isGlobalView = selectedSchoolFilter === 'all';
+
     container.innerHTML = data.map(item => {
       let subjectsHtml = '';
       if (item.subject_names && item.subject_names.length > 0) {
@@ -175,11 +214,15 @@ async function loadDepartments() {
       
       const teacherCount = item.teacher_count || (item.teachers ? item.teachers.length : 0);
 
+      const schoolBadge = (isGlobalView && item.school_name)
+        ? `<span style="font-size:0.75rem; background:rgba(2,132,199,0.12); color:var(--kpi-blue, #0284c7); border:1px solid rgba(2,132,199,0.25); padding:2px 8px; border-radius:10px; font-weight:600;">🏛️ ${item.school_name}</span>`
+        : '';
+
       return `
         <div style="border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 16px 0; display:flex; flex-direction:column; gap:10px;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
-              <h4 style="margin:0; font-size:1.1rem; color:var(--text-primary);">${item.name} (${item.code})</h4>
+              <h4 style="margin:0; font-size:1.1rem; color:var(--text-primary); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">${item.name} (${item.code}) ${schoolBadge}</h4>
               <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--text-secondary);">HOD: <strong style="color:var(--kpi-blue, #2563eb);">${item.hod_name || 'Not assigned'}</strong></p>
               <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
                 <span style="font-size:0.72rem; padding:2px 7px; border-radius:10px; background:var(--badge-bg-indigo, rgba(99,102,241,0.18)); color:var(--kpi-indigo, #4f46e5); border:1px solid rgba(99,102,241,0.3); font-weight:600;">📊 ${item.subject_names ? item.subject_names.length : 0} Subjects</span>
@@ -482,4 +525,5 @@ window.editDepartment = editDepartment;
 window.deleteDepartment = deleteDepartment;
 window.loadPresetSubjects = loadPresetSubjects;
 
+setupSuperAdminSchoolFilter();
 loadInitialData();

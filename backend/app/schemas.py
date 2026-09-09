@@ -191,6 +191,8 @@ class DepartmentCreate(DepartmentBase):
 
 class DepartmentResponse(DepartmentBase):
     id: int
+    school_id: Optional[int] = None
+    school_name: Optional[str] = None
     hod_name: Optional[str] = None
     subject_ids: List[int] = []
     subject_names: List[str] = []

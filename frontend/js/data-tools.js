@@ -66,6 +66,46 @@ window.triggerCSSPSCSVUpload = function() {
   if (input) input.click();
 };
 
+// ── Basic School Students CSV Template & Direct Instant Enrollment ─────────
+window.downloadBasicStudentsTemplate = function() {
+  const headers = [
+    'full_name',
+    'student_code',
+    'class_name',
+    'gender',
+    'date_of_birth',
+    'guardian_name',
+    'phone',
+    'alternative_phone',
+    'address',
+    'blood_group',
+    'allergies'
+  ];
+
+  const sampleRows = [
+    'Kwame Mensah,BAS-2024-001,Class 4B,Male,2015-06-12,Mr. Ebenezer Mensah,0244123456,0200000000,"House 12, Kumasi",O+,"Peanut allergy"',
+    'Ama Konadu,BAS-2024-002,KG 2,Female,2019-10-04,Madam Grace Konadu,0501234567,,"Plot 4, Sunyani",A+,',
+    'Yaw Osei,BAS-2024-003,JHS 1A,Male,2012-03-21,Opanin Yaw Osei,0209876543,,"Accra Enclave",B+,"Asthma"'
+  ];
+
+  const csvContent = [headers.join(','), ...sampleRows].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('href', url);
+  a.setAttribute('download', `Basic_School_Students_Enrollment_Template.csv`);
+  a.click();
+};
+
+window.triggerBasicStudentsCSVUpload = function() {
+  const input = document.getElementById('basicStudentsCsvFileInput');
+  if (input) input.click();
+};
+
+window.handleBasicStudentsCSVSelected = function(event) {
+  handleContinuingStudentsCSVSelected(event);
+};
+
 // ── Continuing Students CSV Template & Direct Instant Enrollment ───────────
 window.downloadContinuingStudentsTemplate = function() {
   const headers = [

@@ -193,6 +193,8 @@ window.checkAndToggleCSSPSFields = function() {
   const kpiDayCard = document.getElementById('kpiDayCard');
   const chipBoarders = document.getElementById('chipBoarders');
   const chipDay = document.getElementById('chipDay');
+  const basicTemplateBtn = document.getElementById('basicTemplateBtn');
+  const basicImportBtn = document.getElementById('basicImportBtn');
   const continuingTemplateBtn = document.getElementById('continuingTemplateBtn');
   const continuingImportBtn = document.getElementById('continuingImportBtn');
   const csspsTemplateBtn = document.getElementById('csspsTemplateBtn');
@@ -224,8 +226,10 @@ window.checkAndToggleCSSPSFields = function() {
   if (chipDay) chipDay.style.display = isBoarding ? '' : 'none';
 
   // Action buttons
-  if (continuingTemplateBtn) continuingTemplateBtn.style.display = (F ? F.showCsvImport : true) ? 'inline-block' : 'none';
-  if (continuingImportBtn) continuingImportBtn.style.display = (F ? F.showCsvImport : true) ? 'inline-block' : 'none';
+  if (basicTemplateBtn) basicTemplateBtn.style.display = (F ? (F.isBasicOnly || !F.isShsOnly) : !isShsOnly) ? 'inline-block' : 'none';
+  if (basicImportBtn) basicImportBtn.style.display = (F ? (F.isBasicOnly || !F.isShsOnly) : !isShsOnly) ? 'inline-block' : 'none';
+  if (continuingTemplateBtn) continuingTemplateBtn.style.display = (F ? (!F.isBasicOnly) : !isBasicOnly) ? 'inline-block' : 'none';
+  if (continuingImportBtn) continuingImportBtn.style.display = (F ? (!F.isBasicOnly) : !isBasicOnly) ? 'inline-block' : 'none';
   if (csspsTemplateBtn) csspsTemplateBtn.style.display = (F ? F.showCsspsEnrollment : !isBasicOnly) ? 'inline-block' : 'none';
   if (csspsImportBtn) csspsImportBtn.style.display = (F ? F.showCsspsEnrollment : !isBasicOnly) ? 'inline-block' : 'none';
 

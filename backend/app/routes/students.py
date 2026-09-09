@@ -492,9 +492,11 @@ async def import_students_csv(
         (Program.school_id == school_id) | (Program.school_id == None)
     ).all() if p.code}
 
-    classes_by_name = {c.name.lower(): c for c in db.query(ClassSection).filter(
+    all_classes = db.query(ClassSection).options(joinedload(ClassSection.stage)).filter(
         (ClassSection.school_id == school_id) | (ClassSection.school_id == None)
-    ).all() if c.name}
+    ).all()
+    classes_by_id = {c.id: c for c in all_classes}
+    classes_by_name = {c.name.lower().strip(): c for c in all_classes if c.name}
 
     houses_by_name = {h.name.lower(): h for h in db.query(House).filter(
         (House.school_id == school_id) | (House.school_id == None)
@@ -504,6 +506,7 @@ async def import_students_csv(
     ).all() if d.name}
 
     boarding_status = _get_boarding_status(db, school_id)
+    school_mode = _get_school_mode(db, school_id)
 
     for row_idx, raw_row in enumerate(reader, start=2):
         if not raw_row or not any(v for v in raw_row.values() if v and str(v).strip()):
@@ -530,7 +533,8 @@ async def import_students_csv(
 
         student_code = row.get("student_code") or row.get("code") or row.get("student_id") or row.get("bece_index_number")
         if not student_code:
-            student_code = f"SHS-{uuid.uuid4().hex[:8].upper()}"
+            prefix = "BAS" if school_mode == "BASIC_ONLY" else "STU"
+            student_code = f"{prefix}-{uuid.uuid4().hex[:8].upper()}"
 
         # Check existing by student_code
         existing = db.query(Student).filter(
@@ -545,32 +549,61 @@ async def import_students_csv(
         # Resolve Class Section
         class_sec_id = None
         form_level = 1
-        class_input = row.get("class_name") or row.get("class") or row.get("section") or row.get("class_section")
-        if class_input and str(class_input).lower() in classes_by_name:
-            matched_cls = classes_by_name[str(class_input).lower()]
-            class_sec_id = matched_cls.id
-            if "3" in matched_cls.name: form_level = 3
-            elif "2" in matched_cls.name: form_level = 2
+        matched_cls = None
+        class_input = (row.get("class_name") or row.get("class") or row.get("section") or row.get("class_section") or "").strip()
+        if class_input:
+            c_low = class_input.lower()
+            if c_low in classes_by_name:
+                matched_cls = classes_by_name[c_low]
+            else:
+                c_clean = re.sub(r'[^a-z0-9]', '', c_low)
+                for c_name, c_obj in classes_by_name.items():
+                    if re.sub(r'[^a-z0-9]', '', c_name) == c_clean or c_low in c_name or c_name in c_low:
+                        matched_cls = c_obj
+                        break
+            if matched_cls:
+                class_sec_id = matched_cls.id
+                if matched_cls.stage:
+                    if "3" in matched_cls.stage.name: form_level = 3
+                    elif "2" in matched_cls.stage.name: form_level = 2
+                elif "3" in matched_cls.name: form_level = 3
+                elif "2" in matched_cls.name: form_level = 2
         elif row.get("class_section_id") and str(row.get("class_section_id")).isdigit():
             class_sec_id = int(row.get("class_section_id"))
+            matched_cls = classes_by_id.get(class_sec_id)
 
         # Explicit form column override
         form_raw = row.get("form") or row.get("year") or row.get("grade")
         if form_raw and str(form_raw).isdigit():
             form_level = int(form_raw)
 
-        # Resolve Academic Program
+        # Detect school_type (Basic vs SHS)
+        stype = "SHS"
+        if school_mode == "BASIC_ONLY":
+            stype = "Basic"
+        elif matched_cls:
+            if matched_cls.stage and matched_cls.stage.school_type == "Basic":
+                stype = "Basic"
+            elif any(k in matched_cls.name.lower() for k in ["kg", "nursery", "creche", "primary", "class", "jhs", "basic", "stage"]):
+                stype = "Basic"
+        elif school_mode == "COMBINED":
+            raw_c = (row.get("class_name") or row.get("class") or "").lower()
+            if any(k in raw_c for k in ["kg", "nursery", "creche", "primary", "class", "jhs", "basic", "stage"]):
+                stype = "Basic"
+
+        # Resolve Academic Program (SHS only)
         prog_id = None
-        prog_input = (row.get("program_name") or row.get("program") or row.get("course") or "").lower()
-        if prog_input:
-            prog_id = programs_by_name.get(prog_input) or programs_by_code.get(prog_input)
-            if not prog_id:
-                for p_name, p_val in programs_by_name.items():
-                    if prog_input in p_name or p_name in prog_input:
-                        prog_id = p_val
-                        break
-        if not prog_id and row.get("program_id") and str(row.get("program_id")).isdigit():
-            prog_id = int(row.get("program_id"))
+        if stype != "Basic":
+            prog_input = (row.get("program_name") or row.get("program") or row.get("course") or "").lower()
+            if prog_input:
+                prog_id = programs_by_name.get(prog_input) or programs_by_code.get(prog_input)
+                if not prog_id:
+                    for p_name, p_val in programs_by_name.items():
+                        if prog_input in p_name or p_name in prog_input:
+                            prog_id = p_val
+                            break
+            if not prog_id and row.get("program_id") and str(row.get("program_id")).isdigit():
+                prog_id = int(row.get("program_id"))
 
         gender_raw = (row.get("gender") or row.get("sex") or "Male").strip().upper()
         gender = "Female" if gender_raw.startswith("F") else "Male"
@@ -581,35 +614,47 @@ async def import_students_csv(
         # Resolve House and Dormitory
         house_id = None
         dormitory_id = None
-        house_input = (row.get("house_name") or row.get("house") or "").strip().lower()
-        if house_input:
-            if house_input in houses_by_name:
-                house_id = houses_by_name[house_input].id
-            else:
-                for h_name, h_obj in houses_by_name.items():
-                    if house_input in h_name or h_name in house_input:
-                        house_id = h_obj.id
-                        break
-        elif row.get("house_id") and str(row.get("house_id")).isdigit():
-            house_id = int(row.get("house_id"))
+        if stype != "Basic":
+            house_input = (row.get("house_name") or row.get("house") or "").strip().lower()
+            if house_input:
+                if house_input in houses_by_name:
+                    house_id = houses_by_name[house_input].id
+                else:
+                    for h_name, h_obj in houses_by_name.items():
+                        if house_input in h_name or h_name in house_input:
+                            house_id = h_obj.id
+                            break
+            elif row.get("house_id") and str(row.get("house_id")).isdigit():
+                house_id = int(row.get("house_id"))
 
-        dorm_input = (row.get("dormitory_name") or row.get("dormitory") or row.get("dorm") or row.get("room") or "").strip().lower()
-        if dorm_input:
-            if dorm_input in dorms_by_name:
-                dormitory_id = dorms_by_name[dorm_input].id
-            else:
-                for d_name, d_obj in dorms_by_name.items():
-                    if dorm_input in d_name or d_name in dorm_input:
-                        dormitory_id = d_obj.id
-                        break
-        elif row.get("dormitory_id") and str(row.get("dormitory_id")).isdigit():
-            dormitory_id = int(row.get("dormitory_id"))
+            dorm_input = (row.get("dormitory_name") or row.get("dormitory") or row.get("dorm") or row.get("room") or "").strip().lower()
+            if dorm_input:
+                if dorm_input in dorms_by_name:
+                    dormitory_id = dorms_by_name[dorm_input].id
+                else:
+                    for d_name, d_obj in dorms_by_name.items():
+                        if dorm_input in d_name or d_name in dorm_input:
+                            dormitory_id = d_obj.id
+                            break
+            elif row.get("dormitory_id") and str(row.get("dormitory_id")).isdigit():
+                dormitory_id = int(row.get("dormitory_id"))
 
-        # Day-Only School Policy Enforcement
-        if boarding_status == "DAY_ONLY":
+        # Day-Only School Policy Enforcement or Basic School Default
+        if boarding_status == "DAY_ONLY" or stype == "Basic":
             residential_status = "D"
             house_id = None
             dormitory_id = None
+
+        # Parse Date of Birth
+        dob = None
+        dob_raw = row.get("date_of_birth") or row.get("dob") or row.get("birth_date")
+        if dob_raw:
+            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y", "%Y/%m/%d"):
+                try:
+                    dob = datetime.strptime(str(dob_raw).strip(), fmt)
+                    break
+                except ValueError:
+                    pass
 
         guardian_name = row.get("guardian_name") or row.get("parent_name") or row.get("guardian")
         phone = row.get("phone") or row.get("primary_phone") or row.get("guardian_phone")
@@ -626,12 +671,13 @@ async def import_students_csv(
                     program_id=prog_id,
                     form=form_level,
                     gender=gender,
+                    date_of_birth=dob,
                     residential_status=residential_status,
                     house_id=house_id,
                     dormitory_id=dormitory_id,
                     enrollment_status="Fully Registered",
                     status="ACTIVE",
-                    school_type="SHS",
+                    school_type=stype,
                     guardian_name=guardian_name,
                     phone=phone,
                     address=address,
@@ -644,6 +690,23 @@ async def import_students_csv(
                 if residential_status == "B" and not db_student.house_id:
                     allocate_student_house_and_dorm(db, db_student)
 
+                # Save Health & Allergy details if provided
+                blood_group = row.get("blood_group")
+                allergies = row.get("allergies")
+                chronic_conditions = row.get("chronic_conditions")
+                emergency_contact = row.get("emergency_contact") or row.get("alternative_phone") or phone
+
+                if any([blood_group, allergies, chronic_conditions, emergency_contact]):
+                    health = StudentHealth(
+                        student_id=db_student.id,
+                        blood_group=blood_group,
+                        allergies=allergies,
+                        chronic_conditions=chronic_conditions,
+                        emergency_contact=emergency_contact,
+                        doctor_clearance_status=True
+                    )
+                    db.add(health)
+
                 if guardian_name or phone:
                     auto_link_guardian_for_student(db, db_student, auto_create=True)
 
@@ -651,6 +714,7 @@ async def import_students_csv(
                     "student_code": db_student.student_code,
                     "full_name": db_student.full_name,
                     "gender": db_student.gender,
+                    "school_type": db_student.school_type,
                     "residential_status": db_student.residential_status,
                     "house_id": db_student.house_id,
                     "dormitory_id": db_student.dormitory_id,

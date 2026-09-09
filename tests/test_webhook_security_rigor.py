@@ -1,7 +1,12 @@
 import unittest
+import os
+import sys
 import json
 import hmac
 import hashlib
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from backend.app.models import Base, School, VoucherOrder, AdmissionVoucher, Setting

@@ -139,7 +139,7 @@ def initialize_paystack_transaction(
 
     platform_fee_pesewas = int(round(amount_pesewas * (platform_commission_percent / 100.0)))
 
-    if not secret_key:
+    if not secret_key or secret_key.startswith("sk_test_edumanage") or secret_key.startswith("sk_test_mock"):
         # Offline or Dev Mode Fallback
         return {
             "status": "offline_fallback",

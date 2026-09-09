@@ -63,8 +63,10 @@ class TestMultiTenantSecurityAudit(unittest.TestCase):
         if not cls.sch2:
             cls.sch2 = School(name="Audit School 2", code="AS2", status="ACTIVE", school_mode="BASIC_ONLY")
             cls.db.add(cls.sch2)
-            cls.db.commit()
-            cls.db.refresh(cls.sch2)
+        else:
+            cls.sch2.school_mode = "BASIC_ONLY"
+        cls.db.commit()
+        cls.db.refresh(cls.sch2)
 
         # Create School 3 (Suspended)
         cls.sch3 = cls.db.query(School).filter(School.name == "Audit School 3 Suspended").first()

@@ -271,8 +271,92 @@ function setupKeyboardNavigation() {
       const gradeEl = tr.querySelector('.grade-preview');
       if (totalEl) totalEl.textContent = total > 0 ? total.toFixed(1) : '—';
       if (gradeEl) gradeEl.innerHTML = total > 0 ? formatGradePill(calculateGrade(total)) : '—';
+      
+      triggerAutoSave();
     });
   });
+}
+
+let bulkAutoSaveTimer = null;
+
+function setAutoSaveStatus(status, text) {
+  let pill = document.getElementById('scoreAutoSaveIndicator');
+  if (!pill) {
+    const targetHeader = document.querySelector('#bulkEntrySection h3') || document.getElementById('saveBulkBtn')?.parentElement;
+    if (targetHeader) {
+      pill = document.createElement('div');
+      pill.id = 'scoreAutoSaveIndicator';
+      pill.className = 'auto-save-pill saved';
+      pill.style.marginLeft = '12px';
+      pill.innerHTML = '<span class="auto-save-dot"></span> <span class="auto-save-text">✓ All marks saved</span>';
+      targetHeader.appendChild(pill);
+    }
+  }
+  if (pill) {
+    pill.className = `auto-save-pill ${status}`;
+    const txt = pill.querySelector('.auto-save-text');
+    if (txt) {
+      if (text) txt.textContent = text;
+      else if (status === 'saving') txt.textContent = 'Saving changes...';
+      else if (status === 'saved') txt.textContent = '✓ All marks saved';
+      else if (status === 'offline') txt.textContent = '💾 Saved locally (offline)';
+      else if (status === 'error') txt.textContent = 'Save failed (Retry)';
+    }
+  }
+}
+
+function triggerAutoSave() {
+  clearTimeout(bulkAutoSaveTimer);
+  setAutoSaveStatus('saving', 'Saving marks...');
+  bulkAutoSaveTimer = setTimeout(async () => {
+    try {
+      const subjectId = document.getElementById('subject_id')?.value;
+      const semesterId = document.getElementById('semester_id')?.value;
+      if (!subjectId || !semesterId) return;
+
+      const rows = document.querySelectorAll('#studentListBody tr[data-student-id]');
+      if (rows.length === 0) return;
+
+      const payloads = [];
+      for (const row of rows) {
+        const studentId = row.dataset.studentId;
+        const classScore = parseFloat(row.querySelector('.class-score')?.value) || 0;
+        const examScore = parseFloat(row.querySelector('.exam-score')?.value) || 0;
+
+        payloads.push({
+          student_id: parseInt(studentId),
+          subject_id: parseInt(subjectId),
+          semester_id: parseInt(semesterId),
+          class_score: classScore,
+          exam_score: examScore
+        });
+      }
+
+      // Save locally first for offline resilience
+      try {
+        localStorage.setItem(`auto_save_scores_${subjectId}_${semesterId}`, JSON.stringify(payloads));
+      } catch (_) {}
+
+      // Background batch save
+      let failed = false;
+      for (const p of payloads) {
+        const res = await fetch(`${API_BASE}/results/`, {
+          method: 'POST',
+          headers: getHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(p)
+        });
+        if (!res.ok) failed = true;
+      }
+
+      if (failed) {
+        setAutoSaveStatus('offline', '💾 Saved locally (Sync pending)');
+      } else {
+        setAutoSaveStatus('saved', '✓ All marks saved');
+      }
+    } catch (e) {
+      setAutoSaveStatus('offline', '💾 Saved locally (Offline)');
+    }
+  }, 1200);
 }
 
 async function saveAllScores() {

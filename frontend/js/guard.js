@@ -576,6 +576,25 @@
       z-index: 9500;
     `;
 
+    // ── Universal Command Palette Trigger (Ctrl + K) ──
+    if (!document.getElementById('cmdPaletteScript')) {
+      const script = document.createElement('script');
+      script.id = 'cmdPaletteScript';
+      script.src = 'js/commandPalette.js?v=2.0';
+      document.head.appendChild(script);
+    }
+
+    const searchTrigger = document.createElement('button');
+    searchTrigger.type = 'button';
+    searchTrigger.className = 'topbar-search-trigger';
+    searchTrigger.style.marginRight = '10px';
+    searchTrigger.title = 'Universal Command Palette & Search (Ctrl + K)';
+    searchTrigger.innerHTML = '<span>🔍 Search</span><kbd>Ctrl K</kbd>';
+    searchTrigger.onclick = () => {
+      if (window.openCommandPalette) window.openCommandPalette();
+    };
+    pillWrapper.appendChild(searchTrigger);
+
     const pill = document.createElement('div');
     pill.id = 'guardUserPill';
     pill.style.cssText = `

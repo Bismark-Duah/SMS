@@ -225,6 +225,72 @@ function setRowStatus(studentId, status) {
   }
 
   updateAttendanceTally();
+  triggerAttendanceAutoSave();
+}
+
+let attendanceAutoSaveTimer = null;
+
+function setAttendanceAutoSaveStatus(status, text) {
+  let pill = document.getElementById('attAutoSaveIndicator');
+  if (!pill) {
+    const tallyContainer = document.querySelector('.tally-bar') || document.querySelector('#rollCard .card-header') || document.getElementById('rollCard');
+    if (tallyContainer) {
+      pill = document.createElement('div');
+      pill.id = 'attAutoSaveIndicator';
+      pill.className = 'auto-save-pill saved';
+      pill.style.marginLeft = 'auto';
+      pill.innerHTML = '<span class="auto-save-dot"></span> <span class="auto-save-text">✓ Attendance synced</span>';
+      tallyContainer.appendChild(pill);
+    }
+  }
+  if (pill) {
+    pill.className = `auto-save-pill ${status}`;
+    const txt = pill.querySelector('.auto-save-text');
+    if (txt) {
+      if (text) txt.textContent = text;
+      else if (status === 'saving') txt.textContent = 'Saving roll...';
+      else if (status === 'saved') txt.textContent = '✓ Attendance synced';
+      else if (status === 'offline') txt.textContent = '💾 Saved locally (offline)';
+      else if (status === 'error') txt.textContent = 'Save failed (Retry)';
+    }
+  }
+}
+
+function triggerAttendanceAutoSave() {
+  clearTimeout(attendanceAutoSaveTimer);
+  setAttendanceAutoSaveStatus('saving', 'Saving roll...');
+  attendanceAutoSaveTimer = setTimeout(async () => {
+    try {
+      const date = document.getElementById('mark_date')?.value;
+      const rows = document.querySelectorAll('.status-value');
+      if (rows.length === 0 || !date) return;
+
+      const records = Array.from(rows).map(sel => ({
+        student_id: parseInt(sel.dataset.studentId),
+        date: date,
+        status: sel.value,
+      }));
+
+      // Cache locally first for offline resilience
+      try {
+        localStorage.setItem(`auto_save_attendance_${date}`, JSON.stringify(records));
+      } catch (_) {}
+
+      const res = await fetch(`${API_BASE}/attendance/bulk`, {
+        method: 'POST',
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(records),
+      });
+
+      if (!res.ok) {
+        setAttendanceAutoSaveStatus('offline', '💾 Saved locally (Sync pending)');
+      } else {
+        setAttendanceAutoSaveStatus('saved', '✓ Attendance synced');
+      }
+    } catch (e) {
+      setAttendanceAutoSaveStatus('offline', '💾 Saved locally (Offline)');
+    }
+  }, 1200);
 }
 
 function updateAttendanceTally() {
@@ -260,6 +326,7 @@ function markAll(status) {
     if (target) target.classList.add('active');
   });
   updateAttendanceTally();
+  triggerAttendanceAutoSave();
 }
 
 async function submitBulkAttendance() {

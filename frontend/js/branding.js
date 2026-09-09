@@ -176,17 +176,12 @@ window.applyBranding = async function(overrideSettings) {
     }
 
     // ── Global Server Theme ───────────────────────────────────────────
-    if (s.system_theme) {
-      if (isSuperAdmin && !isViewing) {
-        localStorage.setItem('system_theme', 'midnight');
-        sessionStorage.setItem('system_theme', 'midnight');
-        if (window.applyTheme) window.applyTheme('midnight');
-      } else {
-        localStorage.setItem('system_theme', s.system_theme);
-        sessionStorage.setItem('system_theme', s.system_theme);
-        if (window.applyTheme) window.applyTheme(s.system_theme);
-      }
-    }
+    const currentLocalTheme = localStorage.getItem('system_theme');
+    const targetTheme = (isSuperAdmin && !isViewing) ? 'midnight' : (currentLocalTheme || s.system_theme || 'midnight');
+    
+    localStorage.setItem('system_theme', targetTheme);
+    sessionStorage.setItem('system_theme', targetTheme);
+    if (window.applyTheme) window.applyTheme(targetTheme);
 
     // ── Active Period Badge in Topbar ─────────────────────────────────
     if (s.active_year_label || s.active_term_name) {
@@ -230,13 +225,6 @@ window.applyBranding = async function(overrideSettings) {
             window.applyTheme('auto', colors);
           }
         });
-      }
-    }
-
-    if (s.system_theme && (!isSuperAdmin || isViewing)) {
-      localStorage.setItem('system_theme', s.system_theme);
-      if (window.applyTheme) {
-        window.applyTheme(s.system_theme);
       }
     }
 

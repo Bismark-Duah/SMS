@@ -316,7 +316,7 @@
           </label>
 
           <label style="display: block; font-size: 0.83rem; font-weight: 600; margin-bottom: 12px;">
-            📧 Personal Email Address <span style="font-weight: 400; opacity: 0.65;">(Optional)</span>
+            📧 Email <span style="font-weight: 400; opacity: 0.65;">(Optional)</span>
             <input type="email" id="onboardEmail" value="${escapeHtml(savedEmail)}" placeholder="Optional (e.g. yourname@gmail.com)" 
               style="width: 100%; margin-top: 4px; padding: 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; box-sizing: border-box;" />
           </label>
@@ -1048,13 +1048,11 @@
           localStorage.setItem('school_logo', data.school_logo);
         }
         if (data.system_theme) {
-          if (isSuperAdmin && !isViewing) {
-            sessionStorage.setItem('system_theme', 'midnight');
-            localStorage.setItem('system_theme', 'midnight');
-          } else {
-            sessionStorage.setItem('system_theme', data.system_theme);
-            localStorage.setItem('system_theme', data.system_theme);
-          }
+          const userChosenTheme = localStorage.getItem('system_theme');
+          const effTheme = (isSuperAdmin && !isViewing) ? 'midnight' : (userChosenTheme || data.system_theme || 'midnight');
+          sessionStorage.setItem('system_theme', effTheme);
+          localStorage.setItem('system_theme', effTheme);
+          if (window.applyTheme) window.applyTheme(effTheme);
         }
         if (data.class_score_weight) {
           sessionStorage.setItem('class_score_weight', String(data.class_score_weight));

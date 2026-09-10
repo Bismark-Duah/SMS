@@ -217,13 +217,156 @@
       <!-- ── TAB 1: FRESH CANDIDATE ADMISSION ──────────────────────────────── -->
       <div id="tabContentNew">
         
-        <!-- STEP 1: Two-Option Intuitive Gateway (Buy Voucher vs Enter Credentials) -->
-        <div id="step-gateway" class="portal-card">
-          <div style="border-bottom:1px solid var(--border-color, rgba(255,255,255,0.1)); padding-bottom:14px; margin-bottom:24px;">
-            <h2 style="margin:0; color:#38bdf8; font-size:1.3rem;">🎓 Candidate Admission Verification & Authentication Gateway</h2>
-            <p style="font-size:0.88rem; color:var(--text-secondary, #94a3b8); margin:4px 0 0;">
-              Welcome to the official Senior High School admission portal. Please select an option below to proceed.
+        <!-- STEP 1: Candidate Placement Verification & Eligibility Gatekeeper -->
+        <div id="step-placement-check" class="portal-card">
+          <div style="border-bottom:1px solid var(--border-color, rgba(255,255,255,0.1)); padding-bottom:14px; margin-bottom:20px;">
+            <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; margin-bottom:8px;">
+              STEP 1 OF 3 • ELIGIBILITY VERIFICATION
+            </div>
+            <h2 style="margin:0; color:#38bdf8; font-size:1.3rem;">🎓 Check & Verify CSSPS Placement Status</h2>
+            <p style="font-size:0.88rem; color:var(--text-secondary, #94a3b8); margin:4px 0 0; line-height:1.45;">
+              Confirm that your name and placement are in this school's official Ministry of Education CSSPS register before purchasing or entering an admission voucher.
             </p>
+          </div>
+
+          <form id="placement-check-form" onsubmit="handleCheckPlacement(event)" autocomplete="off">
+            <div class="form-grid" style="grid-template-columns: 2fr 1fr; align-items:flex-end;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label for="check_bece_index">BECE Candidate Index Number *</label>
+                <input type="text" id="check_bece_index" required maxlength="12" placeholder="e.g. 1010001001 (10 digits) or 101000100126" autocomplete="off" />
+                <span style="font-size:0.74rem; color:#64748b; margin-top:3px; display:block;">Enter your 10-digit index or 12-digit full index with year.</span>
+              </div>
+
+              <div class="form-group" style="margin-bottom:0;">
+                <label for="check_bece_year">Year of Completion *</label>
+                <select id="check_bece_year" required>
+                  <option value="2026" selected>2026 (Current Session)</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                </select>
+                <span style="font-size:0.74rem; color:#64748b; margin-top:3px; display:block;">Exam Completion Year</span>
+              </div>
+            </div>
+
+            <div style="margin-top:16px; display:flex; gap:12px; align-items:center;">
+              <button type="submit" id="btnCheckPlacement" class="btn primary" style="padding:11px 26px; font-weight:700; font-size:0.95rem; background:linear-gradient(135deg, #0284c7, #2563eb); border:none; box-shadow:0 4px 14px rgba(2,132,199,0.35); cursor:pointer;">
+                🔍 Verify Placement Status
+              </button>
+              <div id="placement-check-spinner" style="display:none; font-size:0.85rem; color:#38bdf8; font-weight:600;">
+                ⏳ Checking placement register...
+              </div>
+            </div>
+          </form>
+
+          <!-- ── Dynamic Placement Result Area ────────────────────────────── -->
+          <div id="placement-check-result" style="margin-top:20px; display:none;">
+            
+            <!-- STATE A: Verified Placement Found -->
+            <div id="placement-verified-card" style="display:none; background:linear-gradient(135deg, rgba(16,185,129,0.1), rgba(15,23,42,0.9)); border:1.5px solid #10b981; border-radius:12px; padding:20px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid rgba(16,185,129,0.25); padding-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span style="font-size:1.8rem;">🎉</span>
+                  <div>
+                    <h3 style="margin:0; color:#4ade80; font-size:1.15rem;">Placement Verified Successfully!</h3>
+                    <div style="font-size:0.82rem; color:#94a3b8;">This candidate is confirmed on the school's official CSSPS placement list.</div>
+                  </div>
+                </div>
+                <span style="background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid #10b981; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:800;">
+                  🟢 PLACEMENT ACTIVE
+                </span>
+              </div>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; background:rgba(2,6,23,0.5); border-radius:8px; padding:14px; margin-bottom:18px;">
+                <div>
+                  <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Candidate Name</div>
+                  <div style="font-size:1.05rem; font-weight:800; color:#fff;" id="pv-cand-name">—</div>
+                </div>
+                <div>
+                  <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">BECE Index Number</div>
+                  <div style="font-size:0.95rem; font-weight:700; color:#38bdf8; font-family:monospace;" id="pv-cand-index">—</div>
+                </div>
+                <div>
+                  <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Placed Program / Course</div>
+                  <div style="font-size:0.95rem; font-weight:700; color:#facc15;" id="pv-cand-program">—</div>
+                </div>
+                <div>
+                  <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Residential Status</div>
+                  <div style="font-size:0.95rem; font-weight:700; color:#fff;" id="pv-cand-residential">—</div>
+                </div>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <button type="button" onclick="proceedToVoucherStep()" class="btn primary" style="padding:12px 28px; font-weight:800; font-size:0.98rem; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 16px rgba(16,185,129,0.4); cursor:pointer;">
+                  ⚡ Continue to Step 2: Admission Voucher & Form →
+                </button>
+                <button type="button" onclick="resetPlacementCheck()" class="btn" style="font-size:0.8rem; opacity:0.85; padding:8px 14px;">
+                  ↺ Check Another Placement
+                </button>
+              </div>
+            </div>
+
+            <!-- STATE B: Unverified / Batch Pending Advisory Notice -->
+            <div id="placement-unverified-card" style="display:none; background:linear-gradient(135deg, rgba(245,158,11,0.1), rgba(15,23,42,0.9)); border:1.5px solid #f59e0b; border-radius:12px; padding:20px;">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                <span style="font-size:1.8rem;">⚠️</span>
+                <div>
+                  <h3 style="margin:0; color:#fbbf24; font-size:1.15rem;">Placement Record Not Found on Current Roster</h3>
+                  <div style="font-size:0.82rem; color:#cbd5e1;">Searched BECE Index: <strong id="pnv-searched-index" style="color:#fff; font-family:monospace;">—</strong></div>
+                </div>
+              </div>
+
+              <div style="font-size:0.86rem; color:#cbd5e1; line-height:1.6; background:rgba(2,6,23,0.5); border-radius:8px; padding:14px; margin-bottom:16px;">
+                <p style="margin:0 0 10px; font-weight:700; color:#facc15;">Important Notice Regarding Batch Placement Releases:</p>
+                <ul style="margin:0; padding-left:20px; color:#94a3b8; font-size:0.83rem; line-height:1.6;">
+                  <li><strong>Batched Uploads:</strong> CSSPS placements are released and uploaded in batches (Main Placement, Self-Placement, Supplementary lists). If you were recently placed, the school secretariat may not have uploaded your batch yet.</li>
+                  <li><strong>Double-check Credentials:</strong> Ensure your 10-digit index number and Year of Completion are selected correctly above.</li>
+                  <li><strong>Confirm Placement Slip:</strong> Please verify on your official Ministry CSSPS Placement Slip that <em><span class="active-school-name-text">this institution</span></em> is your assigned school before attempting to buy a voucher.</li>
+                </ul>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <span style="font-size:0.8rem; color:#f87171; font-weight:600;">⛔ Do not purchase a voucher until your placement is confirmed above.</span>
+                <button type="button" onclick="focusPlacementInput()" class="btn primary" style="font-size:0.84rem; padding:8px 18px; background:#0284c7; border:none; cursor:pointer;">
+                  Re-type Index Number
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <div style="margin-top:20px; padding-top:14px; border-top:1px solid var(--border-color, #334155); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <span style="font-size:0.8rem; color:var(--text-secondary, #94a3b8);">Need help verifying your placement? Visit or call the School Admissions Office.</span>
+            <button onclick="handleGenerateBatchVouchers()" class="btn" style="font-size:0.78rem; opacity:0.8;">⚡ Secretariat Voucher Tool</button>
+          </div>
+        </div>
+
+
+        <!-- STEP 2: Admission Voucher Acquisition & Verification Gateway -->
+        <div id="step-gateway" class="portal-card" style="display:none;">
+          <div style="border-bottom:1px solid var(--border-color, rgba(255,255,255,0.1)); padding-bottom:14px; margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+              <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(99,102,241,0.15); color:#818cf8; border:1px solid rgba(99,102,241,0.3); padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:700;">
+                STEP 2 OF 3 • ADMISSION VOUCHER
+              </div>
+              <button type="button" onclick="backToPlacementStep()" class="btn" style="font-size:0.78rem; padding:4px 10px; opacity:0.85;">
+                ← Back to Placement Check
+              </button>
+            </div>
+            
+            <h2 style="margin:0; color:#38bdf8; font-size:1.3rem;">🔑 Candidate Admission Voucher Authentication</h2>
+            
+            <!-- Active Candidate Lock Badge -->
+            <div id="gateway-candidate-badge" style="margin-top:10px; background:rgba(15,23,42,0.8); border:1px solid #38bdf8; border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <div>
+                <span style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Verified Candidate:</span>
+                <span id="gate-cand-name" style="font-weight:800; color:#fff; margin-left:6px;">—</span>
+                <span style="color:#64748b; margin:0 6px;">|</span>
+                <span style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">BECE Index:</span>
+                <span id="gate-cand-index" class="badge-code" style="margin-left:4px;">—</span>
+              </div>
+              <span style="color:#4ade80; font-size:0.78rem; font-weight:700;">✔ PLACEMENT LOCKED</span>
+            </div>
           </div>
 
           <div class="gateway-grid">
@@ -263,13 +406,13 @@
                   <h3 style="margin:0; color:#818cf8; font-size:1.05rem;">2. Already Have Your Voucher?</h3>
                 </div>
                 <p style="font-size:0.85rem; color:var(--text-secondary, #cbd5e1); line-height:1.5; margin-bottom:16px;">
-                  Enter your BECE Index Number, Voucher Serial Code, and Secret PIN to log in and fill your admission docket.
+                  Enter your Voucher Serial Code and Secret PIN to log in and fill your admission docket.
                 </p>
 
                 <form id="voucher-login-form" onsubmit="handleVoucherLogin(event)" autocomplete="off">
                   <div class="form-group">
-                    <label for="gate_bece_index">BECE Index Number (12 digits) *</label>
-                    <input type="text" id="gate_bece_index" required maxlength="12" placeholder="e.g. 101000100124" autocomplete="off" />
+                    <label for="gate_bece_index">BECE Index Number *</label>
+                    <input type="text" id="gate_bece_index" required maxlength="12" placeholder="e.g. 101000100124" autocomplete="off" readonly style="background:rgba(2,6,23,0.8); cursor:not-allowed;" />
                   </div>
                   <div class="form-group">
                     <label for="gate_serial">Voucher Serial Code *</label>

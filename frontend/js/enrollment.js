@@ -7,6 +7,7 @@ const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (
 let currentVerifiedStudent = null;
 let currentLoadedStudentId = null;
 let currentActiveSchoolId = null;
+let currentPlacementRecord = null;
 let currentVoucherPrice = 0.10;
 let currentRecipientNumber = "0508929456";
 let currentRecipientName = "Duah Bismark";
@@ -78,6 +79,10 @@ async function loadPublicSchoolBranding() {
 
   const modalRec = document.getElementById('modalRecipientDisplay');
   if (modalRec) modalRec.textContent = `Recipient: ${currentRecipientName} (${currentRecipientNumber})`;
+
+  document.querySelectorAll('.active-school-name-text').forEach(el => {
+    el.textContent = name;
+  });
 }
 
 
@@ -103,7 +108,172 @@ function switchPortalTab(tab) {
 window.switchPortalTab = switchPortalTab;
 
 
-// ── 1. Handle Candidate Voucher Login ─────────────────────────────────────────
+// ── STEP 1: Handle Candidate Placement & Eligibility Check ────────────────────
+
+async function handleCheckPlacement(event) {
+  if (event) event.preventDefault();
+
+  const indexInput = document.getElementById('check_bece_index');
+  const yearSelect = document.getElementById('check_bece_year');
+  const btn = document.getElementById('btnCheckPlacement');
+  const spinner = document.getElementById('placement-check-spinner');
+  const resultContainer = document.getElementById('placement-check-result');
+  const verifiedCard = document.getElementById('placement-verified-card');
+  const unverifiedCard = document.getElementById('placement-unverified-card');
+
+  const rawIndex = (indexInput ? indexInput.value : '').trim();
+  const rawYear = (yearSelect ? yearSelect.value : '').trim();
+
+  if (!rawIndex) return;
+
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.style.display = 'inline-block';
+  if (resultContainer) resultContainer.style.display = 'block';
+  if (verifiedCard) verifiedCard.style.display = 'none';
+  if (unverifiedCard) unverifiedCard.style.display = 'none';
+
+  try {
+    const queryParams = new URLSearchParams({
+      index_number: rawIndex,
+      year: rawYear
+    });
+    if (currentActiveSchoolId) {
+      queryParams.set('school_id', currentActiveSchoolId);
+    }
+
+    const res = await fetch(`${API_BASE}/cssps/check-placement?${queryParams.toString()}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.detail || 'Could not verify placement. Please check the index number.');
+    }
+
+    if (data.is_placed) {
+      currentPlacementRecord = data;
+
+      // Update school branding if specific
+      if (data.school_name) {
+        const nameEl = document.getElementById('portalSchoolName');
+        if (nameEl) nameEl.textContent = data.school_name;
+      }
+      if (data.school_logo) {
+        const logoEl = document.getElementById('portalLogoContainer');
+        if (logoEl) logoEl.innerHTML = `<img src="${data.school_logo}" alt="${data.school_name || 'School'} Logo" style="width:100%; height:100%; object-fit:contain;" />`;
+      }
+
+      // Populate Verified Placement Card
+      const nameEl = document.getElementById('pv-cand-name');
+      const idxEl = document.getElementById('pv-cand-index');
+      const progEl = document.getElementById('pv-cand-program');
+      const resEl = document.getElementById('pv-cand-residential');
+
+      if (nameEl) nameEl.textContent = data.full_name || 'Candidate';
+      if (idxEl) idxEl.textContent = data.bece_index_number || rawIndex;
+      if (progEl) progEl.textContent = data.program_name || 'Assigned Program';
+      if (resEl) resEl.textContent = data.residential_status || 'Day / Boarding';
+
+      if (verifiedCard) verifiedCard.style.display = 'block';
+      if (unverifiedCard) unverifiedCard.style.display = 'none';
+
+    } else {
+      currentPlacementRecord = null;
+      const notFoundIdxEl = document.getElementById('pnv-searched-index');
+      if (notFoundIdxEl) notFoundIdxEl.textContent = data.searched_index || rawIndex;
+
+      document.querySelectorAll('.active-school-name-text').forEach(el => {
+        el.textContent = document.getElementById('portalSchoolName')?.textContent || 'this institution';
+      });
+
+      if (unverifiedCard) unverifiedCard.style.display = 'block';
+      if (verifiedCard) verifiedCard.style.display = 'none';
+    }
+
+  } catch (err) {
+    alert(`Placement Verification Notice: ${err.message}`);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.style.display = 'none';
+  }
+}
+window.handleCheckPlacement = handleCheckPlacement;
+
+function proceedToVoucherStep() {
+  if (!currentPlacementRecord) return;
+
+  const step1 = document.getElementById('step-placement-check');
+  const step2 = document.getElementById('step-gateway');
+
+  if (step1) step1.style.display = 'none';
+  if (step2) step2.style.display = 'block';
+
+  // Populate Gate Candidate Badge
+  const nameEl = document.getElementById('gate-cand-name');
+  const indexEl = document.getElementById('gate-cand-index');
+  const gateBece = document.getElementById('gate_bece_index');
+
+  if (nameEl) nameEl.textContent = currentPlacementRecord.full_name;
+  if (indexEl) indexEl.textContent = currentPlacementRecord.bece_index_number;
+  if (gateBece) {
+    gateBece.value = currentPlacementRecord.bece_index_number;
+  }
+
+  // Pre-fill Buy Voucher modal index
+  const buyIndex = document.getElementById('buy_bece_index');
+  if (buyIndex) {
+    buyIndex.value = currentPlacementRecord.bece_index_number;
+  }
+
+  // Pre-fill Serial if previously assigned
+  const gateSerial = document.getElementById('gate_serial');
+  const gatePin = document.getElementById('gate_pin');
+  if (gateSerial && !gateSerial.value) {
+    setTimeout(() => {
+      if (gateSerial) gateSerial.focus();
+    }, 100);
+  }
+
+  step2.scrollIntoView({ behavior: 'smooth' });
+}
+window.proceedToVoucherStep = proceedToVoucherStep;
+
+function backToPlacementStep() {
+  const step1 = document.getElementById('step-placement-check');
+  const step2 = document.getElementById('step-gateway');
+
+  if (step2) step2.style.display = 'none';
+  if (step1) step1.style.display = 'block';
+  step1.scrollIntoView({ behavior: 'smooth' });
+}
+window.backToPlacementStep = backToPlacementStep;
+
+function resetPlacementCheck() {
+  currentPlacementRecord = null;
+  const resultContainer = document.getElementById('placement-check-result');
+  const verifiedCard = document.getElementById('placement-verified-card');
+  const unverifiedCard = document.getElementById('placement-unverified-card');
+  const indexInput = document.getElementById('check_bece_index');
+
+  if (resultContainer) resultContainer.style.display = 'none';
+  if (verifiedCard) verifiedCard.style.display = 'none';
+  if (unverifiedCard) unverifiedCard.style.display = 'none';
+  if (indexInput) {
+    indexInput.value = '';
+    indexInput.focus();
+  }
+}
+window.resetPlacementCheck = resetPlacementCheck;
+
+function focusPlacementInput() {
+  const indexInput = document.getElementById('check_bece_index');
+  if (indexInput) {
+    indexInput.focus();
+    indexInput.select();
+  }
+}
+window.focusPlacementInput = focusPlacementInput;
+
+
+// ── STEP 2: Handle Candidate Voucher Login ─────────────────────────────────────
 
 async function handleVoucherLogin(event) {
   event.preventDefault();
@@ -432,7 +602,15 @@ function openBuyVoucherModal() {
   if (modal) {
     modal.style.display = 'flex';
     const beceInput = document.getElementById('buy_bece_index');
-    if (beceInput) beceInput.focus();
+    const phoneInput = document.getElementById('buy_parent_phone');
+    if (beceInput) {
+      if (currentPlacementRecord && currentPlacementRecord.bece_index_number) {
+        beceInput.value = currentPlacementRecord.bece_index_number;
+        if (phoneInput) setTimeout(() => phoneInput.focus(), 150);
+      } else {
+        setTimeout(() => beceInput.focus(), 150);
+      }
+    }
   }
 }
 window.openBuyVoucherModal = openBuyVoucherModal;

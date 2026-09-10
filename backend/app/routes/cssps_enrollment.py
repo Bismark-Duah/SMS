@@ -3,12 +3,12 @@ import io
 import re
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Response, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 
 from ..database import get_db
-from ..models import Student, StudentGuardian, StudentHealth, Program, House, ClassSection, User, ElectiveCombination, Subject, School
+from ..models import Student, StudentGuardian, StudentHealth, Program, House, ClassSection, User, ElectiveCombination, Subject, School, AdmissionVoucher
 from ..schemas import CSSPSEnrollmentCreate
 from ..services.allocation import allocate_student_house_and_dorm
 from ..services.admission_package import AdmissionPackageService
@@ -141,6 +141,119 @@ def enroll_student(data: CSSPSEnrollmentCreate, db: Session = Depends(get_db), c
         "residential_status": student.residential_status,
         "enrollment_status": student.enrollment_status
     }
+
+@router.get("/check-placement")
+def check_candidate_placement(
+    index_number: str = Query(..., description="10 or 12-digit BECE Index Number"),
+    year: Optional[str] = Query(None, description="BECE Year of completion (e.g. 2026 or 26)"),
+    school_id: Optional[int] = Query(None, description="Optional School ID filter"),
+    db: Session = Depends(get_db)
+):
+    """
+    Public Step 1 Placement & Eligibility Verification Gateway.
+    Verifies if a candidate has been placed in this institution from the uploaded CSSPS list
+    before prompting them to purchase or enter an admission voucher.
+    """
+    raw_idx = index_number.strip()
+    clean_idx = re.sub(r'[^a-zA-Z0-9]', '', raw_idx).upper()
+    clean_digits = "".join(filter(str.isdigit, raw_idx))
+    
+    primary_idx = clean_digits if len(clean_digits) >= 6 else clean_idx
+    if not primary_idx or len(primary_idx) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Please provide a valid BECE Index Number (minimum 6 digits)."
+        )
+
+    year_suffix = ""
+    if year:
+        clean_year = "".join(filter(str.isdigit, str(year).strip()))
+        if len(clean_year) >= 2:
+            year_suffix = clean_year[-2:]
+        elif len(clean_year) == 1:
+            year_suffix = f"0{clean_year}"
+
+    # Build potential candidate index keys
+    potential_indices = [primary_idx]
+    if clean_idx and clean_idx != primary_idx:
+        potential_indices.append(clean_idx)
+
+    for base_idx in list(potential_indices):
+        if year_suffix:
+            if len(base_idx) == 10 and not base_idx.endswith(year_suffix):
+                potential_indices.insert(0, f"{base_idx}{year_suffix}")
+            elif len(base_idx) == 12:
+                potential_indices.append(base_idx[:10])
+
+    # Find matching student in database
+    query = db.query(Student).filter(
+        (Student.bece_index_number.in_(potential_indices)) |
+        (Student.student_code.in_([f"SHS-{idx}" for idx in potential_indices]))
+    )
+
+    if school_id:
+        query = query.filter(Student.school_id == school_id)
+
+    student = query.first()
+
+    # Fallback prefix matching if user entered 10 digits without year
+    if not student and len(primary_idx) == 10:
+        prefix_matches = db.query(Student).filter(
+            Student.bece_index_number.startswith(primary_idx)
+        ).all()
+        if school_id:
+            prefix_matches = [s for s in prefix_matches if s.school_id == school_id]
+        if prefix_matches:
+            student = prefix_matches[0]
+
+    if not student:
+        canonical_display = f"{clean_digits}{year_suffix}" if (len(clean_digits) == 10 and year_suffix) else clean_digits
+        return {
+            "is_placed": False,
+            "searched_index": canonical_display,
+            "message": f"Candidate index '{canonical_display}' was not found on the uploaded CSSPS placement list for this school.",
+            "batch_advisory": "CSSPS placement lists are released and uploaded in batches by the school administration. If you were recently placed via self-placement or a supplementary list, please verify that your index number and completion year are correct, or wait for the school's ICT unit to upload the latest batch before acquiring a voucher."
+        }
+
+    # Candidate is placed!
+    prog_name = student.program.name if hasattr(student, 'program') and student.program else "General Studies"
+    is_boarder = (student.residential_status or "B").upper() == "B"
+
+    school_name = "GHANA SENIOR HIGH SCHOOL"
+    school_logo = None
+    if student.school_id:
+        sc = db.query(School).filter(School.id == student.school_id).first()
+        if sc:
+            school_name = sc.name
+            school_logo = sc.logo_url
+    elif hasattr(student, 'school') and student.school:
+        school_name = student.school.name
+        school_logo = student.school.logo_url
+
+    # Check if voucher already linked
+    has_voucher = False
+    v = db.query(AdmissionVoucher).filter(AdmissionVoucher.bece_index_number == student.bece_index_number).first()
+    if v:
+        has_voucher = True
+
+    return {
+        "is_placed": True,
+        "student_id": student.id,
+        "full_name": student.full_name,
+        "bece_index_number": student.bece_index_number,
+        "bece_aggregate": student.bece_aggregate,
+        "program_id": student.program_id,
+        "program_name": prog_name,
+        "residential_status": "Boarding" if is_boarder else "Day",
+        "enrollment_status": student.enrollment_status or "PLACED",
+        "house_name": student.house.name if student.house else None,
+        "dormitory_name": student.dormitory.name if student.dormitory else None,
+        "school_id": student.school_id,
+        "school_name": school_name,
+        "school_logo": school_logo,
+        "has_voucher": has_voucher
+    }
+
 
 @router.get("/verify/{index_number}")
 def verify_bece_index(index_number: str, db: Session = Depends(get_db)):

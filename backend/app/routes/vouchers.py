@@ -469,12 +469,13 @@ def get_voucher_stats(
 
 # ── Enterprise Payment Orchestrator & Webhook Endpoints ──────────────────────
 
-from fastapi import Request, Header
+from fastapi import Request, Header, BackgroundTasks
 from ..services.payment_orchestrator import (
     initialize_voucher_checkout,
     verify_paystack_webhook_signature,
     verify_hubtel_webhook_signature,
-    fulfill_voucher_order_atomic
+    fulfill_voucher_order_atomic,
+    process_unified_payment_webhook
 )
 from ..middleware.cloudflare_guard import verify_turnstile_token
 
@@ -657,35 +658,26 @@ def submit_voucher_otp(
 @router.post("/webhook/paystack")
 async def paystack_webhook(
     request: Request,
+    background_tasks: BackgroundTasks,
     x_paystack_signature: Optional[str] = Header(None, alias="x-paystack-signature"),
     db: Session = Depends(get_db)
 ):
     """
     Enterprise Webhook Handler for Paystack:
-    Cryptographically verifies HMAC SHA-512 signature and triggers ACID atomic voucher fulfillment.
+    Cryptographically verifies HMAC SHA-512 signature and triggers unified payment orchestrator.
     """
     raw_body = await request.body()
-    
-    # Strict Cryptographic HMAC Verification
-    if not verify_paystack_webhook_signature(raw_body, x_paystack_signature or "", db=db):
-        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Paystack webhook signature.")
-
-    try:
-        payload = json.loads(raw_body.decode("utf-8"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body format.")
-
-    event = payload.get("event")
-    if event == "charge.success":
-        data = payload.get("data", {})
-        order_ref = data.get("reference")
-        gateway_ref = data.get("id") or str(data.get("transaction_id", ""))
-
-        if order_ref:
-            fulfillment = fulfill_voucher_order_atomic(order_ref, str(gateway_ref), db)
-            return {"status": "success", "fulfillment": fulfillment}
-
-    return {"status": "ignored", "event": event}
+    result = process_unified_payment_webhook(
+        raw_body=raw_body,
+        signature_header=x_paystack_signature,
+        db=db,
+        background_tasks=background_tasks
+    )
+    if result.get("status") == "unauthorized":
+        raise HTTPException(status_code=401, detail=result.get("error", "Unauthorized: Invalid Paystack webhook signature."))
+    elif result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("error", "Invalid JSON body format."))
+    return result
 
 
 @router.post("/webhook/hubtel")

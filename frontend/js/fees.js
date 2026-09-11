@@ -398,15 +398,41 @@ window.payOnlineWithPaystack = async function() {
     });
     const data = await res.json();
     if (res.ok) {
-      if (data.status === 'success' && data.authorization_url) {
-        showStatus('payStatus', '✅ Opening Paystack Gateway... Redirecting...', 'success');
-        window.open(data.authorization_url, '_blank');
+      if (data.status === 'success' && data.reference) {
+        if (data.authorization_url && !data.authorization_url.startsWith('/paystack-callback')) {
+          showStatus('payStatus', '✅ Opening Paystack Gateway... Redirecting...', 'success');
+          window.open(data.authorization_url, '_blank');
+        }
+
+        const ref = data.reference;
+        showStatus('payStatus', `⏳ Waiting for MoMo approval on reference: ${ref}...`, 'info');
+
+        let attempts = 0;
+        const maxAttempts = 20;
+        const pollInterval = setInterval(async () => {
+          attempts++;
+          try {
+            const vRes = await fetch(`${API_BASE}/fees/paystack/verify/${ref}`, { headers: H() });
+            const vData = await vRes.json();
+            if (vRes.ok && vData.status === 'success') {
+              clearInterval(pollInterval);
+              showStatus('payStatus', `🎉 Payment Successful! GHS ${fmt(amount)} recorded.`, 'success');
+              await Promise.all([loadSummary(), loadFees()]);
+              setTimeout(() => { closePayModal(); }, 1500);
+            } else if (attempts >= maxAttempts) {
+              clearInterval(pollInterval);
+              showStatus('payStatus', '⚠️ Transaction pending confirmation. If prompt was approved, ledger will update momentarily.', 'warning');
+            }
+          } catch (err) {
+            if (attempts >= maxAttempts) clearInterval(pollInterval);
+          }
+        }, 3000);
       } else {
         const fallbackMsg = `ℹ️ ${data.message || 'Paystack is unconfigured or server is offline.'}`;
         showStatus('payStatus', fallbackMsg, 'warning');
       }
     } else {
-      showStatus('payStatus', `❌ Paystack Error: ${data.detail || 'Initialization failed'}`, 'error');
+      showStatus('payStatus', `❌ Paystack Error: ${data.detail || 'Initialization failed'}`, 'danger');
     }
   } catch (e) {
     showStatus('payStatus', `ℹ️ Server is operating in 100% Offline Mode. Click 'Submit Offline Payment' to record locally.`, 'warning');

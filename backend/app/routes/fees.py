@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, Response, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import List, Optional
@@ -16,6 +16,7 @@ from ..models import Fee, Payment, Student, User, ClassSection, Notification, Me
 from ..dependencies import get_current_user, get_school_id
 from ..services.communication_service import CommunicationService
 from ..payments.paystack import initialize_paystack_transaction, verify_paystack_transaction, verify_paystack_signature
+from ..services.payment_orchestrator import process_unified_payment_webhook
 from ..sms.hubtel import send_sms_hubtel
 
 router = APIRouter()
@@ -944,74 +945,26 @@ def verify_paystack_payment(
 @router.post("/paystack/webhook")
 async def paystack_webhook(
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     x_paystack_signature: Optional[str] = Header(None, alias="x-paystack-signature")
 ):
     """
     Paystack Webhook Handler for automated real-time MoMo payment confirmation.
+    Delegates to the unified multi-tenant payment orchestrator with cryptographic HMAC validation.
     """
     body_bytes = await request.body()
-    
-    # Authenticate webhook signature if configured
-    if not verify_paystack_signature(body_bytes, x_paystack_signature, db):
-        raise HTTPException(status_code=400, detail="Invalid Paystack Webhook Signature.")
-
-    try:
-        data = json.loads(body_bytes.decode('utf-8'))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON payload.")
-
-    event = data.get("event")
-    if event != "charge.success":
-        return {"status": "ignored", "message": f"Event {event} not handled."}
-
-    charge_data = data.get("data", {})
-    reference = charge_data.get("reference")
-    if not reference:
-        return {"status": "ignored", "message": "No reference found."}
-
-    existing_pay = db.query(Payment).filter(Payment.reference_no == reference).first()
-    if existing_pay:
-        return {"status": "success", "message": "Payment already processed."}
-
-    meta = charge_data.get("metadata", {})
-    fee_id = meta.get("fee_id")
-    if not fee_id:
-        parts = reference.split("-")
-        if len(parts) >= 3 and parts[2].isdigit():
-            fee_id = int(parts[2])
-
-    fee = db.query(Fee).filter(Fee.id == fee_id).first() if fee_id else None
-    if not fee:
-        return {"status": "error", "message": "Associated fee bill not found."}
-
-    amount_paid = float(charge_data.get("amount", 0)) / 100.0  # Paystack amounts in pesewas
-    if amount_paid <= 0:
-        amount_paid = fee.amount - fee.amount_paid
-
-    student = fee.student
-    target_sch_id = student.school_id if student else None
-    receipt_no = generate_receipt_number(db, target_sch_id, datetime.utcnow())
-
-    pay_record = Payment(
-        fee_id=fee.id,
-        amount_paid=amount_paid,
-        payment_date=datetime.utcnow(),
-        payment_method="Paystack MoMo Webhook",
-        reference_no=reference,
-        receipt_number=receipt_no,
-        notes=f"Paystack Webhook Auto-Verification ({charge_data.get('channel', 'mobile_money')})",
-        recorded_by=meta.get("payer_user_id")
+    result = process_unified_payment_webhook(
+        raw_body=body_bytes,
+        signature_header=x_paystack_signature,
+        db=db,
+        background_tasks=background_tasks
     )
-    db.add(pay_record)
-    db.flush()
-
-    new_tot = db.query(func.coalesce(func.sum(Payment.amount_paid), 0.0)).filter(Payment.fee_id == fee.id).scalar()
-    fee.amount_paid = round(float(new_tot), 2)
-    fee.status = recalculate_fee_status(fee)
-    db.commit()
-
-    return {"status": "success"}
+    if result.get("status") == "unauthorized":
+        raise HTTPException(status_code=401, detail=result.get("error", "Invalid Paystack Webhook Signature."))
+    elif result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("message") or result.get("error", "Bad request."))
+    return result
 
 
 @router.get("/receipt/{payment_id}/pdf")

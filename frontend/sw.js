@@ -51,6 +51,7 @@ const STATIC_ASSETS = [
   '/js/charts.js',
   '/js/classes.js',
   '/js/clearance.js',
+  '/js/commandPalette.js',
   '/js/config.js',
   '/js/cumulative-record.js',
   '/js/dashboard.js',

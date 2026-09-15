@@ -347,7 +347,11 @@ def run_migrations():
             ("responsibility_role", "VARCHAR(50) DEFAULT 'REGULAR_TEACHER'"),
             ("max_weekly_periods", "INTEGER DEFAULT 28"),
             ("is_teaching_exempt", "BOOLEAN DEFAULT FALSE"),
-            ("duty_exempt_periods", "TEXT")
+            ("duty_exempt_periods", "TEXT"),
+            ("recovery_question", "VARCHAR(255)"),
+            ("recovery_answer_hash", "VARCHAR(255)"),
+            ("recovery_pin_hash", "VARCHAR(255)"),
+            ("token_version", "INTEGER DEFAULT 1")
         ],
         "timetable": [
             ("room", "VARCHAR")

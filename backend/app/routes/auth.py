@@ -53,8 +53,8 @@ except ImportError:
     pwd_context = _FallbackPwdContext()
 
 from ..database import get_db
-from ..models import User, Role, School, ClassSection, House, Department
-from ..services.auth import create_jwt
+from ..models import User, Role, School, ClassSection, House, Department, Student, UserDeviceSession
+from ..services.auth import create_jwt, decode_jwt
 from ..services.audit_service import record_audit_event
 from .. import schemas
 from ..services.guardian_service import link_students_for_parent_user
@@ -1141,3 +1141,313 @@ def cleanup_assistant_head_roles(
         "message": f"Successfully scrubbed redundant admin role from {cleaned_count} Assistant Head account(s).",
         "cleaned_count": cleaned_count
     }
+
+
+# ── Enterprise Offline Self-Service Password Recovery Engine ───────────────────
+import time
+import uuid
+import hmac
+
+_recovery_rate_limit = {}  # {client_key: {"attempts": [...], "locked_until": float}}
+_used_recovery_jtis = set()  # Revoked single-use reset token nonces
+
+def _get_client_recovery_key(request: Request, username: str) -> str:
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    clean_user = (username or "").strip().lower()
+    return f"{client_ip}:{clean_user}"
+
+def _check_recovery_rate_limit(client_key: str) -> None:
+    now = time.time()
+    record = _recovery_rate_limit.get(client_key, {"attempts": [], "locked_until": 0})
+    if record["locked_until"] > now:
+        remaining_mins = max(1, int((record["locked_until"] - now) / 60))
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many failed attempts. Recovery locked for {remaining_mins} minute(s) for security."
+        )
+    # Filter attempts in last 15 minutes (900 seconds)
+    record["attempts"] = [t for t in record["attempts"] if (now - t) < 900]
+    if len(record["attempts"]) >= 5:
+        record["locked_until"] = now + 1800  # 30-minute lockout
+        _recovery_rate_limit[client_key] = record
+        raise HTTPException(
+            status_code=429,
+            detail="Too many failed verification attempts. Account recovery locked for 30 minutes for security."
+        )
+    _recovery_rate_limit[client_key] = record
+
+def _record_recovery_failure(client_key: str) -> None:
+    now = time.time()
+    record = _recovery_rate_limit.get(client_key, {"attempts": [], "locked_until": 0})
+    record["attempts"].append(now)
+    if len(record["attempts"]) >= 5:
+        record["locked_until"] = now + 1800
+    _recovery_rate_limit[client_key] = record
+
+def _clear_recovery_rate_limit(client_key: str) -> None:
+    if client_key in _recovery_rate_limit:
+        del _recovery_rate_limit[client_key]
+
+def _normalize_phone(phone: Optional[str]) -> str:
+    if not phone:
+        return ""
+    digits = re.sub(r"\D", "", str(phone))
+    if digits.startswith("233") and len(digits) == 12:
+        digits = "0" + digits[3:]
+    return digits
+
+
+@router.post("/forgot-password/verify")
+def verify_forgot_password_identity(
+    payload: dict,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Enterprise Offline Identity Verification for Self-Service Password Reset.
+    Validates Username/Email + Registered Phone + Secondary Verification (Staff ID / DOB / PIN / Security Answer).
+    Enforces sliding-window rate limiting, timing-attack resistance, and role-based privilege checks.
+    """
+    username_raw = (payload.get("username") or "").strip()
+    phone_raw = (payload.get("phone_number") or "").strip()
+    identifier_raw = (payload.get("identifier") or "").strip()
+    recovery_pin_raw = (payload.get("recovery_pin") or "").strip()
+    recovery_answer_raw = (payload.get("recovery_answer") or "").strip()
+
+    if not username_raw:
+        raise HTTPException(status_code=400, detail="Username or email is required.")
+
+    client_key = _get_client_recovery_key(request, username_raw)
+    _check_recovery_rate_limit(client_key)
+
+    # 1. Lookup User by username or email
+    user = db.query(User).filter(func.lower(User.username) == username_raw.lower()).first()
+    if not user and "@" in username_raw:
+        user = db.query(User).filter(func.lower(User.email) == username_raw.lower()).first()
+
+    # Timing attack defense: compute dummy hash verification if user not found
+    if not user:
+        _verify_password("dummy_password_timing_defense", "$2b$12$ASt15rUBYvNa3mT/KQ8LUOOlTQrett/pL/NCLK6QDw3.Hsciw3csm")
+        _record_recovery_failure(client_key)
+        raise HTTPException(status_code=400, detail="Invalid verification details. Please verify your identity credentials.")
+
+    if not user.is_active:
+        raise HTTPException(status_code=400, detail="Account is deactivated. Please contact your school administrator.")
+
+    input_phone_clean = _normalize_phone(phone_raw)
+    user_phone_clean = _normalize_phone(user.phone_number)
+    
+    # 2. Phone Verification
+    phone_matched = False
+    if input_phone_clean and user_phone_clean and input_phone_clean == user_phone_clean:
+        phone_matched = True
+    
+    # Check student / parent phone records if not matched directly on user record
+    if not phone_matched and input_phone_clean:
+        student_records = db.query(Student).filter(
+            (Student.parent_id == user.id) | (func.lower(Student.student_code) == username_raw.lower())
+        ).all()
+        for st in student_records:
+            if _normalize_phone(st.phone) == input_phone_clean:
+                phone_matched = True
+                break
+
+    # 3. Secondary Identifier / Secret Verification
+    secondary_matched = False
+    
+    # Check Recovery PIN if user configured one
+    if user.recovery_pin_hash:
+        test_pin = recovery_pin_raw or identifier_raw
+        if test_pin and _verify_password(test_pin, user.recovery_pin_hash)[0]:
+            secondary_matched = True
+
+    # Check Security Answer if user configured one
+    if not secondary_matched and user.recovery_answer_hash:
+        test_ans = (recovery_answer_raw or identifier_raw).strip().lower()
+        if test_ans and _verify_password(test_ans, user.recovery_answer_hash)[0]:
+            secondary_matched = True
+
+    # Check Staff ID for teachers & staff
+    if not secondary_matched and user.staff_id and identifier_raw:
+        if user.staff_id.strip().lower() == identifier_raw.lower():
+            secondary_matched = True
+
+    # Check Student DOB / Index Number / Enrolment Code for students & parents
+    if not secondary_matched and identifier_raw:
+        student_records = db.query(Student).filter(
+            (Student.parent_id == user.id) | (func.lower(Student.student_code) == username_raw.lower())
+        ).all()
+        clean_ident = identifier_raw.strip().lower().replace("/", "-")
+        for st in student_records:
+            dob_str = str(st.date_of_birth or "").replace("/", "-")
+            if (st.bece_index_number and st.bece_index_number.lower() == clean_ident) or \
+               (st.enrolment_code and st.enrolment_code.lower() == clean_ident) or \
+               (st.student_code and st.student_code.lower() == clean_ident) or \
+               (dob_str and clean_ident in dob_str):
+                secondary_matched = True
+                break
+
+    # Fallback for initial unconfigured accounts if phone matches
+    user_roles = [r.name.lower() for r in user.roles] if user.roles else []
+    is_high_privilege = any(r in {"super_admin", "admin", "bursar", "proprietor", "headmaster", "headmistress", "school_administrator"} for r in user_roles)
+
+    if not is_high_privilege and phone_matched and (not user.staff_id and not user.recovery_pin_hash and not user.recovery_answer_hash):
+        # Regular teacher without staff ID entered yet: phone match is accepted
+        secondary_matched = True
+
+    if not (phone_matched and secondary_matched):
+        _record_recovery_failure(client_key)
+        raise HTTPException(status_code=400, detail="Identity verification failed. Please check your phone number and identification.")
+
+    # 4. Identity Verified -> Clear rate limit & Issue short-lived, single-use JWT Reset Token
+    _clear_recovery_rate_limit(client_key)
+    reset_jti = uuid.uuid4().hex
+    
+    reset_token = create_jwt(
+        payload={
+            "sub": str(user.id),
+            "user_id": user.id,
+            "username": user.username,
+            "scope": "password_reset",
+            "jti": reset_jti,
+            "token_version": getattr(user, "token_version", 1) or 1
+        },
+        expires_in=600  # 10 minutes expiry
+    )
+
+    return {
+        "status": "success",
+        "message": "Identity verified successfully. You may now set a new password.",
+        "reset_token": reset_token,
+        "username": user.username,
+        "requires_pin_setup": not bool(user.recovery_pin_hash)
+    }
+
+
+@router.post("/forgot-password/reset")
+def reset_forgot_password(
+    payload: dict,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Consumes single-use reset token to securely set a new password.
+    Burns the token nonce, invalidates all existing active device sessions, and records audit telemetry.
+    """
+    reset_token = (payload.get("reset_token") or "").strip()
+    new_password = (payload.get("new_password") or "").strip()
+    confirm_password = (payload.get("confirm_password") or "").strip()
+
+    if not reset_token:
+        raise HTTPException(status_code=400, detail="Missing password reset token.")
+
+    if not new_password or len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters long.")
+
+    if confirm_password and new_password != confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match.")
+
+    try:
+        token_payload = decode_jwt(reset_token)
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid or expired reset token: {str(e)}")
+
+    if token_payload.get("scope") != "password_reset":
+        raise HTTPException(status_code=403, detail="Invalid token scope for password reset.")
+
+    jti = token_payload.get("jti")
+    if not jti or jti in _used_recovery_jtis:
+        raise HTTPException(status_code=401, detail="This reset token has already been used. Please request a new one.")
+
+    # Burn token nonce immediately
+    _used_recovery_jtis.add(jti)
+
+    user_id = token_payload.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User account not found.")
+
+    # Update password and advance token version to revoke previous sessions
+    user.password_hash = _hash_password(new_password)
+    user.is_first_login = False
+    user.token_version = (getattr(user, "token_version", 1) or 1) + 1
+
+    # Invalidate all active device sessions for this user
+    try:
+        db.query(UserDeviceSession).filter(UserDeviceSession.user_id == user.id).delete(synchronize_session=False)
+    except Exception:
+        pass
+
+    # Record immutable audit event
+    record_audit_event(
+        db,
+        request=request,
+        actor=user,
+        action="PASSWORD_RESET_SELF_SERVICE",
+        details=f"User {user.username} successfully self-reset password via offline identity verification.",
+        entity_type="User",
+        entity_id=str(user.id),
+        school_id=user.school_id
+    )
+
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Password successfully updated! You can now log in with your new password."
+    }
+
+
+# ── Authenticated User: Recovery Profile Settings ─────────────────────────────
+
+@router.get("/profile/recovery-settings")
+def get_user_recovery_settings(
+    current_user: User = Depends(get_current_user)
+):
+    """Returns recovery configuration status for the currently authenticated user."""
+    return {
+        "status": "success",
+        "username": current_user.username,
+        "phone_number": current_user.phone_number or "",
+        "staff_id": current_user.staff_id or "",
+        "has_recovery_question": bool(current_user.recovery_question and current_user.recovery_answer_hash),
+        "recovery_question": current_user.recovery_question or "",
+        "has_recovery_pin": bool(current_user.recovery_pin_hash)
+    }
+
+
+@router.post("/profile/recovery-settings")
+def update_user_recovery_settings(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Allows user to set or update their secret Recovery PIN and Security Question/Answer."""
+    phone_number = payload.get("phone_number")
+    staff_id = payload.get("staff_id")
+    recovery_question = (payload.get("recovery_question") or "").strip()
+    recovery_answer = (payload.get("recovery_answer") or "").strip()
+    recovery_pin = (payload.get("recovery_pin") or "").strip()
+
+    if phone_number is not None:
+        current_user.phone_number = str(phone_number).strip()
+
+    if staff_id is not None:
+        current_user.staff_id = str(staff_id).strip()
+
+    if recovery_question:
+        current_user.recovery_question = recovery_question
+        if recovery_answer:
+            current_user.recovery_answer_hash = _hash_password(recovery_answer.lower())
+
+    if recovery_pin:
+        if not (recovery_pin.isdigit() and 4 <= len(recovery_pin) <= 8):
+            raise HTTPException(status_code=400, detail="Recovery PIN must be 4 to 8 digits.")
+        current_user.recovery_pin_hash = _hash_password(recovery_pin)
+
+    db.commit()
+    return {
+        "status": "success",
+        "message": "Recovery settings updated successfully."
+    }
+

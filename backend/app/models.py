@@ -137,6 +137,10 @@ class User(Base):
     max_weekly_periods = Column(Integer, default=28, nullable=True)
     is_teaching_exempt = Column(Boolean, default=False)
     duty_exempt_periods = Column(Text, nullable=True)  # JSON string e.g. '[{"day": 2, "period": 1}]'
+    recovery_question = Column(String(255), nullable=True)
+    recovery_answer_hash = Column(String(255), nullable=True)
+    recovery_pin_hash = Column(String(255), nullable=True)
+    token_version = Column(Integer, default=1, nullable=False, server_default="1")
 
     school = relationship("School", back_populates="users")
     roles = relationship("Role", secondary=user_roles, back_populates="users")

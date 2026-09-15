@@ -375,9 +375,110 @@
         text-align: center;
         font-size: .75rem;
         color: rgba(148,163,184,.4);
-        margin-top: 20px;
-      }
-    </style>
+        .forgot-pw-link {
+          display: inline-block;
+          background: none;
+          border: none;
+          color: #38bdf8;
+          font-size: .84rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: var(--transition);
+          padding: 2px 0;
+          margin-top: -6px;
+          margin-bottom: 16px;
+          text-align: right;
+          float: right;
+        }
+        .forgot-pw-link:hover {
+          color: #7dd3fc;
+          text-decoration: underline;
+        }
+
+        /* ── Glassmorphic Recovery Modal ── */
+        .recovery-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.82);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          z-index: 100;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          padding: 18px;
+          opacity: 0;
+          transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .recovery-modal-overlay.active {
+          display: flex;
+          opacity: 1;
+        }
+        .recovery-modal {
+          background: rgba(30, 41, 59, 0.92);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
+          border-radius: 20px;
+          width: 100%;
+          max-width: 480px;
+          padding: 32px 28px;
+          position: relative;
+          transform: translateY(20px) scale(0.96);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .recovery-modal-overlay.active .recovery-modal {
+          transform: translateY(0) scale(1);
+        }
+        .recovery-close-btn {
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          background: rgba(255, 255, 255, 0.08);
+          border: none;
+          color: var(--muted);
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.1rem;
+          transition: var(--transition);
+        }
+        .recovery-close-btn:hover {
+          background: rgba(239, 68, 68, 0.2);
+          color: #f87171;
+        }
+        .recovery-steps {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          margin-bottom: 24px;
+        }
+        .step-pill {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          padding: 4px 12px;
+          border-radius: 20px;
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--muted);
+          transition: var(--transition);
+        }
+        .step-pill.active {
+          background: rgba(79, 70, 229, 0.25);
+          border: 1px solid rgba(99, 102, 241, 0.4);
+          color: #a5b4fc;
+        }
+        .step-pill.completed {
+          background: rgba(16, 185, 129, 0.15);
+          color: #34d399;
+        }
+      </style>
   </head>
   <body>
     <!-- Floating particles -->
@@ -427,7 +528,10 @@
               <input id="username" name="username" type="text" placeholder="Enter your username" required autocomplete="username" />
             </div>
 
-            <label for="password">Password</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label for="password" style="margin-bottom:0;">Password</label>
+              <button type="button" class="forgot-pw-link" id="forgotPwBtn">Forgot Password?</button>
+            </div>
             <div class="input-wrap">
               <input id="password" name="password" type="password" placeholder="Enter your password" required autocomplete="current-password" />
               <button type="button" class="toggle-pw" id="togglePw" title="Show / hide password" aria-label="Toggle password visibility">👁</button>
@@ -441,6 +545,62 @@
           <div class="divider"></div>
           <p class="version-tag">eduManage360 · All rights reserved</p>
         </div>
+      </div>
+    </div>
+
+    <!-- ── Self-Service Offline Password Recovery Modal ── -->
+    <div class="recovery-modal-overlay" id="recoveryOverlay" role="dialog" aria-modal="true" aria-labelledby="recoveryTitle">
+      <div class="recovery-modal">
+        <button type="button" class="recovery-close-btn" id="recoveryCloseBtn" aria-label="Close modal">×</button>
+        
+        <div class="recovery-steps">
+          <div class="step-pill active" id="step1Pill"><span>1</span> Verify Identity</div>
+          <div class="step-pill" id="step2Pill"><span>2</span> Set Password</div>
+        </div>
+
+        <h3 id="recoveryTitle" style="font-family:'Outfit',sans-serif; font-size:1.35rem; font-weight:700; margin-bottom:6px;">Reset Your Password</h3>
+        <p style="font-size:0.85rem; color:var(--muted); margin-bottom:20px;" id="recoverySubtitle">
+          Enter your registered institutional details to verify your identity.
+        </p>
+
+        <!-- Step 1: Identity Verification -->
+        <form id="recoveryStep1Form">
+          <label for="recUsername">Username or Email</label>
+          <div class="input-wrap">
+            <input id="recUsername" type="text" placeholder="e.g. k.mensah or student code" required autocomplete="username" />
+          </div>
+
+          <label for="recPhone">Registered Phone Number</label>
+          <div class="input-wrap">
+            <input id="recPhone" type="text" placeholder="e.g. 0244123456" required autocomplete="tel" />
+          </div>
+
+          <label for="recIdentifier">Staff ID / Date of Birth / Security PIN</label>
+          <div class="input-wrap">
+            <input id="recIdentifier" type="text" placeholder="e.g. STF-012, 2008-05-14, or PIN" required />
+          </div>
+
+          <button type="submit" class="submit-btn" id="recVerifyBtn">Verify &amp; Continue</button>
+        </form>
+
+        <!-- Step 2: New Password -->
+        <form id="recoveryStep2Form" style="display:none;">
+          <label for="recNewPassword">New Password</label>
+          <div class="input-wrap">
+            <input id="recNewPassword" type="password" placeholder="At least 6 characters" required autocomplete="new-password" />
+            <button type="button" class="toggle-pw" id="toggleRecPw1" title="Toggle visibility">👁</button>
+          </div>
+
+          <label for="recConfirmPassword">Confirm New Password</label>
+          <div class="input-wrap">
+            <input id="recConfirmPassword" type="password" placeholder="Re-enter your new password" required autocomplete="new-password" />
+            <button type="button" class="toggle-pw" id="toggleRecPw2" title="Toggle visibility">👁</button>
+          </div>
+
+          <button type="submit" class="submit-btn" id="recResetBtn">Update Password</button>
+        </form>
+
+        <div class="auth-message" id="recMessage" style="margin-top:16px;"></div>
       </div>
     </div>
 
@@ -652,6 +812,203 @@
           msgEl.innerHTML = `✖ ${err.message}`;
           submitBtn.disabled = false;
           submitBtn.textContent = 'Sign In';
+        }
+      });
+
+      // ── Self-Service Password Recovery Modal Engine ──
+      const forgotPwBtn = document.getElementById('forgotPwBtn');
+      const recoveryOverlay = document.getElementById('recoveryOverlay');
+      const recoveryCloseBtn = document.getElementById('recoveryCloseBtn');
+      const step1Form = document.getElementById('recoveryStep1Form');
+      const step2Form = document.getElementById('recoveryStep2Form');
+      const step1Pill = document.getElementById('step1Pill');
+      const step2Pill = document.getElementById('step2Pill');
+      const recMessage = document.getElementById('recMessage');
+      const recVerifyBtn = document.getElementById('recVerifyBtn');
+      const recResetBtn = document.getElementById('recResetBtn');
+      let currentResetToken = null;
+
+      function openRecoveryModal() {
+        recoveryOverlay.classList.add('active');
+        step1Form.style.display = 'block';
+        step2Form.style.display = 'none';
+        step1Pill.className = 'step-pill active';
+        step2Pill.className = 'step-pill';
+        recMessage.className = 'auth-message';
+        recMessage.innerHTML = '';
+        recMessage.style.display = 'none';
+        currentResetToken = null;
+
+        const mainUser = document.getElementById('username').value.trim();
+        if (mainUser) {
+          document.getElementById('recUsername').value = mainUser;
+          document.getElementById('recPhone').focus();
+        } else {
+          document.getElementById('recUsername').focus();
+        }
+      }
+
+      function closeRecoveryModal() {
+        recoveryOverlay.classList.remove('active');
+      }
+
+      forgotPwBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        openRecoveryModal();
+      });
+
+      recoveryCloseBtn.addEventListener('click', closeRecoveryModal);
+
+      recoveryOverlay.addEventListener('click', (e) => {
+        if (e.target === recoveryOverlay) closeRecoveryModal();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && recoveryOverlay.classList.contains('active')) {
+          closeRecoveryModal();
+        }
+      });
+
+      // Toggle Password Visibility in Recovery Modal
+      const toggleRecPw1 = document.getElementById('toggleRecPw1');
+      const toggleRecPw2 = document.getElementById('toggleRecPw2');
+      const recNewPassword = document.getElementById('recNewPassword');
+      const recConfirmPassword = document.getElementById('recConfirmPassword');
+
+      toggleRecPw1.addEventListener('click', () => {
+        const isPw = recNewPassword.type === 'password';
+        recNewPassword.type = isPw ? 'text' : 'password';
+        toggleRecPw1.textContent = isPw ? '🙈' : '👁';
+      });
+
+      toggleRecPw2.addEventListener('click', () => {
+        const isPw = recConfirmPassword.type === 'password';
+        recConfirmPassword.type = isPw ? 'text' : 'password';
+        toggleRecPw2.textContent = isPw ? '🙈' : '👁';
+      });
+
+      // Step 1: Verification Form Submission
+      step1Form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        recMessage.className = 'auth-message';
+        recMessage.style.display = 'none';
+        recMessage.innerHTML = '';
+
+        const username = document.getElementById('recUsername').value.trim();
+        const phone_number = document.getElementById('recPhone').value.trim();
+        const identifier = document.getElementById('recIdentifier').value.trim();
+
+        if (!username || !phone_number || !identifier) {
+          recMessage.className = 'auth-message error';
+          recMessage.style.display = 'flex';
+          recMessage.innerHTML = '⚠ Please fill in all verification fields.';
+          return;
+        }
+
+        recVerifyBtn.disabled = true;
+        recVerifyBtn.innerHTML = '⏳ Verifying Identity...';
+
+        try {
+          const res = await fetch(`${API_BASE}/auth/forgot-password/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, phone_number, identifier })
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.detail || 'Identity verification failed. Please check your credentials.');
+          }
+
+          currentResetToken = data.reset_token;
+
+          // Transition to Step 2
+          step1Pill.className = 'step-pill completed';
+          step2Pill.className = 'step-pill active';
+          step1Form.style.display = 'none';
+          step2Form.style.display = 'block';
+          document.getElementById('recoverySubtitle').textContent = 'Create a secure new password for your account.';
+          recNewPassword.value = '';
+          recConfirmPassword.value = '';
+          recNewPassword.focus();
+
+        } catch (err) {
+          recMessage.className = 'auth-message error';
+          recMessage.style.display = 'flex';
+          recMessage.innerHTML = `✖ ${err.message}`;
+        } finally {
+          recVerifyBtn.disabled = false;
+          recVerifyBtn.innerHTML = 'Verify &amp; Continue';
+        }
+      });
+
+      // Step 2: New Password Form Submission
+      step2Form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        recMessage.className = 'auth-message';
+        recMessage.style.display = 'none';
+        recMessage.innerHTML = '';
+
+        const new_password = recNewPassword.value;
+        const confirm_password = recConfirmPassword.value;
+
+        if (new_password.length < 6) {
+          recMessage.className = 'auth-message error';
+          recMessage.style.display = 'flex';
+          recMessage.innerHTML = '⚠ Password must be at least 6 characters.';
+          return;
+        }
+
+        if (new_password !== confirm_password) {
+          recMessage.className = 'auth-message error';
+          recMessage.style.display = 'flex';
+          recMessage.innerHTML = '⚠ Passwords do not match.';
+          return;
+        }
+
+        recResetBtn.disabled = true;
+        recResetBtn.innerHTML = '⏳ Updating Password...';
+
+        try {
+          const res = await fetch(`${API_BASE}/auth/forgot-password/reset`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              reset_token: currentResetToken,
+              new_password,
+              confirm_password
+            })
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.detail || 'Failed to update password.');
+          }
+
+          recMessage.className = 'auth-message success';
+          recMessage.style.display = 'flex';
+          recMessage.innerHTML = '✔ Password updated successfully! Redirecting...';
+
+          setTimeout(() => {
+            closeRecoveryModal();
+            const verifiedUser = document.getElementById('recUsername').value.trim();
+            if (verifiedUser) {
+              document.getElementById('username').value = verifiedUser;
+            }
+            document.getElementById('password').value = '';
+            document.getElementById('password').focus();
+
+            msgEl.className = 'auth-message success';
+            msgEl.style.display = 'flex';
+            msgEl.innerHTML = '✔ Password reset complete! Sign in with your new password.';
+          }, 1200);
+
+        } catch (err) {
+          recMessage.className = 'auth-message error';
+          recMessage.style.display = 'flex';
+          recMessage.innerHTML = `✖ ${err.message}`;
+          recResetBtn.disabled = false;
+          recResetBtn.innerHTML = 'Update Password';
         }
       });
     </script>

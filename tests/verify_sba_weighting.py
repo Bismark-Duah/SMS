@@ -2,6 +2,8 @@
 Automated Verification Script for Configurable SBA Weighting Configuration
 """
 import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from sqlalchemy.orm import Session
 
 from backend.app.database import engine, Base, SessionLocal

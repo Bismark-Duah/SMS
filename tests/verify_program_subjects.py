@@ -2,6 +2,8 @@
 Automated Verification Script for Program-Subject Associations
 """
 import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import time
 from sqlalchemy.orm import Session
 
@@ -56,23 +58,23 @@ def run_tests():
             db.commit()
 
         class_data = ClassSectionCreate(name=f"Test Class {ts}", stage_id=stage.id, program_id=program_id)
-        csec = create_section(class_data, db=db)
+        csec = create_section(class_data, db=db, current_user=None, school_id=None)
         class_id = csec["id"] if isinstance(csec, dict) else csec.id
         class_name = csec["name"] if isinstance(csec, dict) else csec.name
         print(f"   [OK] Created Class #{class_id}: {class_name} linked to Program #{program_id}.")
 
         # 5. Retrieve Inherited Class Subjects (Fallback from Program)
         print("\n[5] Verifying Class Subject inheritance from Program...")
-        class_subs = get_class_subjects(section_id=class_id, raw=False, db=db)
+        class_subs = get_class_subjects(section_id=class_id, raw=False, db=db, current_user=None, school_id=None)
         assert len(class_subs) == 1, "Class should inherit 1 subject from program!"
         assert class_subs[0]["id"] == sub1.id, "Inherited subject ID mismatch!"
         print("   [OK] Class subject inheritance verified.")
 
         # 6. Apply Direct Class Override
         print(f"\n[6] Applying manual override: associating Subject #{sub2.id} directly to Class #{class_id}...")
-        set_class_subjects(section_id=class_id, payload=[sub2.id], db=db)
+        set_class_subjects(section_id=class_id, payload=[sub2.id], db=db, current_user=None, school_id=None)
 
-        class_subs_overridden = get_class_subjects(section_id=class_id, raw=False, db=db)
+        class_subs_overridden = get_class_subjects(section_id=class_id, raw=False, db=db, current_user=None, school_id=None)
         assert len(class_subs_overridden) == 1, "Overridden class should have 1 subject!"
         assert class_subs_overridden[0]["id"] == sub2.id, "Overridden subject ID mismatch!"
         print("   [OK] Class manual subject override verified.")

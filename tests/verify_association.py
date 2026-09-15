@@ -13,9 +13,12 @@ def main():
     db = SessionLocal()
     try:
         admin_user = db.query(User).filter(User.username == "admin").first()
-        
-        # 1. Fetch class sections
-        sections = list_sections(db=db, current_user=admin_user)
+
+        # Resolve school_id directly from the user (bypass FastAPI Depends)
+        school_id = getattr(admin_user, "school_id", None) if admin_user else None
+
+        # 1. Fetch class sections — pass school_id as a plain int, not Depends(...)
+        sections = list_sections(db=db, current_user=admin_user, school_id=school_id)
         print(f"[OK] Fetched {len(sections)} sections.")
         if sections:
             first_sec = sections[0]
@@ -24,25 +27,26 @@ def main():
             assert hasattr(first_sec, "school_type") or "school_type" in sec_dict, "school_type missing in response"
             assert hasattr(first_sec, "stage_name") or "stage_name" in sec_dict, "stage_name missing in response"
             print("[OK] school_type and stage_name are present in list_sections response.")
-            
+
             section_id = first_sec.id if hasattr(first_sec, "id") else first_sec["id"]
-            
+
             # 2. Assign subjects to the first class section
-            subjects = list_subjects(db=db, current_user=admin_user)
+            # list_subjects uses x_school_id (Header) not school_id
+            subjects = list_subjects(db=db, current_user=admin_user, x_school_id=str(school_id) if school_id else None)
             print(f"[OK] Fetched {len(subjects)} subjects.")
             if subjects:
                 subject_ids = [sub.id if hasattr(sub, "id") else sub["id"] for sub in subjects]
                 print(f"Associating subjects {subject_ids} to class section {section_id}")
-                
-                post_res = set_class_subjects(section_id=section_id, payload=subject_ids, db=db, current_user=admin_user)
+
+                post_res = set_class_subjects(section_id=section_id, payload=subject_ids, db=db, current_user=admin_user, school_id=None)
                 print(f"[OK] Subject association result: {post_res}")
-                
+
                 # 3. Retrieve associated subjects
-                assoc_subjects = get_class_subjects(section_id=section_id, db=db, current_user=admin_user)
+                assoc_subjects = get_class_subjects(section_id=section_id, db=db, current_user=admin_user, school_id=None)
                 print(f"[OK] Associated subjects count: {len(assoc_subjects)}")
                 assoc_ids = [sub.id if hasattr(sub, "id") else sub["id"] for sub in assoc_subjects]
                 print(f"Associated IDs: {assoc_ids}")
-                
+
                 for sid in subject_ids:
                     assert sid in assoc_ids, f"Subject ID {sid} was not successfully associated!"
                 print("[OK] All subjects associated and retrieved successfully.")
@@ -50,7 +54,7 @@ def main():
                 print("[SKIP] No subjects available to associate.")
         else:
             print("[SKIP] No sections available to test.")
-        
+
         print("=== Verification Successful ===")
     except Exception as e:
         print(f"[FAIL] Verification failed: {e}")

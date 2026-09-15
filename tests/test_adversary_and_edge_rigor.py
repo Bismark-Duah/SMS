@@ -260,17 +260,35 @@ class TestAdversaryAndEdgeRigor(unittest.TestCase):
         os.environ["PAYSTACK_SECRET_KEY"] = secret_key
         payload_bytes = b'{"event":"charge.success","data":{"reference":"T_12345","amount":50000}}'
 
-        # 1. Valid HMAC
-        valid_signature = hmac.new(secret_key.encode("utf-8"), payload_bytes, hashlib.sha512).hexdigest()
-        self.assertTrue(verify_paystack_signature(payload_bytes, valid_signature, db=self.db))
+        # Ensure the DB Setting uses the same test key so DB lookup matches env var
+        from backend.app.models import Setting
+        db_setting = self.db.query(Setting).filter(Setting.key == "paystack_secret_key").first()
+        original_db_value = db_setting.value if db_setting else None
+        if db_setting:
+            db_setting.value = secret_key
+            self.db.commit()
+        else:
+            db_setting = Setting(key="paystack_secret_key", value=secret_key)
+            self.db.add(db_setting)
+            self.db.commit()
 
-        # 2. Forged HMAC
-        forged_signature = "badf00d" * 16
-        self.assertFalse(verify_paystack_signature(payload_bytes, forged_signature, db=self.db))
+        try:
+            # 1. Valid HMAC
+            valid_signature = hmac.new(secret_key.encode("utf-8"), payload_bytes, hashlib.sha512).hexdigest()
+            self.assertTrue(verify_paystack_signature(payload_bytes, valid_signature, db=self.db))
 
-        # 3. Tampered payload with original signature
-        tampered_bytes = b'{"event":"charge.success","data":{"reference":"T_12345","amount":99999999}}'
-        self.assertFalse(verify_paystack_signature(tampered_bytes, valid_signature, db=self.db))
+            # 2. Forged HMAC
+            forged_signature = "badf00d" * 16
+            self.assertFalse(verify_paystack_signature(payload_bytes, forged_signature, db=self.db))
+
+            # 3. Tampered payload with original signature
+            tampered_bytes = b'{"event":"charge.success","data":{"reference":"T_12345","amount":99999999}}'
+            self.assertFalse(verify_paystack_signature(tampered_bytes, valid_signature, db=self.db))
+        finally:
+            # Restore original DB setting
+            if db_setting:
+                db_setting.value = original_db_value or ""
+                self.db.commit()
 
     # ── Test 6: Exeat Boundary & Day Student Integrity ────────────────────────────
     def test_06_exeat_boundary_day_student_and_overlap(self):

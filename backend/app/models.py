@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Table, Text, Index
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Table, Text, Index, UniqueConstraint, CheckConstraint
 from sqlalchemy.types import TypeDecorator, Boolean as _SQLABoolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -247,7 +247,7 @@ class Department(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True, nullable=False)
     code = Column(String, unique=True, index=True, nullable=False)
-    hod_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    hod_id = Column(Integer, ForeignKey("users.id", use_alter=True, name="fk_departments_hod_id"), nullable=True)
     school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True)
 
     school = relationship("School")
@@ -365,10 +365,10 @@ class Student(Base):
     class_name = Column(String, nullable=True, default="")
     school_type = Column(String, nullable=True, default="Basic")
     academic_year = Column(String, nullable=True, default="2025/2026")
-    class_section_id = Column(Integer, ForeignKey("class_sections.id"))
-    program_id = Column(Integer, ForeignKey("programs.id"), nullable=True)
+    class_section_id = Column(Integer, ForeignKey("class_sections.id", ondelete="SET NULL"), nullable=True)
+    program_id = Column(Integer, ForeignKey("programs.id", ondelete="SET NULL"), nullable=True)
     elective_combination_id = Column(Integer, ForeignKey("elective_combinations.id", ondelete="SET NULL"), nullable=True)
-    parent_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    parent_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     form = Column(Integer, nullable=True)
     gender = Column(String, nullable=True)
     date_of_birth = Column(DateTime, nullable=True)
@@ -378,8 +378,8 @@ class Student(Base):
     is_active = Column(Boolean, default=True)
     status = Column(String, default="ACTIVE", server_default="ACTIVE")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    house_id = Column(Integer, ForeignKey("houses.id"), nullable=True)
-    dormitory_id = Column(Integer, ForeignKey("dormitories.id"), nullable=True)
+    house_id = Column(Integer, ForeignKey("houses.id", ondelete="SET NULL"), nullable=True)
+    dormitory_id = Column(Integer, ForeignKey("dormitories.id", ondelete="SET NULL"), nullable=True)
     school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=1)
 
     school = relationship("School", back_populates="students")
@@ -398,10 +398,10 @@ class Student(Base):
     program = relationship("Program", back_populates="students")
     elective_combination_rel = relationship("ElectiveCombination", back_populates="students")
     parent = relationship("User", back_populates="children")
-    scores = relationship("Score", back_populates="student")
-    attendance = relationship("Attendance", back_populates="student")
-    notifications = relationship("Notification", back_populates="student")
-    fees = relationship("Fee", back_populates="student")
+    scores = relationship("Score", back_populates="student", cascade="all, delete-orphan", passive_deletes=True)
+    attendance = relationship("Attendance", back_populates="student", cascade="all, delete-orphan", passive_deletes=True)
+    notifications = relationship("Notification", back_populates="student", cascade="all, delete-orphan", passive_deletes=True)
+    fees = relationship("Fee", back_populates="student", cascade="all, delete-orphan", passive_deletes=True)
     house = relationship("House", back_populates="students")
     dormitory = relationship("Dormitory", back_populates="students")
     guardians = relationship("StudentGuardian", back_populates="student", cascade="all, delete-orphan")
@@ -430,9 +430,9 @@ class Score(Base):
     __tablename__ = "scores"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
-    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False, index=True)
-    semester_id = Column(Integer, ForeignKey("semesters.id"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
+    subject_id = Column(Integer, ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True)
+    semester_id = Column(Integer, ForeignKey("semesters.id", ondelete="CASCADE"), nullable=False, index=True)
     ex1 = Column(Float, nullable=True, default=0.0)
     ex2 = Column(Float, nullable=True, default=0.0)
     ass1 = Column(Float, nullable=True, default=0.0)
@@ -454,6 +454,10 @@ class Score(Base):
     semester = relationship("Semester", back_populates="scores")
 
     __table_args__ = (
+        UniqueConstraint("student_id", "subject_id", "semester_id", name="uq_score_student_subject_sem"),
+        CheckConstraint("class_score >= 0.0 AND class_score <= 100.0", name="chk_score_class_range"),
+        CheckConstraint("exam_score >= 0.0 AND exam_score <= 100.0", name="chk_score_exam_range"),
+        CheckConstraint("total_score >= 0.0 AND total_score <= 100.0", name="chk_score_total_range"),
         Index("ix_scores_student_subject_sem", "student_id", "subject_id", "semester_id"),
         Index("ix_scores_sem_subject", "semester_id", "subject_id"),
     )
@@ -462,7 +466,7 @@ class Attendance(Base):
     __tablename__ = "attendance"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
     date = Column(DateTime, nullable=False, index=True)
     status = Column(String, nullable=False)
     # "daily" = official Form Master class register; "period" = subject lesson absence log
@@ -486,7 +490,7 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     message = Column(String, nullable=False)
     type = Column(String, default="Attendance")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -503,6 +507,7 @@ class Setting(Base):
     value = Column(String, nullable=False)
 
     __table_args__ = (
+        UniqueConstraint("school_id", "key", name="uq_settings_school_key"),
         Index("ix_settings_school_key", "school_id", "key"),
     )
 
@@ -512,7 +517,7 @@ class Fee(Base):
     __tablename__ = "fees"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
     fee_type = Column(String, nullable=False)
     description = Column(String, nullable=True)
     amount = Column(Float, nullable=False)
@@ -525,9 +530,11 @@ class Fee(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     student = relationship("Student", back_populates="fees")
-    payments = relationship("Payment", back_populates="fee", cascade="all, delete-orphan")
+    payments = relationship("Payment", back_populates="fee", cascade="all, delete-orphan", passive_deletes=True)
 
     __table_args__ = (
+        CheckConstraint("amount >= 0.0", name="chk_fee_amount_positive"),
+        CheckConstraint("amount_paid >= 0.0", name="chk_fee_amount_paid_positive"),
         Index("ix_fees_student_status", "student_id", "status"),
         Index("ix_fees_year_term", "academic_year", "term"),
     )
@@ -536,7 +543,7 @@ class Payment(Base):
     __tablename__ = "payments"
 
     id = Column(Integer, primary_key=True, index=True)
-    fee_id = Column(Integer, ForeignKey("fees.id"), nullable=False, index=True)
+    fee_id = Column(Integer, ForeignKey("fees.id", ondelete="CASCADE"), nullable=False, index=True)
     amount_paid = Column(Float, nullable=False)
     payment_date = Column(DateTime, nullable=False, server_default=func.now(), index=True)
     payment_method = Column(String, default="Cash")
@@ -550,6 +557,7 @@ class Payment(Base):
     recorder = relationship("User")
 
     __table_args__ = (
+        CheckConstraint("amount_paid > 0.0", name="chk_payment_amount_positive"),
         Index("ix_payments_fee_date", "fee_id", "payment_date"),
     )
 
@@ -559,8 +567,8 @@ class Timetable(Base):
     __tablename__ = "timetable"
 
     id = Column(Integer, primary_key=True, index=True)
-    class_section_id = Column(Integer, ForeignKey("class_sections.id"), nullable=False, index=True)
-    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False, index=True)
+    class_section_id = Column(Integer, ForeignKey("class_sections.id", ondelete="CASCADE"), nullable=False, index=True)
+    subject_id = Column(Integer, ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True)
     teacher_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     semester_id = Column(Integer, ForeignKey("semesters.id"), nullable=True, index=True)
     day_of_week = Column(Integer, nullable=False)
@@ -569,6 +577,9 @@ class Timetable(Base):
     end_time = Column(String, nullable=True)
 
     __table_args__ = (
+        UniqueConstraint("class_section_id", "semester_id", "day_of_week", "period_number", name="uq_timetable_class_slot"),
+        CheckConstraint("day_of_week >= 0 AND day_of_week <= 7", name="chk_timetable_day_range"),
+        CheckConstraint("period_number >= 1", name="chk_timetable_period_positive"),
         Index("ix_timetable_class_day_period", "class_section_id", "day_of_week", "period_number"),
         Index("ix_timetable_teacher_day_period", "teacher_id", "day_of_week", "period_number"),
     )
@@ -666,6 +677,10 @@ class StudentSemesterSummary(Base):
     student = relationship("Student")
     semester = relationship("Semester")
 
+    __table_args__ = (
+        UniqueConstraint("student_id", "semester_id", name="uq_student_semester_summary"),
+    )
+
 class MessageLog(Base):
     __tablename__ = "message_logs"
 
@@ -694,7 +709,7 @@ class ExeatRecord(Base):
     __tablename__ = "exeat_records"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     exeat_type = Column(String, nullable=False, default="Day")
     reason = Column(String, nullable=False)
     destination = Column(String, nullable=False)

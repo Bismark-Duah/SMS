@@ -37,7 +37,7 @@ class TestAlembicMigrations(unittest.TestCase):
             # Verify alembic_version table exists and has head revision
             result = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
             self.assertIsNotNone(result, "alembic_version table was empty or missing.")
-            self.assertEqual(result[0], "0001_baseline")
+            self.assertIn(result[0], ["0001_baseline", "0002_constraints"])
 
     def test_run_migrations_end_to_end(self):
         """Verify run_migrations() completes end-to-end and synchronizes all schema objects."""

@@ -168,7 +168,8 @@ def run_all():
         "tests/test_production_db_configuration.py",
         "tests/test_alembic_migrations.py",
         "tests/test_database_constraints_integrity.py",
-        "tests/test_database_query_and_performance.py"
+        "tests/test_database_query_and_performance.py",
+        "tests/test_grading_edge_cases_and_sba.py"
     ]
 
     server_proc = ensure_server()

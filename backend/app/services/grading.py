@@ -1,22 +1,61 @@
+import math
+
+
 class GradingService:
     @staticmethod
-    def calculate_total(class_score: float, exam_score: float) -> float:
-        """Calculates total based on 30% class and 70% exam weightage."""
-        return class_score + exam_score
+    def sanitize_score(val) -> float:
+        """Safely parses and bounds a score to [0.0, 100.0]. Normalizes None/NaN/Inf to 0.0."""
+        if val is None:
+            return 0.0
+        try:
+            num = float(val)
+            if math.isnan(num) or math.isinf(num):
+                return 0.0
+            return max(0.0, min(100.0, round(num, 2)))
+        except (ValueError, TypeError):
+            return 0.0
 
-    @staticmethod
-    def get_grade(total: float, db = None) -> dict:
+    @classmethod
+    def calculate_total(cls, class_score, exam_score, class_weight: float = None, exam_weight: float = None) -> float:
+        """
+        Calculates total based on class score and exam score, handling bounds, precision, and weight caps.
+        """
+        c = cls.sanitize_score(class_score)
+        e = cls.sanitize_score(exam_score)
+        if class_weight is not None and class_weight > 0:
+            c = min(c, float(class_weight))
+        if exam_weight is not None and exam_weight > 0:
+            e = min(e, float(exam_weight))
+        return round(min(100.0, c + e), 2)
+
+    @classmethod
+    def scale_sba_components(cls, raw_components: dict, target_weight: float = 30.0, base_max: float = 100.0) -> float:
+        """
+        Scales raw continuous assessment components to a target weight (e.g. 30%, 50%, or 60%).
+        Formula: min(target_weight, (sum(components) / base_max) * target_weight)
+        """
+        if not raw_components or not isinstance(raw_components, dict):
+            return 0.0
+        raw_sum = sum(cls.sanitize_score(v) for v in raw_components.values())
+        b_max = float(base_max) if base_max and base_max > 0 else 100.0
+        t_weight = float(target_weight) if target_weight and target_weight > 0 else 30.0
+        scaled = (raw_sum / b_max) * t_weight
+        return round(min(t_weight, max(0.0, scaled)), 2)
+
+    @classmethod
+    def get_grade(cls, total: float, db = None) -> dict:
         """Returns grade and remark for a given total score (0-100)."""
+        safe_total = cls.sanitize_score(total)
         if db is None:
             # Fast default standard WAEC boundaries without DB session allocation
-            if total >= 80: return {"grade": "A1", "remark": "Excellent"}
-            elif total >= 70: return {"grade": "B2", "remark": "Very Good"}
-            elif total >= 65: return {"grade": "B3", "remark": "Good"}
-            elif total >= 60: return {"grade": "C4", "remark": "Credit"}
-            elif total >= 55: return {"grade": "C5", "remark": "Credit"}
-            elif total >= 50: return {"grade": "C6", "remark": "Credit"}
-            elif total >= 45: return {"grade": "D7", "remark": "Pass"}
-            elif total >= 40: return {"grade": "E8", "remark": "Pass"}
+            if safe_total >= 80: return {"grade": "A1", "remark": "Excellent"}
+            elif safe_total >= 70: return {"grade": "B2", "remark": "Very Good"}
+            elif safe_total >= 65: return {"grade": "B3", "remark": "Good"}
+            elif safe_total >= 60: return {"grade": "C4", "remark": "Credit"}
+            elif safe_total >= 55: return {"grade": "C5", "remark": "Credit"}
+            elif safe_total >= 50: return {"grade": "C6", "remark": "Credit"}
+            elif safe_total >= 45: return {"grade": "D7", "remark": "Pass"}
+            elif safe_total >= 40: return {"grade": "E8", "remark": "Pass"}
             else: return {"grade": "F9", "remark": "Fail"}
             
         try:

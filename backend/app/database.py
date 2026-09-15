@@ -21,48 +21,103 @@ if DATABASE_URL.startswith("postgres://"):
 is_sqlite = DATABASE_URL.startswith("sqlite")
 is_postgres = DATABASE_URL.startswith("postgresql")
 
-def _init_resilient_engine():
+# Pool & connection configuration defaults
+DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "20"))
+DB_MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+DB_POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+DB_POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "1800"))
+DB_CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
+
+def _init_resilient_engine(target_url: str = None):
     global DATABASE_URL, is_sqlite, is_postgres
-    if is_postgres:
+    url = target_url or os.getenv("DATABASE_URL", DATABASE_URL)
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+
+    url_is_postgres = url.startswith("postgresql")
+    url_is_sqlite = url.startswith("sqlite")
+
+    is_prod = os.getenv("ENVIRONMENT", "").lower() == "production"
+    allow_fallback = os.getenv("DB_ALLOW_SQLITE_FALLBACK", "false").lower() in ("true", "1", "yes")
+
+    if url_is_postgres:
         try:
             pg_engine = create_engine(
-                DATABASE_URL,
-                pool_size=25,
-                max_overflow=15,
+                url,
+                pool_size=DB_POOL_SIZE,
+                max_overflow=DB_MAX_OVERFLOW,
+                pool_timeout=DB_POOL_TIMEOUT,
+                pool_recycle=DB_POOL_RECYCLE,
                 pool_pre_ping=True,
-                pool_recycle=300
+                connect_args={"connect_timeout": DB_CONNECT_TIMEOUT}
             )
             # Test connectivity immediately
             with pg_engine.connect() as conn:
                 pass
+            DATABASE_URL = url
+            is_sqlite = False
+            is_postgres = True
             return pg_engine
         except Exception as e:
+            if is_prod and not allow_fallback:
+                raise RuntimeError(
+                    f"[DATABASE CRITICAL] PostgreSQL connection failed in production mode: {e}. "
+                    "Set DB_ALLOW_SQLITE_FALLBACK=true if offline fallback is explicitly desired."
+                ) from e
             print(f"[DATABASE WARNING] PostgreSQL connection failed ({e}). Falling back gracefully to local SQLite ({DEFAULT_DB_PATH}).")
-            DATABASE_URL = f"sqlite:///{DEFAULT_DB_PATH}"
-            is_sqlite = True
-            is_postgres = False
+            url = f"sqlite:///{DEFAULT_DB_PATH}"
 
     sqlite_engine = create_engine(
         f"sqlite:///{DEFAULT_DB_PATH}",
         connect_args={"check_same_thread": False, "timeout": 30}
     )
-    @event.listens_for(sqlite_engine, "connect")
-    def set_sqlite_pragma(dbapi_connection, connection_record):
-        cursor = dbapi_connection.cursor()
-        try:
-            cursor.execute("PRAGMA journal_mode=WAL;")
-            cursor.execute("PRAGMA synchronous=NORMAL;")
-            cursor.execute("PRAGMA foreign_keys=ON;")
-            cursor.execute("PRAGMA busy_timeout=30000;")
-            cursor.execute("PRAGMA wal_autocheckpoint=1000;")
-        except Exception:
-            pass
-        finally:
-            cursor.close()
+    DATABASE_URL = f"sqlite:///{DEFAULT_DB_PATH}"
+    is_sqlite = True
+    is_postgres = False
+
+    try:
+        @event.listens_for(sqlite_engine, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            try:
+                cursor.execute("PRAGMA journal_mode=WAL;")
+                cursor.execute("PRAGMA synchronous=NORMAL;")
+                cursor.execute("PRAGMA foreign_keys=ON;")
+                cursor.execute("PRAGMA busy_timeout=30000;")
+                cursor.execute("PRAGMA wal_autocheckpoint=1000;")
+            except Exception:
+                pass
+            finally:
+                cursor.close()
+    except Exception:
+        pass
     return sqlite_engine
+
+
 
 engine = _init_resilient_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def dispose_engine():
+    """Disposes connection pool and releases all database connections."""
+    global engine
+    if engine is not None:
+        engine.dispose()
+
+def get_database_config() -> dict:
+    """Returns sanitized active database engine metadata and pool configuration."""
+    return {
+        "dialect": "postgresql" if is_postgres else "sqlite",
+        "is_sqlite": is_sqlite,
+        "is_postgres": is_postgres,
+        "pool_size": DB_POOL_SIZE if is_postgres else None,
+        "max_overflow": DB_MAX_OVERFLOW if is_postgres else None,
+        "pool_timeout": DB_POOL_TIMEOUT if is_postgres else None,
+        "pool_recycle": DB_POOL_RECYCLE if is_postgres else None,
+        "offline_mode": is_sqlite,
+        "database_path": DEFAULT_DB_PATH if is_sqlite else "[REDACTED_POSTGRES_HOST]"
+    }
+
 
 Base = declarative_base()
 

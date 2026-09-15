@@ -457,10 +457,23 @@ def get_waec_transcript_by_index(
     if not student:
         raise HTTPException(status_code=404, detail=f"No candidate results found matching index number '{clean_idx}'.")
 
+    # Enforce tenant isolation
+    school_id = get_school_id(current_user)
+    if school_id is not None and student.school_id != school_id:
+        raise HTTPException(status_code=404, detail=f"No candidate results found matching index number '{clean_idx}'.")
+
+    # Enforce parent access scoping
+    roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, "roles") else []
+    admin_roles = {"admin", "super_admin", "headmaster", "headmistress", "assistant_headmaster_academic", "assistant_head_academic", "teacher", "form_master"}
+    if "parent" in roles and not any(r in admin_roles for r in roles):
+        if student.parent_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied: You can only view transcripts for your registered ward.")
+
     transcript = ReportService.get_full_transcript_data(db, student.id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Student transcript records not found.")
     return transcript
+
 
 
 # ── Parent Ward Summary ───────────────────────────────────────────────────

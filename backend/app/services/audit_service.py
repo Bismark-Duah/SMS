@@ -101,6 +101,15 @@ def record_audit_event(
                 action in ["CREATE_SCHOOL", "PURGE_SCHOOL", "SUSPEND_SCHOOL", "UPDATE_GATEWAY_CONFIG", "IMPERSONATION_VIEW"]
             )
 
+        # Normalize details to string/JSON if needed
+        serialized_details = details
+        if serialized_details is not None and not isinstance(serialized_details, str):
+            import json
+            try:
+                serialized_details = json.dumps(serialized_details)
+            except Exception:
+                serialized_details = str(serialized_details)
+
         audit_entry = AuditLog(
             school_id=school_id,
             actor_id=actor_id,
@@ -109,7 +118,7 @@ def record_audit_event(
             action=action,
             entity_type=entity_type,
             entity_id=str(entity_id) if entity_id is not None else None,
-            details=details,
+            details=serialized_details,
             ip_address=client_ip,
             user_agent=user_agent_str,
             device_category=forensics["device_category"],

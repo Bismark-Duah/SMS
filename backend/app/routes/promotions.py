@@ -310,10 +310,10 @@ def promote_students(
     current_user: User = Depends(get_current_user)
 ):
     check_promotion_permission(current_user)
-    
+
     if not payload.student_ids:
         raise HTTPException(status_code=400, detail="Student IDs list cannot be empty")
-        
+
     school_id = get_school_id(current_user)
     target_q = db.query(ClassSection).filter(ClassSection.id == payload.target_class_section_id)
     if school_id is not None and hasattr(ClassSection, "school_id"):
@@ -327,16 +327,37 @@ def promote_students(
         stud_q = stud_q.filter(Student.school_id == school_id)
     students = stud_q.all()
     if not students:
-        raise HTTPException(status_code=404, detail="No students found matching the provided IDs")
-        
+        raise HTTPException(status_code=404, detail="No students found matching the provided IDs in your school")
+
+    promoted_count = 0
     for student in students:
-        student.class_section_id = payload.target_class_section_id
-        if payload.increment_form and student.form is not None:
-            student.form += 1
-        student.is_active = True
-        student.status = "ACTIVE"
-        
+        # Idempotency check: don't double increment if already in target class
+        if student.class_section_id != payload.target_class_section_id:
+            student.class_section_id = payload.target_class_section_id
+            if payload.increment_form and student.form is not None:
+                student.form += 1
+            student.is_active = True
+            student.status = "ACTIVE"
+            promoted_count += 1
+        elif not student.is_active or student.status != "ACTIVE":
+            student.is_active = True
+            student.status = "ACTIVE"
+            promoted_count += 1
+
     db.commit()
+
+    # Log forensic audit event
+    from ..services.audit_service import record_audit_event
+    record_audit_event(
+        db=db,
+        actor=current_user,
+        action="STUDENTS_PROMOTED",
+        entity_type="ClassSection",
+        entity_id=str(target_class.id),
+        details={"promoted_count": promoted_count, "target_class_name": target_class.name},
+        school_id=school_id or target_class.school_id
+    )
+
     return {"message": f"Successfully promoted {len(students)} students to {target_class.name}"}
 
 
@@ -347,18 +368,35 @@ def graduate_students(
     current_user: User = Depends(get_current_user)
 ):
     check_promotion_permission(current_user)
-    
+
     if not payload.student_ids:
         raise HTTPException(status_code=400, detail="Student IDs list cannot be empty")
-        
-    students = db.query(Student).filter(Student.id.in_(payload.student_ids)).all()
+
+    school_id = get_school_id(current_user)
+    stud_q = db.query(Student).filter(Student.id.in_(payload.student_ids))
+    if school_id is not None:
+        stud_q = stud_q.filter(Student.school_id == school_id)
+    students = stud_q.all()
     if not students:
-        raise HTTPException(status_code=404, detail="No students found matching the provided IDs")
-        
+        raise HTTPException(status_code=404, detail="No students found matching the provided IDs in your school")
+
     for student in students:
         student.class_section_id = None
         student.is_active = False
         student.status = "GRADUATED"
-        
+
     db.commit()
+
+    from ..services.audit_service import record_audit_event
+    record_audit_event(
+        db=db,
+        actor=current_user,
+        action="STUDENTS_GRADUATED",
+        entity_type="Student",
+        entity_id=None,
+        details={"graduated_count": len(students)},
+        school_id=school_id or (students[0].school_id if students else None)
+    )
+
     return {"message": f"Successfully graduated {len(students)} students"}
+

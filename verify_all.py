@@ -159,7 +159,8 @@ def run_all():
         "tests/test_password_recovery.py",
         "tests/test_tenant_user_authorization.py",
         "tests/test_tenant_isolation_comprehensive.py",
-        "tests/test_default_credentials_hardening.py"
+        "tests/test_default_credentials_hardening.py",
+        "tests/test_secrets_and_source_sanitization.py"
     ]
 
     server_proc = ensure_server()

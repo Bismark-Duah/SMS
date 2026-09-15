@@ -165,7 +165,8 @@ def run_all():
         "tests/test_password_reset_hardening.py",
         "tests/test_jwt_and_session_management.py",
         "tests/test_authentication_rate_limiting.py",
-        "tests/test_production_db_configuration.py"
+        "tests/test_production_db_configuration.py",
+        "tests/test_alembic_migrations.py"
     ]
 
     server_proc = ensure_server()

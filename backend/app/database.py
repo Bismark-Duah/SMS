@@ -301,12 +301,37 @@ def get_database_telemetry(db = None) -> dict:
         }
 
 
+def apply_alembic_migrations() -> bool:
+    """
+    Executes Alembic migrations to head revision if Alembic configuration is detected.
+    Returns True if successfully executed, False otherwise.
+    """
+    try:
+        from alembic.config import Config
+        from alembic import command
+
+        ini_candidates = [
+            os.path.join(BASE_DIR, "alembic.ini"),
+            os.path.join(BASE_DIR, "backend", "alembic.ini")
+        ]
+        ini_path = next((p for p in ini_candidates if os.path.exists(p)), None)
+        if ini_path:
+            cfg = Config(ini_path)
+            command.upgrade(cfg, "head")
+            return True
+    except Exception as alembic_err:
+        print(f"[ALEMBIC NOTICE] Programmatic migration fallback/notice: {alembic_err}")
+    return False
+
+
 def run_migrations():
     from sqlalchemy import text, inspect
+    apply_alembic_migrations()
     Base.metadata.create_all(bind=engine)
 
     try:
         inspector = inspect(engine)
+
     except Exception as e:
         print("Migration inspector error:", e)
         return

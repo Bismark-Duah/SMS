@@ -151,6 +151,26 @@ def _check_admin(current_user: User):
         raise HTTPException(status_code=403, detail="Only administrators can manage subjects")
 
 
+def _verify_subject_modification_access(subject: Subject, current_user: User):
+    """
+    Prevents cross-school IDOR and protects global/NaCCA curriculum subjects.
+    Super Admins may manage global and school-specific subjects.
+    Ordinary School Admins may ONLY modify subjects belonging to their own school.
+    """
+    roles = [r.name.lower() for r in current_user.roles] if current_user.roles else []
+    is_super = "super_admin" in roles
+    if is_super:
+        return
+    if subject.school_id is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Cannot modify or delete global curriculum subjects. Super-Admin access required."
+        )
+    user_school_id = getattr(current_user, "school_id", None)
+    if user_school_id is None or subject.school_id != user_school_id:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+
 @router.post("/")
 def create_subject(
     payload: SubjectCreate,
@@ -190,6 +210,7 @@ def toggle_subject_status(
     item = query.first()
     if not item:
         raise HTTPException(status_code=404, detail="Subject not found")
+    _verify_subject_modification_access(item, current_user)
 
     current_status = getattr(item, "is_active", True)
     item.is_active = not (current_status if current_status is not None else True)
@@ -223,6 +244,7 @@ def delete_subject(
     item = query.first()
     if not item:
         raise HTTPException(status_code=404, detail="Subject not found")
+    _verify_subject_modification_access(item, current_user)
 
     # ── 1. Check for critical dependent records ───────────────────────────────
     score_count = db.query(Score).filter(Score.subject_id == subject_id).count()
@@ -280,6 +302,7 @@ def update_subject(
     item = query.first()
     if not item:
         raise HTTPException(status_code=404, detail="Subject not found")
+    _verify_subject_modification_access(item, current_user)
 
     item.name = payload.name
     item.code = payload.code

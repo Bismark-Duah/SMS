@@ -19,7 +19,7 @@ def require_admin(current_user: User):
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     roles = [r.name for r in current_user.roles]
-    if "admin" not in roles:
+    if "admin" not in roles and "super_admin" not in roles:
         raise HTTPException(status_code=403, detail="Admin access required")
 
 
@@ -41,32 +41,27 @@ class RecordUpdate(BaseModel):
     incident_date: Optional[datetime] = None
 
 
-# ── Enrich helper ─────────────────────────────────────────────────────────────
+# ── Serializer ────────────────────────────────────────────────────────────────
 
 def _enrich(rec: DisciplineRecord) -> dict:
-    student = rec.student
-    class_name = None
-    if student and student.class_section:
-        class_name = student.class_section.name
-
     return {
         "id": rec.id,
         "student_id": rec.student_id,
-        "student_name": student.full_name if student else None,
-        "student_code": student.student_code if student else None,
-        "class_name": class_name,
+        "student_name": rec.student.full_name if rec.student else None,
+        "class_name": rec.student.class_section.name if rec.student and rec.student.class_section else None,
         "incident_type": rec.incident_type,
         "description": rec.description,
         "action_taken": rec.action_taken,
-        "incident_date": rec.incident_date,
+        "incident_date": rec.incident_date.isoformat() if rec.incident_date else None,
         "recorded_by": rec.recorded_by,
         "recorder_name": rec.recorder.username if rec.recorder else None,
         "parent_notified": rec.parent_notified,
-        "created_at": rec.created_at,
+        "parent_response": getattr(rec, "parent_response", None),
+        "created_at": rec.created_at.isoformat() if rec.created_at else None,
     }
 
 
-# ── Summary ───────────────────────────────────────────────────────────────────
+# ── Analytics Summary ─────────────────────────────────────────────────────────
 
 @router.get("/summary")
 def get_summary(
@@ -103,13 +98,17 @@ def get_class_records(
 ):
     """Admin: get all discipline records for students in a class."""
     require_admin(current_user)
+    school_id = get_school_id(current_user)
+    cs = db.query(ClassSection).filter(ClassSection.id == class_section_id).first()
+    if not cs or (school_id is not None and getattr(cs, "school_id", None) != school_id):
+        raise HTTPException(status_code=404, detail="Class section not found")
 
     student_ids = [
         s.id for s in db.query(Student)
         .filter(Student.class_section_id == class_section_id).all()
     ]
     query = db.query(DisciplineRecord).filter(DisciplineRecord.student_id.in_(student_ids))
-    if incident_type:
+    if incident_type and isinstance(incident_type, str):
         query = query.filter(DisciplineRecord.incident_type == incident_type)
     recs = query.order_by(desc(DisciplineRecord.incident_date)).all()
     return [_enrich(r) for r in recs]
@@ -174,15 +173,15 @@ def list_records(
         else:
             return []
 
-    if incident_type:
+    if incident_type and isinstance(incident_type, str):
         query = query.filter(DisciplineRecord.incident_type == incident_type)
-    if class_section_id:
+    if class_section_id and isinstance(class_section_id, int):
         student_ids = [s.id for s in db.query(Student)
                        .filter(Student.class_section_id == class_section_id).all()]
         query = query.filter(DisciplineRecord.student_id.in_(student_ids))
-    if date_from:
+    if date_from and isinstance(date_from, str):
         query = query.filter(DisciplineRecord.incident_date >= datetime.fromisoformat(date_from))
-    if date_to:
+    if date_to and isinstance(date_to, str):
         query = query.filter(DisciplineRecord.incident_date <= datetime.fromisoformat(date_to))
 
     recs = query.order_by(desc(DisciplineRecord.incident_date)).limit(limit).all()

@@ -669,6 +669,13 @@ def create_slot(
     """Admin: manually create a timetable slot with double-booking prevention."""
     require_admin(current_user)
 
+    cs = db.query(ClassSection).filter(ClassSection.id == payload.class_section_id).first()
+    if not cs:
+        raise HTTPException(status_code=404, detail="Class section not found")
+    school_id = get_school_id(current_user)
+    if not _check_class_school(cs, school_id):
+        raise HTTPException(status_code=404, detail="Class section not found")
+
     if payload.day_of_week < 0 or payload.day_of_week > 4:
         raise HTTPException(status_code=400, detail="day_of_week must be 0 (Mon) to 4 (Fri)")
     if payload.period_number < 1:
@@ -734,6 +741,9 @@ def update_slot(
     slot = db.query(Timetable).filter(Timetable.id == slot_id).first()
     if not slot:
         raise HTTPException(status_code=404, detail="Timetable slot not found")
+    school_id = get_school_id(current_user)
+    if not _check_class_school(slot.class_section, school_id):
+        raise HTTPException(status_code=404, detail="Timetable slot not found")
 
     new_teacher_id = payload.teacher_id if payload.teacher_id is not None else slot.teacher_id
     if new_teacher_id and new_teacher_id != slot.teacher_id:
@@ -777,6 +787,9 @@ def delete_slot(
     slot = db.query(Timetable).filter(Timetable.id == slot_id).first()
     if not slot:
         raise HTTPException(status_code=404, detail="Timetable slot not found")
+    school_id = get_school_id(current_user)
+    if not _check_class_school(slot.class_section, school_id):
+        raise HTTPException(status_code=404, detail="Timetable slot not found")
     db.delete(slot)
     db.commit()
 
@@ -789,6 +802,12 @@ def clear_class_timetable(
 ):
     """Admin: wipe all timetable slots for a class section."""
     require_admin(current_user)
+    cs = db.query(ClassSection).filter(ClassSection.id == class_section_id).first()
+    if not cs:
+        raise HTTPException(status_code=404, detail="Class section not found")
+    school_id = get_school_id(current_user)
+    if not _check_class_school(cs, school_id):
+        raise HTTPException(status_code=404, detail="Class section not found")
     db.query(Timetable).filter(Timetable.class_section_id == class_section_id).delete()
     db.commit()
 

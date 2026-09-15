@@ -52,7 +52,11 @@ def _check_score_lock(db: Session, semester_id: int, user: User):
 @router.get("/")
 def list_scores(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     school_id = get_school_id(current_user)
-    query = db.query(Score)
+    query = db.query(Score).options(
+        joinedload(Score.student),
+        joinedload(Score.subject),
+        joinedload(Score.semester)
+    )
     if school_id is not None:
         query = query.join(Score.student).filter(Student.school_id == school_id)
     mode = _get_school_mode(db, school_id)

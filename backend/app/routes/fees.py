@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, Response, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
 from typing import List, Optional
 from pydantic import BaseModel, Field
@@ -280,7 +280,10 @@ def get_student_fees(
     if not any(r in admin_roles for r in roles) and student.parent_id != current_user.id and current_user.username != student.student_code:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    fees = db.query(Fee).filter(Fee.student_id == student_id).order_by(desc(Fee.created_at)).all()
+    fees = db.query(Fee).options(
+        joinedload(Fee.student).joinedload(Student.class_section),
+        joinedload(Fee.payments)
+    ).filter(Fee.student_id == student_id).order_by(desc(Fee.created_at)).all()
     return [_enrich(f) for f in fees]
 
 
@@ -298,7 +301,14 @@ def list_fees(
     school_id = get_school_id(current_user)
     update_overdue_statuses(db)
 
-    query = _filter_fee_query(db.query(Fee), db, school_id=school_id)
+    query = _filter_fee_query(
+        db.query(Fee).options(
+            joinedload(Fee.student).joinedload(Student.class_section),
+            joinedload(Fee.payments)
+        ),
+        db,
+        school_id=school_id
+    )
     if status:
         query = query.filter(Fee.status == status)
     if fee_type:

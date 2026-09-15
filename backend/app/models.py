@@ -1075,6 +1075,8 @@ class SyncOutbox(Base):
     school = relationship("School")
 
     __table_args__ = (
+        Index("ix_sync_outbox_school_synced", "school_id", "is_synced"),
+        Index("ix_sync_outbox_entity_type_id", "entity_type", "entity_id"),
         Index("ix_sync_outbox_pending", "school_id", "is_synced", "created_at"),
     )
 

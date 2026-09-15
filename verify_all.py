@@ -167,7 +167,8 @@ def run_all():
         "tests/test_authentication_rate_limiting.py",
         "tests/test_production_db_configuration.py",
         "tests/test_alembic_migrations.py",
-        "tests/test_database_constraints_integrity.py"
+        "tests/test_database_constraints_integrity.py",
+        "tests/test_database_query_and_performance.py"
     ]
 
     server_proc = ensure_server()

@@ -1,10 +1,10 @@
-import hashlib
 from typing import Optional, List, Dict
 from sqlalchemy.orm import Session
 from ..models import User, Role, Student
+from ..services.auth import hash_password
 
 def _hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return hash_password(password)
 
 def get_or_create_parent_role(db: Session) -> Role:
     role = db.query(Role).filter(Role.name == "parent").first()

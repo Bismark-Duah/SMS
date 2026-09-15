@@ -8,53 +8,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from ..middleware.device_session_guard import register_device_session
-try:
-    import bcrypt
-    if not hasattr(bcrypt, "__about__"):
-        class About:
-            __version__ = getattr(bcrypt, "__version__", "4.0.0")
-        bcrypt.__about__ = About()
-
-    _orig_hashpw = getattr(bcrypt, "hashpw", None)
-    if _orig_hashpw:
-        def _safe_hashpw(password, salt):
-            if isinstance(password, str):
-                password = password.encode("utf-8")[:72]
-            elif isinstance(password, bytes):
-                password = password[:72]
-            return _orig_hashpw(password, salt)
-
-        bcrypt.hashpw = _safe_hashpw
-except ImportError:
-    bcrypt = None
-
-try:
-    from passlib.context import CryptContext
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-except ImportError:
-    class _FallbackPwdContext:
-        def hash(self, password: str) -> str:
-            if bcrypt:
-                salt = bcrypt.gensalt()
-                return bcrypt.hashpw(password.encode("utf-8")[:72], salt).decode("utf-8")
-            return hashlib.sha256(password.encode("utf-8")).hexdigest()
-
-        def verify(self, secret: str, hash_str: str) -> bool:
-            if bcrypt and hash_str.startswith("$2"):
-                try:
-                    return bcrypt.checkpw(secret.encode("utf-8")[:72], hash_str.encode("utf-8"))
-                except Exception:
-                    pass
-            return hashlib.sha256(secret.encode("utf-8")).hexdigest() == hash_str
-
-        def needs_update(self, hash_str: str) -> bool:
-            return False
-
-    pwd_context = _FallbackPwdContext()
-
 from ..database import get_db
 from ..models import User, Role, School, ClassSection, House, Department, Student, UserDeviceSession
-from ..services.auth import create_jwt, decode_jwt
+from ..services.auth import create_jwt, decode_jwt, hash_password, verify_password
 from ..services.audit_service import record_audit_event
 from .. import schemas
 from ..services.guardian_service import link_students_for_parent_user
@@ -70,37 +26,15 @@ DEFAULT_USER_TEMPLATES = [
 ]
 
 def _legacy_sha256_hash(password: str) -> str:
+    """Retained strictly for legacy verification and migration testing."""
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 def _hash_password(password: str) -> str:
-    try:
-        return pwd_context.hash(password)
-    except Exception:
-        return _legacy_sha256_hash(password)
+    """Produces modern secure bcrypt password hashes; refuses silent insecure fallbacks."""
+    return hash_password(password)
 
 get_password_hash = _hash_password
-
-def _verify_password(plain_password: str, hashed_password: str) -> tuple[bool, bool]:
-    """
-    Verifies plain password against stored hash.
-    Supports both bcrypt and legacy SHA-256 hashes.
-    Returns: (is_valid, needs_rehash)
-    """
-    if not hashed_password:
-        return False, False
-        
-    # Legacy SHA-256 hash check (64 hex characters)
-    if len(hashed_password) == 64 and not hashed_password.startswith("$"):
-        if _legacy_sha256_hash(plain_password) == hashed_password:
-            return True, True  # Valid, but needs rehash to bcrypt
-        return False, False
-
-    try:
-        is_valid = pwd_context.verify(plain_password, hashed_password)
-        needs_rehash = pwd_context.needs_update(hashed_password) if is_valid else False
-        return is_valid, needs_rehash
-    except Exception:
-        return False, False
+_verify_password = verify_password
 
 def _seed_db(db: Session) -> None:
     try:

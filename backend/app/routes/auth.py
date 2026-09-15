@@ -115,25 +115,33 @@ def _seed_db(db: Session) -> None:
             roles_map[role_name] = role
 
         # ── Phase 2: Seed Master Super-Admin ───────────────────────────────
-        DEFAULT_PASSWORDS = {
-            "superadmin": "superadmin123!",
-        }
+        env_mode = os.getenv("ENVIRONMENT", os.getenv("ENV", "development")).lower()
+        is_production = env_mode in ("production", "prod")
+
+        # In production, require INITIAL_SUPERADMIN_PASSWORD; never create universal defaults
+        bootstrap_pwd = os.getenv("INITIAL_SUPERADMIN_PASSWORD", "").strip()
+        if not bootstrap_pwd:
+            if is_production:
+                bootstrap_pwd = None
+            else:
+                bootstrap_pwd = "superadmin123!"
 
         for user_data in DEFAULT_USER_TEMPLATES:
             existing = db.query(User).filter(User.username == user_data["username"]).first()
-            default_password = DEFAULT_PASSWORDS.get(user_data["username"], "Superadmin123!")
             target_roles = [roles_map[r] for r in user_data["roles"] if r in roles_map]
 
             if not existing:
-                new_user = User(
-                    username=user_data["username"],
-                    email=user_data["email"],
-                    password_hash=_hash_password(default_password),
-                    school_id=None,
-                    is_active=True,
-                )
-                new_user.roles = target_roles
-                db.add(new_user)
+                if bootstrap_pwd:
+                    new_user = User(
+                        username=user_data["username"],
+                        email=user_data["email"],
+                        password_hash=_hash_password(bootstrap_pwd),
+                        school_id=None,
+                        is_active=True,
+                        is_first_login=True,
+                    )
+                    new_user.roles = target_roles
+                    db.add(new_user)
             else:
                 existing.school_id = None
                 for role_obj in target_roles:
@@ -180,16 +188,7 @@ def login(payload: dict, request: Request, db: Session = Depends(get_db)):
 
         is_valid, needs_rehash = _verify_password(password, user.password_hash)
         if not is_valid:
-            # Seamlessly accept Superadmin123! or superadmin123! for superadmin account and update hash
-            if user.username.lower() == "superadmin" and password in ("Superadmin123!", "superadmin123!"):
-                try:
-                    user.password_hash = _hash_password(password)
-                    db.commit()
-                except Exception:
-                    db.rollback()
-                is_valid = True
-            else:
-                return JSONResponse(status_code=401, content={"detail": "Invalid username or password"})
+            return JSONResponse(status_code=401, content={"detail": "Invalid username or password"})
 
         # Transparently upgrade legacy SHA-256 hashes to bcrypt on successful login
         if needs_rehash:

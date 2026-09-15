@@ -441,17 +441,19 @@ def list_users(
     from ..dependencies import get_user_assigned_scope
     from ..models import TeacherAssignment, Department, Role
 
-    target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
-    if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
-        try:
-            target_sch_id = int(x_school_id.strip())
-        except ValueError:
-            pass
-    elif target_sch_id is None and hasattr(current_user, "school_id") and current_user.school_id:
-        target_sch_id = current_user.school_id
-    
     current_roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, "roles") and current_user.roles else []
     is_super_admin = "super_admin" in current_roles
+
+    if is_super_admin:
+        target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
+        if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
+            try:
+                target_sch_id = int(x_school_id.strip())
+            except ValueError:
+                pass
+    else:
+        # Prompt 1 Requirement 5: Do not trust client-supplied X-School-Id for ordinary admins.
+        target_sch_id = current_user.school_id
 
     query = db.query(User)
     super_role = db.query(Role).filter(Role.name == "super_admin").first()
@@ -591,22 +593,24 @@ def create_user(
     school_id: Optional[int] = Depends(get_school_id),
     x_school_id: Optional[str] = Header(None, alias="X-School-Id")
 ):
-    target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
-    if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
-        try:
-            target_sch_id = int(x_school_id.strip())
-        except ValueError:
-            pass
-    elif target_sch_id is None and hasattr(current_user, "school_id") and current_user.school_id:
-        target_sch_id = current_user.school_id
-
-    # If payload explicitly provides school_id and caller is super_admin, honor it
     caller_roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, "roles") and current_user.roles else []
-    if "super_admin" in caller_roles and payload.get("school_id"):
-        try:
-            target_sch_id = int(payload.get("school_id"))
-        except (ValueError, TypeError):
-            pass
+    is_super_admin = "super_admin" in caller_roles
+
+    if is_super_admin:
+        target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
+        if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
+            try:
+                target_sch_id = int(x_school_id.strip())
+            except ValueError:
+                pass
+        elif target_sch_id is None and payload.get("school_id"):
+            try:
+                target_sch_id = int(payload.get("school_id"))
+            except (ValueError, TypeError):
+                pass
+    else:
+        # Prompt 1: Ordinary school admins can only create accounts within their own school
+        target_sch_id = current_user.school_id
 
     username = (payload.get("username") or "").strip()
     raw_email = (payload.get("email") or "").strip()
@@ -672,6 +676,45 @@ def create_user(
     db.refresh(new_user)
     return new_user
 
+def _verify_managed_user_access(
+    current_user: User,
+    target_user: Optional[User],
+    operation_name: str = "manage"
+) -> User:
+    """
+    Enforces multi-tenant authorization boundary on user-management operations:
+    1. Caller must have 'admin' or 'super_admin' role.
+    2. If target_user is None, raise 404 (User not found).
+    3. Super Admins may manage users across all schools.
+    4. Ordinary School Admins must only manage users belonging to their own school (current_user.school_id).
+       If target_user belongs to another school (or is a root system user without school), return 404
+       to avoid leaking user existence across tenants.
+    5. Ordinary Admins cannot modify, reset, or delete Super Admin accounts.
+    """
+    caller_roles = [r.name.lower() for r in current_user.roles] if current_user.roles else []
+    is_super = "super_admin" in caller_roles
+    is_admin = "admin" in caller_roles or is_super
+
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    target_roles = [r.name.lower() for r in target_user.roles] if target_user.roles else []
+
+    if not is_super:
+        # Ordinary admins can NEVER modify, delete, or reset super_admin accounts
+        if "super_admin" in target_roles or (target_user.username and target_user.username.lower() == "superadmin"):
+            raise HTTPException(status_code=403, detail="Only Super-Admin can manage super_admin accounts")
+
+        # Tenant boundary: Ordinary admin must belong to a school and match target user's school_id
+        if current_user.school_id is None or target_user.school_id != current_user.school_id:
+            # Return 404 to prevent cross-school user enumeration
+            raise HTTPException(status_code=404, detail="User not found")
+
+    return target_user
+
 @router.put("/users/{user_id}/roles")
 def update_user_roles(
     user_id: int,
@@ -680,14 +723,10 @@ def update_user_roles(
     current_user: User = Depends(get_current_user),
 ):
     """Admin/Super-Admin only: update assigned roles for a user."""
-    role_names_caller = [r.name for r in current_user.roles]
-    if "admin" not in role_names_caller and "super_admin" not in role_names_caller:
-        raise HTTPException(status_code=403, detail="Admin access required")
-
     target = db.query(User).filter(User.id == user_id).first()
-    if not target:
-        raise HTTPException(status_code=404, detail="User not found")
+    _verify_managed_user_access(current_user, target, "update roles")
 
+    role_names_caller = [r.name.lower() for r in current_user.roles] if current_user.roles else []
     new_role_names = payload.get("roles", [])
     if not new_role_names:
         raise HTTPException(status_code=400, detail="At least one role must be assigned")
@@ -727,20 +766,11 @@ def delete_user(
     current_user: User = Depends(get_current_user),
 ):
     """Admin/Super-Admin only: delete a user account."""
-    role_names_caller = [r.name for r in current_user.roles]
-    if "admin" not in role_names_caller and "super_admin" not in role_names_caller:
-        raise HTTPException(status_code=403, detail="Admin access required")
-
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="You cannot delete your own account")
 
     target = db.query(User).filter(User.id == user_id).first()
-    if not target:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    target_roles = [r.name for r in target.roles]
-    if "super_admin" in target_roles and "super_admin" not in role_names_caller:
-        raise HTTPException(status_code=403, detail="Only Super-Admin can delete super_admin accounts")
+    _verify_managed_user_access(current_user, target, "delete user")
 
     db.delete(target)
     db.commit()
@@ -891,7 +921,29 @@ import csv
 import io
 
 @router.post("/import-users-csv")
-async def import_users_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def import_users_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id")
+):
+    caller_roles = [r.name.lower() for r in current_user.roles] if current_user.roles else []
+    is_super = "super_admin" in caller_roles
+    is_admin = "admin" in caller_roles or is_super
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if is_super:
+        target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
+        if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
+            try:
+                target_sch_id = int(x_school_id.strip())
+            except ValueError:
+                pass
+    else:
+        target_sch_id = current_user.school_id
+
     content = await file.read()
     decoded = content.decode("utf-8-sig")
     stream = io.StringIO(decoded)
@@ -934,6 +986,10 @@ async def import_users_csv(file: UploadFile = File(...), db: Session = Depends(g
                     if matched_role and matched_role not in assigned_roles:
                         assigned_roles.append(matched_role)
             
+            # Non-super-admins cannot grant super_admin or admin via CSV
+            if not is_super:
+                assigned_roles = [r for r in assigned_roles if r.name.lower() not in ["super_admin", "admin", "headmaster", "headmistress"]]
+
             if not assigned_roles and default_role:
                 assigned_roles.append(default_role)
 
@@ -942,7 +998,8 @@ async def import_users_csv(file: UploadFile = File(...), db: Session = Depends(g
                 email=email,
                 password_hash=_hash_password(raw_password),
                 gender=gender,
-                is_active=True
+                is_active=True,
+                school_id=target_sch_id
             )
             for role in assigned_roles:
                 new_user.roles.append(role)
@@ -1060,17 +1117,12 @@ def admin_reset_password(
     current_user: User = Depends(get_current_user),
 ):
     """Admin only: reset any user's password."""
-    role_names = [r.name for r in current_user.roles]
-    if "admin" not in role_names and "super_admin" not in role_names:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    target = db.query(User).filter(User.id == user_id).first()
+    _verify_managed_user_access(current_user, target, "reset password")
 
     new_password = payload.get("new_password", "")
     if len(new_password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
-
-    target = db.query(User).filter(User.id == user_id).first()
-    if not target:
-        raise HTTPException(status_code=404, detail="User not found")
 
     target.password_hash = _hash_password(new_password)
     target.is_first_login = True
@@ -1088,13 +1140,8 @@ def set_user_status(
     current_user: User = Depends(get_current_user),
 ):
     """Admin only: activate or deactivate a user account."""
-    role_names = [r.name for r in current_user.roles]
-    if "admin" not in role_names and "super_admin" not in role_names:
-        raise HTTPException(status_code=403, detail="Admin access required")
-
     target = db.query(User).filter(User.id == user_id).first()
-    if not target:
-        raise HTTPException(status_code=404, detail="User not found")
+    _verify_managed_user_access(current_user, target, "change status")
 
     is_active = payload.get("is_active", True)
     target.is_active = is_active

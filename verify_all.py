@@ -156,7 +156,8 @@ def run_all():
         "tests/test_devops_and_infrastructure.py",
         "tests/test_enterprise_sms_engine.py",
         "tests/test_device_forensics_and_tiered_audit.py",
-        "tests/test_password_recovery.py"
+        "tests/test_password_recovery.py",
+        "tests/test_tenant_user_authorization.py"
     ]
 
     server_proc = ensure_server()

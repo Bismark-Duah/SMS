@@ -110,16 +110,36 @@ def get_school_id(
     return getattr(user, "school_id", None) if user else None
 
 
-# ── In-Memory Rate Limiter (Brute-Force Protection) ──────────────────────────
+# ── Authentication Rate Limiter (Brute-Force & Credential Stuffing Defense) ──
 
+import os
 import time
 from collections import defaultdict
 from fastapi import Request
 
+DEFAULT_RATE_LIMIT_MAX = int(os.getenv("AUTH_RATE_LIMIT_MAX_REQUESTS", "5"))
+DEFAULT_RATE_LIMIT_WINDOW = int(os.getenv("AUTH_RATE_LIMIT_WINDOW_SECONDS", "60"))
+
 class InMemoryRateLimiter:
-    def __init__(self, max_requests: int = 5, window_seconds: int = 60):
-        self.max_requests = max_requests
-        self.window_seconds = window_seconds
+    """
+    In-memory sliding-window rate limiter for authentication endpoints.
+    
+    Deployment Architecture & Operational Adequacy:
+    1. Single-Process / Offline Deployments:
+       - 100% self-contained and zero-dependency (no Redis/memcached required).
+       - Fully aligns with the offline-first institutional school deployment model.
+    2. Multi-Worker Deployments (Gunicorn / Uvicorn workers):
+       - Each worker process tracks requests in its local memory space.
+       - Effective rate limit across N workers is approximately (max_requests * N)
+         under round-robin load distribution.
+    3. Horizontally Scaled Production Nodes:
+       - In horizontally clustered environments behind a multi-node load balancer,
+         a distributed cache (such as Redis or DB-backed token bucket) can be configured,
+         or sticky sessions / client-IP hash affinity used on reverse proxies.
+    """
+    def __init__(self, max_requests: int = None, window_seconds: int = None):
+        self.max_requests = max_requests or DEFAULT_RATE_LIMIT_MAX
+        self.window_seconds = window_seconds or DEFAULT_RATE_LIMIT_WINDOW
         self.requests = defaultdict(list)
 
     def check_rate_limit(self, client_ip: str):
@@ -129,11 +149,20 @@ class InMemoryRateLimiter:
             ts for ts in self.requests[client_ip] if now - ts < self.window_seconds
         ]
         if len(self.requests[client_ip]) >= self.max_requests:
+            retry_after = int(self.window_seconds - (now - self.requests[client_ip][0])) + 1
             raise HTTPException(
                 status_code=429,
-                detail=f"Too many login attempts. Maximum {self.max_requests} attempts per minute allowed."
+                detail=f"Too many login attempts. Maximum {self.max_requests} attempts per {self.window_seconds}s allowed. Please try again in {max(1, retry_after)} seconds.",
+                headers={"Retry-After": str(max(1, retry_after))}
             )
         self.requests[client_ip].append(now)
+
+    def reset(self, client_ip: str = None):
+        """Clears recorded requests for a specific IP or all IPs."""
+        if client_ip:
+            self.requests.pop(client_ip, None)
+        else:
+            self.requests.clear()
 
 
 def get_user_assigned_scope(user: User, db: Session) -> dict:
@@ -184,10 +213,28 @@ def get_user_assigned_scope(user: User, db: Session) -> dict:
     }
 
 
-auth_rate_limiter = InMemoryRateLimiter(max_requests=5, window_seconds=60)
+auth_rate_limiter = InMemoryRateLimiter(max_requests=DEFAULT_RATE_LIMIT_MAX, window_seconds=DEFAULT_RATE_LIMIT_WINDOW)
 
 def rate_limit_auth(request: Request):
-    client_ip = request.client.host if request.client else "127.0.0.1"
+    """
+    Extracts real client IP resolving reverse proxy headers (X-Forwarded-For, X-Real-IP)
+    or request state, and applies brute-force rate limiting.
+    """
+    client_ip = "127.0.0.1"
+    if hasattr(request, "state") and getattr(request.state, "client_ip", None):
+        client_ip = str(request.state.client_ip)
+    elif hasattr(request, "headers"):
+        forwarded = request.headers.get("x-forwarded-for")
+        real_ip = request.headers.get("x-real-ip")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+        elif real_ip:
+            client_ip = real_ip.strip()
+        elif hasattr(request, "client") and request.client and getattr(request.client, "host", None):
+            client_ip = str(request.client.host)
+    elif hasattr(request, "client") and request.client and getattr(request.client, "host", None):
+        client_ip = str(request.client.host)
+
     auth_rate_limiter.check_rate_limit(client_ip)
 
 

@@ -163,7 +163,8 @@ def run_all():
         "tests/test_secrets_and_source_sanitization.py",
         "tests/test_password_hashing_hardening.py",
         "tests/test_password_reset_hardening.py",
-        "tests/test_jwt_and_session_management.py"
+        "tests/test_jwt_and_session_management.py",
+        "tests/test_authentication_rate_limiting.py"
     ]
 
     server_proc = ensure_server()

@@ -34,6 +34,12 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
     if hasattr(user, "is_active") and user.is_active is False:
         raise HTTPException(status_code=401, detail="Account is deactivated. Please contact your administrator.")
 
+    # Invalidate tokens issued prior to password changes or admin reset
+    token_ver = payload.get("token_version")
+    user_token_ver = getattr(user, "token_version", None)
+    if token_ver is not None and user_token_ver is not None and token_ver < user_token_ver:
+        raise HTTPException(status_code=401, detail="Session expired: your password was changed. Please log in again.")
+
     role_names = [r.name.lower() for r in user.roles] if hasattr(user, "roles") and user.roles else []
     if "super_admin" not in role_names and user.school and getattr(user.school, "status", "ACTIVE") == "SUSPENDED":
         raise HTTPException(status_code=403, detail="Access Denied: Your school's account has been suspended by the Super-Admin.")

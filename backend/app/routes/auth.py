@@ -192,7 +192,8 @@ def login(payload: dict, request: Request, db: Session = Depends(get_db)):
             "user_id": user.id,
             "username": user.username,
             "school_id": school_id,
-            "roles": role_names
+            "roles": role_names,
+            "token_version": getattr(user, "token_version", 1) or 1
         })
 
         # Register zero-trust multi-device session
@@ -344,7 +345,8 @@ def impersonate_user(
         "primary_role": primary_role,
         "school_id": target_user.school_id,
         "impersonator_id": current_user.id,
-        "impersonator_username": current_user.username
+        "impersonator_username": current_user.username,
+        "token_version": getattr(target_user, "token_version", 1) or 1
     }
     token = create_jwt(token_data)
 
@@ -955,12 +957,13 @@ from ..dependencies import get_current_user
 @router.patch("/change-password")
 def change_password(
     payload: dict,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Allow any authenticated user to change their own password."""
     old_password = payload.get("old_password", "")
-    new_password = payload.get("new_password", "")
+    new_password = (payload.get("new_password") or "").strip()
 
     if not old_password or not new_password:
         raise HTTPException(status_code=400, detail="Both old and new passwords are required")
@@ -974,6 +977,28 @@ def change_password(
 
     current_user.password_hash = _hash_password(new_password)
     current_user.is_first_login = False
+    current_user.token_version = (getattr(current_user, "token_version", 1) or 1) + 1
+
+    # Invalidate active device sessions for this user
+    try:
+        db.query(UserDeviceSession).filter(UserDeviceSession.user_id == current_user.id).update(
+            {"is_active": False}, synchronize_session=False
+        )
+    except Exception:
+        pass
+
+    # Record audit event
+    record_audit_event(
+        db,
+        request=request,
+        actor=current_user,
+        action="PASSWORD_CHANGED",
+        details=f"User {current_user.username} successfully changed their password.",
+        entity_type="User",
+        entity_id=str(current_user.id),
+        school_id=current_user.school_id
+    )
+
     db.commit()
     return {"status": "success", "message": "Password changed successfully"}
 
@@ -1046,6 +1071,7 @@ def complete_onboarding(
 def admin_reset_password(
     user_id: int,
     payload: dict,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1053,12 +1079,34 @@ def admin_reset_password(
     target = db.query(User).filter(User.id == user_id).first()
     _verify_managed_user_access(current_user, target, "reset password")
 
-    new_password = payload.get("new_password", "")
+    new_password = (payload.get("new_password") or "").strip()
     if len(new_password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
 
     target.password_hash = _hash_password(new_password)
     target.is_first_login = True
+    target.token_version = (getattr(target, "token_version", 1) or 1) + 1
+
+    # Invalidate active device sessions for target user
+    try:
+        db.query(UserDeviceSession).filter(UserDeviceSession.user_id == target.id).update(
+            {"is_active": False}, synchronize_session=False
+        )
+    except Exception:
+        pass
+
+    # Record forensic audit event
+    record_audit_event(
+        db,
+        request=request,
+        actor=current_user,
+        action="ADMIN_RESET_PASSWORD",
+        details=f"Admin {current_user.username} reset password for user {target.username} (ID: {target.id}).",
+        entity_type="User",
+        entity_id=str(target.id),
+        school_id=target.school_id
+    )
+
     db.commit()
     return {"status": "success", "message": f"Password reset for {target.username}"}
 
@@ -1069,6 +1117,7 @@ def admin_reset_password(
 def set_user_status(
     user_id: int,
     payload: dict,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1078,8 +1127,32 @@ def set_user_status(
 
     is_active = payload.get("is_active", True)
     target.is_active = is_active
-    db.commit()
+
+    # When deactivating, invalidate active device sessions and advance token version immediately
+    if not is_active:
+        target.token_version = (getattr(target, "token_version", 1) or 1) + 1
+        try:
+            db.query(UserDeviceSession).filter(UserDeviceSession.user_id == target.id).update(
+                {"is_active": False}, synchronize_session=False
+            )
+        except Exception:
+            pass
+
     status_str = "activated" if is_active else "deactivated"
+
+    # Record forensic audit event
+    record_audit_event(
+        db,
+        request=request,
+        actor=current_user,
+        action="USER_STATUS_CHANGE",
+        details=f"Admin {current_user.username} {status_str} account for user {target.username} (ID: {target.id}).",
+        entity_type="User",
+        entity_id=str(target.id),
+        school_id=target.school_id
+    )
+
+    db.commit()
     return {"status": "success", "message": f"User {target.username} {status_str}"}
 
 

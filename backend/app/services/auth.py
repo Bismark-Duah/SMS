@@ -4,6 +4,7 @@ import json
 import hmac
 import hashlib
 import time
+import uuid
 
 try:
     import jwt as pyjwt
@@ -19,8 +20,25 @@ try:
 except ImportError:
     bcrypt = None
 
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+DEFAULT_INSECURE_SECRET = "your-secret-key-change-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY", DEFAULT_INSECURE_SECRET)
 DEFAULT_EXPIRE_SECONDS = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440")) * 60
+
+def get_secret_key() -> str:
+    """
+    Returns the configured cryptographic secret key.
+    In production mode, strictly refuses default or empty secret keys.
+    """
+    secret = os.getenv("SECRET_KEY", DEFAULT_INSECURE_SECRET).strip()
+    env_mode = os.getenv("ENVIRONMENT", os.getenv("ENV", "development")).lower()
+    is_production = env_mode in ("production", "prod")
+
+    if is_production and (not secret or secret == DEFAULT_INSECURE_SECRET):
+        raise RuntimeError(
+            "CRITICAL SECURITY CONFIGURATION: In production mode, SECRET_KEY must be set to "
+            "a strong, unique cryptographic secret and cannot use the default placeholder."
+        )
+    return secret or DEFAULT_INSECURE_SECRET
 
 def hash_password(password: str) -> str:
     """
@@ -79,7 +97,7 @@ def base64url_decode(data: str) -> bytes:
 def create_jwt(payload: dict, secret: str = None, expires_in: int = None) -> str:
     """Generates a secure HMAC-SHA256 JWT token using PyJWT or built-in HMAC."""
     if secret is None:
-        secret = os.getenv("SECRET_KEY", SECRET_KEY)
+        secret = get_secret_key()
     if expires_in is None:
         expires_in = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440")) * 60
 
@@ -87,6 +105,8 @@ def create_jwt(payload: dict, secret: str = None, expires_in: int = None) -> str
     now = int(time.time())
     payload["iat"] = payload.get("iat", now)
     payload["exp"] = now + expires_in
+    if "jti" not in payload:
+        payload["jti"] = uuid.uuid4().hex
 
     if pyjwt:
         token = pyjwt.encode(payload, secret, algorithm="HS256")
@@ -107,7 +127,7 @@ def create_jwt(payload: dict, secret: str = None, expires_in: int = None) -> str
 def decode_jwt(token: str, secret: str = None) -> dict:
     """Decodes and validates a JWT token's signature and expiration."""
     if secret is None:
-        secret = os.getenv("SECRET_KEY", SECRET_KEY)
+        secret = get_secret_key()
 
     if pyjwt:
         try:

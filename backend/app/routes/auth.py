@@ -290,6 +290,43 @@ def get_current_user_profile(current_user: User = Depends(get_current_user), db:
         "is_super_admin": "super_admin" in role_names,
     }
 
+@router.post("/logout")
+def logout(
+    request: Request,
+    authorization: str = Header(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Terminates the current device session on the server.
+    Marks the active UserDeviceSession as inactive and logs a forensic USER_LOGOUT audit event.
+    """
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+        token_digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        try:
+            db.query(UserDeviceSession).filter(
+                UserDeviceSession.session_token_hash == token_digest,
+                UserDeviceSession.user_id == current_user.id
+            ).update({"is_active": False}, synchronize_session=False)
+        except Exception:
+            pass
+
+    # Record forensic audit event
+    record_audit_event(
+        db=db,
+        request=request,
+        actor=current_user,
+        action="USER_LOGOUT",
+        details=f"User {current_user.username} successfully logged out.",
+        entity_type="User",
+        entity_id=str(current_user.id),
+        school_id=current_user.school_id
+    )
+
+    db.commit()
+    return {"status": "success", "message": "Successfully logged out"}
+
 @router.post("/impersonate/{user_id}")
 def impersonate_user(
     user_id: int,

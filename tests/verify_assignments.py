@@ -103,7 +103,7 @@ def run_tests():
             class_section_id=class_sec.id,
             semester_id=sem.id
         )
-        asgn_res = create_assignment(asgn_req, db=db, current_user=user_admin)
+        asgn_res = create_assignment(asgn_req, db=db, current_user=user_admin, school_id=None)
         assert asgn_res["teacher_id"] == teacher_user.id, "Teacher ID mismatch!"
         assert asgn_res["subject_id"] == subj.id, "Subject ID mismatch!"
         print(f"   [OK] Created assignment #{asgn_res['id']} for {asgn_res['teacher_name']} -> {asgn_res['subject_name']} ({asgn_res['class_section_name']}).")
@@ -112,7 +112,8 @@ def run_tests():
         print("\n[3] Querying Assignments List...")
         asgns_list = list_assignments(
             db=db,
-            current_user=user_admin
+            current_user=user_admin,
+            school_id=None
         )
         matching_asgn = next((a for a in asgns_list if a["id"] == asgn_res["id"]), None)
         assert matching_asgn is not None, "Created assignment should be present in assignments list!"

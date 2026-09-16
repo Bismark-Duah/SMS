@@ -149,6 +149,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Standardized API Error Handling & Fault Sanitization
+from .errors import register_error_handlers
+register_error_handlers(app)
+
 @app.on_event("startup")
 def sanitize_multi_tenant_state():
     """

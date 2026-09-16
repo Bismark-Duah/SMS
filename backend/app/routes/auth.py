@@ -891,6 +891,7 @@ def create_role(payload: dict, db: Session = Depends(get_db)):
 from fastapi import UploadFile, File
 import csv
 import io
+from ..services.import_export_service import validate_and_read_csv_upload
 
 @router.post("/import-users-csv")
 async def import_users_csv(
@@ -916,8 +917,7 @@ async def import_users_csv(
     else:
         target_sch_id = current_user.school_id
 
-    content = await file.read()
-    decoded = content.decode("utf-8-sig")
+    decoded, safe_filename = await validate_and_read_csv_upload(file, max_bytes=10 * 1024 * 1024)
     stream = io.StringIO(decoded)
     reader = csv.DictReader(stream)
     
@@ -929,62 +929,64 @@ async def import_users_csv(
     
     for row in reader:
         try:
-            clean_row = {str(k).strip().lower(): str(v).strip() if v else "" for k, v in row.items() if k}
-            
-            username = clean_row.get("username") or clean_row.get("user_name") or clean_row.get("name")
-            if not username:
-                errors.append(f"Row {reader.line_num}: Missing username")
-                continue
+            with db.begin_nested():
+                clean_row = {str(k).strip().lower(): str(v).strip() if v else "" for k, v in row.items() if k}
                 
-            if db.query(User).filter(User.username == username).first():
-                errors.append(f"Row {reader.line_num}: Username '{username}' already exists")
-                continue
+                username = clean_row.get("username") or clean_row.get("user_name") or clean_row.get("name")
+                if not username:
+                    errors.append(f"Row {reader.line_num}: Missing username")
+                    continue
+                    
+                if db.query(User).filter(User.username == username).first():
+                    errors.append(f"Row {reader.line_num}: Username '{username}' already exists")
+                    continue
 
-            email = clean_row.get("email") or clean_row.get("e-mail")
-            gender = clean_row.get("gender")
-            raw_password = clean_row.get("password") or clean_row.get("pass") or "Welcome123!"
+                email = clean_row.get("email") or clean_row.get("e-mail")
+                gender = clean_row.get("gender")
+                raw_password = clean_row.get("password") or clean_row.get("pass") or "Welcome123!"
 
-            raw_roles_str = clean_row.get("roles") or clean_row.get("role") or clean_row.get("user_role") or clean_row.get("user_roles")
-            assigned_roles = []
-            
-            if raw_roles_str:
-                delimiters = "|" if "|" in raw_roles_str else ("," if "," in raw_roles_str else None)
-                r_items = raw_roles_str.split(delimiters) if delimiters else [raw_roles_str]
+                raw_roles_str = clean_row.get("roles") or clean_row.get("role") or clean_row.get("user_role") or clean_row.get("user_roles")
+                assigned_roles = []
                 
-                for r_item in r_items:
-                    raw_text = r_item.strip().lower()
-                    mapped_name = ROLE_ALIASES.get(raw_text) or raw_text.replace(" ", "_")
-                    matched_role = all_roles.get(mapped_name)
-                    if matched_role and matched_role not in assigned_roles:
-                        assigned_roles.append(matched_role)
-            
-            # Non-super-admins cannot grant super_admin or admin via CSV
-            if not is_super:
-                assigned_roles = [r for r in assigned_roles if r.name.lower() not in ["super_admin", "admin", "headmaster", "headmistress"]]
+                if raw_roles_str:
+                    delimiters = "|" if "|" in raw_roles_str else ("," if "," in raw_roles_str else None)
+                    r_items = raw_roles_str.split(delimiters) if delimiters else [raw_roles_str]
+                    
+                    for r_item in r_items:
+                        raw_text = r_item.strip().lower()
+                        mapped_name = ROLE_ALIASES.get(raw_text) or raw_text.replace(" ", "_")
+                        matched_role = all_roles.get(mapped_name)
+                        if matched_role and matched_role not in assigned_roles:
+                            assigned_roles.append(matched_role)
+                
+                # Non-super-admins cannot grant super_admin or admin via CSV
+                if not is_super:
+                    assigned_roles = [r for r in assigned_roles if r.name.lower() not in ["super_admin", "admin", "headmaster", "headmistress"]]
 
-            if not assigned_roles and default_role:
-                assigned_roles.append(default_role)
+                if not assigned_roles and default_role:
+                    assigned_roles.append(default_role)
 
-            new_user = User(
-                username=username,
-                email=email,
-                password_hash=_hash_password(raw_password),
-                gender=gender,
-                is_active=True,
-                school_id=target_sch_id
-            )
-            for role in assigned_roles:
-                new_user.roles.append(role)
-            
-            db.add(new_user)
-            db.flush()
-            link_students_for_parent_user(db, new_user)
-            imported_count += 1
+                new_user = User(
+                    username=username,
+                    email=email,
+                    password_hash=_hash_password(raw_password),
+                    gender=gender,
+                    is_active=True,
+                    school_id=target_sch_id
+                )
+                for role in assigned_roles:
+                    new_user.roles.append(role)
+                
+                db.add(new_user)
+                db.flush()
+                link_students_for_parent_user(db, new_user)
+                imported_count += 1
         except Exception as e:
             errors.append(f"Row {reader.line_num}: {str(e)}")
             
     db.commit()
-    return {"status": "success", "imported": imported_count, "errors": errors}
+    batch_status = "success" if not errors else ("partial_success" if imported_count > 0 else "error")
+    return {"status": batch_status, "imported": imported_count, "errors": errors}
 
 
 # ── Change Password ───────────────────────────────────────────────────────────

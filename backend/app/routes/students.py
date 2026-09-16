@@ -14,6 +14,7 @@ from ..services.guardian_service import auto_link_guardian_for_student, auto_lin
 from ..services.allocation import allocate_student_house_and_dorm
 from ..services.admission_package import AdmissionPackageService
 from ..services.sync_engine import log_sync_change
+from ..services.import_export_service import validate_and_read_csv_upload, sanitize_csv_cell
 
 router = APIRouter()
 
@@ -463,19 +464,7 @@ async def import_students_csv(
     _check_admin(current_user)
     school_id = get_school_id(current_user)
     
-    if not file.filename or not file.filename.lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Invalid file type. Only .csv files are supported.")
-
-    content = await file.read()
-    if not content:
-        raise HTTPException(status_code=400, detail="Uploaded CSV file is empty.")
-    if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File size exceeds maximum 10MB limit.")
-
-    try:
-        decoded = content.decode("utf-8-sig")
-    except Exception:
-        decoded = content.decode("latin-1", errors="replace")
+    decoded, safe_filename = await validate_and_read_csv_upload(file, max_bytes=10 * 1024 * 1024)
 
     stream = io.StringIO(decoded)
     reader = csv.DictReader(stream)
@@ -727,8 +716,9 @@ async def import_students_csv(
             skipped_count += 1
 
     db.commit()
+    batch_status = "success" if not errors else ("partial_success" if imported_count > 0 else "error")
     return {
-        "status": "success",
+        "status": batch_status,
         "imported": imported_count,
         "skipped": skipped_count,
         "total": imported_count + skipped_count,

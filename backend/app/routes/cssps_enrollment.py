@@ -13,6 +13,7 @@ from ..schemas import CSSPSEnrollmentCreate
 from ..services.allocation import allocate_student_house_and_dorm
 from ..services.admission_package import AdmissionPackageService
 from ..dependencies import get_current_user, get_school_id
+from ..services.import_export_service import validate_and_read_csv_upload
 
 router = APIRouter(prefix="/api/cssps", tags=["CSSPS Enrollment"])
 
@@ -279,19 +280,7 @@ async def import_cssps_csv(file: UploadFile = File(...), db: Session = Depends(g
                 status_code=400,
                 detail="CSSPS Enrollment and Online Candidate Admission are only applicable to Senior High / STEM / Technical institutions."
             )
-    if not file.filename or not file.filename.lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Invalid file type. Only .csv files are supported.")
-
-    content = await file.read()
-    if not content:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
-    if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File size exceeds maximum 10MB limit.")
-
-    try:
-        decoded = content.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        decoded = content.decode("latin-1", errors="replace")
+    decoded, safe_filename = await validate_and_read_csv_upload(file, max_bytes=10 * 1024 * 1024)
 
     lines = [l for l in decoded.splitlines() if l.strip()]
     if not lines:

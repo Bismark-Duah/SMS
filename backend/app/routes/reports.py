@@ -10,6 +10,7 @@ from ..services.reports import ReportService
 from ..models import Student, User, Score, Attendance, ClassSection, Fee, StudentSemesterSummary
 from ..services.auth import decode_jwt
 from ..dependencies import get_current_user, get_school_id
+from ..services.import_export_service import generate_safe_csv_content, sanitize_filename, sanitize_row_for_export
 
 router = APIRouter()
 
@@ -178,24 +179,23 @@ def export_students(
         query = query.filter(Student.school_id == school_id)
     students = query.all()
     
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["ID", "Student Code", "Name", "Class Section", "Program"])
-    
-    for s in students:
-        writer.writerow([
-            s.id, 
-            s.student_code, 
-            s.full_name, 
+    headers = ["ID", "Student Code", "Name", "Class Section", "Program"]
+    rows = [
+        [
+            s.id,
+            s.student_code,
+            s.full_name,
             s.class_section.name if s.class_section else "N/A",
             s.program.name if s.program else "N/A"
-        ])
-    
-    content = output.getvalue()
+        ]
+        for s in students
+    ]
+    content = generate_safe_csv_content(headers, rows)
+    safe_filename = sanitize_filename("students_export.csv")
     return Response(
         content=content,
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=students_export.csv"}
+        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'}
     )
 
 @router.get("/class-summary/{class_id}")
@@ -277,25 +277,24 @@ def export_class_summary(
     class_section = db.query(ClassSection).filter(ClassSection.id == class_id).first()
     class_name = class_section.name if class_section else f"Class_{class_id}"
     
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Student Code", "Name", "Average Score (%)", "Fails Count", "Attendance Rate (%)", "Grade Average Tier"])
-    
-    for row in data:
-        writer.writerow([
+    headers = ["Student Code", "Name", "Average Score (%)", "Fails Count", "Attendance Rate (%)", "Grade Average Tier"]
+    rows = [
+        [
             row["student_code"],
             row["full_name"],
             row["average_score"],
             row["fails_count"],
             row["attendance_rate"],
             row["grade_tier"]
-        ])
-        
-    content = output.getvalue()
+        ]
+        for row in data
+    ]
+    content = generate_safe_csv_content(headers, rows)
+    safe_filename = sanitize_filename(f"class_summary_{class_name}.csv")
     return Response(
         content=content,
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=class_summary_{class_name.replace(' ', '_')}.csv"}
+        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'}
     )
 
 @router.get("/financial-summary")
@@ -360,12 +359,9 @@ def export_financial_summary(
 ):
     data = get_financial_summary(class_id=class_id, overdue_only=overdue_only, min_balance=min_balance, db=db, current_user=current_user)
     
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Student Code", "Name", "Class", "Total Billed", "Total Paid", "Outstanding Balance", "Overdue Invoices"])
-    
-    for row in data:
-        writer.writerow([
+    headers = ["Student Code", "Name", "Class", "Total Billed", "Total Paid", "Outstanding Balance", "Overdue Invoices"]
+    rows = [
+        [
             row["student_code"],
             row["full_name"],
             row["class_name"],
@@ -373,13 +369,15 @@ def export_financial_summary(
             row["total_paid"],
             row["outstanding_balance"],
             row["overdue_count"]
-        ])
-        
-    content = output.getvalue()
+        ]
+        for row in data
+    ]
+    content = generate_safe_csv_content(headers, rows)
+    safe_filename = sanitize_filename("financial_summary.csv")
     return Response(
         content=content,
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=financial_summary.csv"}
+        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'}
     )
 
 @router.get("/official-transcript/{student_id}")
@@ -841,11 +839,12 @@ def get_broadsheet_csv(
         raise HTTPException(status_code=404, detail="No broadsheet data found for this class section.")
 
     clean_cls_name = (cs.name or f"Class_{class_section_id}").replace(" ", "_").replace("/", "-")
+    safe_filename = sanitize_filename(f"Broadsheet_{clean_cls_name}_Sem_{semester_id}.csv")
     return Response(
         content=csv_content,
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="Broadsheet_{clean_cls_name}_Sem_{semester_id}.csv"'
+            "Content-Disposition": f'attachment; filename="{safe_filename}"'
         }
     )
 

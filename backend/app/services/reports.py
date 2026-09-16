@@ -8,6 +8,7 @@ from ..models import (
     ClassSectionReportStatus, User, ClassSection
 )
 from .grading import GradingService
+from .import_export_service import sanitize_row_for_export
 
 
 def _get_setting(db, key, default=""):
@@ -1076,8 +1077,8 @@ class ReportService:
         writer = csv.writer(output)
 
         # Header comments
-        writer.writerow(["CLASS BROADSHEET MATRIX & ACADEMIC LEDGER"])
-        writer.writerow(["Class Section", cs.name, "Semester / Term", semester.name, "Academic Year", semester.academic_year.label if semester.academic_year else ""])
+        writer.writerow(sanitize_row_for_export(["CLASS BROADSHEET MATRIX & ACADEMIC LEDGER"]))
+        writer.writerow(sanitize_row_for_export(["Class Section", cs.name, "Semester / Term", semester.name, "Academic Year", semester.academic_year.label if semester.academic_year else ""]))
         writer.writerow([])
 
         # Table Column Headers
@@ -1085,7 +1086,7 @@ class ReportService:
         for s in subjects:
             headers.append(f"{s.name} ({s.code or ''})")
         headers.extend(["Total Score", "Average (%)", "WASSCE Aggregate (Best 6)", "Attitude", "Conduct", "Form Master Remarks"])
-        writer.writerow(headers)
+        writer.writerow(sanitize_row_for_export(headers))
 
         # Calculate student scores and ranks with batch queries
         student_rows = []
@@ -1154,11 +1155,11 @@ class ReportService:
             row = [idx + 1, st.student_code, st.full_name, st.gender or ""]
             row.extend(r["subject_vals"])
             row.extend([f"{r['total']:.1f}", f"{r['avg']:.1f}%", r["aggregate"], r["attitude"], r["conduct"], r["remarks"]])
-            writer.writerow(row)
+            writer.writerow(sanitize_row_for_export(row))
 
         # Summary statistics
         writer.writerow([])
-        writer.writerow(["STATISTICAL SUMMARY"])
+        writer.writerow(sanitize_row_for_export(["STATISTICAL SUMMARY"]))
         mean_row = ["Class Subject Mean", "", "", ""]
         max_row = ["Highest Score", "", "", ""]
         min_row = ["Lowest Score", "", "", ""]
@@ -1178,10 +1179,10 @@ class ReportService:
                 min_row.append("-")
                 pass_row.append("-")
 
-        writer.writerow(mean_row)
-        writer.writerow(max_row)
-        writer.writerow(min_row)
-        writer.writerow(pass_row)
+        writer.writerow(sanitize_row_for_export(mean_row))
+        writer.writerow(sanitize_row_for_export(max_row))
+        writer.writerow(sanitize_row_for_export(min_row))
+        writer.writerow(sanitize_row_for_export(pass_row))
 
         return output.getvalue()
 

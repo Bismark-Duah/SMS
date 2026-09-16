@@ -416,14 +416,18 @@
         cursor: pointer;
         transition: var(--transition);
         padding: 2px 0;
-        margin-top: -6px;
-        margin-bottom: 16px;
         text-align: right;
-        float: right;
       }
       .forgot-pw-link:hover {
         color: #7dd3fc;
         text-decoration: underline;
+      }
+
+      .forgot-pw-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
+        margin-bottom: 20px;
       }
 
       /* ── Accessible Keyboard Skip Link (WCAG 2.1 AA) ── */
@@ -582,13 +586,14 @@
               <input id="username" name="username" type="text" placeholder="Enter your username" required autocomplete="username" />
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <label for="password" style="margin-bottom:0;">Password</label>
-              <button type="button" class="forgot-pw-link" id="forgotPwBtn">Forgot Password?</button>
-            </div>
+            <label for="password">Password</label>
             <div class="input-wrap">
               <input id="password" name="password" type="password" placeholder="Enter your password" required autocomplete="current-password" />
               <button type="button" class="toggle-pw" id="togglePw" title="Show / hide password" aria-label="Toggle password visibility">👁</button>
+            </div>
+
+            <div class="forgot-pw-row">
+              <button type="button" class="forgot-pw-link" id="forgotPwBtn">Forgot Password?</button>
             </div>
 
             <button type="submit" class="submit-btn" id="submitBtn">Sign In</button>

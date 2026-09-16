@@ -2709,6 +2709,66 @@
 
   // Boot Global EduBot Copilot
   setTimeout(() => mountEduBotGlobal(), 450);
+
+  // ── 5. Enterprise Accessibility Controller (WCAG 2.1 AA / Prompt 25) ──
+  function mountGlobalAccessibility() {
+    // 1. Skip to main content link
+    if (!document.querySelector('.skip-to-main') && document.body) {
+      const skipLink = document.createElement('a');
+      skipLink.href = '#mainContent';
+      skipLink.className = 'skip-to-main';
+      skipLink.textContent = 'Skip to main content';
+      document.body.prepend(skipLink);
+
+      const mainEl = document.querySelector('main, .page, #appContent');
+      if (mainEl && !mainEl.id) {
+        mainEl.id = 'mainContent';
+        mainEl.setAttribute('tabindex', '-1');
+      }
+    }
+
+    // 2. Table Accessibility (col scope)
+    document.querySelectorAll('table thead th').forEach(th => {
+      if (!th.getAttribute('scope')) th.setAttribute('scope', 'col');
+    });
+
+    // 3. Modal Dialog ARIA decoration
+    document.querySelectorAll('.modal, [id*="Modal"], [id*="modal"]').forEach(modal => {
+      if (!modal.getAttribute('role')) modal.setAttribute('role', 'dialog');
+      if (!modal.getAttribute('aria-modal')) modal.setAttribute('aria-modal', 'true');
+    });
+
+    // 4. Modal close buttons accessible labels
+    document.querySelectorAll('.modal-close, button.close, [onclick*="closeModal"]').forEach(btn => {
+      if (!btn.getAttribute('aria-label')) btn.setAttribute('aria-label', 'Close dialog');
+    });
+
+    // 5. Accessible Form Alert Live Regions
+    document.querySelectorAll('.error-msg, .field-error, .auth-message.error, [id*="Error"], [id*="error"]').forEach(el => {
+      if (!el.getAttribute('role')) el.setAttribute('role', 'alert');
+      if (!el.getAttribute('aria-live')) el.setAttribute('aria-live', 'polite');
+    });
+
+    // 6. Global ESC to close any active modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const activeModals = document.querySelectorAll('.modal, .modal-backdrop, .recovery-modal-overlay');
+        activeModals.forEach(m => {
+          const style = window.getComputedStyle(m);
+          if (style.display !== 'none' && style.visibility !== 'hidden') {
+            m.style.display = 'none';
+            m.classList.remove('open');
+          }
+        });
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountGlobalAccessibility);
+  } else {
+    mountGlobalAccessibility();
+  }
 })();
 
 

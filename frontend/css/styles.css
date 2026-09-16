@@ -5194,3 +5194,107 @@ select:-webkit-autofill {
   }
 }
 
+/* ==========================================================================
+   ENTERPRISE ACCESSIBILITY SUBSYSTEM (PROMPT 25 — WCAG 2.1 AA / WCAG 2.2)
+   Focus Rings, Screen Readers, Skip Navigation, Contrast & Reduced Motion
+   ========================================================================== */
+
+/* ── 1. Skip to Main Content Navigation ──────────────────────────────── */
+.skip-to-main {
+  position: absolute;
+  top: -120px;
+  left: 16px;
+  background: var(--primary, #4f46e5);
+  color: #ffffff !important;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  z-index: 100000;
+  text-decoration: none;
+  transition: top 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  border: 2px solid #ffffff;
+}
+
+.skip-to-main:focus {
+  top: 16px;
+  outline: 3px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+/* ── 2. Keyboard Focus Visibility (WCAG 2.4.7 / 2.4.11) ───────────────── */
+:focus-visible {
+  outline: 2px solid var(--primary, #4f46e5) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.25) !important;
+}
+
+[data-theme="dark"] :focus-visible {
+  outline: 2px solid #38bdf8 !important;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.35) !important;
+}
+
+/* High-contrast focus for buttons and navigation */
+.btn:focus-visible,
+button:focus-visible,
+.sidebar-item:focus-visible {
+  outline: 2px solid #38bdf8 !important;
+  outline-offset: 2px !important;
+}
+
+/* ── 3. Screen Reader Utilities (WCAG 1.3.1) ─────────────────────────── */
+.sr-only,
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ── 4. Reduced Motion Adaptations (WCAG 2.3.3) ──────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── 5. High Contrast / Forced Colors Mode (WCAG 1.4.3 / 1.4.11) ──────── */
+@media (forced-colors: active) {
+  .btn,
+  .sidebar-item,
+  .card,
+  input,
+  select,
+  textarea {
+    border: 1px solid ButtonText !important;
+  }
+  :focus-visible {
+    outline: 3px solid Highlight !important;
+  }
+}
+
+/* ── 6. Accessible Table Semantics & Headers ─────────────────────────── */
+table th[scope="col"],
+table th[scope="row"] {
+  font-weight: 700;
+}
+
+/* ── 7. Error Alert & Validation Live Regions (WCAG 3.3.1 / 3.3.2) ────── */
+[role="alert"],
+.field-error,
+.auth-message.error {
+  border-left: 4px solid var(--error, #ef4444);
+}
+
+

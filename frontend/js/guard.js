@@ -72,6 +72,58 @@
     return headers;
   };
 
+  // ── Global Fetch Interceptor & 401/403 Security Boundary ─────────
+  if (!window._guardFetchInstalled && typeof window.fetch === 'function') {
+    window._guardFetchInstalled = true;
+    const _originalFetch = window.fetch;
+
+    window.fetch = async function(...args) {
+      let [resource, config] = args;
+      config = config || {};
+
+      const urlStr = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
+      const isApiCall = urlStr.includes('/api/') || urlStr.startsWith('/api') || (typeof API_BASE === 'string' && urlStr.includes(API_BASE));
+
+      if (isApiCall) {
+        // Automatically inject Bearer token and school context if available
+        const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+        const schId = sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+
+        if (config.headers instanceof Headers) {
+          if (token && !config.headers.has('Authorization')) config.headers.set('Authorization', `Bearer ${token}`);
+          if (schId && !config.headers.has('X-School-Id')) config.headers.set('X-School-Id', String(schId));
+        } else {
+          config.headers = config.headers || {};
+          if (token && !config.headers['Authorization']) config.headers['Authorization'] = `Bearer ${token}`;
+          if (schId && !config.headers['X-School-Id']) config.headers['X-School-Id'] = String(schId);
+        }
+      }
+
+      try {
+        const response = await _originalFetch(resource, config);
+
+        if (isApiCall) {
+          if (response.status === 401) {
+            const currentPath = window.location.pathname;
+            // Only redirect if not already on the login/auth page
+            if (!currentPath.endsWith('auth.html') && !currentPath.endsWith('login.html')) {
+              console.warn('[Security Guard] 401 Unauthorized received from backend. Redirecting to login.');
+              redirectToLogin('Your session has expired or is invalid. Please log in again.');
+            }
+          } else if (response.status === 403) {
+            console.warn('[Security Guard] 403 Forbidden received. Server rejected action.');
+            if (typeof window.showToast === 'function') {
+              window.showToast('Access Denied: You do not have permission to perform this action.', 'error');
+            }
+          }
+        }
+        return response;
+      } catch (err) {
+        throw err;
+      }
+    };
+  }
+
   function getPageName() {
     return window.location.pathname.split('/').pop() || 'index.html';
   }

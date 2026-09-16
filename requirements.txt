@@ -1,0 +1,2 @@
+# EduManage 360 - Root Requirements
+-r backend/requirements.txt

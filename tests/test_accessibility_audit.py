@@ -84,6 +84,16 @@ class TestAccessibilityAudit(unittest.TestCase):
         self.assertIn("scope", js)
         self.assertIn("alert", js)
 
+    def test_08_auth_html_contains_skip_to_main_styling(self):
+        """Verify auth.html defines .skip-to-main styling so WCAG bypass link remains off-screen until focused."""
+        auth_path = os.path.join(FRONTEND_DIR, "auth.html")
+        self.assertTrue(os.path.isfile(auth_path), "auth.html must exist.")
+        with open(auth_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn(".skip-to-main", content)
+        self.assertIn("top: -120px", content)
+        self.assertIn(".skip-to-main:focus", content)
+
 
 if __name__ == "__main__":
     unittest.main()

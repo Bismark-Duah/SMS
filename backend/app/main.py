@@ -110,29 +110,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         return response
 
-DEFAULT_LOCAL_ORIGINS = [
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://smsghana.onrender.com",
-    "https://smsgh.onrender.com"
-]
+from .cors_config import DEFAULT_LOCAL_ORIGINS, DEFAULT_PROD_ORIGINS, get_cors_configuration
 
-cors_origins_env = os.getenv("CORS_ORIGINS", "").strip()
-if cors_origins_env and cors_origins_env != "*":
-    allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
-elif cors_origins_env == "*":
-    allowed_origins = ["*"]
-else:
-    allowed_origins = DEFAULT_LOCAL_ORIGINS
-
-# If wildcard is explicitly configured, allow_credentials must be False per CORS security spec
-allow_creds = (allowed_origins != ["*"])
+_cors_cfg = get_cors_configuration()
+allowed_origins = _cors_cfg["allow_origins"]
+allow_creds = _cors_cfg["allow_credentials"]
 
 from .middleware.cloudflare_guard import CloudflareGuardMiddleware
 from .middleware.tenant_subdomain import TenantSubdomainMiddleware
@@ -143,10 +125,7 @@ app.add_middleware(CloudflareGuardMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=allow_creds,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    **_cors_cfg
 )
 
 # Standardized API Error Handling & Fault Sanitization

@@ -47,6 +47,20 @@ def _check_score_lock(db: Session, semester_id: int, user: User):
         except Exception:
             pass
 
+def _score_dict(s: Score) -> dict:
+    return {
+        "id": s.id,
+        "student_id": s.student_id,
+        "subject_id": s.subject_id,
+        "semester_id": s.semester_id,
+        "class_score": s.class_score,
+        "exam_score": s.exam_score,
+        "total_score": s.total_score,
+        "grade": s.grade,
+        "remark": s.remark,
+        "approval_status": getattr(s, "approval_status", "DRAFT") or "DRAFT",
+    }
+
 # ── Existing Endpoints ─────────────────────────────────────────────────────────
 
 @router.get("/")
@@ -171,7 +185,7 @@ def create_score(
             user=current_user,
             school_id=school_id
         )
-        return existing
+        return _score_dict(existing)
 
     db_score = Score(
         student_id=score.student_id,
@@ -218,7 +232,7 @@ def create_score(
         user=current_user,
         school_id=school_id
     )
-    return db_score
+    return _score_dict(db_score)
 
 
 # ── New Endpoints ──────────────────────────────────────────────────────────────

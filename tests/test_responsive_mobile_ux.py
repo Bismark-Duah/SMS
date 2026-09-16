@@ -81,7 +81,7 @@ class TestResponsiveMobileUX(unittest.TestCase):
         self.assertIn("-webkit-overflow-scrolling: touch", css)
 
     def test_06_auth_login_screen_has_mobile_safeguards(self):
-        """Verify auth.html supports vertical scrolling on small screens and 16px inputs."""
+        """Verify auth.html supports vertical scrolling on small screens, 16px inputs, and valid modal CSS scoping."""
         auth_path = os.path.join(FRONTEND_DIR, "auth.html")
         with open(auth_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -90,6 +90,18 @@ class TestResponsiveMobileUX(unittest.TestCase):
         self.assertTrue(has_mobile_mq, "auth.html must contain mobile media query")
         self.assertIn("overflow-y: auto", content)
         self.assertIn("16px", content)
+
+        # Integrity guard: ensure .version-tag is closed and modal overlay is top-level
+        self.assertRegex(
+            content,
+            r'\.version-tag\s*\{[^}]*\}\s*\.forgot-pw-link',
+            ".version-tag must be closed before .forgot-pw-link",
+        )
+        self.assertRegex(
+            content,
+            r'\.recovery-modal-overlay\s*\{[^}]*display:\s*none;',
+            ".recovery-modal-overlay must specify display: none at top level",
+        )
 
     def test_07_high_use_workflow_tables_wrapped(self):
         """Verify high-use workflow pages contain responsive table wrappers."""

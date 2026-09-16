@@ -404,109 +404,111 @@
         text-align: center;
         font-size: .75rem;
         color: rgba(148,163,184,.4);
-        .forgot-pw-link {
-          display: inline-block;
-          background: none;
-          border: none;
-          color: #38bdf8;
-          font-size: .84rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: var(--transition);
-          padding: 2px 0;
-          margin-top: -6px;
-          margin-bottom: 16px;
-          text-align: right;
-          float: right;
-        }
-        .forgot-pw-link:hover {
-          color: #7dd3fc;
-          text-decoration: underline;
-        }
+      }
 
-        /* ── Glassmorphic Recovery Modal ── */
-        .recovery-modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(15, 23, 42, 0.82);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          z-index: 100;
-          display: none;
-          align-items: center;
-          justify-content: center;
-          padding: 18px;
-          opacity: 0;
-          transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .recovery-modal-overlay.active {
-          display: flex;
-          opacity: 1;
-        }
-        .recovery-modal {
-          background: rgba(30, 41, 59, 0.92);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
-          border-radius: 20px;
-          width: 100%;
-          max-width: 480px;
-          padding: 32px 28px;
-          position: relative;
-          transform: translateY(20px) scale(0.96);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .recovery-modal-overlay.active .recovery-modal {
-          transform: translateY(0) scale(1);
-        }
-        .recovery-close-btn {
-          position: absolute;
-          top: 20px;
-          right: 20px;
-          background: rgba(255, 255, 255, 0.08);
-          border: none;
-          color: var(--muted);
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.1rem;
-          transition: var(--transition);
-        }
-        .recovery-close-btn:hover {
-          background: rgba(239, 68, 68, 0.2);
-          color: #f87171;
-        }
-        .recovery-steps {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          margin-bottom: 24px;
-        }
-        .step-pill {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 0.8rem;
-          font-weight: 600;
-          padding: 4px 12px;
-          border-radius: 20px;
-          background: rgba(255, 255, 255, 0.06);
-          color: var(--muted);
-          transition: var(--transition);
-        }
-        .step-pill.active {
-          background: rgba(79, 70, 229, 0.25);
-          border: 1px solid rgba(99, 102, 241, 0.4);
-          color: #a5b4fc;
-        }
-        .step-pill.completed {
-          background: rgba(16, 185, 129, 0.15);
-          color: #34d399;
-        }
+      .forgot-pw-link {
+        display: inline-block;
+        background: none;
+        border: none;
+        color: #38bdf8;
+        font-size: .84rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition);
+        padding: 2px 0;
+        margin-top: -6px;
+        margin-bottom: 16px;
+        text-align: right;
+        float: right;
+      }
+      .forgot-pw-link:hover {
+        color: #7dd3fc;
+        text-decoration: underline;
+      }
+
+      /* ── Glassmorphic Recovery Modal ── */
+      .recovery-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.82);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        opacity: 0;
+        transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .recovery-modal-overlay.active {
+        display: flex;
+        opacity: 1;
+      }
+      .recovery-modal {
+        background: rgba(30, 41, 59, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
+        border-radius: 20px;
+        width: 100%;
+        max-width: 480px;
+        padding: 32px 28px;
+        position: relative;
+        transform: translateY(20px) scale(0.96);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .recovery-modal-overlay.active .recovery-modal {
+        transform: translateY(0) scale(1);
+      }
+      .recovery-close-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.08);
+        border: none;
+        color: var(--muted);
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        transition: var(--transition);
+      }
+      .recovery-close-btn:hover {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+      }
+      .recovery-steps {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .step-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--muted);
+        transition: var(--transition);
+      }
+      .step-pill.active {
+        background: rgba(79, 70, 229, 0.25);
+        border: 1px solid rgba(99, 102, 241, 0.4);
+        color: #a5b4fc;
+      }
+      .step-pill.completed {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+      }
       </style>
   </head>
   <body>

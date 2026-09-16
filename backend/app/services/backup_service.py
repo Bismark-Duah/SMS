@@ -3,6 +3,7 @@ import sqlite3
 import hashlib
 import shutil
 import zipfile
+import urllib.parse
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from ..database import DEFAULT_DB_PATH, is_sqlite, checkpoint_database
@@ -217,3 +218,177 @@ class BackupService:
                     logger.warning(f"Failed to prune stale backup {stale_file}: {e}")
 
         return pruned_count
+
+    @classmethod
+    def restore_database_snapshot(
+        cls,
+        filename: str,
+        dry_run: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Validates snapshot integrity and safely tests restoration.
+        If dry_run=True, tests the snapshot in isolation without altering the active live database.
+        If dry_run=False, takes a pre-restore safety snapshot of the active live database,
+        flushes WAL checkpoints, and restores the selected backup atomically.
+        """
+        if not is_sqlite:
+            return {
+                "status": "skipped",
+                "message": "SQLite snapshot restoration only applies to SQLite databases."
+            }
+
+        filename = os.path.basename(filename)
+        backup_path = os.path.join(BACKUPS_DIR, filename)
+
+        if not os.path.exists(backup_path):
+            raise FileNotFoundError(f"Backup snapshot '{filename}' not found.")
+
+        # 1. Verify cryptographic checksum and SQLite page integrity
+        verify_result = cls.verify_backup_integrity(filename)
+        if verify_result.get("status") != "HEALTHY":
+            raise ValueError(
+                f"Cannot restore corrupted backup snapshot '{filename}'. "
+                f"Checksum matched: {verify_result.get('checksum_matched')}, "
+                f"Integrity healthy: {verify_result.get('sqlite_integrity_healthy')}."
+            )
+
+        # 2. Inspect tables in target snapshot to verify critical schemas
+        conn = sqlite3.connect(backup_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = [row[0] for row in cursor.fetchall() if not row[0].startswith("sqlite_")]
+        
+        # Verify essential core tables exist
+        required_tables = {"users", "schools", "students"}
+        missing_tables = required_tables - set(tables)
+        if missing_tables:
+            conn.close()
+            raise ValueError(f"Snapshot missing required system tables: {missing_tables}")
+
+        cursor.execute("SELECT COUNT(*) FROM users;")
+        user_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM schools;")
+        school_count = cursor.fetchone()[0]
+        conn.close()
+
+        if dry_run:
+            logger.info(f"Dry-run restore verification succeeded for {filename}: {len(tables)} tables, {user_count} users.")
+            return {
+                "status": "success",
+                "dry_run": True,
+                "filename": filename,
+                "verified": True,
+                "tables_count": len(tables),
+                "schools_count": school_count,
+                "users_count": user_count,
+                "message": "Snapshot passed all integrity checks and schema validations. Safe to restore."
+            }
+
+        # 3. Live restore execution
+        # Take safety snapshot of current live database first
+        safety_backup = cls.create_backup(verify_integrity=True)
+        logger.info(f"Created pre-restore safety backup: {safety_backup['filename']}")
+
+        # Flush active WAL
+        checkpoint_database(mode="TRUNCATE")
+
+        # Copy snapshot over live database file
+        shutil.copy2(backup_path, DEFAULT_DB_PATH)
+
+        # Remove stale WAL / SHM files if present
+        for ext in ("-wal", "-shm"):
+            extra_file = f"{DEFAULT_DB_PATH}{ext}"
+            if os.path.exists(extra_file):
+                try: os.remove(extra_file)
+                except Exception: pass
+
+        logger.info(f"Live database successfully restored from snapshot {filename}.")
+        return {
+            "status": "success",
+            "dry_run": False,
+            "filename": filename,
+            "safety_backup_filename": safety_backup["filename"],
+            "message": f"Live database successfully restored from {filename}."
+        }
+
+    @classmethod
+    def generate_postgres_backup_command(
+        cls,
+        db_url: Optional[str] = None,
+        output_file: str = "edumanage_backup.dump"
+    ) -> Dict[str, Any]:
+        """
+        Parses PostgreSQL connection details and generates standard pg_dump commands
+        for production disaster recovery backups.
+        """
+        target_url = db_url or os.getenv("DATABASE_URL", "")
+        if not (target_url.startswith("postgresql://") or target_url.startswith("postgres://")):
+            return {
+                "status": "skipped",
+                "message": "PostgreSQL backup command generation requires a valid postgresql:// URL."
+            }
+
+        parsed = urllib.parse.urlparse(target_url)
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 5432
+        user = parsed.username or "postgres"
+        dbname = parsed.path.lstrip("/") or "postgres"
+
+        # Sanitize command output without leaking password in plaintext
+        cmd_str = (
+            f"pg_dump -Fc -v -h {host} -p {port} -U {user} -d {dbname} -f {output_file}"
+        )
+
+        return {
+            "status": "success",
+            "host": host,
+            "port": port,
+            "user": user,
+            "database": dbname,
+            "command": cmd_str,
+            "format": "custom compressed (-Fc)",
+            "env_requirements": "Set PGPASSWORD environment variable securely when running command.",
+            "instructions": (
+                f"Run: PGPASSWORD='***' {cmd_str}\n"
+                f"Verify: pg_restore --list {output_file}"
+            )
+        }
+
+    @classmethod
+    def generate_postgres_restore_command(
+        cls,
+        db_url: Optional[str] = None,
+        dump_file: str = "edumanage_backup.dump",
+        clean: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Generates standard pg_restore commands for production PostgreSQL recovery.
+        """
+        target_url = db_url or os.getenv("DATABASE_URL", "")
+        if not (target_url.startswith("postgresql://") or target_url.startswith("postgres://")):
+            return {
+                "status": "skipped",
+                "message": "PostgreSQL restore command generation requires a valid postgresql:// URL."
+            }
+
+        parsed = urllib.parse.urlparse(target_url)
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 5432
+        user = parsed.username or "postgres"
+        dbname = parsed.path.lstrip("/") or "postgres"
+
+        clean_flag = "--clean --if-exists " if clean else ""
+        cmd_str = (
+            f"pg_restore -v {clean_flag}-h {host} -p {port} -U {user} -d {dbname} {dump_file}"
+        )
+
+        return {
+            "status": "success",
+            "host": host,
+            "port": port,
+            "user": user,
+            "database": dbname,
+            "command": cmd_str,
+            "instructions": f"Run: PGPASSWORD='***' {cmd_str}"
+        }
+

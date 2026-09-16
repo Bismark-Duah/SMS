@@ -124,6 +124,8 @@ def create_jwt(payload: dict, secret: str = None, expires_in: int = None) -> str
     
     return f"{header_b64}.{payload_b64}.{signature_b64}"
 
+create_access_token = create_jwt
+
 def decode_jwt(token: str, secret: str = None) -> dict:
     """Decodes and validates a JWT token's signature and expiration."""
     if secret is None:

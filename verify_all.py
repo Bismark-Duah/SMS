@@ -177,7 +177,8 @@ def run_all():
         "tests/test_api_workflows_integration.py",
         "tests/test_production_cors_hardening.py",
         "tests/test_production_environment_audit.py",
-        "tests/test_observability_and_logging.py"
+        "tests/test_observability_and_logging.py",
+        "tests/test_backup_and_recovery.py"
     ]
 
     server_proc = ensure_server()

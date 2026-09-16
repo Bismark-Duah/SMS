@@ -66,6 +66,26 @@ def verify_backup(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Integrity verification failed: {str(e)}")
 
+@router.post("/restore-test/{filename}")
+def test_restore_backup(
+    filename: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Executes a dry-run restoration verification on a backup snapshot, validating table schemas
+    and queryability without altering the active live database.
+    """
+    _is_admin(current_user)
+    try:
+        return BackupService.restore_database_snapshot(filename, dry_run=True)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Backup snapshot '{filename}' not found.")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Restore verification failed: {str(e)}")
+
 @router.delete("/{filename}")
 def delete_backup(
     filename: str,

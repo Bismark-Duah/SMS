@@ -85,7 +85,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         response.headers["Critical-CH"] = "Sec-CH-UA-Model, Sec-CH-UA-Platform"
 
         # Skip high-frequency health poll noise unless error
-        if path not in ("/health", "/api/health") or response.status_code >= 400:
+        if path not in ("/health", "/api/health", "/api/system/health") or response.status_code >= 400:
             log_record = logging.LogRecord(
                 name="edumanage.access",
                 level=logging.INFO if response.status_code < 400 else logging.WARNING,
@@ -101,6 +101,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             log_record.path = path
             log_record.status_code = response.status_code
             log_record.duration_ms = duration_ms
+            log_record.school_id = getattr(request.state, "school_id", None)
             logger.handle(log_record)
 
         return response
@@ -172,6 +173,13 @@ def sanitize_multi_tenant_state():
 
         db.commit()
         db.close()
+
+        # 4. Emit safe startup diagnostics
+        from .logger import log_startup_diagnostics
+        log_startup_diagnostics(
+            environment=env_mode,
+            db_engine="PostgreSQL" if is_postgres else "SQLite WAL"
+        )
     except Exception as e:
         logger.error(f"[StartupSanitization] Error: {e}")
 

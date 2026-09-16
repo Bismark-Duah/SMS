@@ -39,21 +39,16 @@ with next(get_db()) as db:
     except Exception as e:
         logger.info(f"NaCCA curriculum auto-seed notice: {e}")
 
-# Verify SECRET_KEY configuration & Fail-Secure Production Guard
+# Verify Environment Configuration & Fail-Secure Production Guard
+from .env_audit import validate_production_environment_or_exit, get_sanitized_env_summary
+validate_production_environment_or_exit()
+
 secret_key = os.getenv("SECRET_KEY", "").strip()
 env_mode = os.getenv("ENVIRONMENT", os.getenv("ENV", "development")).lower()
-
-if env_mode in ("production", "prod"):
-    if not secret_key or secret_key in ("your-secret-key-change-in-production", "edumanage-hybrid-sync-secret-key-2026"):
-        logger.critical("CRITICAL DEVOPS SECURITY VIOLATION: Insecure default SECRET_KEY in production!")
-        raise RuntimeError(
-            "CRITICAL DEVOPS SECURITY ERROR: Insecure or default SECRET_KEY configured in production environment! "
-            "Server startup halted. Set a strong random 256-bit secret in environment variables."
-        )
-elif not secret_key or secret_key == "your-secret-key-change-in-production":
+if env_mode not in ("production", "prod") and (not secret_key or secret_key == "your-secret-key-change-in-production"):
     import warnings
     warnings.warn(
-        "SECURITY WARNING: SECRET_KEY is set to default. For production deployment, configure a strong SECRET_KEY.",
+        "SECURITY WARNING: SECRET_KEY is unset or using a default placeholder. Set a strong SECRET_KEY before deploying to production.",
         UserWarning
     )
 
@@ -182,6 +177,7 @@ def sanitize_multi_tenant_state():
 
 @app.get("/health", tags=["system"])
 @app.get("/api/health", tags=["system"])
+@app.get("/api/system/health", tags=["system"])
 def get_system_health(db: Session = Depends(get_db)):
     """
     Enterprise health & telemetry endpoint for container orchestrators (Render / Azure / AWS).

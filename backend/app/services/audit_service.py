@@ -10,6 +10,63 @@ from ..models import AuditLog, User
 from .device_parser import parse_device_forensics, get_client_ip
 
 
+import re
+import json
+
+SENSITIVE_FIELD_NAMES = {
+    "password", "passwd", "pwd", "secret", "token", "access_token",
+    "refresh_token", "api_key", "apikey", "authorization", "auth_token",
+    "pin", "cvv", "credit_card", "private_key", "client_secret"
+}
+
+
+def mask_sensitive_data(data: Any) -> Any:
+    """
+    Recursively redacts passwords, tokens, API keys, and sensitive secrets
+    from audit event metadata dictionaries, lists, or strings.
+    """
+    if data is None:
+        return None
+
+    if isinstance(data, dict):
+        masked_dict = {}
+        for k, v in data.items():
+            k_lower = str(k).lower().strip()
+            if any(s in k_lower for s in SENSITIVE_FIELD_NAMES):
+                masked_dict[k] = "[REDACTED]"
+            else:
+                masked_dict[k] = mask_sensitive_data(v)
+        return masked_dict
+
+    if isinstance(data, (list, tuple, set)):
+        return [mask_sensitive_data(item) for item in data]
+
+    if isinstance(data, str):
+        # Check if the string is JSON-encoded
+        s_trimmed = data.strip()
+        if (s_trimmed.startswith("{") and s_trimmed.endswith("}")) or (s_trimmed.startswith("[") and s_trimmed.endswith("]")):
+            try:
+                parsed = json.loads(s_trimmed)
+                return json.dumps(mask_sensitive_data(parsed))
+            except Exception:
+                pass
+
+        # Regex string masking for authorization tokens, bearer, password params
+        masked_str = re.sub(
+            r'(?i)(bearer\s+)[A-Za-z0-9._~+/-]+=*',
+            r'\1[REDACTED]',
+            data
+        )
+        masked_str = re.sub(
+            r'(?i)(password|passwd|token|secret|pin|api_key)\s*[:=]\s*["\']?[^\s,"\'&]+["\']?',
+            r'\1=[REDACTED]',
+            masked_str
+        )
+        return masked_str
+
+    return data
+
+
 def record_audit_event(
     db: Session,
     request: Optional[Request] = None,
@@ -101,10 +158,10 @@ def record_audit_event(
                 action in ["CREATE_SCHOOL", "PURGE_SCHOOL", "SUSPEND_SCHOOL", "UPDATE_GATEWAY_CONFIG", "IMPERSONATION_VIEW"]
             )
 
-        # Normalize details to string/JSON if needed
-        serialized_details = details
+        # Mask sensitive context before persisting
+        safe_details = mask_sensitive_data(details)
+        serialized_details = safe_details
         if serialized_details is not None and not isinstance(serialized_details, str):
-            import json
             try:
                 serialized_details = json.dumps(serialized_details)
             except Exception:

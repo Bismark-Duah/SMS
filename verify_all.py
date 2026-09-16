@@ -183,7 +183,8 @@ def run_all():
         "tests/test_responsive_mobile_ux.py",
         "tests/test_accessibility_audit.py",
         "tests/test_guided_school_onboarding.py",
-        "tests/test_import_export_workflows.py"
+        "tests/test_import_export_workflows.py",
+        "tests/test_audit_and_forensic_visibility.py"
     ]
 
     server_proc = ensure_server()

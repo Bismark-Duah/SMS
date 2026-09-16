@@ -6,7 +6,7 @@ from datetime import datetime
 
 from ..database import get_db
 from ..models import ExeatRecord, Student, House, Dormitory, User, Role, Setting
-from ..schemas import ExeatCreate, ExeatUpdate, ExeatResponse, ExeatStats
+from ..schemas import ExeatCreate, ExeatUpdate, ExeatResponse, ExeatStats, GateVerifyRequest
 from ..dependencies import get_current_user, get_school_id
 from ..services.communication_service import CommunicationService
 

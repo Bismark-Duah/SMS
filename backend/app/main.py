@@ -61,7 +61,29 @@ if ("sqlite" in db_url.lower()) and web_concurrency and int(web_concurrency) > 1
         "Multiple worker processes can cause SQLite database locked errors. Pin workers to 1 or switch to PostgreSQL."
     )
 
-app = FastAPI(title="School Management System", version="0.1.0")
+OPENAPI_TAGS = [
+    {"name": "Authentication & Session Guard", "description": "User authentication, zero-trust device sessions, and self-service password recovery."},
+    {"name": "Students & Admissions", "description": "Student bio-data, CSSPS intake, house allocation, and cumulative records."},
+    {"name": "Academic Hierarchy & Classes", "description": "Schools, school stages, class sections, and form allocations."},
+    {"name": "Curriculum & Subjects", "description": "NaCCA Basic and WAEC SHS curriculum offerings, elective combinations."},
+    {"name": "Grading & Terminal Reports", "description": "Continuous assessment (SBA), terminal exams, broadsheets, and batch report cards."},
+    {"name": "Fees & Bursary Accounting", "description": "Fee billing, student ledgers, transaction receipts, and online payments."},
+    {"name": "Attendance & Truancy", "description": "Class register recording, barcode badge scanning, and truancy tracking."},
+    {"name": "Boarding & Exeat Gate Passes", "description": "Dormitory capacity management, exeat approvals, and QR gate passes."},
+    {"name": "Timetable & Period Scheduling", "description": "Automated conflict-free scheduling and workload balancing."},
+    {"name": "Tenant Forensic Audit Feed", "description": "Institutional audit ledger, device forensics, and safe CSV exports."},
+    {"name": "Omnichannel Messaging & SMS", "description": "Local simulated SMS, Hubtel/Arkesel dispatches, and WhatsApp links."},
+    {"name": "System Health & Diagnostics", "description": "Operational health probes, WAL concurrency telemetry, and backup management."}
+]
+
+app = FastAPI(
+    title="EduManage 360 Institutional API",
+    version="1.0.0",
+    description="Enterprise 100% Offline-First Multi-School ERP & Academic Management Engine.",
+    openapi_tags=OPENAPI_TAGS,
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """

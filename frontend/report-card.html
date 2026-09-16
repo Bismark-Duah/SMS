@@ -242,6 +242,41 @@
         object-fit: contain;
       }
 
+      @media screen and (max-width: 768px) {
+        #reportCard {
+          padding: 18px 14px !important;
+          border-radius: 8px !important;
+        }
+        .rc-header h1 {
+          font-size: 1.25rem !important;
+        }
+        .rc-header h2 {
+          font-size: 0.95rem !important;
+        }
+        .rc-bio-grid {
+          grid-template-columns: 1fr !important;
+          gap: 6px 12px !important;
+          padding: 10px 12px !important;
+        }
+        .table-responsive {
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+          margin-bottom: 16px !important;
+        }
+        table.rc-scores {
+          min-width: 540px !important;
+        }
+        .rc-signatures {
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 20px !important;
+        }
+        .rc-sig-block {
+          width: 100% !important;
+          max-width: 280px !important;
+        }
+      }
+
       @media print {
         body { background: #ffffff !important; color: #000000 !important; }
         .no-print { display: none !important; }
@@ -315,22 +350,24 @@
         </div>
 
         <!-- Scores Table -->
-        <table class="rc-scores">
-          <thead>
-            <tr>
-              <th style="text-align:left;">Subject Title</th>
-              <th>Class (30%)</th>
-              <th>Exam (70%)</th>
-              <th>Total (100%)</th>
-              <th>Grade</th>
-              <th>Remark</th>
-              <th>Position</th>
-            </tr>
-          </thead>
-          <tbody id="rc-scores-body">
-            <!-- Rendered by JS -->
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="rc-scores">
+            <thead>
+              <tr>
+                <th style="text-align:left;">Subject Title</th>
+                <th>Class (30%)</th>
+                <th>Exam (70%)</th>
+                <th>Total (100%)</th>
+                <th>Grade</th>
+                <th>Remark</th>
+                <th>Position</th>
+              </tr>
+            </thead>
+            <tbody id="rc-scores-body">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
 
         <!-- Summary Statistics Cards -->
         <div class="rc-summary-grid">
@@ -468,62 +505,68 @@
         </div>
 
         <!-- Candidate Metadata Grid -->
-        <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:20px; border:1px solid #cbd5e1;">
-          <tbody>
-            <tr style="background:#f8fafc; border-bottom:1px solid #cbd5e1;">
-              <td style="padding:6px 12px; font-weight:700; width:160px; color:#475569;">CANDIDATE NAME:</td>
-              <td style="padding:6px 12px; font-weight:800; color:#0f172a;" id="waecCandName">-</td>
-              <td style="padding:6px 12px; font-weight:700; width:160px; color:#475569;">WASSCE INDEX NO:</td>
-              <td style="padding:6px 12px; font-weight:800; color:#0284c7;" id="waecCandIndex">-</td>
-            </tr>
-            <tr style="border-bottom:1px solid #cbd5e1;">
-              <td style="padding:6px 12px; font-weight:700; color:#475569;">CENTRE / SCHOOL:</td>
-              <td style="padding:6px 12px; font-weight:700;" id="waecSchoolName">-</td>
-              <td style="padding:6px 12px; font-weight:700; color:#475569;">PROGRAMME:</td>
-              <td style="padding:6px 12px; font-weight:700;" id="waecProgName">-</td>
-            </tr>
-            <tr>
-              <td style="padding:6px 12px; font-weight:700; color:#475569;">GENDER / RESIDENCE:</td>
-              <td style="padding:6px 12px;" id="waecGenderRes">-</td>
-              <td style="padding:6px 12px; font-weight:700; color:#475569;">EXAM SERIES:</td>
-              <td style="padding:6px 12px;" id="waecExamSeries">-</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:20px; border:1px solid #cbd5e1; min-width:480px;">
+            <tbody>
+              <tr style="background:#f8fafc; border-bottom:1px solid #cbd5e1;">
+                <td style="padding:6px 12px; font-weight:700; width:160px; color:#475569;">CANDIDATE NAME:</td>
+                <td style="padding:6px 12px; font-weight:800; color:#0f172a;" id="waecCandName">-</td>
+                <td style="padding:6px 12px; font-weight:700; width:160px; color:#475569;">WASSCE INDEX NO:</td>
+                <td style="padding:6px 12px; font-weight:800; color:#0284c7;" id="waecCandIndex">-</td>
+              </tr>
+              <tr style="border-bottom:1px solid #cbd5e1;">
+                <td style="padding:6px 12px; font-weight:700; color:#475569;">CENTRE / SCHOOL:</td>
+                <td style="padding:6px 12px; font-weight:700;" id="waecSchoolName">-</td>
+                <td style="padding:6px 12px; font-weight:700; color:#475569;">PROGRAMME:</td>
+                <td style="padding:6px 12px; font-weight:700;" id="waecProgName">-</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 12px; font-weight:700; color:#475569;">GENDER / RESIDENCE:</td>
+                <td style="padding:6px 12px;" id="waecGenderRes">-</td>
+                <td style="padding:6px 12px; font-weight:700; color:#475569;">EXAM SERIES:</td>
+                <td style="padding:6px 12px;" id="waecExamSeries">-</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <!-- WASSCE Subjects Table -->
         <div style="font-size:0.85rem; font-weight:800; color:#0369a1; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">1. WASSCE Core & Elective Subject Results</div>
-        <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:20px; border:1px solid #0284c7;">
-          <thead style="background:#0284c7; color:#ffffff;">
-            <tr>
-              <th style="padding:8px 12px; text-align:left;">Subject Code & Title</th>
-              <th style="padding:8px 12px; text-align:center; width:100px;">Category</th>
-              <th style="padding:8px 12px; text-align:center; width:90px;">Total %</th>
-              <th style="padding:8px 12px; text-align:center; width:80px;">Grade</th>
-              <th style="padding:8px 12px; text-align:left; width:130px;">Interpretation</th>
-            </tr>
-          </thead>
-          <tbody id="waecSubjectsTbody">
-            <!-- Rendered by JS -->
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:20px; border:1px solid #0284c7; min-width:520px;">
+            <thead style="background:#0284c7; color:#ffffff;">
+              <tr>
+                <th style="padding:8px 12px; text-align:left;">Subject Code & Title</th>
+                <th style="padding:8px 12px; text-align:center; width:100px;">Category</th>
+                <th style="padding:8px 12px; text-align:center; width:90px;">Total %</th>
+                <th style="padding:8px 12px; text-align:center; width:80px;">Grade</th>
+                <th style="padding:8px 12px; text-align:left; width:130px;">Interpretation</th>
+              </tr>
+            </thead>
+            <tbody id="waecSubjectsTbody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
 
         <!-- Internal Non-WASSCE Subjects Table (Robotics, PEH, etc) -->
         <div id="waecInternalSection" style="display:none; margin-bottom:20px;">
           <div style="font-size:0.85rem; font-weight:800; color:#475569; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">2. Institutional Practical & Assessment Subjects</div>
-          <table style="width:100%; border-collapse:collapse; font-size:0.85rem; border:1px solid #cbd5e1;">
-            <thead style="background:#f1f5f9; color:#334155;">
-              <tr>
-                <th style="padding:6px 12px; text-align:left;">Subject Title</th>
-                <th style="padding:6px 12px; text-align:center; width:120px;">Category</th>
-                <th style="padding:6px 12px; text-align:center; width:90px;">Total %</th>
-                <th style="padding:6px 12px; text-align:center; width:80px;">Grade</th>
-              </tr>
-            </thead>
-            <tbody id="waecInternalTbody">
-              <!-- Rendered by JS -->
-            </tbody>
-          </table>
+          <div class="table-responsive">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem; border:1px solid #cbd5e1; min-width:440px;">
+              <thead style="background:#f1f5f9; color:#334155;">
+                <tr>
+                  <th style="padding:6px 12px; text-align:left;">Subject Title</th>
+                  <th style="padding:6px 12px; text-align:center; width:120px;">Category</th>
+                  <th style="padding:6px 12px; text-align:center; width:90px;">Total %</th>
+                  <th style="padding:6px 12px; text-align:center; width:80px;">Grade</th>
+                </tr>
+              </thead>
+              <tbody id="waecInternalTbody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- WAEC 9-Point Scale Legend -->

@@ -4920,3 +4920,277 @@ select:-webkit-autofill {
     opacity: 1;
   }
 }
+
+/* ==========================================================================
+   ENTERPRISE RESPONSIVE & MOBILE UX SUBSYSTEM (PROMPT 24)
+   Cross-Device Layout Matrix: Mobile (<640px), Tablet (641-1024px), Desktop (>=1025px)
+   ========================================================================== */
+
+/* ── Universal Responsive Container & Table Foundations ────────────────── */
+.table-responsive,
+.table-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 12px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-md, 8px);
+  position: relative;
+}
+
+/* Subtle scroll hint gradient for tables */
+.table-responsive::-webkit-scrollbar {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: var(--primary, #4f46e5);
+  border-radius: 4px;
+}
+
+/* Ensure raw tables inside cards don't burst layout */
+.card > table,
+.card > div > table {
+  max-width: 100%;
+}
+
+/* Action button clusters & toolbars */
+.action-toolbar,
+.filter-bar,
+.button-group,
+.toolbar-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Mobile Hamburger Button Standard ─────────────────────────────────── */
+.mobile-hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: 1.35rem;
+  line-height: 1;
+  border-radius: 8px;
+  background: var(--primary-light, rgba(79, 70, 229, 0.12));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary);
+  cursor: pointer;
+  touch-action: manipulation;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.mobile-hamburger-btn:hover {
+  background: var(--primary, #4f46e5);
+  color: #ffffff;
+}
+
+/* ── TABLET BREAKPOINT: <= 1024px ───────────────────────────────────────── */
+@media screen and (max-width: 1024px) {
+  .page {
+    padding: 20px 16px;
+    gap: 20px;
+  }
+
+  .stats-grid,
+  .kpi-grid,
+  .dashboard-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+    gap: 14px !important;
+  }
+
+  .form-grid-3 {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  }
+
+  /* Table column spacing on tablet */
+  table th, table td {
+    padding: 10px 12px;
+  }
+}
+
+/* ── MOBILE & TABLET HAMBURGER VISIBILITY: <= 768px ────────────────────── */
+@media screen and (max-width: 768px) {
+  .mobile-hamburger-btn {
+    display: inline-flex !important;
+  }
+
+  /* Interactive touch target sizing for fingers (min 42px height) */
+  .btn,
+  button:not(.sidebar-collapse-btn):not(.toggle-pw):not(.notif-bell-btn):not(.edubot-clear-btn),
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="number"],
+  input[type="search"],
+  input[type="date"],
+  select,
+  textarea {
+    min-height: 42px;
+  }
+
+  /* iOS input auto-zoom prevention */
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="number"],
+  input[type="search"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Off-canvas sidebar enhancements */
+  .app-sidebar .sidebar-item {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 0.92rem;
+  }
+
+  .app-sidebar .sidebar-group-title {
+    padding: 12px 14px;
+    min-height: 40px;
+  }
+
+  /* Sticky Topbar Mobile Optimization */
+  .topbar {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 10px 12px !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .topbar > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .topbar > div:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    margin-left: 0 !important;
+    justify-content: flex-start;
+  }
+
+  .topbar .btn,
+  .topbar button,
+  .topbar a.btn {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    padding: 8px 12px;
+  }
+
+  /* Filter bars and search controls */
+  .filter-bar,
+  .action-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .filter-bar input,
+  .filter-bar select,
+  .filter-bar button {
+    width: 100%;
+  }
+
+  /* Tab Navigation bar horizontal scrolling */
+  .tab-nav {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .tab-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+}
+
+/* ── SMALL MOBILE BREAKPOINT: <= 640px ─────────────────────────────────── */
+@media screen and (max-width: 640px) {
+  .page {
+    padding: 12px 8px !important;
+    gap: 14px !important;
+  }
+
+  .card {
+    padding: 16px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .stats-grid,
+  .kpi-grid,
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .form-grid-2,
+  .form-grid-3 {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Mobile Bottom Sheet Modal Behavior */
+  .modal-content {
+    max-height: 90vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 20px 16px 28px !important;
+    border-radius: 20px 20px 0 0 !important;
+  }
+
+  .modal-content > form,
+  .modal-content > .modal-body {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex: 1 1 auto !important;
+    padding-right: 4px !important;
+  }
+
+  /* Parent Portal & Student Profile Mobile Cards */
+  .student-header-banner {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 12px !important;
+  }
+
+  /* Attendance and Mark Entry grid columns */
+  .attendance-grid,
+  .marks-table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+

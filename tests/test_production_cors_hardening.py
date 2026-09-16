@@ -5,8 +5,13 @@ Tests environment separation, wildcard prohibition, credential policy, and prefl
 """
 
 import os
+import sys
 import unittest
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from fastapi.testclient import TestClient
+
 
 from backend.app.cors_config import (
     DEFAULT_LOCAL_ORIGINS,

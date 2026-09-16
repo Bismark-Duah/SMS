@@ -6,8 +6,13 @@ retention pruning, and PostgreSQL production command generation.
 """
 
 import os
+import sys
 import unittest
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from fastapi.testclient import TestClient
+
 
 from backend.app.services.backup_service import BackupService, BACKUPS_DIR
 from backend.app.main import app

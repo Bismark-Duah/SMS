@@ -91,8 +91,8 @@
         <div id="syncStatusMsg" style="margin-top:10px;"></div>
 
         <h4 style="margin-top:20px; margin-bottom:8px; font-size:0.95rem; color:#e2e8f0;">Recent Sync Outbox Activity Log</h4>
-        <div style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08); border-radius:6px;">
-          <table style="width:100%; font-size:0.82rem;">
+        <div class="table-responsive" style="max-height: 220px; overflow: auto; -webkit-overflow-scrolling: touch; border: 1px solid rgba(255,255,255,0.08); border-radius:6px;">
+          <table style="width:100%; font-size:0.82rem; min-width: 480px;">
             <thead>
               <tr style="background:rgba(255,255,255,0.03);">
                 <th>Entity</th>
@@ -126,8 +126,8 @@
         <div style="background:rgba(2,132,199,0.06); border:1px solid rgba(2,132,199,0.2); padding:16px; border-radius:8px; margin-bottom:20px;">
           <h4 style="margin:0 0 6px; font-size:0.95rem; color:#0369a1;">📁 Save Backup to Secondary Local Drive or Local Network Path</h4>
           <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Enter a local drive folder (e.g. <code>D:\SchoolBackups</code>, <code>E:\USB_Drive</code>) or LAN network folder (e.g. <code>\\HEADMASTER-PC\Backups</code>):</p>
-          <div style="display:flex; gap:10px;">
-            <input id="customBackupPathInput" type="text" placeholder="e.g. D:\SchoolBackups or E:\USB_Backup" style="flex:1; padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem;" />
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <input id="customBackupPathInput" type="text" placeholder="e.g. D:\SchoolBackups or E:\USB_Backup" style="flex:1; min-width:200px; padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem;" />
             <button class="btn" style="background:#0284c7; color:#fff; font-weight:700;" onclick="saveToCustomPath()">💾 Save to Location</button>
           </div>
         </div>
@@ -135,8 +135,8 @@
         <div id="backupMsg" style="margin-top:12px;"></div>
         
         <h4 style="margin-top:24px;margin-bottom:10px;">Existing Local Server Backups</h4>
-        <div style="max-height: 250px; overflow-y: auto;">
-          <table style="width:100%; font-size:0.9rem;">
+        <div class="table-responsive" style="max-height: 280px; overflow: auto; -webkit-overflow-scrolling: touch; border-radius:6px;">
+          <table style="width:100%; font-size:0.9rem; min-width: 440px;">
             <thead>
               <tr>
                 <th>Backup File</th>

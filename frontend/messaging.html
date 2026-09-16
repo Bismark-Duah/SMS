@@ -193,22 +193,24 @@
               </div>
             </div>
 
-            <table style="width: 100%; border-collapse: collapse;">
-              <thead>
-                <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
-                  <th style="padding: 10px; width: 40px;"><input type="checkbox" id="chkSelectAllHeader" onchange="onHeaderCheckChange(this)" /></th>
-                  <th style="padding: 10px;">Student / Parent</th>
-                  <th style="padding: 10px;">Class / House</th>
-                  <th style="padding: 10px;">Guardian Contact</th>
-                  <th style="padding: 10px; text-align: right;">Action</th>
-                </tr>
-              </thead>
-              <tbody id="recipientTableBody">
-                <tr><td colspan="5" style="text-align: center; padding: 24px; opacity: 0.6;">Loading recipients...</td></tr>
-              </tbody>
-            </table>
+            <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
+                    <th style="padding: 10px; width: 40px;"><input type="checkbox" id="chkSelectAllHeader" onchange="onHeaderCheckChange(this)" /></th>
+                    <th style="padding: 10px;">Student / Parent</th>
+                    <th style="padding: 10px;">Class / House</th>
+                    <th style="padding: 10px;">Guardian Contact</th>
+                    <th style="padding: 10px; text-align: right;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="recipientTableBody">
+                  <tr><td colspan="5" style="text-align: center; padding: 24px; opacity: 0.6;">Loading recipients...</td></tr>
+                </tbody>
+              </table>
+            </div>
 
-            <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 12px;">
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap;">
               <button class="btn secondary" style="padding: 10px 16px;" onclick="exportBulkCSV()">📥 Export Bulk SMS CSV</button>
               <button class="btn primary" style="padding: 10px 20px;" onclick="openBulkPreviewModal()">🚀 Preview & Send Selected (<span id="selectedCount">0</span>)</button>
             </div>
@@ -218,27 +220,29 @@
 
       <!-- OUTBOX PANEL -->
       <div id="panelOutbox" class="card" style="padding: 20px; display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
           <h3 style="margin: 0;">📋 Outbox & Delivery History</h3>
           <button class="btn secondary" onclick="loadOutboxLogs()">🔄 Refresh Log</button>
         </div>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
-              <th style="padding: 10px;">Date & Time</th>
-              <th style="padding: 10px;">Sender</th>
-              <th style="padding: 10px;">Student / Parent</th>
-              <th style="padding: 10px;">Contact Phone</th>
-              <th style="padding: 10px;">Channel</th>
-              <th style="padding: 10px;">Type</th>
-              <th style="padding: 10px;">Overall Grade</th>
-              <th style="padding: 10px;">Status</th>
-            </tr>
-          </thead>
-          <tbody id="outboxTableBody">
-            <tr><td colspan="8" style="text-align: center; padding: 24px; opacity: 0.6;">Loading outbox history...</td></tr>
-          </tbody>
-        </table>
+        <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
+                <th style="padding: 10px;">Date & Time</th>
+                <th style="padding: 10px;">Sender</th>
+                <th style="padding: 10px;">Student / Parent</th>
+                <th style="padding: 10px;">Contact Phone</th>
+                <th style="padding: 10px;">Channel</th>
+                <th style="padding: 10px;">Type</th>
+                <th style="padding: 10px;">Overall Grade</th>
+                <th style="padding: 10px;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="outboxTableBody">
+              <tr><td colspan="8" style="text-align: center; padding: 24px; opacity: 0.6;">Loading outbox history...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- GATEWAY & CLOUD SETUP PANEL -->

@@ -207,6 +207,35 @@
 
       @media (min-width: 900px) { .right-panel { flex: 0 0 440px; } }
 
+      @media (max-width: 600px) {
+        body {
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          height: auto !important;
+          min-height: 100vh !important;
+        }
+        .page-wrap {
+          min-height: 100vh !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+        .right-panel {
+          padding: 24px 16px !important;
+          flex: 1 0 auto !important;
+        }
+        .login-card {
+          padding: 28px 20px !important;
+          box-shadow: 0 12px 36px rgba(0,0,0,0.4) !important;
+        }
+        .submit-btn {
+          min-height: 44px;
+        }
+        input[type="text"], input[type="password"] {
+          font-size: 16px !important;
+          min-height: 44px;
+        }
+      }
+
       .login-card {
         width: 100%;
         max-width: 400px;

@@ -6,8 +6,13 @@ and backend security boundary enforcement against client-side tampering.
 """
 
 import os
+import sys
 import unittest
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from fastapi.testclient import TestClient
+
 
 from backend.app.main import app
 from backend.app.database import SessionLocal

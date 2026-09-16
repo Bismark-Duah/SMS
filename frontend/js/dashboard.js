@@ -3710,6 +3710,120 @@ window.sendExeatParentAlert = function(phone, studentName) {
   }
 };
 
+// ── Guided School Onboarding Subsystem (Prompt 26) ───────────────────────────
+async function loadGuidedOnboardingChecklist() {
+  const container = document.getElementById('onboardingBanner');
+  if (!container) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/onboarding/status`, {
+      headers: getDashboardHeaders()
+    });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    if (!data || !data.milestones) return;
+
+    if (data.is_complete && data.is_dismissed) return;
+
+    const completed = data.completed_count;
+    const total = data.total_steps;
+    const pct = data.overall_progress_percent;
+    const next = data.next_step;
+
+    container.style.display = 'block';
+    container.innerHTML = `
+      <div class="card" style="border: 1px solid rgba(99, 102, 241, 0.35); background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(6, 182, 212, 0.04) 100%); padding: 20px; border-radius: 14px; position: relative;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.3rem;">🚀</span>
+              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Guided School Setup Checklist</h3>
+              <span style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px;">${pct}% Complete</span>
+            </div>
+            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">
+              ${data.is_complete ? '🎉 Congratulations! Your school setup is 100% complete and fully operational.' : `Complete these progressive milestones to operationalize ${escapeHtml(data.school_name || 'your school')}.`}
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn secondary" style="font-size: 0.78rem; padding: 4px 10px;" onclick="window.toggleOnboardingMilestones()">
+              <span id="onboardToggleText">📋 View All Steps (${completed}/${total})</span>
+            </button>
+            <button class="btn secondary" style="font-size: 0.78rem; padding: 4px 10px; opacity: 0.7;" onclick="window.dismissOnboardingBanner()" title="Dismiss checklist">
+              ✕ Dismiss
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div style="width: 100%; height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; overflow: hidden; margin-bottom: 16px;">
+          <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #6366f1, #06b6d4); transition: width 0.4s ease;"></div>
+        </div>
+
+        ${!data.is_complete && next ? `
+          <div style="background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.2rem;">👉</span>
+              <div>
+                <strong style="font-size: 0.88rem; color: var(--text-primary);">Next Step: ${escapeHtml(next.title)}</strong>
+                <div style="font-size: 0.78rem; color: var(--text-secondary);">${escapeHtml(next.hint)}</div>
+              </div>
+            </div>
+            <a href="${next.href}" class="btn primary" style="font-size: 0.82rem; padding: 6px 14px; font-weight: 700;">
+              Complete This Step →
+            </a>
+          </div>
+        ` : ''}
+
+        <!-- Collapsible Milestones Grid -->
+        <div id="onboardingMilestonesList" style="display: none; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 14px;">
+          ${data.milestones.map(m => `
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid ${m.is_completed ? 'rgba(34, 197, 94, 0.25)' : 'rgba(255, 255, 255, 0.07)'}; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                <span style="font-size: 1rem;">${m.is_completed ? '✅' : '⚪'}</span>
+                <div style="min-width: 0;">
+                  <div style="font-size: 0.84rem; font-weight: 700; color: ${m.is_completed ? '#4ade80' : 'var(--text-primary)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(m.title)}
+                  </div>
+                  <div style="font-size: 0.72rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(m.hint)}
+                  </div>
+                </div>
+              </div>
+              <a href="${m.href}" class="btn secondary" style="font-size: 0.72rem; padding: 3px 8px; flex-shrink: 0;">
+                ${m.is_completed ? 'Review' : 'Set Up'}
+              </a>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    window.toggleOnboardingMilestones = function() {
+      const list = document.getElementById('onboardingMilestonesList');
+      const text = document.getElementById('onboardToggleText');
+      if (!list) return;
+      const isVisible = list.style.display !== 'none';
+      list.style.display = isVisible ? 'none' : 'grid';
+      if (text) text.textContent = isVisible ? `📋 View All Steps (${completed}/${total})` : `▲ Hide All Steps`;
+    };
+
+    window.dismissOnboardingBanner = async function() {
+      container.style.display = 'none';
+      try {
+        await fetch(`${API_BASE}/onboarding/dismiss`, {
+          method: 'POST',
+          headers: getDashboardHeaders()
+        });
+      } catch (e) {
+        console.warn('Failed to persist onboarding dismissal:', e);
+      }
+    };
+  } catch (err) {
+    console.error('Failed to load onboarding checklist:', err);
+  }
+}
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   window.API_BASE = API_BASE;
@@ -3718,5 +3832,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadExecutiveAnalytics();
   loadAnalytics();
   loadComparativeDashboardWidget();
+  loadGuidedOnboardingChecklist();
 });
+
 

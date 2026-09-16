@@ -7,7 +7,7 @@ import os
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from .database import Base, engine, get_db
-from .routes import auth, students, attendance, results, reports, classes, subjects, programs, academic, notifications, settings, assignments, promotions, fees, timetable, discipline, departments, houses, messaging, exeat, academic_hierarchy, backup, rollover, cssps_enrollment, cumulative_records, super_admin, vouchers, assets, clearance, audit, sync
+from .routes import auth, students, attendance, results, reports, classes, subjects, programs, academic, notifications, settings, assignments, promotions, fees, timetable, discipline, departments, houses, messaging, exeat, academic_hierarchy, backup, rollover, cssps_enrollment, cumulative_records, super_admin, vouchers, assets, clearance, audit, sync, onboarding
 
 
 
@@ -254,6 +254,7 @@ app.include_router(vouchers.router)
 app.include_router(cssps_enrollment.router)
 app.include_router(cumulative_records.router)
 app.include_router(super_admin.router, prefix="/api")
+app.include_router(onboarding.router, prefix="/api/onboarding", tags=["onboarding"])
 
 
 current_dir = os.path.dirname(os.path.abspath(__file__))

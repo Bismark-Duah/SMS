@@ -12,7 +12,7 @@ from ..database import get_db
 from ..models import AuditLog, User, School
 from ..routes.auth import get_current_user
 
-router = APIRouter(prefix="/audit", tags=["Tenant Forensic Audit Feed"])
+router = APIRouter(tags=["Tenant Forensic Audit Feed"])
 
 
 def require_school_staff(current_user: User = Depends(get_current_user)):
@@ -30,6 +30,7 @@ def require_school_staff(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/school-feed")
+@router.get("/logs")
 def get_school_audit_feed(
     action: Optional[str] = None,
     page: int = 1,
@@ -98,3 +99,7 @@ def get_school_audit_feed(
         "total_pages": math.ceil(total_count / limit) if total_count > 0 else 1,
         "logs": results
     }
+
+
+# Backward-compatible alias for existing verification scripts
+get_audit_logs = get_school_audit_feed

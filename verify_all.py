@@ -172,7 +172,8 @@ def run_all():
         "tests/test_grading_edge_cases_and_sba.py",
         "tests/test_promotion_rules_and_transcripts.py",
         "tests/test_standardized_api_error_handling.py",
-        "tests/test_reproducible_test_environment.py"
+        "tests/test_reproducible_test_environment.py",
+        "tests/test_security_regression_matrix.py"
     ]
 
     server_proc = ensure_server()

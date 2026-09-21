@@ -48,10 +48,28 @@ class TestAlembicMigrations(unittest.TestCase):
         run_migrations()
         with engine.connect() as conn:
             # Verify core tables and columns exist
-            for table_name in ["users", "students", "schools", "subjects", "timetable"]:
+            critical_tables = [
+                "users", "students", "schools", "subjects", "timetable",
+                "fees", "settings", "revoked_reset_tokens", "audit_logs"
+            ]
+            for table_name in critical_tables:
                 res = conn.execute(text(f"SELECT 1 FROM {table_name} LIMIT 1"))
                 self.assertIsNotNone(res)
+
+    def test_database_migrations_documentation_exists(self):
+        """Verify DATABASE_MIGRATIONS.md exists and documents dual-engine lifecycle."""
+        doc_path = os.path.join(BASE_DIR, "DATABASE_MIGRATIONS.md")
+        self.assertTrue(os.path.exists(doc_path), "DATABASE_MIGRATIONS.md must exist at project root")
+        with open(doc_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        self.assertIn("Dual-Engine Architecture", content)
+        self.assertIn("SQLite 3", content)
+        self.assertIn("PostgreSQL", content)
+        self.assertIn("alembic upgrade head", content)
+        self.assertIn("alembic downgrade -1", content)
 
 
 if __name__ == "__main__":
     unittest.main()
+

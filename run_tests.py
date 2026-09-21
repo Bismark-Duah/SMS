@@ -65,6 +65,13 @@ FAST_SUITES = [
     "tests/test_system_telemetry_hardening.py",
 ]
 
+DATABASE_SUITES = [
+    "tests/test_alembic_migrations.py",
+    "tests/test_database_constraints_integrity.py",
+    "tests/test_database_query_and_performance.py",
+    "tests/test_sqlite_wal_and_concurrency.py",
+]
+
 
 def discover_all_tests() -> List[str]:
     """Discovers all test files matching tests/test_*.py."""
@@ -124,6 +131,7 @@ Examples:
     )
     parser.add_argument("--security", action="store_true", help="Run core security hardening test suites")
     parser.add_argument("--tenant", action="store_true", help="Run multi-tenant isolation test suites")
+    parser.add_argument("--database", action="store_true", help="Run database migrations and schema integrity suites")
     parser.add_argument("--fast", action="store_true", help="Run fast unit & configuration test suites")
     parser.add_argument("--all", action="store_true", help="Discover and execute all test suites in tests/")
     parser.add_argument("-v", "--verbose", action="store_true", help="Show detailed test progress")
@@ -141,6 +149,9 @@ Examples:
     elif args.tenant:
         test_files = TENANT_SUITES
         category = "Multi-Tenant Isolation"
+    elif args.database:
+        test_files = DATABASE_SUITES
+        category = "Database & Migration Integrity"
     elif args.fast:
         test_files = FAST_SUITES
         category = "Fast Unit Checks"

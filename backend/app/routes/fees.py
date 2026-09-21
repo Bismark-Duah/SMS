@@ -98,6 +98,7 @@ def update_overdue_statuses(db: Session):
 
             if not existing_log:
                 db.add(MessageLog(
+                    school_id=student.school_id,
                     sender_id=None,
                     student_id=student.id,
                     recipient_name=guardian_name,

@@ -86,7 +86,7 @@ def get_school_id(
 
         # 1. Non-super admin is locked strictly to their school (BOLA / IDOR Defense)
         if not is_super:
-            return user.school_id
+            return user.school_id if user.school_id is not None else -1
 
     # 2. Super Admin or unauthenticated public requests: Check X-School-Id Header first
     if isinstance(x_school_id, str) and x_school_id.strip():

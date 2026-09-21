@@ -138,14 +138,21 @@ def get_settings(
     x_school_id: Optional[str] = Header(None, alias="X-School-Id")
 ):
     user = current_user if isinstance(current_user, User) else None
-    target_school_id = int(school_id) if isinstance(school_id, (int, float)) else None
-    if target_school_id is None and isinstance(x_school_id, str) and x_school_id.strip():
-        try:
-            target_school_id = int(x_school_id.strip())
-        except ValueError:
-            pass
-    elif target_school_id is None and user and user.school_id:
+    role_names = [r.name for r in user.roles] if (user and hasattr(user, 'roles')) else []
+    is_super = "super_admin" in role_names
+
+    if not is_super and user:
+        # Non-superadmin is locked strictly to their school (IDOR / BOLA defense)
         target_school_id = user.school_id
+    else:
+        target_school_id = int(school_id) if isinstance(school_id, (int, float)) and school_id != -1 else None
+        if target_school_id is None and isinstance(x_school_id, str) and x_school_id.strip():
+            try:
+                target_school_id = int(x_school_id.strip())
+            except ValueError:
+                pass
+        elif target_school_id is None and user and user.school_id:
+            target_school_id = user.school_id
 
     res = {}
     # 1. Global settings (fallback defaults)
@@ -278,14 +285,19 @@ def update_settings(
             if locked_key in payload:
                 del payload[locked_key]
 
-    target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
-    if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
-        try:
-            target_sch_id = int(x_school_id.strip())
-        except ValueError:
-            pass
-    elif target_sch_id is None and isinstance(current_user, User) and current_user.school_id:
+    if not is_super_admin:
+        if not current_user.school_id:
+            raise HTTPException(status_code=403, detail="Access denied: Administrator is not assigned to any institution.")
         target_sch_id = current_user.school_id
+    else:
+        target_sch_id = int(school_id) if isinstance(school_id, (int, float)) and school_id != -1 else None
+        if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
+            try:
+                target_sch_id = int(x_school_id.strip())
+            except ValueError:
+                pass
+        elif target_sch_id is None and isinstance(current_user, User) and current_user.school_id:
+            target_sch_id = current_user.school_id
 
     if target_sch_id:
         sch = db.query(School).filter(School.id == target_sch_id).first()
@@ -336,10 +348,12 @@ def update_settings(
             else:
                 new_setting = Setting(school_id=target_sch_id, key=key, value=val_str)
                 db.add(new_setting)
-        else:
-            setting = db.query(Setting).filter(Setting.key == key).first()
+        elif is_super_admin:
+            setting = db.query(Setting).filter(Setting.key == key, Setting.school_id == None).first()
             if setting:
                 setting.value = val_str
+            else:
+                db.add(Setting(school_id=None, key=key, value=val_str))
     db.commit()
     return {"status": "success"}
 

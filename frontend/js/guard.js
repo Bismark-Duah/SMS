@@ -648,7 +648,11 @@
     searchTrigger.className = 'topbar-search-trigger';
     searchTrigger.style.marginRight = '10px';
     searchTrigger.title = 'Universal Command Palette & Search (Ctrl + K)';
-    searchTrigger.innerHTML = '<span>🔍 Search</span><kbd>Ctrl K</kbd>';
+    searchTrigger.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.75;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <span>Search...</span>
+      <kbd>Ctrl K</kbd>
+    `;
     searchTrigger.onclick = () => {
       if (window.openCommandPalette) window.openCommandPalette();
     };
@@ -673,13 +677,13 @@
         font-size:0.75rem; font-weight:800; color:${color};
         text-transform:uppercase; flex-shrink:0;
       ">${username.charAt(0)}</span>
-      <span style="color:#f8fafc; font-size:0.82rem; font-weight:600;">${username}</span>
-      <span style="
+      <span class="user-pill-name" style="color:#f8fafc; font-size:0.82rem; font-weight:600;">${username}</span>
+      <span class="user-pill-role" style="
         background:${color}33; color:${color};
         font-size:0.65rem; font-weight:800; text-transform:uppercase;
         padding:2px 6px; border-radius:20px;
       ">${displayRoleName}</span>
-      <span style="font-size:0.7rem; opacity:0.6;">▾</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;"><polyline points="6 9 12 15 18 9"></polyline></svg>
     `;
 
     const activeTheme = localStorage.getItem('system_theme') || 'midnight';
@@ -699,7 +703,7 @@
     `;
 
     const roleSelectHtml = selectableRoles.length > 1 ? `
-      <div style="padding:4px 8px 2px; font-size:0.72rem; color:var(--primary, #818cf8); font-weight:700; text-transform:uppercase;">🎭 Switch Active Persona</div>
+      <div style="padding:4px 8px 2px; font-size:0.72rem; color:var(--primary, #818cf8); font-weight:700; text-transform:uppercase;">Switch Active Persona</div>
       <div style="padding:0 8px 8px;">
         <select id="guardRoleSelect" style="width:100%; padding:6px 8px; font-size:0.82rem; background:var(--input-bg, #0f172a); color:var(--text-primary, #f8fafc); border:1px solid var(--border-color, #6366f1); border-radius:6px; cursor:pointer; font-weight:600;">
           ${selectableRoles.map(r => `<option value="${r}" ${r===activeRole?'selected':''}>${ROLE_DISPLAY_NAMES[r]||r.toUpperCase()}</option>`).join('')}
@@ -710,32 +714,39 @@
 
     menu.innerHTML = `
       <div style="padding:4px 8px 8px; font-size:0.72rem; color:var(--text-secondary, #94a3b8); font-weight:700; text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid var(--border-color, #334155); margin-bottom:8px;">
-        👤 ${username} <span style="color:${color};">(${displayRoleName})</span>
+        ${username} <span style="color:${color};">(${displayRoleName})</span>
       </div>
 
       ${roleSelectHtml}
 
-      <div style="padding:4px 8px 2px; font-size:0.72rem; color:var(--text-secondary, #64748b); font-weight:700; text-transform:uppercase;">🎨 Color Theme</div>
+      <a href="dashboard.html" id="guardSchoolViewLink" style="display:flex; align-items:center; gap:8px; text-decoration:none; width:100%; box-sizing:border-box; text-align:left; padding:8px 10px; color:var(--text-primary, #f8fafc); font-size:0.85rem; border-radius:6px; cursor:pointer; transition:background 0.15s;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        School Dashboard
+      </a>
+
+      <div style="padding:6px 8px 2px; font-size:0.72rem; color:var(--text-secondary, #64748b); font-weight:700; text-transform:uppercase;">Color Theme</div>
       <div style="padding:0 8px 8px;">
         <select id="guardThemeSelect" style="width:100%; padding:6px 8px; font-size:0.82rem; background:var(--input-bg, #0f172a); color:var(--text-primary, #f8fafc); border:1px solid var(--border-color, #334155); border-radius:6px; cursor:pointer;">
-          <option value="midnight" ${activeTheme==='midnight'?'selected':''}>🌙 Midnight Dark</option>
-          <option value="light" ${activeTheme==='light'?'selected':''}>☀️ Clean Light</option>
-          <option value="emerald" ${activeTheme==='emerald'?'selected':''}>🌲 Emerald Oasis</option>
-          <option value="ocean" ${activeTheme==='ocean'?'selected':''}>🌊 Ocean Sapphire</option>
+          <option value="midnight" ${activeTheme==='midnight'?'selected':''}>Midnight Dark</option>
+          <option value="light" ${activeTheme==='light'?'selected':''}>Clean Light</option>
+          <option value="emerald" ${activeTheme==='emerald'?'selected':''}>Emerald Oasis</option>
+          <option value="ocean" ${activeTheme==='ocean'?'selected':''}>Ocean Sapphire</option>
         </select>
       </div>
 
       <hr style="border:none; border-top:1px solid var(--border-color, #334155); margin:6px 0;">
 
       <button id="guardChangePwBtn"
-        style="display:block; width:100%; text-align:left; padding:8px 10px; border:none;
+        style="display:flex; align-items:center; gap:8px; width:100%; text-align:left; padding:8px 10px; border:none;
                background:none; color:var(--text-primary, #f8fafc); font-size:0.85rem; border-radius:6px; cursor:pointer;">
-        🔑 Change Password
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Change Password
       </button>
       <button id="guardLogoutBtn"
-        style="display:block; width:100%; text-align:left; padding:8px 10px; border:none;
+        style="display:flex; align-items:center; gap:8px; width:100%; text-align:left; padding:8px 10px; border:none;
                background:none; color:var(--danger, #f87171); font-size:0.85rem; border-radius:6px; cursor:pointer; margin-top:2px;">
-        🚪 Logout
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        Logout
       </button>
     `;
 
@@ -865,6 +876,7 @@
     const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('username') === 'superadmin' || userRoles.includes('super_admin');
     
     if (!isSuperAdmin) return;
+    if (window.location.pathname.endsWith('super-admin.html')) return;
 
     const topbar = document.querySelector('.topbar') || document.querySelector('header');
     if (!topbar) return;

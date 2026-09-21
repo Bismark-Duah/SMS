@@ -6,9 +6,9 @@
     <meta http-equiv="Accept-CH" content="Sec-CH-UA-Model, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version, Sec-CH-UA-Mobile" />
     <title>eduManage360 Master Portal — Unified Multi-School Administration</title>
     <meta name="description" content="Central Executive Management Console for all registered schools in eduManage360." />
-    <link rel="stylesheet" href="css/styles.css?v=11.0" />
-    <script src="js/featureGate.js?v=11.0"></script>
-    <script src="js/theme.js?v=11.0"></script>
+    <link rel="stylesheet" href="css/styles.css?v=11.1" />
+    <script src="js/featureGate.js?v=11.1"></script>
+    <script src="js/theme.js?v=11.1"></script>
     <style>
       /* ── Enterprise Design Tokens ────────────────────────────────────────── */
       :root {
@@ -51,9 +51,22 @@
         justify-content: space-between;
         align-items: center;
         gap: 16px;
-        padding-bottom: 16px;
+        padding: 14px 0 16px 0;
         border-bottom: 1px solid var(--sa-card-border);
         margin-bottom: 20px;
+      }
+
+      .sa-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .sa-header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-left: auto;
       }
 
       .sa-brand-title {
@@ -64,18 +77,7 @@
         align-items: center;
         gap: 8px;
         letter-spacing: -0.02em;
-      }
-
-      .sa-brand-pill {
-        font-size: 0.7rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        background: rgba(99, 102, 241, 0.15);
-        color: #818cf8;
-        padding: 3px 8px;
-        border-radius: 6px;
-        border: 1px solid rgba(99, 102, 241, 0.3);
+        color: var(--sa-text-main);
       }
 
       /* ── Segmented Navigation Tabs ───────────────────────────────────────── */
@@ -321,64 +323,29 @@
         }
 
         .sa-header {
-          flex-direction: column;
-          align-items: stretch;
-          gap: 12px;
-          padding-bottom: 12px;
-          margin-bottom: 16px;
+          display: flex !important;
+          flex-direction: row !important;
+          justify-content: space-between !important;
+          align-items: center !important;
+          gap: 10px !important;
+          padding: 8px 0 12px 0 !important;
+          margin-bottom: 16px !important;
         }
 
-        .sa-header-brand {
+        .sa-header-left {
           display: flex;
-          flex-direction: column;
-          gap: 4px;
-          width: 100%;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .sa-header-right {
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
 
         .sa-brand-title {
-          font-size: 1.15rem;
-          flex-wrap: wrap;
-        }
-
-        .sa-header-brand p {
-          font-size: 0.78rem !important;
-          line-height: 1.35;
-        }
-
-        .sa-header-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          align-items: center;
-          width: 100%;
-        }
-
-        .sa-header-actions .btn,
-        .sa-header-actions a.btn {
-          flex: 1 1 auto;
-          text-align: center;
-          justify-content: center;
-          min-height: 40px;
-          font-size: 0.82rem;
-        }
-
-        #headerCloudSyncPill {
-          width: 100%;
-          justify-content: center;
-          box-sizing: border-box;
-          padding: 7px 12px !important;
-          font-size: 0.76rem;
-        }
-
-        #guardSchoolSwitcherWrapper {
-          width: 100%;
-          margin: 0 !important;
-        }
-
-        #guardSchoolSwitcherWrapper select {
-          max-width: 100% !important;
-          width: 100% !important;
-          box-sizing: border-box;
+          font-size: 1.1rem !important;
         }
 
         #guardUserPill {
@@ -488,46 +455,43 @@
       
       <!-- ── Executive Header ───────────────────────────────────────────────── -->
       <header class="sa-header">
-        <div class="sa-header-brand">
-          <div class="sa-brand-row" style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <h1 class="sa-brand-title">🌐 eduManage360</h1>
-              <span class="sa-brand-pill">Master Console</span>
-            </div>
-            <!-- In-flow destination for user avatar & persona pill -->
-            <div id="saHeaderUserContainer" style="display:flex; align-items:center; margin-left:auto;"></div>
+        <div class="sa-header-left">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <svg class="sa-brand-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--sa-primary, #818cf8)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+            </svg>
+            <h1 class="sa-brand-title">eduManage360</h1>
           </div>
-          <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--sa-text-muted);">
-            Executive Multi-Tenant Governance &amp; Cloud Telemetry
-          </p>
         </div>
 
-        <div class="sa-header-actions" style="display:flex; gap:10px; align-items:center;">
-          <span id="headerCloudSyncPill" class="badge-mode" style="background:rgba(14,165,233,0.15); color:#38bdf8; border:1px solid rgba(14,165,233,0.3); padding:5px 12px;">
-            ● Cloud Engine Connected
-          </span>
-          <button class="btn" style="padding:7px 12px; font-size:0.82rem;" onclick="window.loadSuperAdminDashboard()">⚡ Refresh</button>
-          <a href="dashboard.html" class="btn" style="padding:7px 12px; font-size:0.82rem; text-decoration:none;">🏫 School View</a>
+        <div class="sa-header-right">
+          <!-- In-flow destination for search trigger & user avatar pill -->
+          <div id="saHeaderUserContainer" style="display:flex; align-items:center; gap:8px;"></div>
         </div>
       </header>
 
-      <!-- ── 4-Segmented Executive Navigation Tab Bar ────────────────────────── -->
+      <!-- ── 5-Segmented Executive Navigation Tab Bar ────────────────────────── -->
       <nav class="sa-nav-tabs" id="superAdminTabs">
         <button class="sa-tab-btn active" onclick="window.switchSuperAdminTab('overview')">
-          <span>📊</span> Overview &amp; Telemetry
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          <span>Overview &amp; Telemetry</span>
         </button>
         <button class="sa-tab-btn" onclick="window.switchSuperAdminTab('schools')">
-          <span>🏫</span> School Directory &amp; Governance
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v14M21 7v14M6 11v6M10 11v6M14 11v6M18 11v6M9 3h6v4H9z"></path></svg>
+          <span>School Directory &amp; Governance</span>
           <span class="sa-tab-badge" id="tabBadgeSchoolCount">0</span>
         </button>
         <button class="sa-tab-btn" onclick="window.switchSuperAdminTab('security')">
-          <span>🛡️</span> Security &amp; Audit Trail
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <span>Security &amp; Audit Trail</span>
         </button>
         <button class="sa-tab-btn" onclick="window.switchSuperAdminTab('operations')">
-          <span>⚙️</span> System Operations &amp; Tools
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span>System Operations &amp; Tools</span>
         </button>
         <button class="sa-tab-btn" onclick="window.switchSuperAdminTab('subscriptions')">
-          <span>💳</span> Licensing &amp; Subscriptions
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+          <span>Licensing &amp; Subscriptions</span>
         </button>
       </nav>
 
@@ -572,7 +536,8 @@
           <div class="sa-table-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:8px;">
               <h3 style="margin:0; font-size:1rem; display:flex; align-items:center; gap:8px;">
-                <span>📊</span> Enrolment Distribution
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <span>Enrolment Distribution</span>
               </h3>
               <span style="font-size:0.75rem; color:var(--sa-text-muted);" id="enrolmentTotalHeader">Total: 0</span>
             </div>
@@ -585,7 +550,8 @@
           <div class="sa-table-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:8px;">
               <h3 style="margin:0; font-size:1rem; display:flex; align-items:center; gap:8px;">
-                <span>💳</span> Financial Recovery &amp; Revenue
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                <span>Financial Recovery &amp; Revenue</span>
               </h3>
               <span style="font-size:0.75rem; color:var(--sa-success); font-weight:600;" id="feesCollectedHeader">GH₵ 0.00</span>
             </div>
@@ -598,7 +564,8 @@
           <div class="sa-table-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:8px;">
               <h3 style="margin:0; font-size:1rem; display:flex; align-items:center; gap:8px;">
-                <span>🌐</span> Institutional Breakdown
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                <span>Institutional Breakdown</span>
               </h3>
               <span style="font-size:0.75rem; color:var(--sa-text-muted);">Ghana National Grid</span>
             </div>
@@ -611,13 +578,25 @@
           <div class="sa-matrix-header" style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
             <div style="flex:1 1 280px;">
               <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-                <span>📡</span> Multi-Tenant Real-Time Sync &amp; Telemetry Matrix
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                <span>Multi-Tenant Real-Time Sync &amp; Telemetry Matrix</span>
               </h3>
               <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);">Monitor store-and-forward outbox queue deltas and node health across all schools.</p>
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+              <span id="headerCloudSyncPill" class="badge-mode" style="background:rgba(14,165,233,0.15); color:#38bdf8; border:1px solid rgba(14,165,233,0.3); padding:5px 10px; font-size:0.75rem; display:inline-flex; align-items:center; gap:5px;">
+                <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#38bdf8;"></span>
+                <span>Cloud Connected</span>
+              </span>
               <span id="syncMonitorNetworkBadge" class="badge-mode" style="background:rgba(2,132,199,0.2); color:#38bdf8; border:1px solid #0284c7;">Loading Sync...</span>
-              <button class="btn" style="padding:6px 12px; font-size:0.78rem; background:#0284c7; color:#fff;" onclick="window.triggerAllSchoolsSync()">🔄 Sync All Nodes</button>
+              <button class="btn" style="padding:6px 12px; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;" onclick="window.loadSuperAdminDashboard()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                <span>Refresh</span>
+              </button>
+              <button class="btn" style="padding:6px 12px; font-size:0.78rem; background:#0284c7; color:#fff; display:inline-flex; align-items:center; gap:5px;" onclick="window.triggerAllSchoolsSync()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+                <span>Sync All Nodes</span>
+              </button>
             </div>
           </div>
 
@@ -651,7 +630,8 @@
           <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; border-bottom:1px solid var(--sa-card-border); padding-bottom:14px;">
             <div>
               <h3 style="margin:0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
-                <span>🏫</span> Registered Institutions Directory
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v14M21 7v14M6 11v6M10 11v6M14 11v6M18 11v6M9 3h6v4H9z"></path></svg>
+                <span>Registered Institutions Directory</span>
               </h3>
               <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);" id="directorySummarySubtitle">
                 Managing all institutions in the network.
@@ -660,15 +640,15 @@
 
             <!-- Search, Filter & Register CTA -->
             <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-              <input type="text" id="schoolSearchInput" placeholder="🔍 Search school name, code, region..." oninput="window.filterSchoolsDirectory()"
+              <input type="text" id="schoolSearchInput" placeholder="Search school name, code, region..." oninput="window.filterSchoolsDirectory()"
                      style="padding:8px 14px; font-size:0.85rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; width:220px;" />
               
               <select id="schoolModeFilter" onchange="window.filterSchoolsDirectory()"
                       style="padding:8px 12px; font-size:0.82rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; cursor:pointer;">
                 <option value="ALL">All Stages</option>
-                <option value="BASIC_ONLY">🎯 Basic Only (KG - JHS)</option>
-                <option value="SHS_ONLY">🏛️ SHS Only (SHS 1 - 3)</option>
-                <option value="COMBINED">🌐 Combined (Basic + SHS)</option>
+                <option value="BASIC_ONLY">Basic Only (KG - JHS)</option>
+                <option value="SHS_ONLY">SHS Only (SHS 1 - 3)</option>
+                <option value="COMBINED">Combined (Basic + SHS)</option>
               </select>
 
               <select id="schoolBoardingFilter" onchange="window.filterSchoolsDirectory()"
@@ -714,7 +694,8 @@
           <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; border-bottom:1px solid var(--sa-card-border); padding-bottom:12px;">
             <div>
               <h3 style="margin:0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
-                <span>🛡️</span> Master Activity &amp; Security Audit Trail
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>Master Activity &amp; Security Audit Trail</span>
               </h3>
               <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);">
                 Chronological ledger of cross-school administrative mutations and security events.
@@ -725,15 +706,21 @@
               <select id="auditActionFilter" onchange="window.loadMasterAuditStream(1)"
                       style="padding:7px 12px; font-size:0.82rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; cursor:pointer;">
                 <option value="">All Actions</option>
-                <option value="USER_LOGIN">🔑 User Logins</option>
-                <option value="ENROLLMENT">🎓 Student Enrollments</option>
-                <option value="FEE_PAYMENT">💳 Fee Collections</option>
-                <option value="SCORE_UPDATE">📝 Scores &amp; SBA</option>
-                <option value="SETTINGS_UPDATE">⚙️ Configuration Updates</option>
-                <option value="DEPROVISION">⚠️ Deprovisioning &amp; Purge</option>
+                <option value="USER_LOGIN">User Logins</option>
+                <option value="ENROLLMENT">Student Enrollments</option>
+                <option value="FEE_PAYMENT">Fee Collections</option>
+                <option value="SCORE_UPDATE">Scores &amp; SBA</option>
+                <option value="SETTINGS_UPDATE">Configuration Updates</option>
+                <option value="DEPROVISION">Deprovisioning &amp; Purge</option>
               </select>
-              <button class="btn" style="padding:7px 12px; font-size:0.82rem;" onclick="window.loadMasterAuditStream(1)">🔄 Refresh Feed</button>
-              <button class="btn danger" style="padding:7px 12px; font-size:0.82rem; background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#f87171;" onclick="window.openPurgeAuditModal()">🗑️ Clear Audit Trail</button>
+              <button class="btn" style="padding:7px 12px; font-size:0.82rem; display:inline-flex; align-items:center; gap:5px;" onclick="window.loadMasterAuditStream(1)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                <span>Refresh Feed</span>
+              </button>
+              <button class="btn danger" style="padding:7px 12px; font-size:0.82rem; background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#f87171; display:inline-flex; align-items:center; gap:5px;" onclick="window.openPurgeAuditModal()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span>Clear Audit Trail</span>
+              </button>
             </div>
           </div>
 
@@ -758,33 +745,37 @@
           <!-- Operation 1: Cloud Pull & Mirror Sync -->
           <div class="sa-table-card">
             <h3 style="margin:0 0 8px 0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-              <span>🔄</span> 1-Click Master Cloud Mirroring
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>1-Click Master Cloud Mirroring</span>
             </h3>
             <p style="font-size:0.82rem; color:var(--sa-text-muted); line-height:1.45; margin-bottom:16px;">
               Connect securely to your live remote Render PostgreSQL database to pull all registered schools, students, classes, and marks into your local instance.
             </p>
-            <button class="btn" style="width:100%; padding:10px; background:#0284c7; color:#fff; font-weight:700;" onclick="openCloudSyncModal()">
-              🔄 Open Cloud Synchronization Wizard
+            <button class="btn" style="width:100%; padding:10px; background:#0284c7; color:#fff; font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:6px;" onclick="openCloudSyncModal()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>Open Cloud Synchronization Wizard</span>
             </button>
           </div>
 
           <!-- Operation 2: Curriculum Accreditation -->
           <div class="sa-table-card">
             <h3 style="margin:0 0 8px 0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-              <span>📚</span> National Curriculum Accreditation
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              <span>National Curriculum Accreditation</span>
             </h3>
             <p style="font-size:0.82rem; color:var(--sa-text-muted); line-height:1.45; margin-bottom:16px;">
               Manage accredited learning tracks (General Science, Business, General Arts, TVET, Basic) and active subject catalogs per institution.
             </p>
             <p style="font-size:0.8rem; color:#818cf8; margin-bottom:16px;">
-              💡 Open any school from the <strong>School Directory</strong> tab and click <em>"⚙️ Accredit"</em> to configure its catalog.
+              Open any school from the <strong>School Directory</strong> tab and click <em>"Accredit"</em> to configure its catalog.
             </p>
           </div>
 
           <!-- Operation 3: Database Snapshots & Maintenance -->
           <div class="sa-table-card">
             <h3 style="margin:0 0 8px 0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-              <span>💾</span> System Diagnostics &amp; Snapshots
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              <span>System Diagnostics &amp; Snapshots</span>
             </h3>
             <p style="font-size:0.82rem; color:var(--sa-text-muted); line-height:1.45; margin-bottom:16px;">
               The platform executes hot non-blocking SQLite snapshots with SHA-256 integrity checksums and 14-day rolling retention.
@@ -799,14 +790,15 @@
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
               <div>
                 <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-                  <span>💳</span> Master Paystack Gateway &amp; Direct Multi-Tenant Settlement Engine
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                  <span>Master Paystack Gateway &amp; Direct Multi-Tenant Settlement Engine</span>
                 </h3>
                 <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);">
                   Centralized platform keys for online admission voucher checkout and automated fee disbursements across all school subaccounts.
                 </p>
               </div>
               <div id="paystackMasterStatusPill" style="display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:700; padding:4px 10px; border-radius:20px; background:rgba(99,102,241,0.15); color:#a5b4fc; border:1px solid rgba(99,102,241,0.3);">
-                ⚪ Checking Gateway State...
+                Checking Gateway State...
               </div>
             </div>
 
@@ -815,8 +807,8 @@
                 <div>
                   <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Master Gateway State *</label>
                   <select id="paystackMasterEnabled" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-primary); border-radius:6px; color:#fff; font-weight:600;">
-                    <option value="true">🟢 Online Checkout &amp; Settlements Active</option>
-                    <option value="false">🔴 Disabled / Offline &amp; Manual Verification Only</option>
+                    <option value="true">Online Checkout &amp; Settlements Active</option>
+                    <option value="false">Disabled / Offline &amp; Manual Verification Only</option>
                   </select>
                 </div>
                 <div>
@@ -827,7 +819,7 @@
                   <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Paystack Secret Key (Live / Test) *</label>
                   <div style="position:relative; display:flex; align-items:center;">
                     <input id="paystackMasterSecretKey" type="password" placeholder="sk_live_... or sk_test_..." required style="width:100%; box-sizing:border-box; padding:9px 40px 9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; font-family:monospace;" />
-                    <button type="button" onclick="window.toggleMasterPaystackKeyVisibility()" style="position:absolute; right:8px; background:none; border:none; color:var(--sa-text-muted); cursor:pointer; font-size:0.9rem;" title="Toggle Visibility">👁️</button>
+                    <button type="button" onclick="window.toggleMasterPaystackKeyVisibility()" style="position:absolute; right:8px; background:none; border:none; color:var(--sa-text-muted); cursor:pointer; font-size:0.85rem;" title="Toggle Visibility">Show</button>
                   </div>
                 </div>
               </div>
@@ -835,7 +827,7 @@
               <!-- Webhook integration callout -->
               <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.06); padding:10px 14px; border-radius:6px; margin-bottom:14px; font-size:0.78rem; color:var(--sa-text-muted); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                 <div>
-                  <span style="color:#38bdf8; font-weight:600;">⚡ Instant Webhook Endpoint:</span>
+                  <span style="color:#38bdf8; font-weight:600;">Instant Webhook Endpoint:</span>
                   <code id="paystackWebhookUrlDisplay" style="color:#a5b4fc; margin-left:6px;">/api/admissions/paystack/webhook</code>
                 </div>
                 <span style="color:#10b981; font-weight:600;">✓ Auto-Verifies Admission PINs &amp; Direct Settlements</span>
@@ -845,10 +837,10 @@
 
               <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
                 <button type="submit" id="btnSaveMasterPaystack" class="btn primary" style="padding:9px 18px; font-weight:700;">
-                  💾 Save Master Paystack Keys
+                  Save Master Paystack Keys
                 </button>
                 <button type="button" class="btn" style="padding:9px 14px; background:rgba(99,102,241,0.2); border-color:#6366f1; color:#a5b4fc;" onclick="window.verifyMasterPaystackConnection()">
-                  ⚡ Verify Connection
+                  Verify Connection
                 </button>
               </div>
             </form>
@@ -859,14 +851,15 @@
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
               <div>
                 <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-                  <span>📱</span> Multi-Gateway SMS Engine &amp; Failover Matrix
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                  <span>Multi-Gateway SMS Engine &amp; Failover Matrix</span>
                 </h3>
                 <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);">
                   Configure your primary mNotify gateway and Hubtel secondary failover for student alerts, admission PINs &amp; fee receipts.
                 </p>
               </div>
               <div id="smsGatewayStatusPill" style="display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:700; padding:4px 10px; border-radius:20px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);">
-                🟢 Gateway Engine Ready
+                Gateway Engine Ready
               </div>
             </div>
 
@@ -905,13 +898,13 @@
 
               <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
                 <button type="submit" id="btnSaveSMSGateway" class="btn primary" style="padding:9px 18px; font-weight:700;">
-                  💾 Save Gateway Settings
+                  Save Gateway Settings
                 </button>
                 <button type="button" class="btn" style="padding:9px 14px; background:#0284c7; color:#fff;" onclick="window.checkSMSBalance()">
-                  💳 Check Gateway Balance
+                  Check Gateway Balance
                 </button>
                 <button type="button" class="btn" style="padding:9px 14px; background:rgba(99,102,241,0.2); border-color:#6366f1; color:#a5b4fc;" onclick="window.openTestSMSModal()">
-                  ⚡ Send Test Dispatch
+                  Send Test Dispatch
                 </button>
               </div>
             </form>
@@ -952,15 +945,19 @@
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
             <div>
               <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
-                <span>💳</span> Multi-Tenant Licensing &amp; Subscription Matrix
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                <span>Multi-Tenant Licensing &amp; Subscription Matrix</span>
               </h3>
               <p style="margin:4px 0 0 0; font-size:0.82rem; color:var(--sa-text-muted);">
                 Govern active license tiers, admission voucher commission rates, and SMS credits across all schools.
               </p>
             </div>
             <div style="display:flex; gap:10px; align-items:center;">
-              <input type="text" id="subscriptionSearchInput" placeholder="🔍 Filter school or plan..." oninput="window.filterSubscriptionTable()" style="padding:7px 12px; font-size:0.82rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; min-width:220px;" />
-              <button class="btn" style="padding:7px 12px; font-size:0.82rem;" onclick="window.loadSubscriptionsTab()">🔄 Refresh</button>
+              <input type="text" id="subscriptionSearchInput" placeholder="Filter school or plan..." oninput="window.filterSubscriptionTable()" style="padding:7px 12px; font-size:0.82rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; min-width:220px;" />
+              <button class="btn" style="padding:7px 12px; font-size:0.82rem; display:inline-flex; align-items:center; gap:5px;" onclick="window.loadSubscriptionsTab()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
 
@@ -995,7 +992,8 @@
       <div class="modal-content" style="max-width:620px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
           <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
-            <span>🏫</span> Onboard New Institution
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v14M21 7v14M6 11v6M10 11v6M14 11v6M18 11v6M9 3h6v4H9z"></path></svg>
+            <span>Onboard New Institution</span>
           </h3>
           <button type="button" onclick="closeNewSchoolModal()" style="background:none; border:none; color:var(--sa-text-muted); font-size:1.3rem; cursor:pointer;">✕</button>
         </div>
@@ -1017,9 +1015,9 @@
             <div>
               <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Academic School Mode *</label>
               <select id="schoolMode" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;">
-                <option value="SHS_ONLY">🏛️ SHS Only (Senior High)</option>
-                <option value="BASIC_ONLY">🎯 Basic School Only (KG - JHS)</option>
-                <option value="COMBINED" selected>🌐 Combined (Basic &amp; SHS)</option>
+                <option value="SHS_ONLY">SHS Only (Senior High)</option>
+                <option value="BASIC_ONLY">Basic School Only (KG - JHS)</option>
+                <option value="COMBINED" selected>Combined (Basic &amp; SHS)</option>
               </select>
             </div>
           </div>
@@ -1039,8 +1037,9 @@
             </div>
           </div>
 
-          <h4 style="margin:14px 0 8px 0; font-size:0.88rem; border-top:1px solid var(--sa-card-border); padding-top:10px; color:#818cf8;">
-            🔑 Initial School Administrator Account
+          <h4 style="margin:14px 0 8px 0; font-size:0.88rem; border-top:1px solid var(--sa-card-border); padding-top:10px; color:#818cf8; display:flex; align-items:center; gap:6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-1-1l-3 3 2 2 3-3-2-2zM3 13a4 4 0 1 0 5 5L21 5l-3-3L3 13z"/></svg>
+            <span>Initial School Administrator Account</span>
           </h4>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
@@ -1069,7 +1068,8 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--sa-card-border); padding-bottom:12px;">
           <div>
             <h3 style="margin:0; font-size:1.15rem; color:#f8fafc; display:flex; align-items:center; gap:8px;">
-              <span>✏️</span> Edit School Profile &amp; Governance
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              <span>Edit School Profile &amp; Governance</span>
             </h3>
             <div id="editSchoolSubtitle" style="font-size:0.8rem; color:var(--sa-text-muted); margin-top:2px;">Configuring School ID: #<span id="editSchoolIdLabel">—</span></div>
           </div>
@@ -1094,17 +1094,17 @@
             <div>
               <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Academic School Mode *</label>
               <select id="editSchoolMode" onchange="updateEditModeNotice()" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-primary); border-radius:6px; color:#fff; font-weight:600;">
-                <option value="BASIC_ONLY">🎯 Basic School (KG - JHS 3 Only)</option>
-                <option value="SHS_ONLY">🏛️ Senior High School (SHS 1 - 3 Only)</option>
-                <option value="COMBINED">🌐 Combined Institution (Basic + SHS)</option>
+                <option value="BASIC_ONLY">Basic School (KG - JHS 3 Only)</option>
+                <option value="SHS_ONLY">Senior High School (SHS 1 - 3 Only)</option>
+                <option value="COMBINED">Combined Institution (Basic + SHS)</option>
               </select>
             </div>
             <div>
               <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Boarding Facility *</label>
               <select id="editSchoolBoarding" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-info); border-radius:6px; color:#fff; font-weight:600;">
-                <option value="DAY_ONLY">☀️ Day School Only</option>
-                <option value="BOARDING_AND_DAY">🏡 Boarding &amp; Day Facility</option>
-                <option value="BOARDING_ONLY">🏠 Pure Boarding School Only</option>
+                <option value="DAY_ONLY">Day School Only</option>
+                <option value="BOARDING_AND_DAY">Boarding &amp; Day Facility</option>
+                <option value="BOARDING_ONLY">Pure Boarding School Only</option>
               </select>
             </div>
           </div>
@@ -1139,13 +1139,15 @@
             <div style="display:flex; gap:14px; align-items:center;">
               <div id="editSchoolLogoPreviewContainer" style="width:54px; height:54px; border-radius:8px; background:#1e293b; border:1px dashed #475569; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
                 <img id="editSchoolLogoImg" src="" alt="Crest Preview" style="width:100%; height:100%; object-fit:contain; display:none;" />
-                <span id="editSchoolDefaultCrest" style="font-size:1.6rem;">🏫</span>
+                <span id="editSchoolDefaultCrest" style="display:inline-flex; align-items:center; justify-content:center; color:var(--sa-text-muted);">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v14M21 7v14M6 11v6M10 11v6M14 11v6M18 11v6M9 3h6v4H9z"></path></svg>
+                </span>
               </div>
               <div style="flex:1;">
                 <input id="editSchoolLogoFile" type="file" accept="image/*" onchange="handleEditLogoFileSelect(event)" style="display:none;" />
                 <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
-                  <button type="button" class="btn" style="padding:5px 10px; font-size:0.75rem; background:#334155; color:#fff;" onclick="document.getElementById('editSchoolLogoFile').click()">📤 Upload Logo</button>
-                  <button type="button" id="btnRemoveEditLogo" class="btn danger" style="padding:5px 8px; font-size:0.75rem; display:none;" onclick="handleRemoveEditLogo()">🗑 Remove</button>
+                  <button type="button" class="btn" style="padding:5px 10px; font-size:0.75rem; background:#334155; color:#fff;" onclick="document.getElementById('editSchoolLogoFile').click()">Upload Logo</button>
+                  <button type="button" id="btnRemoveEditLogo" class="btn danger" style="padding:5px 8px; font-size:0.75rem; display:none;" onclick="handleRemoveEditLogo()">Remove</button>
                 </div>
                 <input id="editSchoolLogoUrl" type="text" placeholder="Or paste Logo URL / Data URI" oninput="handleEditLogoUrlInput(this.value)"
                        style="width:100%; box-sizing:border-box; padding:6px 10px; font-size:0.75rem; background:#090d16; border:1px solid var(--sa-card-border); border-radius:4px; color:#cbd5e1;" />
@@ -1157,20 +1159,20 @@
 
           <div style="margin-top:16px; padding-top:14px; border-top:1px dashed var(--sa-card-border);">
             <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--sa-text-muted); margin-bottom:8px;">
-              ⚡ Quick Operations for this School:
+              Quick Operations for this School:
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:8px;">
-              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; font-weight:700;" onclick="window.openSubaccountModal(document.getElementById('editSchoolId').value, document.getElementById('editSchoolName').value)">💳 Payout Subaccount</button>
-              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:rgba(99,102,241,0.2); border-color:#6366f1; color:#a5b4fc;" onclick="window.openAccreditationModal(document.getElementById('editSchoolId').value, document.getElementById('editSchoolName').value, document.getElementById('editSchoolMode').value)">⚙️ Accredit Subjects</button>
-              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:#0284c7; color:#fff;" onclick="window.downloadSchoolBackup(document.getElementById('editSchoolId').value, document.getElementById('editSchoolCode').value)">📥 Download Backup</button>
-              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:#d97706; color:#fff;" onclick="window.toggleSchoolStatus(document.getElementById('editSchoolId').value, 'ACTIVE')">⏸ Toggle Suspend</button>
-              <button type="button" class="btn danger" style="padding:6px 10px; font-size:0.78rem;" onclick="closeEditSchoolModal(); window.openDeleteSchoolModal(document.getElementById('editSchoolId').value, document.getElementById('editSchoolName').value, document.getElementById('editSchoolCode').value)">🗑 Purge School</button>
+              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; font-weight:700;" onclick="window.openSubaccountModal(document.getElementById('editSchoolId').value, document.getElementById('editSchoolName').value)">Payout Subaccount</button>
+              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:rgba(99,102,241,0.2); border-color:#6366f1; color:#a5b4fc;" onclick="window.openAccreditationModal(document.getElementById('editSchoolId').value, document.getElementById('editSchoolName').value, document.getElementById('editSchoolMode').value)">Accredit Subjects</button>
+              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:#0284c7; color:#fff;" onclick="window.downloadSchoolBackup(document.getElementById('editSchoolId').value, document.getElementById('editSchoolCode').value)">Download Backup</button>
+              <button type="button" class="btn" style="padding:6px 10px; font-size:0.78rem; background:#d97706; color:#fff;" onclick="window.toggleSchoolStatus(document.getElementById('editSchoolId').value, 'ACTIVE')">Toggle Suspend</button>
+              <button type="button" class="btn danger" style="padding:6px 10px; font-size:0.78rem;" onclick="closeEditSchoolModal(); window.openDeleteSchoolModal(document.getElementById('editSchoolId').value, document.getElementById('editSchoolName').value, document.getElementById('editSchoolCode').value)">Purge School</button>
             </div>
           </div>
 
           <div style="display:flex; gap:10px; border-top:1px solid var(--sa-card-border); padding-top:16px; margin-top:14px;">
             <button type="submit" id="btnSaveEditSchool" class="btn primary" style="flex:1; padding:10px; font-weight:700;">
-              💾 Save Profile Changes
+              Save Profile Changes
             </button>
             <button type="button" class="btn" onclick="closeEditSchoolModal()" style="flex:1; padding:10px;">Cancel</button>
           </div>
@@ -1184,7 +1186,8 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
           <div>
             <h3 style="margin:0; font-size:1.15rem; color:#4ade80; display:flex; align-items:center; gap:8px;">
-              <span>💳</span> Manage Payout Subaccount
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+              <span>Manage Payout Subaccount</span>
             </h3>
             <div id="subaccountModalSchoolTitle" style="font-size:0.8rem; color:var(--sa-text-muted); margin-top:2px;">School: ...</div>
           </div>
@@ -1234,7 +1237,7 @@
 
           <div style="display:flex; gap:10px; border-top:1px solid var(--sa-card-border); padding-top:14px;">
             <button type="submit" id="btnSaveAdminSubaccount" class="btn primary" style="flex:1; padding:10px; font-weight:700; background:linear-gradient(135deg, #10b981, #059669); border:none;">
-              💾 Save & Link Paystack Subaccount
+              Save &amp; Link Paystack Subaccount
             </button>
             <button type="button" class="btn" onclick="closeSubaccountModal()" style="flex:1; padding:10px;">Cancel</button>
           </div>
@@ -1248,7 +1251,8 @@
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--sa-card-border); padding-bottom:12px; margin-bottom:14px;">
           <div>
             <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;" id="accreditationModalTitle">
-              <span>⚙️</span> Curriculum Accreditation &amp; Active Subjects
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              <span>Curriculum Accreditation &amp; Active Subjects</span>
             </h3>
             <p style="margin:4px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);" id="accreditationModalSubtitle">
               Select accredited tracks and active subjects for this institution.
@@ -1269,7 +1273,7 @@
 
         <div style="margin-bottom:12px; background:rgba(255,255,255,0.02); border:1px solid var(--sa-card-border); border-radius:8px; padding:10px 12px;">
           <div style="font-size:0.75rem; font-weight:700; color:var(--sa-text-muted); text-transform:uppercase; margin-bottom:8px;">
-            ⚡ Quick GES Track Presets:
+            Quick GES Track Presets:
           </div>
           <div id="accreditationPresetsToolbar" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
         </div>
@@ -1293,7 +1297,8 @@
       <div class="card" style="max-width:500px; width:100%; padding:24px; background:var(--sa-surface); border:1px solid var(--sa-card-border); border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.6);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
           <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
-            <span>🔄</span> 1-Click Master Cloud Sync
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            <span>1-Click Master Cloud Sync</span>
           </h3>
           <button type="button" onclick="closeCloudSyncModal()" style="background:none; border:none; color:var(--sa-text-muted); font-size:1.2rem; cursor:pointer;">✕</button>
         </div>
@@ -1329,7 +1334,8 @@
     <div class="modal" id="deleteSchoolModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
       <div class="modal-content" style="max-width:460px; width:90%; background:var(--sa-surface); border:1px solid var(--sa-danger); border-radius:12px; padding:24px;">
         <h3 style="margin:0 0 10px 0; color:var(--sa-danger); font-size:1.15rem; display:flex; align-items:center; gap:8px;">
-          <span>⚠️</span> Permanently Purge School
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <span>Permanently Purge School</span>
         </h3>
         <p style="font-size:0.85rem; line-height:1.45; margin-bottom:14px;">
           You are about to permanently purge <strong id="deleteSchoolModalName" style="color:#fff;">...</strong>.
@@ -1355,7 +1361,8 @@
       <div class="modal-content" style="max-width:480px; width:90%; background:var(--sa-surface); border:1px solid var(--sa-danger); border-radius:12px; padding:24px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
           <h3 style="margin:0; color:var(--sa-danger); font-size:1.15rem; display:flex; align-items:center; gap:8px;">
-            <span>⚠️</span> Permanently Clear Audit Trail
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <span>Permanently Clear Audit Trail</span>
           </h3>
           <button type="button" onclick="window.closePurgeAuditModal()" style="background:none; border:none; color:var(--sa-text-muted); font-size:1.2rem; cursor:pointer;">✕</button>
         </div>
@@ -1366,7 +1373,7 @@
 
         <div style="display:flex; gap:10px;">
           <button type="button" id="btnConfirmPurgeAudit" class="btn danger" style="flex:1; padding:10px; background:#dc2626; color:#fff; font-weight:700;" onclick="window.executePurgeAuditStream()">
-            🗑️ Yes, Purge Audit Trail
+            Yes, Purge Audit Trail
           </button>
           <button type="button" class="btn" style="flex:1; padding:10px;" onclick="window.closePurgeAuditModal()">
             Cancel
@@ -1380,7 +1387,8 @@
       <div class="modal-content" style="max-width:540px; width:90%; background:var(--sa-surface); border:1px solid var(--sa-primary); border-radius:12px; padding:24px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
           <h3 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
-            <span>💳</span> Manage School License &amp; Tier
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+            <span>Manage School License &amp; Tier</span>
           </h3>
           <button type="button" onclick="window.closeManageSubscriptionModal()" style="background:none; border:none; color:var(--sa-text-muted); font-size:1.3rem; cursor:pointer;">✕</button>
         </div>
@@ -1398,19 +1406,19 @@
             <div>
               <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Subscription Tier Plan *</label>
               <select id="subModalPlan" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; font-weight:700;">
-                <option value="FREE">🌱 Free Community Plan</option>
-                <option value="BASIC">📘 Basic School Plan</option>
-                <option value="STANDARD">🏛️ Standard Pro Plan</option>
-                <option value="ENTERPRISE">👑 Enterprise Multi-Campus</option>
+                <option value="FREE">Free Community Plan</option>
+                <option value="BASIC">Basic School Plan</option>
+                <option value="STANDARD">Standard Pro Plan</option>
+                <option value="ENTERPRISE">Enterprise Multi-Campus</option>
               </select>
             </div>
             <div>
               <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">License Status *</label>
               <select id="subModalStatus" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff; font-weight:700;">
-                <option value="ACTIVE">🟢 Active Licensed</option>
-                <option value="TRIAL">🟡 Evaluation / Trial</option>
-                <option value="SUSPENDED">🔴 Suspended / Past Due</option>
-                <option value="EXPIRED">⚫ Expired License</option>
+                <option value="ACTIVE">Active Licensed</option>
+                <option value="TRIAL">Evaluation / Trial</option>
+                <option value="SUSPENDED">Suspended / Past Due</option>
+                <option value="EXPIRED">Expired License</option>
               </select>
             </div>
           </div>
@@ -1423,7 +1431,7 @@
             </div>
             <div>
               <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Platform Commission (%)</label>
-              <input type="number" id="subModalCommission" min="0" max="100" step="0.5" placeholder="5.0" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+              <input id="subModalCommission" min="0" max="100" step="0.5" placeholder="5.0" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
               <span style="font-size:0.72rem; color:var(--sa-text-muted);">From voucher sales</span>
             </div>
           </div>
@@ -1432,7 +1440,7 @@
 
           <div style="display:flex; gap:10px; margin-top:16px;">
             <button type="submit" id="btnSaveSubscription" class="btn primary" style="flex:1; padding:10px; font-weight:700;">
-              💾 Save Subscription &amp; Tier
+              Save Subscription &amp; Tier
             </button>
             <button type="button" class="btn" onclick="window.closeManageSubscriptionModal()" style="flex:1; padding:10px;">Cancel</button>
           </div>
@@ -1441,7 +1449,7 @@
     </div>
 
     <!-- ── Core Scripts ─────────────────────────────────────────────────────── -->
-    <script src="js/guard.js?v=9.9"></script>
-    <script src="js/super-admin.js?v=9.9"></script>
+    <script src="js/guard.js?v=11.1"></script>
+    <script src="js/super-admin.js?v=11.1"></script>
   </body>
 </html>

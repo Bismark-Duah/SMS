@@ -529,7 +529,12 @@ if (userForm) {
       });
 
       if (res.ok) {
-        alert('User account created successfully!');
+        const data = await res.json();
+        if (data && data.temporary_password) {
+          alert(`User account created successfully!\n\n🔑 Temporary Password: ${data.temporary_password}\n(The user will be required to change this password upon first login).`);
+        } else {
+          alert('User account created successfully!');
+        }
         userForm.reset();
         await loadRoles();
         await loadData();
@@ -712,7 +717,12 @@ window.saveNewPassword = async function() {
     });
 
     if (res.ok) {
-      alert('Password reset successfully!');
+      const data = await res.json();
+      if (data && data.temporary_password) {
+        alert(`Password reset successfully!\n\n🔑 Temporary Password: ${data.temporary_password}\n(The user will be required to change this password upon first login).`);
+      } else {
+        alert('Password reset successfully!');
+      }
       closeResetPasswordModal();
     } else {
       const err = await res.json();

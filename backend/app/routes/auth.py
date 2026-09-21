@@ -591,7 +591,14 @@ def create_user(
     phone_number = raw_phone if raw_phone else None
     raw_staff_id = (payload.get("staff_id") or "").strip()
     staff_id = raw_staff_id if raw_staff_id else None
-    password = payload.get("password") or "Staff@123"
+    raw_password = (payload.get("password") or "").strip()
+    is_generated = False
+    if not raw_password:
+        raw_password = f"Tmp#{secrets.token_urlsafe(8)}"
+        is_generated = True
+    elif len(raw_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
     gender = payload.get("gender")
     role_names = payload.get("roles", ["teacher"])
 
@@ -624,13 +631,15 @@ def create_user(
         email=email,
         phone_number=phone_number,
         staff_id=staff_id,
-        password_hash=_hash_password(password),
+        password_hash=_hash_password(raw_password),
         gender=gender,
         is_active=True,
         is_first_login=True,
         contact_verified=bool(phone_number or email),
         school_id=target_sch_id
     )
+    if is_generated:
+        setattr(new_user, "temporary_password", raw_password)
     
     seen_canonical = set()
     for r_name in role_names:
@@ -923,6 +932,7 @@ async def import_users_csv(
     
     imported_count = 0
     errors = []
+    generated_credentials = []
     
     all_roles = {r.name.lower(): r for r in db.query(Role).all()}
     default_role = all_roles.get("teacher") or db.query(Role).first()
@@ -943,7 +953,11 @@ async def import_users_csv(
 
                 email = clean_row.get("email") or clean_row.get("e-mail")
                 gender = clean_row.get("gender")
-                raw_password = clean_row.get("password") or clean_row.get("pass") or "Welcome123!"
+                raw_password = (clean_row.get("password") or clean_row.get("pass") or "").strip()
+                is_generated = False
+                if not raw_password or len(raw_password) < 6:
+                    raw_password = f"Tmp#{secrets.token_urlsafe(8)}"
+                    is_generated = True
 
                 raw_roles_str = clean_row.get("roles") or clean_row.get("role") or clean_row.get("user_role") or clean_row.get("user_roles")
                 assigned_roles = []
@@ -972,6 +986,7 @@ async def import_users_csv(
                     password_hash=_hash_password(raw_password),
                     gender=gender,
                     is_active=True,
+                    is_first_login=True,
                     school_id=target_sch_id
                 )
                 for role in assigned_roles:
@@ -981,12 +996,22 @@ async def import_users_csv(
                 db.flush()
                 link_students_for_parent_user(db, new_user)
                 imported_count += 1
+                if is_generated:
+                    generated_credentials.append({
+                        "username": username,
+                        "temporary_password": raw_password
+                    })
         except Exception as e:
             errors.append(f"Row {reader.line_num}: {str(e)}")
             
     db.commit()
     batch_status = "success" if not errors else ("partial_success" if imported_count > 0 else "error")
-    return {"status": batch_status, "imported": imported_count, "errors": errors}
+    return {
+        "status": batch_status,
+        "imported": imported_count,
+        "errors": errors,
+        "temporary_credentials": generated_credentials
+    }
 
 
 # ── Change Password ───────────────────────────────────────────────────────────
@@ -1119,7 +1144,11 @@ def admin_reset_password(
     _verify_managed_user_access(current_user, target, "reset password")
 
     new_password = (payload.get("new_password") or "").strip()
-    if len(new_password) < 6:
+    is_generated = False
+    if not new_password:
+        new_password = f"Tmp#{secrets.token_urlsafe(8)}"
+        is_generated = True
+    elif len(new_password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
 
     target.password_hash = _hash_password(new_password)
@@ -1147,7 +1176,10 @@ def admin_reset_password(
     )
 
     db.commit()
-    return {"status": "success", "message": f"Password reset for {target.username}"}
+    resp = {"status": "success", "message": f"Password reset for {target.username}"}
+    if is_generated:
+        resp["temporary_password"] = new_password
+    return resp
 
 
 # ── Admin: Deactivate / Reactivate user ──────────────────────────────────────

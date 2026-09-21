@@ -225,7 +225,7 @@ let activeTranscriptFormat = 'waec'; // Default to WAEC Statement format
 
 async function initTranscriptMode() {
   const titleEl = document.getElementById("pageTitleHeading");
-  if (titleEl) titleEl.innerText = "📜 Official WAEC Statement & SHS Transcript";
+  if (titleEl) titleEl.innerText = "Official Academic Transcript";
 
   const fmtToggle = document.getElementById("transcriptFormatToggle");
   if (fmtToggle) fmtToggle.style.display = "flex";
@@ -268,7 +268,7 @@ async function initTranscriptMode() {
     const errorEl = document.getElementById("errorState");
     if (loadingEl) loadingEl.style.display = "none";
     if (errorEl) {
-      errorEl.innerText = "ℹ️ Please select a student from the dropdown above to view their Official Academic Transcript.";
+      errorEl.innerText = "Please select a student from the dropdown above to view their Official Academic Transcript.";
       errorEl.style.color = "#6366f1";
       errorEl.style.display = "block";
     }

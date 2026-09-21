@@ -293,26 +293,39 @@
   </head>
   <body>
     <main class="page">
-      <!-- Toolbar (Hidden during printing) -->
+      <!-- Enterprise Topbar (Hidden during printing) -->
       <header class="no-print topbar">
-        <div>
-          <h1 id="pageTitleHeading" style="margin:0;font-size:1.2rem;">Terminal Report Card</h1>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <h1 id="pageTitleHeading" style="margin:0; font-size:1.25rem; font-weight:800; letter-spacing:0.3px; white-space:nowrap;">Terminal Report Card</h1>
         </div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-left:auto;">
+      </header>
+
+      <!-- Document Controls & Actions Toolbar (Directly above the report/transcript preview) -->
+      <div class="no-print doc-action-bar" style="max-width:860px; margin:0 auto 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:var(--card-bg, #1e293b); padding:12px 18px; border-radius:10px; border:1px solid var(--border-color, rgba(255,255,255,0.1)); box-shadow:0 4px 16px rgba(0,0,0,0.15);">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <div id="transcriptFormatToggle" style="display:none; align-items:center; background:rgba(255,255,255,0.08); padding:3px; border-radius:8px; border:1px solid rgba(255,255,255,0.15);">
-            <button id="btnFmtWAEC" class="btn sm active" style="padding:4px 10px; font-size:0.8rem; font-weight:700; border-radius:6px;" onclick="switchTranscriptFormat('waec')">WAEC Statement</button>
-            <button id="btnFmtInternal" class="btn sm" style="padding:4px 10px; font-size:0.8rem; font-weight:700; border-radius:6px;" onclick="switchTranscriptFormat('internal')">3-Year Transcript</button>
+            <button type="button" id="btnFmtWAEC" class="btn sm active" style="padding:5px 12px; font-size:0.82rem; font-weight:700; border-radius:6px;" onclick="switchTranscriptFormat('waec')">WAEC Statement</button>
+            <button type="button" id="btnFmtInternal" class="btn sm" style="padding:5px 12px; font-size:0.82rem; font-weight:700; border-radius:6px;" onclick="switchTranscriptFormat('internal')">3-Year Transcript</button>
           </div>
 
           <div id="transcriptPickerContainer" style="display:none; align-items:center; gap:6px;">
-            <select id="transcriptStudentSelect" style="padding:6px 12px; font-size:0.85rem; border-radius:6px; min-width:220px;" onchange="onTranscriptStudentChange(this.value)">
+            <select id="transcriptStudentSelect" style="padding:7px 12px; font-size:0.85rem; border-radius:6px; min-width:220px; background:var(--bg-input, #0f172a); color:var(--text-primary, #fff); border:1px solid var(--border-color, #334155);" onchange="onTranscriptStudentChange(this.value)">
               <option value="">Select Student...</option>
             </select>
           </div>
-          <button class="btn" style="background:#2563eb; border-color:#1d4ed8; color:white; font-weight:600;" onclick="downloadReportCardPDF()">Download PDF</button>
-          <button class="btn btn-primary" style="font-weight:600;" onclick="window.print()">Print / Save PDF</button>
         </div>
-      </header>
+
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-left:auto;">
+          <button type="button" class="btn" style="display:inline-flex; align-items:center; gap:6px; background:#2563eb; border-color:#1d4ed8; color:white; font-weight:600; padding:7px 14px; font-size:0.85rem;" onclick="downloadReportCardPDF()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Download PDF</span>
+          </button>
+          <button type="button" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:7px 14px; font-size:0.85rem;" onclick="window.print()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <span>Print / Save PDF</span>
+          </button>
+        </div>
+      </div>
 
       <!-- Loading / Error Messages -->
       <div id="loadingState" style="text-align:center; padding:50px; opacity:0.7;">
@@ -595,17 +608,20 @@
         </div>
       </div>
 
-      <!-- 🔒 WASSCE Index Verification Modal (For Student / Parent View) -->
+      <!-- WASSCE Index Verification Modal (For Student / Parent View) -->
       <div id="waecIndexModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.85); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
         <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; width:100%; max-width:440px; padding:32px; box-shadow:0 24px 48px rgba(0,0,0,0.5); text-align:center; color:#f8fafc;">
-          <div style="font-size:3rem; margin-bottom:12px;">🔒</div>
+          <div style="width:54px; height:54px; border-radius:50%; background:rgba(2,132,199,0.15); border:1px solid rgba(2,132,199,0.3); display:inline-flex; align-items:center; justify-content:center; margin-bottom:14px; color:#38bdf8;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
           <h3 style="margin:0 0 8px; font-size:1.3rem;">WASSCE Index Verification</h3>
           <p style="color:#94a3b8; font-size:0.88rem; margin-bottom:20px;">Please enter your official 10-Digit WASSCE Index Number or Candidate Code to view your Statement of Results.</p>
 
           <input id="waecIndexInput" type="text" placeholder="e.g. 1090401023 or STU-2025-001" style="width:100%; box-sizing:border-box; padding:12px 16px; border-radius:8px; border:1px solid #475569; background:#0f172a; color:#f8fafc; font-size:1rem; text-align:center; font-weight:700; margin-bottom:16px;" />
 
-          <button onclick="submitWAECIndexVerification()" style="width:100%; padding:12px; border-radius:8px; border:none; background:#0284c7; color:#fff; font-size:0.95rem; font-weight:800; cursor:pointer;">
-            🔍 Verify Candidate Index
+          <button onclick="submitWAECIndexVerification()" style="width:100%; padding:12px; border-radius:8px; border:none; background:#0284c7; color:#fff; font-size:0.95rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>Verify Candidate Index</span>
           </button>
 
           <div id="waecIndexError" style="display:none; margin-top:14px; color:#f87171; font-size:0.85rem; font-weight:600;"></div>

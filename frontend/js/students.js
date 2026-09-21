@@ -514,11 +514,11 @@ function renderCurrentPage() {
         ${showBoarding ? `<td>${boardingBadge}</td>` : ''}
         <td>${statusChip(!isInactive)}</td>
         <td>
-          ${showTranscripts ? `<a class="btn" style="padding:4px 8px; font-size:0.8rem; background:#4338ca; border-color:#3730a3; color:#ffffff; text-decoration:none; margin-right:4px; display:inline-block;" href="report-card.html?mode=transcript&student_id=${s.id}" target="_blank">📜 Transcript</a>` : ''}
-          ${!isBasicMode ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#0284c7; border-color:#0369a1; color:#ffffff; margin-right:4px;" onclick="downloadAdmissionPackage(${s.id})" title="Download Official Admission Letter & Prospectus PDF">📄 Prospectus</button>` : ''}
-          ${(!isBasicMode && canEdit) ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#4f46e5; border-color:#4338ca; color:#ffffff; margin-right:4px;" onclick="openChangeProgramModal(${s.id})" title="Reassign Academic Program & Class Stream">🔄 Program</button>` : ''}
-          ${canEdit ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem;" onclick="openEditForm(${s.id})">✏ Edit</button>` : ''}
-          ${canDeactivate && !isInactive ? `<button class="btn danger" style="padding:4px 8px; font-size:0.8rem; margin-left:4px;" onclick="deactivateStudent(${s.id})">🗑 Deactivate</button>` : ''}
+          ${showTranscripts ? `<a class="btn" style="padding:4px 8px; font-size:0.8rem; background:#4338ca; border-color:#3730a3; color:#ffffff; text-decoration:none; margin-right:4px; display:inline-block;" href="report-card.html?mode=transcript&student_id=${s.id}" target="_blank">Transcript</a>` : ''}
+          ${!isBasicMode ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#0284c7; border-color:#0369a1; color:#ffffff; margin-right:4px;" onclick="downloadAdmissionPackage(${s.id})" title="Download Official Admission Letter & Prospectus PDF">Prospectus</button>` : ''}
+          ${(!isBasicMode && canEdit) ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#4f46e5; border-color:#4338ca; color:#ffffff; margin-right:4px;" onclick="openChangeProgramModal(${s.id})" title="Reassign Academic Program & Class Stream">Program</button>` : ''}
+          ${canEdit ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem;" onclick="openEditForm(${s.id})">Edit</button>` : ''}
+          ${canDeactivate && !isInactive ? `<button class="btn danger" style="padding:4px 8px; font-size:0.8rem; margin-left:4px;" onclick="deactivateStudent(${s.id})">Deactivate</button>` : ''}
         </td>
       </tr>
     `;

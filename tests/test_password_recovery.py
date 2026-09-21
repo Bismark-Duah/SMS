@@ -98,6 +98,23 @@ class TestPasswordRecovery(unittest.TestCase):
             roles=[admin_role] if admin_role else []
         )
         cls.db.add(cls.admin_user)
+
+        # 6. Create SuperAdmin User
+        super_admin_role = cls.db.query(Role).filter(Role.name == "super_admin").first()
+        if not super_admin_role:
+            super_admin_role = Role(name="super_admin", description="Super Admin")
+            cls.db.add(super_admin_role)
+            cls.db.flush()
+
+        cls.super_admin_user = User(
+            username=f"superadmin_{cls.suffix}",
+            email=f"super_{cls.suffix}@platform.local",
+            phone_number="0240000000",
+            staff_id=f"ROOT-{cls.suffix}",
+            password_hash=_hash_password("SuperSecret123!"),
+            roles=[super_admin_role]
+        )
+        cls.db.add(cls.super_admin_user)
         cls.db.commit()
 
     @classmethod
@@ -248,6 +265,48 @@ class TestPasswordRecovery(unittest.TestCase):
                 "identifier": "bad_guess"
             }, req, self.db)
         self.assertEqual(ctx.exception.status_code, 429)
+
+    def test_07_superadmin_recovery_forbidden(self):
+        """Verify that SuperAdmin recovery is strictly forbidden via the web API."""
+        from fastapi import HTTPException
+        req = MockRequest(client_ip="192.168.1.99")
+        payload = {
+            "username": self.super_admin_user.username,
+            "phone_number": self.super_admin_user.phone_number,
+            "identifier": self.super_admin_user.staff_id
+        }
+        with self.assertRaises(HTTPException) as ctx:
+            verify_forgot_password_identity(payload, req, self.db)
+        self.assertEqual(ctx.exception.status_code, 403)
+        self.assertIn("SuperAdmin accounts cannot be reset via the web portal", ctx.exception.detail)
+
+    def test_08_superadmin_reset_token_forbidden(self):
+        """Verify that even with a forged or valid reset token, SuperAdmin cannot reset password via web API."""
+        from fastapi import HTTPException
+        from backend.app.services.auth import create_jwt
+        req = MockRequest(client_ip="192.168.1.99")
+        
+        # Forge a password reset token for the super admin
+        token = create_jwt(
+            payload={
+                "sub": str(self.super_admin_user.id),
+                "user_id": self.super_admin_user.id,
+                "username": self.super_admin_user.username,
+                "scope": "password_reset",
+                "jti": uuid.uuid4().hex,
+                "token_version": 1
+            },
+            expires_in=600
+        )
+        reset_payload = {
+            "reset_token": token,
+            "new_password": "NewSuperAdminPass123!",
+            "confirm_password": "NewSuperAdminPass123!"
+        }
+        with self.assertRaises(HTTPException) as ctx:
+            reset_forgot_password(reset_payload, req, self.db)
+        self.assertEqual(ctx.exception.status_code, 403)
+        self.assertIn("SuperAdmin accounts cannot be reset via the web portal", ctx.exception.detail)
 
 if __name__ == "__main__":
     unittest.main()

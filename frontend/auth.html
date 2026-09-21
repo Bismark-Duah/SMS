@@ -592,8 +592,11 @@
               <button type="button" class="toggle-pw" id="togglePw" title="Show / hide password" aria-label="Toggle password visibility">👁</button>
             </div>
 
-            <div class="forgot-pw-row">
+            <div class="forgot-pw-row" id="forgotPwRow">
               <button type="button" class="forgot-pw-link" id="forgotPwBtn">Forgot Password?</button>
+              <div id="superadminPwNotice" style="display:none; font-size:0.75rem; color:#f59e0b; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:6px; padding:6px 10px; line-height:1.35; width:100%; text-align:center;">
+                🛡️ SuperAdmin password recovery is restricted to the host server utility.
+              </div>
             </div>
 
             <button type="submit" class="submit-btn" id="submitBtn">Sign In</button>
@@ -874,8 +877,28 @@
         }
       });
 
-      // ── Self-Service Password Recovery Modal Engine ──
+      // ── Dynamic SuperAdmin Forgot Password Guard ──
       const forgotPwBtn = document.getElementById('forgotPwBtn');
+      const superadminPwNotice = document.getElementById('superadminPwNotice');
+      const usernameInput = document.getElementById('username');
+
+      function updateForgotPwVisibility() {
+        const val = (usernameInput ? usernameInput.value : '').trim().toLowerCase();
+        if (val === 'superadmin' || val === 'super_admin') {
+          if (forgotPwBtn) forgotPwBtn.style.display = 'none';
+          if (superadminPwNotice) superadminPwNotice.style.display = 'block';
+        } else {
+          if (forgotPwBtn) forgotPwBtn.style.display = 'inline-block';
+          if (superadminPwNotice) superadminPwNotice.style.display = 'none';
+        }
+      }
+
+      if (usernameInput) {
+        usernameInput.addEventListener('input', updateForgotPwVisibility);
+        usernameInput.addEventListener('change', updateForgotPwVisibility);
+      }
+
+      // ── Self-Service Password Recovery Modal Engine ──
       const recoveryOverlay = document.getElementById('recoveryOverlay');
       const recoveryCloseBtn = document.getElementById('recoveryCloseBtn');
       const step1Form = document.getElementById('recoveryStep1Form');
@@ -885,7 +908,33 @@
       const recMessage = document.getElementById('recMessage');
       const recVerifyBtn = document.getElementById('recVerifyBtn');
       const recResetBtn = document.getElementById('recResetBtn');
+      const recUsernameInput = document.getElementById('recUsername');
       let currentResetToken = null;
+
+      function checkRecSuperadmin() {
+        const val = (recUsernameInput ? recUsernameInput.value : '').trim().toLowerCase();
+        if (val === 'superadmin' || val === 'super_admin') {
+          recMessage.className = 'auth-message warning';
+          recMessage.style.display = 'flex';
+          recMessage.innerHTML = '🛡️ SuperAdmin accounts cannot be reset via the web portal. Please use the host server recovery utility.';
+          if (recVerifyBtn) recVerifyBtn.disabled = true;
+          return true;
+        } else {
+          if (recVerifyBtn && recVerifyBtn.disabled && !recVerifyBtn.innerHTML.includes('⏳')) {
+            recVerifyBtn.disabled = false;
+          }
+          if (recMessage && recMessage.innerHTML.includes('SuperAdmin')) {
+            recMessage.style.display = 'none';
+            recMessage.innerHTML = '';
+          }
+          return false;
+        }
+      }
+
+      if (recUsernameInput) {
+        recUsernameInput.addEventListener('input', checkRecSuperadmin);
+        recUsernameInput.addEventListener('change', checkRecSuperadmin);
+      }
 
       function openRecoveryModal() {
         recoveryOverlay.classList.add('active');
@@ -900,10 +949,12 @@
 
         const mainUser = document.getElementById('username').value.trim();
         if (mainUser) {
-          document.getElementById('recUsername').value = mainUser;
-          document.getElementById('recPhone').focus();
+          recUsernameInput.value = mainUser;
+          if (!checkRecSuperadmin()) {
+            document.getElementById('recPhone').focus();
+          }
         } else {
-          document.getElementById('recUsername').focus();
+          recUsernameInput.focus();
         }
       }
 
@@ -911,10 +962,12 @@
         recoveryOverlay.classList.remove('active');
       }
 
-      forgotPwBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        openRecoveryModal();
-      });
+      if (forgotPwBtn) {
+        forgotPwBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          openRecoveryModal();
+        });
+      }
 
       recoveryCloseBtn.addEventListener('click', closeRecoveryModal);
 
@@ -953,9 +1006,13 @@
         recMessage.style.display = 'none';
         recMessage.innerHTML = '';
 
-        const username = document.getElementById('recUsername').value.trim();
+        const username = recUsernameInput.value.trim();
         const phone_number = document.getElementById('recPhone').value.trim();
         const identifier = document.getElementById('recIdentifier').value.trim();
+
+        if (checkRecSuperadmin()) {
+          return;
+        }
 
         if (!username || !phone_number || !identifier) {
           recMessage.className = 'auth-message error';

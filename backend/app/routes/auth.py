@@ -1326,6 +1326,15 @@ def verify_forgot_password_identity(
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account is deactivated. Please contact your school administrator.")
 
+    # Explicit SuperAdmin Security Block: SuperAdmin cannot be recovered via web UI
+    user_roles = [r.name.lower() for r in user.roles] if user.roles else []
+    if "super_admin" in user_roles or getattr(user, "is_superadmin", False):
+        _record_recovery_failure(client_key)
+        raise HTTPException(
+            status_code=403,
+            detail="SuperAdmin accounts cannot be reset via the web portal. Please use the host server recovery utility."
+        )
+
     input_phone_clean = _normalize_phone(phone_raw)
     user_phone_clean = _normalize_phone(user.phone_number)
     
@@ -1458,6 +1467,13 @@ def reset_forgot_password(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User account not found.")
+
+    user_roles = [r.name.lower() for r in user.roles] if user.roles else []
+    if "super_admin" in user_roles or getattr(user, "is_superadmin", False):
+        raise HTTPException(
+            status_code=403,
+            detail="SuperAdmin accounts cannot be reset via the web portal. Please use the host server recovery utility."
+        )
 
     # Update password and advance token version to revoke previous sessions
     user.password_hash = _hash_password(new_password)

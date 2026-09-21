@@ -14,6 +14,7 @@ from sqlalchemy import func
 from ..database import get_db
 from ..models import School, User, Role, Student, Fee, Setting, Subject, SchoolStage, ConfigAuditLog, Program, ActivityAuditLog, MessageLog, AuditLog, VoucherOrder
 from ..routes.auth import get_current_user, get_password_hash
+from ..services.auth import audit_password_hashes, remediate_legacy_sha256_accounts
 from ..ncca_seed import seed_ncca_curriculum
 from ..sms.gateway import sms_engine, mask_phone_number
 from ..services.audit_service import record_audit_event
@@ -2249,5 +2250,48 @@ def update_master_sms_gateway(
     db.commit()
     record_audit_event(db, current_user.id, "GATEWAY_UPDATE", "SMS", "Updated Master SMS Gateways (Hubtel/mNotify)")
     return {"status": "success", "message": "Master SMS gateway credentials saved successfully"}
+
+
+@router.get("/credential-audit")
+def super_admin_credential_audit(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Super Admin endpoint to audit credential security health across the database.
+    Detects accounts stored with legacy SHA-256 digests vs modern bcrypt ($2b$).
+    """
+    require_super_admin(current_user)
+    audit = audit_password_hashes(db)
+    return {
+        "status": "success",
+        "data": audit
+    }
+
+
+@router.post("/remediate-legacy-passwords")
+def super_admin_remediate_legacy_passwords(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """
+    Super Admin endpoint to flag all dormant legacy SHA-256 accounts for mandatory password rotation.
+    Sets is_first_login = True so users are upgraded to bcrypt and forced to choose private credentials upon next login.
+    """
+    require_super_admin(current_user)
+    res = remediate_legacy_sha256_accounts(db)
+    record_audit_event(
+        db,
+        current_user.id,
+        "SECURITY_REMEDIATION",
+        "AUTH",
+        f"Remediated {res['remediated_count']} legacy SHA-256 user accounts for mandatory rotation"
+    )
+    return {
+        "status": "success",
+        "message": f"Successfully flagged {res['remediated_count']} legacy accounts for password rotation.",
+        "data": res
+    }
+
 
 

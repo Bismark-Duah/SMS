@@ -159,3 +159,77 @@ def decode_jwt(token: str, secret: str = None) -> dict:
         
     return payload
 
+
+def is_legacy_sha256_hash(hash_str: str) -> bool:
+    """Returns True if the hash string matches a raw 64-hex SHA-256 digest."""
+    if not hash_str or not isinstance(hash_str, str):
+        return False
+    return len(hash_str) == 64 and not hash_str.startswith("$") and all(c in "0123456789abcdefABCDEF" for c in hash_str)
+
+
+def audit_password_hashes(db) -> dict:
+    """
+    Audits the database for user password hash security posture.
+    Categorizes accounts into modern bcrypt, legacy SHA-256, and other/invalid.
+    """
+    from ..models import User
+    users = db.query(User).all()
+    total_users = len(users)
+    bcrypt_count = 0
+    legacy_sha256_count = 0
+    unrecognized_count = 0
+    legacy_accounts = []
+
+    for u in users:
+        h = u.password_hash or ""
+        if h.startswith(("$2a$", "$2b$", "$2y$")):
+            bcrypt_count += 1
+        elif is_legacy_sha256_hash(h):
+            legacy_sha256_count += 1
+            legacy_accounts.append({
+                "user_id": u.id,
+                "username": u.username,
+                "school_id": getattr(u, "school_id", None),
+                "is_active": getattr(u, "is_active", True),
+                "is_first_login": getattr(u, "is_first_login", False)
+            })
+        else:
+            unrecognized_count += 1
+
+    return {
+        "total_users": total_users,
+        "bcrypt_secure": bcrypt_count,
+        "legacy_sha256": legacy_sha256_count,
+        "unrecognized": unrecognized_count,
+        "legacy_accounts": legacy_accounts
+    }
+
+
+def remediate_legacy_sha256_accounts(db) -> dict:
+    """
+    Flags all accounts with legacy SHA-256 hashes for mandatory password rotation (is_first_login=True).
+    When they log in, JIT migration upgrades them to bcrypt AND forces immediate password rotation.
+    """
+    from ..models import User
+    users = db.query(User).all()
+    remediated_count = 0
+    remediated_users = []
+
+    for u in users:
+        h = u.password_hash or ""
+        if is_legacy_sha256_hash(h):
+            if not getattr(u, "is_first_login", False):
+                u.is_first_login = True
+                remediated_count += 1
+                remediated_users.append(u.username)
+
+    if remediated_count > 0:
+        db.commit()
+
+    return {
+        "status": "success",
+        "remediated_count": remediated_count,
+        "remediated_users": remediated_users
+    }
+
+

@@ -3,10 +3,10 @@
 scripts/migrate_to_postgres.py — SQLite to PostgreSQL Enterprise Migration Utility
 
 Usage:
-  1. Set target POSTGRES_URL environment variable (or pass as argument):
-     export POSTGRES_URL="postgresql://postgres:password@localhost:5432/school_sms_db"
-  2. Run script:
-     python scripts/migrate_to_postgres.py
+   1. Set target POSTGRES_URL environment variable (or pass as argument):
+      export POSTGRES_URL="postgresql://postgres:<password>@localhost:5432/school_sms_db"
+   2. Run script:
+      python scripts/migrate_to_postgres.py
 
 Description:
   Reads all tables & rows from local SQLite database (school.db),
@@ -15,28 +15,33 @@ Description:
 
 import os
 import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.orm import sessionmaker
+from backend.app.database import mask_database_url
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SQLITE_DB_PATH = os.path.join(BASE_DIR, "school.db")
 SQLITE_URL = f"sqlite:///{SQLITE_DB_PATH}"
 
-target_postgres_url = sys.argv[1] if len(sys.argv) > 1 else os.getenv("POSTGRES_URL")
+target_postgres_url = (sys.argv[1] if len(sys.argv) > 1 else (os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL") or "")).strip()
 
-if not target_postgres_url:
-    print("❌ ERROR: Please provide PostgreSQL target URL.")
-    print("Example: python scripts/migrate_to_postgres.py postgresql://postgres:password@localhost:5432/school_sms_db")
+if not target_postgres_url or not target_postgres_url.startswith(("postgresql://", "postgres://")):
+    print("[-] ERROR: Target PostgreSQL database connection string is not configured.")
+    print("    Please pass as argument or set POSTGRES_URL / DATABASE_URL environment variable.")
+    print("    Example: python scripts/migrate_to_postgres.py postgresql://postgres:<password>@localhost:5432/school_sms_db")
     sys.exit(1)
 
+target_postgres_url = target_postgres_url.strip()
 if target_postgres_url.startswith("postgres://"):
     target_postgres_url = target_postgres_url.replace("postgres://", "postgresql://", 1)
 
 print("==================================================")
 print(" SQLITE → POSTGRESQL ENTERPRISE MIGRATION UTILITY ")
 print("==================================================")
-print(f"Source SQLite  : {SQLITE_URL}")
-print(f"Target Postgres: {target_postgres_url}\n")
+print(f"Source SQLite  : {mask_database_url(SQLITE_URL)}")
+print(f"Target Postgres: {mask_database_url(target_postgres_url)}\n")
 
 # Connect to Source SQLite
 sqlite_engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})

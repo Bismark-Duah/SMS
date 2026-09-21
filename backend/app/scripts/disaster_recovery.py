@@ -12,7 +12,7 @@ import argparse
 # Ensure parent path resolution
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
-from backend.app.database import DEFAULT_DB_PATH, is_sqlite, is_postgres
+from backend.app.database import DEFAULT_DB_PATH, is_sqlite, is_postgres, mask_database_url
 from backend.app.services.backup_service import BackupService
 
 
@@ -22,7 +22,7 @@ def cmd_status(args):
     print(" EDUMANAGE 360 — DATABASE DISASTER RECOVERY STATUS")
     print("=" * 60)
     print(f"Database Engine : {'SQLite (Local WAL)' if is_sqlite else 'PostgreSQL'}")
-    print(f"Database Target : {DEFAULT_DB_PATH if is_sqlite else os.getenv('DATABASE_URL', '')[:25] + '...'}")
+    print(f"Database Target : {DEFAULT_DB_PATH if is_sqlite else mask_database_url(os.getenv('DATABASE_URL', ''))}")
 
     if is_sqlite:
         if os.path.exists(DEFAULT_DB_PATH):

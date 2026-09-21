@@ -8,9 +8,12 @@ import sys
 import sqlite3
 from sqlalchemy import create_engine, text, inspect
 from backend.app.models import Base
-from backend.app.database import DEFAULT_DB_PATH
+from backend.app.database import DEFAULT_DB_PATH, mask_database_url
 
-PG_URL = os.getenv("PG_DATABASE_URL", "postgresql://postgres:passwordeduManage360@localhost:5432/sms_db")
+PG_URL = (os.getenv("PG_DATABASE_URL") or os.getenv("DATABASE_URL") or "").strip()
+if PG_URL.startswith("postgres://"):
+    PG_URL = PG_URL.replace("postgres://", "postgresql://", 1)
+
 
 TABLES_ORDERED = [
     "roles",
@@ -69,7 +72,13 @@ TABLES_ORDERED = [
 ]
 
 def migrate():
-    print(f"[*] Starting resilient migration from {DEFAULT_DB_PATH} to {PG_URL}...")
+    if not PG_URL or not PG_URL.startswith("postgresql"):
+        print("[-] ERROR: Target PostgreSQL database connection string is not configured.")
+        print("    Please set PG_DATABASE_URL or DATABASE_URL environment variable.")
+        print("    Example: export DATABASE_URL='postgresql://postgres:<password>@localhost:5432/sms_db'")
+        sys.exit(1)
+
+    print(f"[*] Starting resilient migration from {DEFAULT_DB_PATH} to {mask_database_url(PG_URL)}...")
     if not os.path.exists(DEFAULT_DB_PATH):
         print(f"[!] SQLite file {DEFAULT_DB_PATH} not found. Nothing to migrate.")
         return

@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -20,6 +21,27 @@ if DATABASE_URL.startswith("postgres://"):
 
 is_sqlite = DATABASE_URL.startswith("sqlite")
 is_postgres = DATABASE_URL.startswith("postgresql")
+
+_DEFAULT_URL_SENTINEL = object()
+
+def mask_database_url(url: str = _DEFAULT_URL_SENTINEL) -> str:
+    """
+    Safely sanitizes a database connection string by redacting embedded passwords.
+    Example: 'postgresql://postgres:secret@localhost:5432/sms_db' -> 'postgresql://postgres:***@localhost:5432/sms_db'
+    """
+    if url is _DEFAULT_URL_SENTINEL:
+        target = DATABASE_URL or ""
+    else:
+        target = url or ""
+
+    if not target or not isinstance(target, str):
+        return ""
+    try:
+        from sqlalchemy.engine.url import make_url
+        parsed = make_url(target)
+        return parsed.render_as_string(hide_password=True)
+    except Exception:
+        return re.sub(r"://([^:]+):([^@]+)@", r"://\1:***@", target)
 
 # Pool & connection configuration defaults
 DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "20"))

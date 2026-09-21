@@ -4,7 +4,7 @@ School Management System (SMS) — Offline-First Edition
 
 Usage:
   python scripts/pull_cloud_database.py
-  python scripts/pull_cloud_database.py --url https://sms-nald.onrender.com --user superadmin
+  python scripts/pull_cloud_database.py --url https://your-cloud-domain.com --user superadmin
 
 Description:
   1. Authenticates securely with the live cloud portal (Render).
@@ -26,7 +26,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 sys.path.insert(0, os.path.join(BASE_DIR, "backend"))
 
-DEFAULT_CLOUD_URL = os.getenv("CLOUD_BASE_URL", "https://sms-nald.onrender.com")
+DEFAULT_CLOUD_URL = os.getenv("CLOUD_BASE_URL", "").strip()
 LOCAL_DB_PATH = os.path.join(BASE_DIR, "school.db")
 BACKUPS_DIR = os.path.join(BASE_DIR, "backups")
 
@@ -44,7 +44,15 @@ def pull_cloud_database():
     print("   CLOUD -> LOCAL DATABASE SYNCHRONIZATION TOOL   ")
     print("==================================================")
 
-    cloud_url = input(f"Enter Cloud URL [{DEFAULT_CLOUD_URL}]: ").strip() or DEFAULT_CLOUD_URL
+    if DEFAULT_CLOUD_URL:
+        cloud_url = input(f"Enter Cloud URL [{DEFAULT_CLOUD_URL}]: ").strip() or DEFAULT_CLOUD_URL
+    else:
+        cloud_url = input("Enter Cloud URL (e.g. https://your-school-domain.com): ").strip()
+
+    if not cloud_url:
+        print("ERROR: Cloud URL is required to synchronize database.")
+        sys.exit(1)
+
     cloud_url = cloud_url.rstrip("/")
 
     username = input("Enter Super Admin Username [superadmin]: ").strip() or "superadmin"

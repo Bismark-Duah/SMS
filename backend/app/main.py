@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, FileResponse, JSONResponse
 import os
+from .dependencies import get_current_user
+from .models import User
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -210,8 +212,8 @@ def sanitize_multi_tenant_state():
 @app.get("/api/system/health", tags=["system"])
 def get_system_health(db: Session = Depends(get_db)):
     """
-    Enterprise health & telemetry endpoint for container orchestrators (Render / Azure / AWS).
-    Checks database connection responsiveness, storage engine status, and replication state.
+    Public lightweight health & liveness probe for container orchestrators (Render / Azure / AWS / Docker).
+    Checks database responsiveness without leaking internal pool topology, replica details, or counts.
     """
     telemetry = get_database_telemetry(db)
     is_healthy = telemetry.get("status") == "connected"
@@ -221,18 +223,30 @@ def get_system_health(db: Session = Depends(get_db)):
         status_code=status_code,
         content={
             "status": "healthy" if is_healthy else "degraded",
+            "database": "connected" if is_healthy else "disconnected",
             "environment": os.getenv("ENVIRONMENT", "offline_local"),
-            "database": telemetry,
             "version": "4.2.0"
         }
     )
 
 @app.get("/api/system/telemetry", tags=["system"])
-def get_system_telemetry(db: Session = Depends(get_db)):
+def get_system_telemetry(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     DevOps telemetry and observability endpoint for Prometheus, Grafana, and Super Admin monitors.
+    Strictly requires authenticated Super Administrator access to prevent information disclosure.
     """
-    from .models import School, User, Student
+    user_roles = [r.name.lower() for r in current_user.roles] if current_user.roles else []
+    is_super_admin = "super_admin" in user_roles or getattr(current_user, "is_superadmin", False) or current_user.username.lower() == "superadmin"
+    if not is_super_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Super Admin privileges are required to view system telemetry."
+        )
+
+    from .models import School, User as UserModel, Student
     db_telemetry = get_database_telemetry(db)
     return {
         "status": "success",
@@ -240,7 +254,7 @@ def get_system_telemetry(db: Session = Depends(get_db)):
         "database": db_telemetry,
         "counts": {
             "schools": db.query(School).count(),
-            "users": db.query(User).count(),
+            "users": db.query(UserModel).count(),
             "students": db.query(Student).count()
         }
     }

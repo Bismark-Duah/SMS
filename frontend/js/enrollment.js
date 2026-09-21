@@ -330,9 +330,11 @@ async function handleVoucherLogin(event) {
 
 async function updateElectiveComboOptions(programName, programId) {
   const comboSelect = document.getElementById('adm_elective_combo');
+  const overflowNoticeEl = document.getElementById('adm_overflow_notice');
   if (!comboSelect) return;
 
   comboSelect.innerHTML = '<option value="">-- Loading available elective packages... --</option>';
+  if (overflowNoticeEl) overflowNoticeEl.style.display = 'none';
 
   // 1. Try fetching school-configured dynamic combinations from API
   if (programId) {
@@ -341,12 +343,23 @@ async function updateElectiveComboOptions(programName, programId) {
       if (res.ok) {
         const data = await res.json();
         if (data.combinations && data.combinations.length > 0) {
+          if (data.all_combinations_full && overflowNoticeEl) {
+            overflowNoticeEl.style.display = 'block';
+            overflowNoticeEl.innerHTML = `
+              <div style="background:rgba(245,158,11,0.12); border:1px solid #f59e0b; border-radius:8px; padding:10px 14px; font-size:0.83rem; color:#fef3c7; line-height:1.45;">
+                <strong style="color:#facc15;">ℹ️ Capacity Advisory:</strong> Standard streams for this program have reached classroom capacity. Your placement is secured! You may proceed to submit your admission form; stream and laboratory seat allocation will be confirmed by the Academic Board on reporting day.
+              </div>
+            `;
+          }
+
           comboSelect.innerHTML = `
             <option value="">-- Choose Approved Elective Package --</option>
             ${data.combinations.map(c => {
               const subjList = (c.subjects && c.subjects.length > 0) ? ` (${c.subjects.map(s => s.name).join(' + ')})` : '';
               const streamInfo = c.class_section_name ? ` → (${c.class_section_name})` : '';
-              return `<option value="${c.name}" data-combo-id="${c.id}">${c.name}${subjList}${streamInfo}</option>`;
+              const seatText = c.is_full ? ' [⚠️ FULL - 0 seats]' : ` [${c.remaining_seats} seats remaining]`;
+              const disabledAttr = (c.is_full && !data.all_combinations_full) ? 'disabled' : '';
+              return `<option value="${c.name}" data-combo-id="${c.id}" ${disabledAttr}>${c.name}${subjList}${streamInfo}${seatText}</option>`;
             }).join('')}
           `;
           return;

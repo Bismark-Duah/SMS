@@ -21,7 +21,10 @@ class SubjectEnrollmentService:
                     seen_subject_ids.add(sub.id)
         else:
             # Fallback default core subjects for SHS
-            default_cores = db.query(Subject).filter(Subject.is_core == True).all()
+            q = db.query(Subject).filter(Subject.is_core == True)
+            if getattr(student, "school_id", None):
+                q = q.filter((Subject.school_id == student.school_id) | (Subject.school_id.is_(None)))
+            default_cores = q.all()
             for sub in default_cores:
                 if sub.id not in seen_subject_ids:
                     enrolled_subjects.append(sub)

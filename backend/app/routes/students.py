@@ -8,11 +8,12 @@ import uuid
 from datetime import datetime
 from ..database import get_db
 from ..models import Student, TeacherAssignment, User, ClassSection, Program, Setting, SchoolStage, StudentHealth, School, House, Dormitory
-from ..schemas import StudentCreate
+from ..schemas import StudentCreate, ProgramChangeRequest
 from ..dependencies import get_current_user, get_school_id, get_user_assigned_scope
 from ..services.guardian_service import auto_link_guardian_for_student, auto_link_all_guardians
 from ..services.allocation import allocate_student_house_and_dorm
 from ..services.admission_package import AdmissionPackageService
+from ..services.program_transfer_service import ProgramTransferService
 from ..services.sync_engine import log_sync_change
 from ..services.import_export_service import validate_and_read_csv_upload, sanitize_csv_cell
 
@@ -107,6 +108,10 @@ def _student_dict(s: Student) -> dict:
         "pe_limitations": hp.pe_limitations if hp else None,
         "emergency_contact": hp.emergency_contact if hp else None,
         "doctor_clearance_status": hp.doctor_clearance_status if hp else True,
+        "elective_combination_id": s.elective_combination_id,
+        "elective_combination": s.elective_combination,
+        "program_reassigned_at": str(s.program_reassigned_at) if getattr(s, "program_reassigned_at", None) else None,
+        "program_reassigned_by": getattr(s, "program_reassigned_by", None),
     }
 
 
@@ -772,6 +777,34 @@ def download_student_admission_package_pdf(
             "Content-Disposition": f'attachment; filename="{filename}"'
         }
     )
+
+
+@router.post("/{student_id}/change-program")
+def change_student_program(
+    student_id: int,
+    payload: ProgramChangeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Academic Program Reassignment Endpoint.
+    Authorizes Super Admin, Headmaster, Headmistress, and Head of Academics to reassign
+    a student's academic program, elective combination, and class stream.
+    """
+    school_id = get_school_id(current_user)
+    return ProgramTransferService.reassign_student_program(
+        db=db,
+        student_id=student_id,
+        new_program_id=payload.new_program_id,
+        new_elective_combination_id=payload.new_elective_combination_id,
+        new_class_section_id=payload.new_class_section_id,
+        approving_officer=payload.approving_officer,
+        reason=payload.reason,
+        force_override=bool(payload.force_override),
+        current_user=current_user,
+        school_id=school_id
+    )
+
 
 
 

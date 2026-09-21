@@ -812,10 +812,9 @@
 
     document.body.prepend(sidebar);
 
-    // Auto-inject mobile hamburger button into .topbar if present
-    const topbar = document.querySelector('.topbar');
+    // Auto-inject mobile hamburger button into .topbar or .sa-header if present
+    const topbar = document.querySelector('.topbar') || document.querySelector('.sa-header');
     if (topbar && !topbar.querySelector('.mobile-hamburger-btn')) {
-      const topbarFirstChild = topbar.firstElementChild;
       const hamburger = document.createElement('button');
       hamburger.type = 'button';
       hamburger.className = 'mobile-hamburger-btn';
@@ -826,8 +825,11 @@
         window.toggleMobileSidebar();
       };
 
-      if (topbarFirstChild) {
-        topbarFirstChild.prepend(hamburger);
+      const brandRow = topbar.querySelector('.sa-brand-title')?.parentElement;
+      if (brandRow) {
+        brandRow.prepend(hamburger);
+      } else if (topbar.firstElementChild) {
+        topbar.firstElementChild.prepend(hamburger);
       } else {
         topbar.prepend(hamburger);
       }

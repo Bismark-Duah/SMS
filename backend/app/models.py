@@ -378,6 +378,8 @@ class Student(Base):
     is_active = Column(Boolean, default=True)
     status = Column(String, default="ACTIVE", server_default="ACTIVE")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    program_reassigned_at = Column(DateTime, nullable=True)
+    program_reassigned_by = Column(String, nullable=True)
     house_id = Column(Integer, ForeignKey("houses.id", ondelete="SET NULL"), nullable=True)
     dormitory_id = Column(Integer, ForeignKey("dormitories.id", ondelete="SET NULL"), nullable=True)
     school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=1)

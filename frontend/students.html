@@ -483,6 +483,106 @@
       </div>
     </div>
 
+    <!-- ── MODAL: ACADEMIC PROGRAM REASSIGNMENT (Enterprise Guardrails) ────────── -->
+    <div class="modal" id="modalChangeProgram" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); justify-content:center; align-items:center; z-index:10001; padding:16px; box-sizing:border-box;">
+      <div style="background:var(--card-bg, #1e293b); border:1px solid rgba(255,255,255,0.15); border-radius:14px; max-width:540px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.6); box-sizing:border-box;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color, #334155); padding-bottom:12px; margin-bottom:16px;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem; color:#38bdf8; display:flex; align-items:center; gap:8px;">
+              <span>🔄</span> Academic Program Reassignment
+            </h3>
+            <div style="font-size:0.75rem; color:#94a3b8; margin-top:3px;">
+              Authorized Academic Control &bull; Head of Academics / Headmaster
+            </div>
+          </div>
+          <button type="button" class="btn" onclick="closeChangeProgramModal()" style="padding:2px 8px; font-size:0.85rem;">✕</button>
+        </div>
+
+        <!-- Current Student Placement Dossier -->
+        <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(56,189,248,0.25); border-radius:10px; padding:12px 14px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+            <div>
+              <div style="font-weight:800; font-size:1rem; color:#fff;" id="cp_student_name">—</div>
+              <div style="font-size:0.78rem; color:#94a3b8;">
+                ID: <span id="cp_student_code" style="font-family:monospace; color:#38bdf8;">—</span> &bull; 
+                BECE Index: <span id="cp_bece_index" style="font-family:monospace; color:#cbd5e1;">—</span>
+              </div>
+            </div>
+            <span id="cp_aggregate_badge" style="background:rgba(234,179,8,0.15); color:#facc15; border:1px solid rgba(234,179,8,0.3); padding:2px 8px; border-radius:12px; font-size:0.74rem; font-weight:700;">
+              Agg: —
+            </span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.78rem; border-top:1px dashed rgba(255,255,255,0.1); padding-top:8px; margin-top:6px;">
+            <div><span style="opacity:0.7;">Current Program:</span> <strong id="cp_current_prog" style="color:#f87171;">—</strong></div>
+            <div><span style="opacity:0.7;">Current Stream:</span> <strong id="cp_current_class" style="color:#cbd5e1;">—</strong></div>
+          </div>
+        </div>
+
+        <form id="formChangeProgram" onsubmit="handleConfirmProgramChange(event)">
+          <input type="hidden" id="cp_student_id" value="" />
+
+          <!-- Target Program Dropdown -->
+          <div class="form-group" style="margin-bottom:12px;">
+            <label for="cp_target_program" style="font-weight:700; font-size:0.85rem; color:#e2e8f0;">Target Academic Program *</label>
+            <select id="cp_target_program" required onchange="onTargetProgramSelected()" style="width:100%; padding:9px; border-radius:8px; background:rgba(2,6,23,0.8); color:#fff; border:1px solid #6366f1;">
+              <option value="">-- Choose Target Program --</option>
+            </select>
+          </div>
+
+          <!-- Target Elective Package Dropdown -->
+          <div class="form-group" style="margin-bottom:12px;">
+            <label for="cp_target_combo" style="font-weight:700; font-size:0.85rem; color:#e2e8f0;">Target Elective Package & Subjects *</label>
+            <select id="cp_target_combo" required onchange="onTargetComboChanged()" style="width:100%; padding:9px; border-radius:8px; background:rgba(2,6,23,0.8); color:#fff; border:1px solid #6366f1;">
+              <option value="">-- Select Target Program First --</option>
+            </select>
+            <div id="cp_combo_details" style="font-size:0.76rem; color:#94a3b8; margin-top:4px;"></div>
+          </div>
+
+          <!-- Target Class Section -->
+          <div class="form-group" style="margin-bottom:12px;">
+            <label for="cp_target_class" style="font-weight:700; font-size:0.85rem; color:#e2e8f0;">Assigned Class Section (Stream)</label>
+            <select id="cp_target_class" style="width:100%; padding:9px; border-radius:8px; background:rgba(2,6,23,0.8); color:#fff; border:1px solid var(--border-color, #334155);">
+              <option value="">Auto-Assign Stream</option>
+            </select>
+            <span style="font-size:0.72rem; color:#64748b; margin-top:2px; display:block;">Automatically maps to the matching Form 1 stream or elective cohort.</span>
+          </div>
+
+          <!-- Approving Authority & Justification -->
+          <div class="form-grid" style="margin-bottom:12px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="cp_approving_officer" style="font-weight:700; font-size:0.82rem;">Approving Officer *</label>
+              <input type="text" id="cp_approving_officer" required placeholder="e.g. Mr. K. Mensah (Head of Academics)" style="padding:8px; font-size:0.85rem;" />
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="cp_reason" style="font-weight:700; font-size:0.82rem;">Reason / Appeal Note *</label>
+              <input type="text" id="cp_reason" required placeholder="e.g. Parental appeal on reporting day" style="padding:8px; font-size:0.85rem;" />
+            </div>
+          </div>
+
+          <!-- Force Override Box (Visible only when combination is full) -->
+          <div id="cp_override_box" style="display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:10px 12px; margin-bottom:14px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.82rem; color:#fca5a5; font-weight:700; margin:0;">
+              <input type="checkbox" id="cp_force_override" style="width:16px; height:16px; margin:0;" />
+              <span>Authorize Capacity Override (Headmaster / Academic Board Exception)</span>
+            </label>
+            <div style="font-size:0.72rem; color:#f87171; margin-top:4px;">
+              The selected package has reached standard capacity. Check this box to authorize seat expansion.
+            </div>
+          </div>
+
+          <div id="cp_status" style="font-size:0.84rem; font-weight:600; min-height:1.2rem; margin-bottom:14px;"></div>
+
+          <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+            <button type="button" class="btn" onclick="closeChangeProgramModal()">Cancel</button>
+            <button type="button" id="btnCpPrintPackage" class="btn" style="display:none; background:#0284c7; color:#fff; border-color:#0369a1; font-weight:700;" onclick="printRevisedPackageFromModal()">📄 Print Revised Package</button>
+            <button type="submit" id="btnCpConfirm" class="btn primary" style="background:linear-gradient(135deg, #6366f1, #06b6d4); font-weight:700; border:none; padding:9px 20px;">
+              ⚡ Confirm & Reassign Program
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script src="js/guard.js"></script>
     <script src="js/data-tools.js"></script>
     <script src="js/students.js"></script>

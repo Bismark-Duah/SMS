@@ -12,6 +12,7 @@ from ..models import Student, StudentGuardian, StudentHealth, Program, House, Cl
 from ..schemas import CSSPSEnrollmentCreate
 from ..services.allocation import allocate_student_house_and_dorm
 from ..services.admission_package import AdmissionPackageService
+from ..services.program_transfer_service import ProgramTransferService
 from ..dependencies import get_current_user, get_school_id
 from ..services.import_export_service import validate_and_read_csv_upload
 
@@ -585,6 +586,19 @@ class CandidateAdmissionForm(BaseModel):
     emergency_contact: Optional[str] = None
 
 
+@router.get("/program-capacities")
+def get_cssps_program_capacities(
+    school_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Secretariat & Administrative query for live program vacancies and stream capacities.
+    """
+    effective_school_id = get_school_id(current_user) or school_id
+    return ProgramTransferService.get_program_capacities(db, effective_school_id)
+
+
 @router.get("/program-options/{program_id}")
 def get_program_enrollment_options(
     program_id: int,
@@ -592,7 +606,7 @@ def get_program_enrollment_options(
 ):
     """
     Public endpoint: Retrieve active Elective Packages configured by the school
-    for the candidate's placed Academic Program.
+    for the candidate's placed Academic Program with real-time seat availability.
     """
     prog = db.query(Program).filter(Program.id == program_id).first()
     if not prog:
@@ -603,23 +617,37 @@ def get_program_enrollment_options(
         ElectiveCombination.is_active == True
     ).all()
 
+    combo_list = []
+    for c in combos:
+        enrolled = db.query(Student).filter(
+            Student.elective_combination_id == c.id,
+            Student.is_active == True
+        ).count()
+        cap = c.capacity or 50
+        remaining = max(0, cap - enrolled)
+        combo_list.append({
+            "id": c.id,
+            "name": c.name,
+            "code": c.code,
+            "class_section_id": c.class_section_id,
+            "class_section_name": c.class_section.name if c.class_section else None,
+            "capacity": cap,
+            "enrolled_count": enrolled,
+            "remaining_seats": remaining,
+            "is_full": enrolled >= cap,
+            "subjects": [{"id": s.id, "name": s.name, "code": s.code} for s in c.subjects]
+        })
+
+    all_full = len(combo_list) > 0 and all(c["is_full"] for c in combo_list)
+
     return {
         "program_id": prog.id,
         "program_name": prog.name,
         "program_code": prog.code,
-        "combinations": [
-            {
-                "id": c.id,
-                "name": c.name,
-                "code": c.code,
-                "class_section_id": c.class_section_id,
-                "class_section_name": c.class_section.name if c.class_section else None,
-                "capacity": c.capacity,
-                "subjects": [{"id": s.id, "name": s.name, "code": s.code} for s in c.subjects]
-            }
-            for c in combos
-        ]
+        "all_combinations_full": all_full,
+        "combinations": combo_list
     }
+
 
 
 @router.post("/complete-form")
@@ -715,7 +743,32 @@ def complete_admission_form(
             voucher.used_at = datetime.now()
             voucher.bece_index_number = student.bece_index_number
 
-    student.enrollment_status = "FORM_COMPLETED"
+    # Check if all combinations in the program have reached capacity
+    is_overflow = False
+    if student.program_id:
+        active_combos = db.query(ElectiveCombination).filter(
+            ElectiveCombination.program_id == student.program_id,
+            ElectiveCombination.is_active == True
+        ).all()
+        if active_combos:
+            all_full = True
+            for c in active_combos:
+                c_enrolled = db.query(Student).filter(
+                    Student.elective_combination_id == c.id,
+                    Student.is_active == True,
+                    Student.id != student.id
+                ).count()
+                if c_enrolled < (c.capacity or 50):
+                    all_full = False
+                    break
+            if all_full:
+                is_overflow = True
+
+    if is_overflow:
+        student.enrollment_status = "CAPACITY_OVERFLOW_REVIEW"
+    else:
+        student.enrollment_status = "FORM_COMPLETED"
+
     db.commit()
 
     # 5. Auto-Enroll in Track & Elective Subject Scoresheets for current term
@@ -727,13 +780,17 @@ def complete_admission_form(
 
     return {
         "success": True,
-        "message": "Admission Form completed successfully!",
+        "message": (
+            "Admission Form completed successfully!" if not is_overflow
+            else "Admission Form recorded! Standard stream capacity reached; placement confirmed and stream allocation is under academic board review upon reporting."
+        ),
         "student_id": student.id,
         "full_name": student.full_name,
-        "class_name": student.class_section.name if student.class_section else "Unassigned",
+        "class_name": student.class_section.name if student.class_section else "Form 1 (Provisional)",
         "house_name": student.house.name if student.house else "Day Student",
         "dormitory_name": student.dormitory.name if student.dormitory else "N/A",
-        "enrollment_status": student.enrollment_status
+        "enrollment_status": student.enrollment_status,
+        "overflow_review": is_overflow
     }
 
 

@@ -399,7 +399,9 @@ def run_migrations():
             ("hobbies_talents", "TEXT"),
             ("awards", "TEXT"),
             ("elective_combination", "VARCHAR"),
-            ("elective_combination_id", "INTEGER REFERENCES elective_combinations(id) ON DELETE SET NULL")
+            ("elective_combination_id", "INTEGER REFERENCES elective_combinations(id) ON DELETE SET NULL"),
+            ("program_reassigned_at", "DATETIME" if is_sqlite else "TIMESTAMP"),
+            ("program_reassigned_by", "VARCHAR")
         ],
         "programs": [
             ("code", "VARCHAR"),

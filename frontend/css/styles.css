@@ -1218,7 +1218,8 @@ thead th {
   }
 
   /* Main Application Content Area */
-  main.page {
+  main.page,
+  main.sa-container {
     width: 100% !important;
     max-width: 100% !important;
     padding: 16px 14px 40px !important;
@@ -1226,7 +1227,9 @@ thead th {
   }
 
   .app-sidebar + main.page,
-  .app-sidebar.collapsed + main.page {
+  .app-sidebar.collapsed + main.page,
+  .app-sidebar + main.sa-container,
+  .app-sidebar.collapsed + main.sa-container {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;

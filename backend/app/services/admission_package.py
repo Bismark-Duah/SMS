@@ -149,6 +149,16 @@ class AdmissionPackageService:
                 return "<p style='color:#666; font-style:italic;'>No specific items required for this section.</p>"
             return "<ul style='margin:4px 0 8px 18px; padding:0;'>" + "".join([f"<li style='margin-bottom:3px;'>{it}</li>" for it in items]) + "</ul>"
 
+        reassigned_notice = ""
+        if getattr(student, "program_reassigned_at", None):
+            r_date = student.program_reassigned_at.strftime("%d %b %Y")
+            r_by = student.program_reassigned_by or "Academic Board"
+            reassigned_notice = f"""
+            <div style="background:#fef3c7; border:1px solid #f59e0b; color:#92400e; padding:5px 8px; border-radius:4px; margin-bottom:8px; font-size:8.5px; font-weight:bold; text-align:center;">
+                &#9888; REVISED ADMISSION DOCKET &#8226; Program Reassigned and Officially Approved by {r_by} on {r_date}.
+            </div>
+            """
+
         html_content = f"""
         <html>
         <head>
@@ -220,6 +230,7 @@ class AdmissionPackageService:
         <body>
 
             <!-- ── PAGE 1: OFFICIAL ADMISSION LETTER ──────────────────────────── -->
+            {reassigned_notice}
             <table class="header-table">
                 <tr>
                     <td style="text-align:center;">

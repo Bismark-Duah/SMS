@@ -515,8 +515,8 @@ function renderCurrentPage() {
         <td>${statusChip(!isInactive)}</td>
         <td>
           ${showTranscripts ? `<a class="btn" style="padding:4px 8px; font-size:0.8rem; background:#4338ca; border-color:#3730a3; color:#ffffff; text-decoration:none; margin-right:4px; display:inline-block;" href="report-card.html?mode=transcript&student_id=${s.id}" target="_blank">📜 Transcript</a>` : ''}
-          <button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#059669; border-color:#047857; color:#ffffff; margin-right:4px;" onclick="openIdCardModal(${s.id})">🪪 ID Card</button>
           ${!isBasicMode ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#0284c7; border-color:#0369a1; color:#ffffff; margin-right:4px;" onclick="downloadAdmissionPackage(${s.id})" title="Download Official Admission Letter & Prospectus PDF">📄 Prospectus</button>` : ''}
+          ${(!isBasicMode && canEdit) ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem; background:#4f46e5; border-color:#4338ca; color:#ffffff; margin-right:4px;" onclick="openChangeProgramModal(${s.id})" title="Reassign Academic Program & Class Stream">🔄 Program</button>` : ''}
           ${canEdit ? `<button class="btn" style="padding:4px 8px; font-size:0.8rem;" onclick="openEditForm(${s.id})">✏ Edit</button>` : ''}
           ${canDeactivate && !isInactive ? `<button class="btn danger" style="padding:4px 8px; font-size:0.8rem; margin-left:4px;" onclick="deactivateStudent(${s.id})">🗑 Deactivate</button>` : ''}
         </td>
@@ -1102,3 +1102,286 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchEl = document.getElementById('studentSearch');
   if (searchEl) searchEl.value = '';
 });
+
+// ── Academic Program Reassignment Modal Logic (Enterprise Standard) ──────────
+let currentReassignmentStudentId = null;
+let cachedProgramCapacities = [];
+
+window.openChangeProgramModal = async function(studentId) {
+  currentReassignmentStudentId = studentId;
+  const student = allStudents.find(s => s.id === studentId);
+  if (!student) return;
+
+  const modal = document.getElementById('modalChangeProgram');
+  if (!modal) return;
+
+  // Populate Student Identity Header
+  document.getElementById('cp_student_id').value = student.id;
+  document.getElementById('cp_student_name').textContent = student.full_name || 'N/A';
+  document.getElementById('cp_student_code').textContent = student.student_code || `STU-${student.id}`;
+  document.getElementById('cp_bece_index').textContent = student.bece_index_number || 'N/A';
+  
+  const aggBadge = document.getElementById('cp_aggregate_badge');
+  if (aggBadge) {
+    aggBadge.textContent = student.bece_aggregate ? `Agg: ${student.bece_aggregate}` : 'Agg: N/A';
+  }
+
+  document.getElementById('cp_current_prog').textContent = student.program_name || 'Unassigned';
+  document.getElementById('cp_current_class').textContent = student.class_name || 'Unassigned';
+
+  // Reset fields
+  const statusEl = document.getElementById('cp_status');
+  if (statusEl) {
+    statusEl.textContent = '';
+    statusEl.style.color = '';
+  }
+
+  const overrideBox = document.getElementById('cp_override_box');
+  if (overrideBox) overrideBox.style.display = 'none';
+
+  const forceChk = document.getElementById('cp_force_override');
+  if (forceChk) forceChk.checked = false;
+
+  const printBtn = document.getElementById('btnCpPrintPackage');
+  if (printBtn) printBtn.style.display = 'none';
+
+  const confirmBtn = document.getElementById('btnCpConfirm');
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = '⚡ Confirm & Reassign Program';
+  }
+
+  const officerInput = document.getElementById('cp_approving_officer');
+  if (officerInput) {
+    const userDisplay = localStorage.getItem('user_display_name') || localStorage.getItem('username') || 'Head of Academics';
+    officerInput.value = userDisplay;
+  }
+
+  const reasonInput = document.getElementById('cp_reason');
+  if (reasonInput) {
+    reasonInput.value = 'Academic counseling & parental appeal on reporting day';
+  }
+
+  // Load Programs with Live Capacities
+  await loadTargetProgramsForModal(student.program_id);
+
+  modal.style.display = 'flex';
+};
+
+window.closeChangeProgramModal = function() {
+  const modal = document.getElementById('modalChangeProgram');
+  if (modal) modal.style.display = 'none';
+  currentReassignmentStudentId = null;
+};
+
+async function loadTargetProgramsForModal(currentProgramId) {
+  const progSelect = document.getElementById('cp_target_program');
+  if (!progSelect) return;
+
+  progSelect.innerHTML = '<option value="">Loading available programs & quotas...</option>';
+
+  try {
+    const res = await fetch(`${API_BASE}/cssps/program-capacities`, { headers: getHeaders() });
+    if (res.ok) {
+      cachedProgramCapacities = await res.json();
+    } else {
+      // Fallback to basic programs endpoint
+      const pRes = await fetch(`${API_BASE}/programs/`, { headers: getHeaders() });
+      if (pRes.ok) {
+        const rawProgs = await pRes.json();
+        cachedProgramCapacities = rawProgs.map(p => ({
+          program_id: p.id,
+          program_name: p.name,
+          form1_enrolled: 0,
+          combinations: []
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load program capacities:', err);
+    cachedProgramCapacities = [];
+  }
+
+  if (!cachedProgramCapacities || cachedProgramCapacities.length === 0) {
+    progSelect.innerHTML = '<option value="">-- No Active Programs Found --</option>';
+    return;
+  }
+
+  progSelect.innerHTML = `
+    <option value="">-- Choose Target Academic Program --</option>
+    ${cachedProgramCapacities.map(p => {
+      const isCurrent = (p.program_id === currentProgramId);
+      const label = `${p.program_name}${isCurrent ? ' (Current)' : ''} [${p.form1_enrolled || 0} enrolled]`;
+      return `<option value="${p.program_id}" ${isCurrent ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+    }).join('')}
+  `;
+
+  await onTargetProgramSelected();
+}
+
+window.onTargetProgramSelected = async function() {
+  const progSelect = document.getElementById('cp_target_program');
+  const comboSelect = document.getElementById('cp_target_combo');
+  const classSelect = document.getElementById('cp_target_class');
+  const comboDetails = document.getElementById('cp_combo_details');
+  if (!progSelect || !comboSelect) return;
+
+  const targetProgId = progSelect.value ? parseInt(progSelect.value) : null;
+  if (!targetProgId) {
+    comboSelect.innerHTML = '<option value="">-- Select Target Program First --</option>';
+    if (classSelect) classSelect.innerHTML = '<option value="">Auto-Assign Stream</option>';
+    if (comboDetails) comboDetails.textContent = '';
+    return;
+  }
+
+  comboSelect.innerHTML = '<option value="">Loading elective packages...</option>';
+
+  try {
+    const res = await fetch(`${API_BASE}/cssps/program-options/${targetProgId}`);
+    if (!res.ok) throw new Error('Could not fetch elective options');
+    const data = await res.json();
+
+    const combos = data.combinations || [];
+    if (combos.length === 0) {
+      comboSelect.innerHTML = '<option value="">Standard Core Track (No custom electives)</option>';
+      if (comboDetails) comboDetails.textContent = '';
+    } else {
+      comboSelect.innerHTML = `
+        <option value="">-- Select Elective Subject Package --</option>
+        ${combos.map(c => {
+          const seatLabel = c.is_full ? '⚠️ FULL (0 seats)' : `(${c.remaining_seats} seats remaining)`;
+          return `<option value="${c.id}" data-is-full="${c.is_full}" data-class-id="${c.class_section_id || ''}" data-class-name="${escapeHtml(c.class_section_name || '')}">
+            ${escapeHtml(c.name)} — ${seatLabel}
+          </option>`;
+        }).join('')}
+      `;
+    }
+
+    // Populate Available Form 1 Class Sections for this Program
+    if (classSelect) {
+      const cRes = await fetch(`${API_BASE}/classes/?program_id=${targetProgId}`, { headers: getHeaders() });
+      if (cRes.ok) {
+        const sections = await cRes.json();
+        const f1Sections = sections.filter(sec => (sec.form === 1 || !sec.form || sec.name.toLowerCase().includes('1')));
+        const activeSecs = f1Sections.length > 0 ? f1Sections : sections;
+
+        classSelect.innerHTML = `
+          <option value="">⚡ Auto-Assign Stream (Recommended)</option>
+          ${activeSecs.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}
+        `;
+      }
+    }
+
+    onTargetComboChanged();
+
+  } catch (err) {
+    comboSelect.innerHTML = '<option value="">Standard Package (Default)</option>';
+  }
+};
+
+window.onTargetComboChanged = function() {
+  const comboSelect = document.getElementById('cp_target_combo');
+  const classSelect = document.getElementById('cp_target_class');
+  const overrideBox = document.getElementById('cp_override_box');
+  const comboDetails = document.getElementById('cp_combo_details');
+  if (!comboSelect) return;
+
+  const selectedOpt = comboSelect.options[comboSelect.selectedIndex];
+  if (!selectedOpt || !selectedOpt.value) {
+    if (overrideBox) overrideBox.style.display = 'none';
+    if (comboDetails) comboDetails.textContent = '';
+    return;
+  }
+
+  const isFull = selectedOpt.getAttribute('data-is-full') === 'true';
+  const autoClassId = selectedOpt.getAttribute('data-class-id');
+
+  if (overrideBox) {
+    overrideBox.style.display = isFull ? 'block' : 'none';
+  }
+
+  // Pre-select mapped stream if present
+  if (autoClassId && classSelect && autoClassId !== '') {
+    classSelect.value = autoClassId;
+  }
+};
+
+window.handleConfirmProgramChange = async function(event) {
+  event.preventDefault();
+  const studentId = currentReassignmentStudentId;
+  if (!studentId) return;
+
+  const progSelect = document.getElementById('cp_target_program');
+  const comboSelect = document.getElementById('cp_target_combo');
+  const classSelect = document.getElementById('cp_target_class');
+  const officerInput = document.getElementById('cp_approving_officer');
+  const reasonInput = document.getElementById('cp_reason');
+  const forceChk = document.getElementById('cp_force_override');
+  const statusEl = document.getElementById('cp_status');
+  const confirmBtn = document.getElementById('btnCpConfirm');
+  const printBtn = document.getElementById('btnCpPrintPackage');
+
+  const new_program_id = progSelect ? parseInt(progSelect.value) : null;
+  const new_elective_combination_id = (comboSelect && comboSelect.value) ? parseInt(comboSelect.value) : null;
+  const new_class_section_id = (classSelect && classSelect.value) ? parseInt(classSelect.value) : null;
+  const approving_officer = officerInput ? officerInput.value.trim() : '';
+  const reason = reasonInput ? reasonInput.value.trim() : '';
+  const force_override = forceChk ? forceChk.checked : false;
+
+  if (!new_program_id) {
+    alert('Please choose a target academic program.');
+    return;
+  }
+
+  statusEl.style.color = '#38bdf8';
+  statusEl.textContent = 'Executing atomic program reassignment & class realignment...';
+  if (confirmBtn) confirmBtn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/students/${studentId}/change-program`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        new_program_id,
+        new_elective_combination_id,
+        new_class_section_id,
+        approving_officer,
+        reason,
+        force_override
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      // If error is capacity limit, surface override prompt
+      if (res.status === 400 && data.detail && data.detail.includes('capacity')) {
+        const overrideBox = document.getElementById('cp_override_box');
+        if (overrideBox) overrideBox.style.display = 'block';
+        throw new Error(`${data.detail} (Please authorize capacity override if approved by Headmaster).`);
+      }
+      throw new Error(data.detail || 'Failed to reassign program.');
+    }
+
+    statusEl.style.color = '#4ade80';
+    statusEl.textContent = `✔ ${data.message}`;
+
+    if (printBtn) {
+      printBtn.style.display = 'inline-block';
+    }
+
+    // Refresh main student roster in background
+    loadStudents();
+
+  } catch (err) {
+    statusEl.style.color = '#f87171';
+    statusEl.textContent = `❌ ${err.message}`;
+    if (confirmBtn) confirmBtn.disabled = false;
+  }
+};
+
+window.printRevisedPackageFromModal = function() {
+  if (currentReassignmentStudentId) {
+    window.downloadAdmissionPackage(currentReassignmentStudentId);
+  }
+};
+

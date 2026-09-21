@@ -281,6 +281,14 @@ class StudentCreate(BaseModel):
     emergency_contact: Optional[str] = None
     doctor_clearance_status: Optional[bool] = True
 
+class ProgramChangeRequest(BaseModel):
+    new_program_id: int
+    new_elective_combination_id: Optional[int] = None
+    new_class_section_id: Optional[int] = None
+    reason: Optional[str] = "Academic counseling & parental appeal"
+    approving_officer: Optional[str] = None
+    force_override: Optional[bool] = False
+
 class ScoreCreate(BaseModel):
     student_id: int
     subject_id: int

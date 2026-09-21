@@ -162,24 +162,24 @@
       const isOnline = navigator.onLine;
 
       if (isSyncing) {
-        badge.innerHTML = `<span style="display:inline-block; animation:spin 1s linear infinite;">🔄</span> <span>Syncing...</span>`;
+        badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;flex-shrink:0;"><path d="M23 4v6h-6M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> <span>Syncing...</span>`;
         badge.style.background = 'rgba(59, 130, 246, 0.15)';
         badge.style.color = '#3b82f6';
         badge.style.border = '1px solid rgba(59, 130, 246, 0.3)';
       } else if (!isOnline) {
-        badge.innerHTML = `<span>🟡</span> <span>Offline (Local)</span>`;
+        badge.innerHTML = `<svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" style="flex-shrink:0;"><circle cx="4" cy="4" r="3.5"></circle></svg> <span>Offline (Local)</span>`;
         badge.style.background = 'rgba(245, 158, 11, 0.15)';
         badge.style.color = '#f59e0b';
         badge.style.border = '1px solid rgba(245, 158, 11, 0.3)';
         badge.title = 'Offline mode active. All records are stored locally.';
       } else if (this.status.pendingCount > 0) {
-        badge.innerHTML = `<span>🔄</span> <span>Pending (${this.status.pendingCount})</span>`;
+        badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> <span>Pending (${this.status.pendingCount})</span>`;
         badge.style.background = 'rgba(234, 88, 12, 0.15)';
         badge.style.color = '#ea580c';
         badge.style.border = '1px solid rgba(234, 88, 12, 0.3)';
         badge.title = `${this.status.pendingCount} local changes pending cloud sync. Click to push now.`;
       } else {
-        badge.innerHTML = `<span>🟢</span> <span>Cloud Synced</span>`;
+        badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>Cloud Synced</span>`;
         badge.style.background = 'rgba(16, 185, 129, 0.15)';
         badge.style.color = '#10b981';
         badge.style.border = '1px solid rgba(16, 185, 129, 0.3)';

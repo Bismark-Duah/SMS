@@ -81,25 +81,28 @@ window.applyBranding = async function(overrideSettings) {
             modeBadge.style.display = 'none';
           } else {
             const rawMode = (s.school_mode || sessionStorage.getItem('school_mode') || localStorage.getItem('school_mode') || 'COMBINED').toUpperCase();
-            let badgeText = '🌐 Combined';
+            let badgeSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
+            let badgeText = 'Combined';
             let badgeBg = 'rgba(99, 102, 241, 0.15)';
             let badgeColor = '#818cf8';
             let badgeBorder = 'rgba(99, 102, 241, 0.3)';
 
             if (rawMode === 'BASIC_ONLY') {
-              badgeText = '🎯 Basic School (KG–JHS)';
+              badgeSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>';
+              badgeText = 'Basic School (KG–JHS)';
               badgeBg = 'rgba(16, 185, 129, 0.15)';
               badgeColor = '#34d399';
               badgeBorder = 'rgba(16, 185, 129, 0.3)';
             } else if (rawMode === 'SHS_ONLY') {
-              badgeText = '🏛️ SHS Profile (SHS 1–3)';
+              badgeSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 21h18M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7M4 21V10m16 11V10M12 3L2 7h20L12 3z"></path></svg>';
+              badgeText = 'SHS Profile (SHS 1–3)';
               badgeBg = 'rgba(59, 130, 246, 0.15)';
               badgeColor = '#60a5fa';
               badgeBorder = 'rgba(59, 130, 246, 0.3)';
             }
 
-            modeBadge.textContent = badgeText;
-            modeBadge.style.cssText = `display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:999px; background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; margin-left:8px; vertical-align:middle;`;
+            modeBadge.innerHTML = `${badgeSvg}<span>${badgeText}</span>`;
+            modeBadge.style.cssText = `display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:999px; background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; margin-left:8px; vertical-align:middle;`;
           }
         }
       }
@@ -186,17 +189,17 @@ window.applyBranding = async function(overrideSettings) {
         let displayText = '';
         if (mode === 'BASIC_ONLY') {
           const termName = rawPeriod ? rawPeriod.replace(/Semester/i, 'Term') : 'Term 1';
-          displayText = `📅 ${yearLabel} ${termName ? '· ' + termName : ''}`.trim();
+          displayText = `${yearLabel} ${termName ? '· ' + termName : ''}`.trim();
         } else if (mode === 'SHS_ONLY') {
           const semName = rawPeriod ? rawPeriod.replace(/Term/i, 'Semester') : 'Semester 1';
-          displayText = `📅 ${yearLabel} ${semName ? '· ' + semName : ''}`.trim();
+          displayText = `${yearLabel} ${semName ? '· ' + semName : ''}`.trim();
         } else {
           const termName = rawPeriod.replace(/Semester/i, 'Term');
           const semName = rawPeriod.replace(/Term/i, 'Semester');
-          displayText = `📅 ${yearLabel} · ${termName} | ${semName}`.trim();
+          displayText = `${yearLabel} · ${termName} | ${semName}`.trim();
         }
 
-        periodBadge.textContent = displayText;
+        periodBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><span>${displayText}</span>`;
         const firstDiv = topbar.firstElementChild;
         if (firstDiv) {
           firstDiv.appendChild(periodBadge);

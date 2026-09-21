@@ -1094,7 +1094,7 @@
     bellBtn.id = 'notifBellBtn';
     bellBtn.title = 'Notifications';
     bellBtn.setAttribute('aria-label', 'Notifications');
-    bellBtn.innerHTML = '🔔';
+    bellBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:auto;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>';
 
     controlsDiv.appendChild(bellBtn);
     topbar.appendChild(controlsDiv);
@@ -1300,34 +1300,34 @@
 
   // ── 7. Breadcrumb Navigation ─────────────────────────────────────────────────
   const BREADCRUMB_MAP = {
-    'dashboard.html':        { label: 'Dashboard',              icon: '📊', group: null },
-    'students.html':         { label: 'Students',               icon: '👥', group: { label: 'Academic',      href: 'dashboard.html' } },
-    'classes.html':          { label: 'Classes',                icon: '🏫', group: { label: 'Academic',      href: 'dashboard.html' } },
-    'subjects.html':         { label: 'Subjects',               icon: '📚', group: { label: 'Academic',      href: 'dashboard.html' } },
-    'programs.html':         { label: 'Programs',               icon: '🎯', group: { label: 'Academic',      href: 'dashboard.html' } },
-    'departments.html':      { label: 'Departments',            icon: '🏢', group: { label: 'Academic',      href: 'dashboard.html' } },
-    'assignments.html':      { label: 'Teacher Assignments',    icon: '👩‍🏫', group: { label: 'Academic',      href: 'dashboard.html' } },
-    'timetable.html':        { label: 'Timetable',              icon: '📅', group: { label: 'Academic',      href: 'dashboard.html' } },
-    'attendance.html':       { label: 'Attendance',             icon: '📋', group: { label: 'Student Life',  href: 'dashboard.html' } },
-    'houses.html':           { label: 'Houses & Dorms',         icon: '🏠', group: { label: 'Student Life',  href: 'dashboard.html' } },
-    'exeat.html':            { label: 'Exeat Management',       icon: '🎟️', group: { label: 'Student Life',  href: 'dashboard.html' } },
-    'discipline.html':       { label: 'Discipline Records',     icon: '⚖️', group: { label: 'Student Life',  href: 'dashboard.html' } },
-    'promotions.html':       { label: 'Promotions',             icon: '🎓', group: { label: 'Student Life',  href: 'dashboard.html' } },
-    'clearance.html':        { label: 'Final Year Clearance',   icon: '🎓', group: { label: 'Student Life',  href: 'dashboard.html' } },
-    'cumulative-record.html':{ label: 'Cumulative Record',      icon: '📁', group: { label: 'Assessment',    href: 'dashboard.html' } },
-    'bulk-entry.html':       { label: 'Marks Entry',            icon: '✍️', group: { label: 'Assessment',    href: 'dashboard.html' } },
-    'broadsheet.html':       { label: 'Class Broadsheet',       icon: '📈', group: { label: 'Assessment',    href: 'dashboard.html' } },
-    'reports.html':          { label: 'Report Cards',           icon: '📄', group: { label: 'Assessment',    href: 'dashboard.html' } },
-    'report-card.html':      { label: 'Student Report Card',    icon: '📄', group: { label: 'Assessment',    href: 'reports.html'   } },
-    'fees.html':             { label: 'Fee Management',         icon: '💰', group: { label: 'Finance',       href: 'dashboard.html' } },
-    'assets.html':           { label: 'Asset Management',       icon: '🗄️', group: { label: 'Finance',       href: 'dashboard.html' } },
-    'messaging.html':        { label: 'Bulk Messaging',         icon: '💬', group: { label: 'Communications',href: 'dashboard.html' } },
-    'parent-view.html':      { label: 'Parent Portal',          icon: '👨‍👩‍👧', group: { label: 'Communications',href: 'dashboard.html' } },
-    'announcements.html':    { label: 'Announcements',          icon: '📢', group: { label: 'Communications',href: 'dashboard.html' } },
-    'users.html':            { label: 'Users',                  icon: '👤', group: { label: 'Admin',         href: 'dashboard.html' } },
-    'data-tools.html':       { label: 'Data Tools',             icon: '🛠️', group: { label: 'Admin',         href: 'dashboard.html' } },
-    'settings.html':         { label: 'Settings',               icon: '⚙️', group: { label: 'Admin',         href: 'dashboard.html' } },
-    'super-admin.html':      { label: 'Super Admin',            icon: '👑', group: null },
+    'dashboard.html':        { label: 'Dashboard',              icon: '', group: null },
+    'students.html':         { label: 'Students',               icon: '', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'classes.html':          { label: 'Classes',                icon: '', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'subjects.html':         { label: 'Subjects',               icon: '', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'programs.html':         { label: 'Programs',               icon: '', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'departments.html':      { label: 'Departments',            icon: '', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'assignments.html':      { label: 'Teacher Assignments',    icon: '', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'timetable.html':        { label: 'Timetable',              icon: '', group: { label: 'Academic',      href: 'dashboard.html' } },
+    'attendance.html':       { label: 'Attendance',             icon: '', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'houses.html':           { label: 'Houses & Dorms',         icon: '', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'exeat.html':            { label: 'Exeat Management',       icon: '', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'discipline.html':       { label: 'Discipline Records',     icon: '', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'promotions.html':       { label: 'Promotions',             icon: '', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'clearance.html':        { label: 'Final Year Clearance',   icon: '', group: { label: 'Student Life',  href: 'dashboard.html' } },
+    'cumulative-record.html':{ label: 'Cumulative Record',      icon: '', group: { label: 'Assessment',    href: 'dashboard.html' } },
+    'bulk-entry.html':       { label: 'Marks Entry',            icon: '', group: { label: 'Assessment',    href: 'dashboard.html' } },
+    'broadsheet.html':       { label: 'Class Broadsheet',       icon: '', group: { label: 'Assessment',    href: 'dashboard.html' } },
+    'reports.html':          { label: 'Report Cards',           icon: '', group: { label: 'Assessment',    href: 'dashboard.html' } },
+    'report-card.html':      { label: 'Student Report Card',    icon: '', group: { label: 'Assessment',    href: 'reports.html'   } },
+    'fees.html':             { label: 'Fee Management',         icon: '', group: { label: 'Finance',       href: 'dashboard.html' } },
+    'assets.html':           { label: 'Asset Management',       icon: '', group: { label: 'Finance',       href: 'dashboard.html' } },
+    'messaging.html':        { label: 'Bulk Messaging',         icon: '', group: { label: 'Communications',href: 'dashboard.html' } },
+    'parent-view.html':      { label: 'Parent Portal',          icon: '', group: { label: 'Communications',href: 'dashboard.html' } },
+    'announcements.html':    { label: 'Announcements',          icon: '', group: { label: 'Communications',href: 'dashboard.html' } },
+    'users.html':            { label: 'Users',                  icon: '', group: { label: 'Admin',         href: 'dashboard.html' } },
+    'data-tools.html':       { label: 'Data Tools',             icon: '', group: { label: 'Admin',         href: 'dashboard.html' } },
+    'settings.html':         { label: 'Settings',               icon: '', group: { label: 'Admin',         href: 'dashboard.html' } },
+    'super-admin.html':      { label: 'Super Admin',            icon: '', group: null },
   };
 
   function mountBreadcrumb() {
@@ -1345,7 +1345,7 @@
 
     // Always start with Dashboard (unless we are on dashboard)
     if (currentPage !== 'dashboard.html' && currentPage !== 'super-admin.html') {
-      crumbs.push({ label: 'Dashboard', href: 'dashboard.html', icon: '📊' });
+      crumbs.push({ label: 'Dashboard', href: 'dashboard.html', icon: '' });
     }
 
     // Add group if present
@@ -1361,9 +1361,9 @@
     crumbs.forEach((crumb, i) => {
       if (i > 0) html += '<span class="breadcrumb-sep">›</span>';
       if (crumb.current) {
-        html += `<span class="breadcrumb-item current">${crumb.icon ? crumb.icon + ' ' : ''}${crumb.label}</span>`;
+        html += `<span class="breadcrumb-item current">${crumb.label}</span>`;
       } else {
-        html += `<a href="${crumb.href}" class="breadcrumb-item">${crumb.icon ? crumb.icon + ' ' : ''}${crumb.label}</a>`;
+        html += `<a href="${crumb.href}" class="breadcrumb-item">${crumb.label}</a>`;
       }
     });
 
@@ -1397,7 +1397,10 @@
     const btn = document.createElement('button');
     btn.id = 'lan-hub-btn';
     btn.className = 'lan-hub-trigger no-print';
-    btn.innerHTML = '📡 Connect Devices';
+    btn.style.display = 'inline-flex';
+    btn.style.alignItems = 'center';
+    btn.style.gap = '6px';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg><span>Connect Devices</span>';
     btn.title = "Connect teachers' phones & tablets over local Wi-Fi / Hotspot";
     btn.onclick = () => openLANSharingModal();
 

@@ -283,7 +283,7 @@
           const yearLabel = payload.active_year_label || '';
           const rawPeriod = payload.active_term_name || '';
           const periodName = mode === 'BASIC_ONLY' ? rawPeriod.replace(/Semester/i, 'Term') : rawPeriod;
-          periodBadge.innerHTML = `<span style="opacity:0.8;">📅</span>&nbsp;${sanitizeText(yearLabel)} &bull; ${sanitizeText(periodName)}`;
+          periodBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>${sanitizeText(yearLabel)} &bull; ${sanitizeText(periodName)}`;
         }
       }
 

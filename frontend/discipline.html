@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>⚖️ Discipline Records – School Management System</title>
+    <title>Discipline Records – School Management System</title>
     <meta name="description" content="Log and track student behavior incidents, warning letters, and commendations." />
     <link rel="stylesheet" href="css/styles.css" />
     <script src="js/featureGate.js?v=1.0"></script>
@@ -194,12 +194,8 @@
     <main class="page">
       <header class="topbar">
         <div>
-          <h1 style="margin:0;font-size:1.2rem;">⚖️ Discipline Records</h1>
+          <h1 style="margin:0;font-size:1.2rem;">Discipline & Student Conduct Log</h1>
           <p style="margin:0;opacity:.7;font-size:.85rem;">Log, review, and track student behavioral incidents and commendations</p>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
-          <button class="btn" style="background:#6366f1; color:#fff;" onclick="printSelectedStudentConductReport()">📋 Print Conduct Certificate</button>
-          <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
 
@@ -274,7 +270,10 @@
 
         <!-- Incidents List Feed (Right Panel) -->
         <div class="card" style="padding:20px;">
-          <h3>Discipline Feed & Search (<span id="feedCount">Showing 0 of 0 records</span>)</h3>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <h3 style="margin:0;">Discipline Feed & Search (<span id="feedCount">Showing 0 of 0 records</span>)</h3>
+            <button class="btn sm" style="background:#6366f1; color:#fff; font-size:0.82rem; padding:4px 10px;" onclick="printSelectedStudentConductReport()">Print Conduct Certificate</button>
+          </div>
           
           <!-- Filters row -->
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; margin-top:12px;">

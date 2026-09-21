@@ -13,25 +13,20 @@
     <main class="page">
       <header class="topbar">
         <div>
-          <h1 style="margin:0;font-size:1.2rem;">Boarding System</h1>
+          <h1 style="margin:0;font-size:1.2rem;">Boarding & Residential Houses</h1>
           <p style="margin:0;opacity:.7;font-size:.85rem;">Manage houses, dormitories, and assign residential supervisors.</p>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
-          <button class="btn" style="background:#7c3aed; border-color:#6d28d9; color:white; font-weight:700;" onclick="triggerAutoAllocation()">⚡ Auto-Allocate Boarders</button>
-          <a class="btn btn-primary" href="exeat.html">🏡 Exeat Management</a>
-          <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
 
       <!-- Reporting Structure Section -->
       <section class="card" style="max-width:100%; border-left: 4px solid var(--primary);">
-        <h3 style="border-bottom:none; margin-bottom:10px;">📋 Boarding Hierarchy & Reporting Structure</h3>
+        <h3 style="border-bottom:none; margin-bottom:10px;">Boarding Hierarchy & Reporting Structure</h3>
         <p style="font-size:0.88rem; opacity:0.8; margin-bottom:15px;">
           Note: Male supervisors (Housemasters) report to the Senior Housemaster. Female supervisors (Housemistresses) report to the Senior Housemistress.
         </p>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
           <div style="background:rgba(0,0,0,0.2); padding:14px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.05);">
-            <h4 style="margin:0 0 8px 0; color:#818cf8; font-size:0.95rem;">🚹 Boys' Residential Wing</h4>
+            <h4 style="margin:0 0 8px 0; color:#818cf8; font-size:0.95rem;">Boys' Residential Wing</h4>
             <div style="font-size:0.85rem; opacity:0.85; line-height:1.6;">
               <span style="font-weight:600;">Senior Housemaster:</span> <span id="reportSeniorHousemaster">None Assigned</span>
               <ul id="reportHousemastersList" style="margin:6px 0 0 15px; padding:0; list-style-type:circle;">
@@ -40,7 +35,7 @@
             </div>
           </div>
           <div style="background:rgba(0,0,0,0.2); padding:14px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.05);">
-            <h4 style="margin:0 0 8px 0; color:#f472b6; font-size:0.95rem;">🚺 Girls' Residential Wing</h4>
+            <h4 style="margin:0 0 8px 0; color:#f472b6; font-size:0.95rem;">Girls' Residential Wing</h4>
             <div style="font-size:0.85rem; opacity:0.85; line-height:1.6;">
               <span style="font-weight:600;">Senior Housemistress:</span> <span id="reportSeniorHousemistress">None Assigned</span>
               <ul id="reportHousemistressesList" style="margin:6px 0 0 15px; padding:0; list-style-type:circle;">
@@ -54,7 +49,10 @@
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start;">
         <!-- Houses list -->
         <section class="card" style="max-width:100%;">
-          <h3>Boarding Houses</h3>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <h3 style="margin:0;">Boarding Houses</h3>
+            <button class="btn sm" style="background:#7c3aed; border-color:#6d28d9; color:white; font-weight:600; font-size:0.82rem; padding:4px 12px;" onclick="triggerAutoAllocation()">Auto-Allocate Boarders</button>
+          </div>
           <div id="housesList">
             <p style="opacity:.6; text-align:center; padding:20px;">Loading houses...</p>
           </div>

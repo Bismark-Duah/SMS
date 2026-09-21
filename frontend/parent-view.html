@@ -265,11 +265,8 @@
     <main class="page">
       <header class="topbar">
         <div>
-          <h1 style="margin:0;font-size:1.2rem;">👨‍👩‍👧 Parent Portal</h1>
+          <h1 style="margin:0;font-size:1.2rem;">Parent Portal</h1>
           <p style="margin:0;opacity:.7;font-size:.85rem;">Track your child's progress at a glance</p>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
-          <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
 
@@ -282,13 +279,13 @@
       </div>
 
       <div class="child-bar">
-        <label>👶 SELECT CHILD</label>
+        <label>SELECT CHILD</label>
         <select id="child_id" onchange="onChildChange()">
           <option value="">Loading children…</option>
         </select>
         <button class="btn primary" id="viewBtn" onclick="loadChildDashboard()" disabled>View Dashboard</button>
-        <button class="btn" id="downloadReportCardBtn" style="background:#2563eb; border-color:#1d4ed8; color:white; font-weight:700; display:none;" onclick="downloadSelectedChildReportCard()">📄 Official Report Card</button>
-        <button class="btn" id="downloadProspectusBtn" style="background:#0284c7; border-color:#0369a1; color:white; font-weight:700; display:none;" onclick="downloadSelectedChildAdmissionPackage()">📜 Admission & Prospectus</button>
+        <button class="btn" id="downloadReportCardBtn" style="background:#2563eb; border-color:#1d4ed8; color:white; font-weight:600; display:none;" onclick="downloadSelectedChildReportCard()">Official Report Card</button>
+        <button class="btn" id="downloadProspectusBtn" style="background:#0284c7; border-color:#0369a1; color:white; font-weight:600; display:none;" onclick="downloadSelectedChildAdmissionPackage()">Admission & Prospectus</button>
       </div>
 
       <div id="childDashboard" style="display:none;">

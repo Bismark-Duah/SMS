@@ -907,14 +907,17 @@
         const schools = await res.json();
         if (Array.isArray(schools)) {
           switcher.innerHTML = `
-            <select id="guardGlobalSchoolSelect" style="padding:6px 10px; font-size:0.78rem; font-weight:600; border-radius:8px; background:var(--card-bg, #1e293b); border:1px solid var(--border-color, #6366f1); color:var(--text-primary, #fff); cursor:pointer; box-shadow:var(--shadow-sm); outline:none; max-width:210px; text-overflow:ellipsis;">
-              <option value="master" ${!isViewing ? 'selected' : ''}>👑 Scope: Master Platform</option>
-              ${schools.map(s => `
-                <option value="${s.id}" data-name="${escapeHtml(s.name)}" data-mode="${s.school_mode || 'COMBINED'}" data-code="${escapeHtml(s.code || '')}" ${isViewing && String(activeSchoolId) === String(s.id) ? 'selected' : ''}>
-                  🏫 ${s.name} (${s.code || 'SCH'})
-                </option>
-              `).join('')}
-            </select>
+            <div style="display:inline-flex; align-items:center; gap:6px; background:var(--card-bg, #1e293b); border:1px solid var(--border-color, rgba(99,102,241,0.4)); border-radius:8px; padding:2px 8px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.75; flex-shrink:0;"><path d="M3 21h18M3 7v14M21 7v14M6 11v6M10 11v6M14 11v6M18 11v6M9 3h6v4H9z"></path></svg>
+              <select id="guardGlobalSchoolSelect" style="padding:4px 2px; font-size:0.78rem; font-weight:600; background:transparent; border:none; color:var(--text-primary, #fff); cursor:pointer; outline:none; max-width:180px; text-overflow:ellipsis;">
+                <option value="master" ${!isViewing ? 'selected' : ''}>Scope: Master Platform</option>
+                ${schools.map(s => `
+                  <option value="${s.id}" data-name="${escapeHtml(s.name)}" data-mode="${s.school_mode || 'COMBINED'}" data-code="${escapeHtml(s.code || '')}" ${isViewing && String(activeSchoolId) === String(s.id) ? 'selected' : ''}>
+                    ${s.name} (${s.code || 'SCH'})
+                  </option>
+                `).join('')}
+              </select>
+            </div>
           `;
 
           const selectEl = document.getElementById('guardGlobalSchoolSelect');

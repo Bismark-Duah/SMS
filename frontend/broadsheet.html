@@ -66,27 +66,18 @@
     <main class="page">
       <header class="topbar">
         <div>
-          <h1 style="margin:0;font-size:1.3rem;">📜 Broadsheet & Comparative Intelligence</h1>
+          <h1 style="margin:0;font-size:1.3rem;">Broadsheet & Comparative Intelligence</h1>
           <p style="margin:4px 0 0 0;opacity:.75;font-size:.85rem;">Review class broadsheets, inter-class league standings, departmental benchmarks, and academic trajectory curves.</p>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center; margin-left:auto; flex-wrap:wrap;">
-          <button id="btnBatchPDF" class="btn" style="background:#7c3aed; color:white; font-weight:700;" onclick="downloadBatchTerminalReports()">📥 Batch Reports (PDF)</button>
-          <button id="btnBroadsheetPDF" class="btn" style="background:#4338ca; color:white; font-weight:700;" onclick="downloadBroadsheetPDF()">📄 Broadsheet Ledger (PDF)</button>
-          <button id="btnExportCSV" class="btn" style="background:#0284c7; color:white; font-weight:700;" onclick="exportBroadsheetCSV()">📊 Export CSV / Excel</button>
-          <button id="btnPrintReport" class="btn-print no-print" title="Print Report" onclick="handlePrintAction()">🖨️ Print View</button>
-          <a class="btn" href="results.html">📝 Results & Scores</a>
-          <a class="btn" href="departments.html">🏢 Departments</a>
-          <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
 
       <!-- View Switcher Tabs -->
       <div class="broadsheet-view-switcher no-print">
         <button id="viewTabBroadsheet" class="view-switch-btn active" onclick="switchBroadsheetView('matrix')">
-          <span>📜 Single Class Broadsheet Matrix</span>
+          <span>Single Class Broadsheet Matrix</span>
         </button>
         <button id="viewTabComparative" class="view-switch-btn" onclick="switchBroadsheetView('comparative')">
-          <span>🏆 Inter-Class League & Comparative Analytics</span>
+          <span>Inter-Class League & Comparative Analytics</span>
         </button>
       </div>
 
@@ -136,9 +127,13 @@
                 <button type="button" class="table-density-btn" data-density="compact" onclick="window.setTableDensity('compact')">⊟ Compact</button>
               </div>
             </div>
-            <div style="display:flex; gap:8px;">
-              <button class="btn" style="background:#8b5cf6; color:white; font-weight:600;" onclick="autoGenerateRemarks()">⚡ Auto-Generate Remarks</button>
-              <button class="btn" style="background:#10b981; color:white; font-weight:600;" onclick="saveBroadsheetRemarks()">💾 Save Remarks</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <button id="btnBatchPDF" class="btn" style="background:#7c3aed; color:white; font-weight:600; font-size:0.85rem;" onclick="downloadBatchTerminalReports()">Batch Reports (PDF)</button>
+              <button id="btnBroadsheetPDF" class="btn" style="background:#4338ca; color:white; font-weight:600; font-size:0.85rem;" onclick="downloadBroadsheetPDF()">Broadsheet Ledger (PDF)</button>
+              <button id="btnExportCSV" class="btn" style="background:#0284c7; color:white; font-weight:600; font-size:0.85rem;" onclick="exportBroadsheetCSV()">Export CSV</button>
+              <button id="btnPrintReport" class="btn btn-secondary no-print" title="Print Report" onclick="handlePrintAction()">Print</button>
+              <button class="btn" style="background:#8b5cf6; color:white; font-weight:600; font-size:0.85rem;" onclick="autoGenerateRemarks()">Auto Remarks</button>
+              <button class="btn" style="background:#10b981; color:white; font-weight:600; font-size:0.85rem;" onclick="saveBroadsheetRemarks()">Save Remarks</button>
             </div>
           </div>
 

@@ -16,12 +16,6 @@
           <h1 style="margin:0;font-size:1.2rem;">Teacher Assignments & Workload Register</h1>
           <p style="margin:0;opacity:.7;font-size:.85rem;">Manage teacher subject allocations, class sections, and leadership roles.</p>
         </div>
-        <div style="display:flex; gap:10px; align-items:center; margin-left:auto; flex-wrap:wrap;">
-          <button type="button" id="btnOpenPrimaryFastAssign" class="btn" onclick="openPrimaryFastAssignModal()" style="font-size:0.85rem; padding:6px 14px; background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; font-weight:600; display:none;">1-Click Primary Class Allocation</button>
-          <button type="button" class="btn" onclick="printStaffWorkloadRegister()" style="font-size:0.85rem; padding:6px 12px;">Print Workload Roster</button>
-          <button type="button" class="btn" onclick="openCopyWorkloadModal()" style="font-size:0.85rem; padding:6px 12px;">Copy to Next Term</button>
-          <a class="btn" href="dashboard.html">← Dashboard</a>
-        </div>
       </header>
 
       <!-- Super Admin Multi-Tenant Filter Bar -->
@@ -146,7 +140,7 @@
 
         <!-- Bottom Full-Width Tables Section -->
         <section class="card" style="width: 100%;">
-          <!-- Filter Navigation Pills -->
+          <!-- Filter Navigation Pills & Actions -->
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button id="filterRoleAll" class="btn primary sm" onclick="setWorkloadRoleFilter('all')" style="font-size: 0.85rem; padding: 4px 12px;">All Staff</button>
@@ -155,7 +149,12 @@
               <button id="filterRoleHouseMaster" class="btn sm" onclick="setWorkloadRoleFilter('house_master')" style="font-size: 0.85rem; padding: 4px 12px;">House Supervisors</button>
               <button id="filterRoleUnassigned" class="btn sm" onclick="setWorkloadRoleFilter('unassigned')" style="font-size: 0.85rem; padding: 4px 12px;">Unassigned Staff</button>
             </div>
-            <button id="tabPrivilegesBtn" class="btn sm" onclick="toggleAssignmentTab()" style="font-size: 0.82rem; padding: 4px 10px; opacity: 0.85;">View Raw Privileges Table</button>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <button type="button" id="btnOpenPrimaryFastAssign" class="btn sm" onclick="openPrimaryFastAssignModal()" style="font-size:0.82rem; padding:4px 12px; background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; font-weight:600; display:none;">1-Click Fast Assign</button>
+              <button type="button" class="btn sm" onclick="openCopyWorkloadModal()" style="font-size:0.82rem; padding:4px 10px;">Copy to Next Term</button>
+              <button type="button" class="btn sm btn-secondary no-print" onclick="printStaffWorkloadRegister()" style="font-size:0.82rem; padding:4px 10px;">Print Roster</button>
+              <button id="tabPrivilegesBtn" class="btn sm" onclick="toggleAssignmentTab()" style="font-size: 0.82rem; padding: 4px 10px; opacity: 0.85;">View Raw Privileges</button>
+            </div>
           </div>
           
           <!-- Teaching Assignments Tab Pane -->

@@ -13,26 +13,27 @@
     <main class="page">
       <header class="topbar">
         <div>
-          <h1 style="margin:0;font-size:1.2rem;">Attendance</h1>
+          <h1 style="margin:0;font-size:1.2rem;">Attendance Management</h1>
           <p style="margin:0;opacity:.7;font-size:.85rem;">Daily register & subject period absence log</p>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center; margin-left:auto; flex-wrap:wrap;">
-          <button class="btn" style="background:#7c3aed; color:white; font-weight:700;" onclick="dispatchTruancyAlerts()">📢 Dispatch Truancy SMS</button>
-          <button class="btn" style="background:#0284c7; color:white; font-weight:700;" onclick="downloadAttendanceLedgerPDF()">📄 Download PDF Ledger</button>
-          <button class="btn-print no-print" title="Print attendance register (landscape)" onclick="(function(){var s=document.createElement('style');s.id='_landscapeHint';s.textContent='@page{size:A4 landscape;}';document.head.appendChild(s);window.print();setTimeout(function(){var el=document.getElementById('_landscapeHint');if(el)el.parentNode.removeChild(el);},1000);})()">🖨️ Print View</button>
-          <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
 
-      <!-- Tabs -->
-      <div class="tab-nav" id="tabNav" style="display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--border-color); padding-bottom:8px; flex-wrap:wrap;">
-        <!-- Tab buttons injected by JS based on role -->
+      <!-- Tabs & Contextual Actions -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border-color); padding-bottom:8px; flex-wrap:wrap; gap:10px;">
+        <div class="tab-nav" id="tabNav" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <!-- Tab buttons injected by JS based on role -->
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" style="background:#7c3aed; color:white; font-weight:600; font-size:0.85rem;" onclick="dispatchTruancyAlerts()">Dispatch Truancy SMS</button>
+          <button class="btn" style="background:#0284c7; color:white; font-weight:600; font-size:0.85rem;" onclick="downloadAttendanceLedgerPDF()">Download PDF Ledger</button>
+          <button class="btn btn-secondary no-print" title="Print attendance register (landscape)" onclick="(function(){var s=document.createElement('style');s.id='_landscapeHint';s.textContent='@page{size:A4 landscape;}';document.head.appendChild(s);window.print();setTimeout(function(){var el=document.getElementById('_landscapeHint');if(el)el.parentNode.removeChild(el);},1000);})()">Print View</button>
+        </div>
       </div>
 
       <!-- PANEL 1: Daily Class Register (Form Master / Admin only) -->
       <div id="panelMark" class="tab-panel" style="display:none;">
         <div id="registerBanner" style="display:none; margin-bottom:16px; padding:12px 16px; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.3); border-radius:8px; font-size:.9rem; color:var(--text-secondary);">
-          ℹ️ Daily class register marking is restricted to Form Masters and Administrators. You are not assigned as a Form Master for any class section.
+          Daily class register marking is restricted to Form Masters and Administrators. You are not assigned as a Form Master for any class section.
         </div>
         <section class="card">
           <h3>Mark Daily Class Register</h3>
@@ -45,7 +46,7 @@
             <label>Date
               <input type="date" id="mark_date" required />
             </label>
-            <button type="submit" class="btn primary" style="height:40px;">📋 Load Class Roll</button>
+            <button type="submit" class="btn primary" style="height:40px;">Load Class Roll</button>
           </form>
           <div id="rollMsg" style="margin-top:10px;"></div>
         </section>
@@ -57,9 +58,9 @@
               <p style="margin:4px 0 0; font-size:.85rem; opacity:.7;" id="rollSubtitle"></p>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="btn" onclick="markAll('Present')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#34d399; font-weight:700;">✅ All Present</button>
-              <button class="btn" onclick="markAll('Absent')" style="background:rgba(239,68,68,0.15); border:1px solid #ef4444; color:#f87171; font-weight:700;">❌ All Absent</button>
-              <button class="btn primary" onclick="submitBulkAttendance()" style="font-weight:700;">💾 Submit Register</button>
+              <button class="btn" onclick="markAll('Present')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#34d399; font-weight:600;">All Present</button>
+              <button class="btn" onclick="markAll('Absent')" style="background:rgba(239,68,68,0.15); border:1px solid #ef4444; color:#f87171; font-weight:600;">All Absent</button>
+              <button class="btn primary" onclick="submitBulkAttendance()" style="font-weight:600;">Submit Register</button>
             </div>
           </div>
 

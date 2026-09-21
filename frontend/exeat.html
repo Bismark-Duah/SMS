@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🏡 Exeat Management – School Management System</title>
+    <title>Exeat Management – School Management System</title>
     <meta name="description" content="Manage student permission passes, departure checks, gate security sign-outs, and return tracking." />
     <link rel="stylesheet" href="css/styles.css" />
     <script src="js/featureGate.js?v=1.0"></script>
@@ -193,13 +193,8 @@
     <main class="page">
       <header class="topbar">
         <div>
-          <h1 style="margin:0;font-size:1.3rem;">🏡 Exeat Management</h1>
+          <h1 style="margin:0;font-size:1.3rem;">Exeat & Permit Management</h1>
           <p style="margin:4px 0 0 0;opacity:.75;font-size:.85rem;">Issue, approve, and track student exeat passes & gate sign-in/out logs.</p>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
-          <button class="btn" style="background:#059669; border-color:#047857; color:white; font-weight:700;" onclick="openGatekeeperView()">🚪 Gatekeeper Verification</button>
-          <a class="btn" href="houses.html">🏠 Boarding Houses</a>
-          <a class="btn" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
 
@@ -207,12 +202,15 @@
       <section class="card" style="border-left: 4px solid var(--primary, #6366f1); margin-bottom: 20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
           <div>
-            <h4 style="margin:0; font-size:1rem; color:var(--primary, #818cf8);" id="jurisdictionRoleLabel">🛡️ Loading Jurisdiction...</h4>
+            <h4 style="margin:0; font-size:1rem; color:var(--primary, #818cf8);" id="jurisdictionRoleLabel">Loading Jurisdiction...</h4>
             <p style="margin:4px 0 0 0; font-size:0.85rem; opacity:0.8;" id="jurisdictionDescription">
               Verifying house master and domestic administration permissions.
             </p>
           </div>
-          <button class="btn btn-primary" onclick="openNewExeatModal()">+ Issue New Exeat Pass</button>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button class="btn" style="background:#059669; border-color:#047857; color:white; font-weight:600;" onclick="openGatekeeperView()">Gatekeeper Verification</button>
+            <button class="btn btn-primary" onclick="openNewExeatModal()">+ Issue New Exeat Pass</button>
+          </div>
         </div>
       </section>
 

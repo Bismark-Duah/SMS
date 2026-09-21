@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>📅 Timetable – School Management System</title>
+    <title>Timetable – School Management System</title>
     <meta name="description" content="Automated timetable generation, weekly schedules, and live campus operations." />
     <link rel="stylesheet" href="css/styles.css" />
     <script src="js/featureGate.js?v=1.0"></script>
@@ -204,26 +204,25 @@
   </head>
   <body>
     <main class="page">
-      <header class="topbar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+      <header class="topbar">
         <div>
-          <h1 style="margin:0; font-size:1.35rem; font-weight:700; letter-spacing:-0.02em;">Timetable</h1>
+          <h1 style="margin:0; font-size:1.35rem; font-weight:700; letter-spacing:-0.02em;">Timetable Management</h1>
           <p style="margin:3px 0 0 0; opacity:0.75; font-size:0.85rem;">Master academic schedules, autonomous constraint solver, and campus operations</p>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <button class="btn primary" style="font-weight:700; padding:8px 16px;" onclick="openAutoGenerateModal()">⚡ Auto-Generate</button>
-          <button class="btn" style="background:#0f172a; border:1px solid #334155; color:white;" onclick="openPreferencesModal()">⚙️ Preferences</button>
-          <button class="btn" style="background:#0f172a; border:1px solid #334155; color:white;" onclick="openHandoverModal()">🔄 Staff Handover</button>
-          <a class="btn" style="background:transparent; border:1px solid rgba(255,255,255,0.15);" href="dashboard.html">← Dashboard</a>
         </div>
       </header>
 
-      <!-- View Selection Toggles -->
-      <div>
-        <div class="view-toggles">
-          <button id="vBtnClass" class="btn active" onclick="switchView('class')">👤 Class Schedule</button>
-          <button id="vBtnTeacher" class="btn" onclick="switchView('teacher')">👨‍🏫 Teacher Docket</button>
-          <button id="vBtnRadar" class="btn" onclick="switchView('radar')">📡 Live Campus Radar</button>
-          <button id="vBtnWorkloads" class="btn" onclick="switchView('workloads')">📊 Staff Workload Audit</button>
+      <!-- View Selection Toggles & Actions Bar -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+        <div class="view-toggles" style="margin-bottom:0;">
+          <button id="vBtnClass" class="btn active" onclick="switchView('class')">Class Schedule</button>
+          <button id="vBtnTeacher" class="btn" onclick="switchView('teacher')">Teacher Docket</button>
+          <button id="vBtnRadar" class="btn" onclick="switchView('radar')">Live Campus Radar</button>
+          <button id="vBtnWorkloads" class="btn" onclick="switchView('workloads')">Staff Workload Audit</button>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn primary" style="font-weight:600; font-size:0.85rem; padding:6px 14px;" onclick="openAutoGenerateModal()">Auto-Generate</button>
+          <button class="btn" style="font-size:0.85rem; padding:6px 12px;" onclick="openPreferencesModal()">Preferences</button>
+          <button class="btn" style="font-size:0.85rem; padding:6px 12px;" onclick="openHandoverModal()">Staff Handover</button>
         </div>
       </div>
 

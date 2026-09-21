@@ -413,6 +413,19 @@ body#public-portal #edubot-global-launcher, body.public-portal #edubot-global-la
   }
 }
 
+.topbar > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.topbar > div:last-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .topbar a[href="dashboard.html"],
 .topbar .topbar-back-btn {
   display: none !important;

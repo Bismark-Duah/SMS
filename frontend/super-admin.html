@@ -6,9 +6,9 @@
     <meta http-equiv="Accept-CH" content="Sec-CH-UA-Model, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version, Sec-CH-UA-Mobile" />
     <title>eduManage360 Master Portal — Unified Multi-School Administration</title>
     <meta name="description" content="Central Executive Management Console for all registered schools in eduManage360." />
-    <link rel="stylesheet" href="css/styles.css?v=10.9" />
-    <script src="js/featureGate.js?v=10.9"></script>
-    <script src="js/theme.js?v=10.9"></script>
+    <link rel="stylesheet" href="css/styles.css?v=11.0" />
+    <script src="js/featureGate.js?v=11.0"></script>
+    <script src="js/theme.js?v=11.0"></script>
     <style>
       /* ── Enterprise Design Tokens ────────────────────────────────────────── */
       :root {
@@ -445,10 +445,40 @@
           border-radius: 10px !important;
         }
 
+        .sa-matrix-header {
+          flex-direction: column !important;
+          align-items: stretch !important;
+          gap: 10px !important;
+        }
+
+        .sa-matrix-header > div:last-child {
+          width: 100% !important;
+          display: flex !important;
+          justify-content: space-between !important;
+          gap: 8px !important;
+        }
+
+        .sa-matrix-header > div:last-child .btn {
+          flex: 1 1 auto !important;
+          text-align: center !important;
+          justify-content: center !important;
+        }
+
+        #guardUserPill {
+          padding: 3px 8px 3px 4px !important;
+          font-size: 0.78rem !important;
+        }
+
         .sa-table th,
         .sa-table td {
           padding: 9px 10px;
           font-size: 0.82rem;
+        }
+      }
+
+      @media (max-width: 480px) {
+        #guardUserPill span:nth-child(3) {
+          display: none !important;
         }
       }
     </style>
@@ -459,9 +489,13 @@
       <!-- ── Executive Header ───────────────────────────────────────────────── -->
       <header class="sa-header">
         <div class="sa-header-brand">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <h1 class="sa-brand-title">🌐 eduManage360</h1>
-            <span class="sa-brand-pill">Master Console</span>
+          <div class="sa-brand-row" style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h1 class="sa-brand-title">🌐 eduManage360</h1>
+              <span class="sa-brand-pill">Master Console</span>
+            </div>
+            <!-- In-flow destination for user avatar & persona pill -->
+            <div id="saHeaderUserContainer" style="display:flex; align-items:center; margin-left:auto;"></div>
           </div>
           <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--sa-text-muted);">
             Executive Multi-Tenant Governance &amp; Cloud Telemetry
@@ -574,16 +608,16 @@
 
         <!-- Real-Time Sync & Telemetry Matrix -->
         <div class="sa-table-card" style="border:1px solid rgba(14,165,233,0.3); background:linear-gradient(180deg, rgba(14,165,233,0.03) 0%, rgba(30,41,59,0.7) 100%);">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
-            <div>
+          <div class="sa-matrix-header" style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; border-bottom:1px solid var(--sa-card-border); padding-bottom:10px;">
+            <div style="flex:1 1 280px;">
               <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
                 <span>📡</span> Multi-Tenant Real-Time Sync &amp; Telemetry Matrix
               </h3>
               <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--sa-text-muted);">Monitor store-and-forward outbox queue deltas and node health across all schools.</p>
             </div>
-            <div style="display:flex; gap:8px; align-items:center;">
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
               <span id="syncMonitorNetworkBadge" class="badge-mode" style="background:rgba(2,132,199,0.2); color:#38bdf8; border:1px solid #0284c7;">Loading Sync...</span>
-              <button class="btn" style="padding:5px 10px; font-size:0.78rem; background:#0284c7; color:#fff;" onclick="window.triggerAllSchoolsSync()">🔄 Sync All Nodes</button>
+              <button class="btn" style="padding:6px 12px; font-size:0.78rem; background:#0284c7; color:#fff;" onclick="window.triggerAllSchoolsSync()">🔄 Sync All Nodes</button>
             </div>
           </div>
 

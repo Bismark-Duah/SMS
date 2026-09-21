@@ -1264,6 +1264,10 @@ thead th {
     display: inline-flex !important;
   }
 
+  .topbar-search-trigger {
+    display: none !important;
+  }
+
   /* Touch-Friendly Action Buttons (44px standard) */
   .btn, button.btn {
     min-height: 44px !important;

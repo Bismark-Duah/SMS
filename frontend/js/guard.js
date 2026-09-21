@@ -616,7 +616,7 @@
     };
     const color = roleColors[activeRole] || '#6b7280';
 
-    const topbar = document.querySelector('.topbar');
+    const topbar = document.querySelector('.topbar') || document.querySelector('.sa-header') || document.querySelector('header');
 
     const pillWrapper = document.createElement('div');
     pillWrapper.id = 'guardUserWrapper';
@@ -742,7 +742,11 @@
     pillWrapper.appendChild(pill);
     pillWrapper.appendChild(menu);
 
-    if (topbar) {
+    const saTarget = document.getElementById('saHeaderUserContainer');
+    if (saTarget) {
+      pillWrapper.style.marginLeft = '0';
+      saTarget.appendChild(pillWrapper);
+    } else if (topbar) {
       const actionsContainer = topbar.querySelector('div[style*="margin-left:auto"]') || (topbar.children.length > 1 ? topbar.children[topbar.children.length - 1] : null);
       if (actionsContainer && actionsContainer !== topbar.firstElementChild) {
         pillWrapper.style.marginLeft = '0';

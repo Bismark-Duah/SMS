@@ -1,13 +1,23 @@
+databases:
+  - name: edumanage-db
+    databaseName: edumanage
+    user: edumanage_user
+    plan: free
+
 services:
   - type: web
     name: sms-school-management-system
     env: python
-    buildCommand: pip install -r backend/requirements.txt
+    buildCommand: pip install -r backend/requirements.txt && alembic upgrade head
     startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
-        value: sqlite:///./school.db
+        fromDatabase:
+          name: edumanage-db
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
+      - key: ENVIRONMENT
+        value: production
       - key: CORS_ORIGINS
-        value: "*"
+        value: "https://sms-nald.onrender.com,https://smsghana.onrender.com,https://smsgh.onrender.com"

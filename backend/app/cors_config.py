@@ -19,11 +19,13 @@ DEFAULT_LOCAL_ORIGINS: List[str] = [
     "http://127.0.0.1:5500",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://sms-nald.onrender.com",
     "https://smsghana.onrender.com",
     "https://smsgh.onrender.com",
 ]
 
 DEFAULT_PROD_ORIGINS: List[str] = [
+    "https://sms-nald.onrender.com",
     "https://smsghana.onrender.com",
     "https://smsgh.onrender.com",
 ]
@@ -39,7 +41,8 @@ def resolve_cors_origins(
     Rules:
     - Production (ENVIRONMENT=production):
       - Wildcard '*' is strictly prohibited and raises a ValueError.
-      - If CORS_ORIGINS is configured, splits and validates that no wildcard exists.
+      - Insecure 'http://' origins are strictly prohibited in production and raise a ValueError.
+      - If CORS_ORIGINS is configured, splits and validates that all origins are secure HTTPS.
       - If CORS_ORIGINS is unset, defaults to known secure HTTPS production domains.
       - Credentials (allow_credentials) is True for explicitly listed origins.
     - Development / Testing (ENVIRONMENT!=production):
@@ -65,6 +68,11 @@ def resolve_cors_origins(
                 raise ValueError(
                     "CORS Security Violation: Wildcard origin ('*') cannot be included in production CORS_ORIGINS."
                 )
+            for o in parsed:
+                if not o.lower().startswith("https://"):
+                    raise ValueError(
+                        f"CORS Security Violation: Production origins must use secure HTTPS protocol: '{o}'"
+                    )
             allowed = parsed
         else:
             allowed = list(DEFAULT_PROD_ORIGINS)

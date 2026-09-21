@@ -191,7 +191,7 @@
     <header class="portal-header">
       <div class="portal-brand">
         <div id="portalLogoContainer" class="portal-logo-container">
-          <span style="font-size:1.6rem;">🏫</span>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 21h18M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7M4 21V10m16 11V10M12 3L2 7h20L12 3z"></path></svg>
         </div>
         <div>
           <h1 id="portalSchoolName" style="margin:0; font-size:1.2rem; font-weight:800; color:var(--text-primary, #fff); letter-spacing:0.5px;">J.A. KUFFOUR STEM TECHNICAL SCHOOL</h1>
@@ -200,8 +200,10 @@
       </div>
 
       <div class="btn-no-print" style="display:flex; align-items:center; gap:10px;">
-        <span style="background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3); padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:700;">🟢 INTAKE ACTIVE</span>
-        <a href="auth.html" class="btn" style="font-size:0.8rem; padding:6px 12px; opacity:0.85;">Staff Login →</a>
+        <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3); padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:700;">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" style="flex-shrink:0;"><circle cx="4" cy="4" r="3.5"></circle></svg>
+          <span>INTAKE ACTIVE</span>
+        </span>
       </div>
     </header>
 
@@ -210,8 +212,8 @@
       
       <!-- Tab Bar for Switching Between Fresh Admission & Re-Printing Documents -->
       <div class="tab-bar btn-no-print">
-        <button type="button" id="tabNewAdmBtn" class="tab-btn active" onclick="switchPortalTab('new')">🔑 1. Candidate Online Admission Gateway</button>
-        <button type="button" id="tabRetrieveBtn" class="tab-btn" onclick="switchPortalTab('retrieve')">🖨️ 2. Re-Print / Retrieve Existing Packet</button>
+        <button type="button" id="tabNewAdmBtn" class="tab-btn active" onclick="switchPortalTab('new')">1. Candidate Online Admission Gateway</button>
+        <button type="button" id="tabRetrieveBtn" class="tab-btn" onclick="switchPortalTab('retrieve')">2. Re-Print / Retrieve Existing Packet</button>
       </div>
 
       <!-- ── TAB 1: FRESH CANDIDATE ADMISSION ──────────────────────────────── -->
@@ -223,7 +225,7 @@
             <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; margin-bottom:8px;">
               STEP 1 OF 3 • ELIGIBILITY VERIFICATION
             </div>
-            <h2 style="margin:0; color:#38bdf8; font-size:1.3rem;">🎓 Check & Verify CSSPS Placement Status</h2>
+            <h2 style="margin:0; color:#38bdf8; font-size:1.3rem;">Check & Verify CSSPS Placement Status</h2>
             <p style="font-size:0.88rem; color:var(--text-secondary, #94a3b8); margin:4px 0 0; line-height:1.45;">
               Confirm that your name and placement are in this school's official Ministry of Education CSSPS register before purchasing or entering an admission voucher.
             </p>
@@ -695,6 +697,17 @@
         </div>
       </div>
 
+      <!-- ── Public Portal Footer ──────────────────────────────────────── -->
+      <footer class="portal-footer btn-no-print" style="text-align:center; padding:32px 16px 20px; color:var(--text-secondary, #94a3b8); font-size:0.8rem; line-height:1.6; border-top:1px solid var(--border-color, rgba(255,255,255,0.08)); margin-top:40px;">
+        <div>Official CSSPS Online Candidate Admission &amp; Prospectus Portal</div>
+        <div style="margin-top:6px;">
+          <a href="auth.html" style="color:inherit; text-decoration:none; opacity:0.75; font-size:0.78rem; display:inline-flex; align-items:center; gap:6px; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span>Staff &amp; Administrative Access</span>
+          </a>
+        </div>
+      </footer>
+
     </main>
 
     <!-- ── MODAL: BUY VOUCHER ONLINE VIA MOBILE MONEY (MoMo) ─────────────────── -->
@@ -703,7 +716,8 @@
         
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:12px; margin-bottom:16px;">
           <h3 style="margin:0; font-size:1.15rem; color:#4ade80; display:flex; align-items:center; gap:8px;">
-            <span>📱</span> Buy Admission Voucher (MoMo)
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            <span>Buy Admission Voucher (MoMo)</span>
           </h3>
           <button type="button" onclick="closeBuyVoucherModal()" style="background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; padding:0 6px;">✕</button>
         </div>
@@ -749,7 +763,7 @@
           <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
             <button type="button" onclick="closeBuyVoucherModal()" class="btn" style="padding:9px 18px; font-size:0.88rem; cursor:pointer;">Cancel</button>
             <button type="submit" id="btnPayVoucher" class="btn primary" style="padding:9px 22px; font-weight:700; font-size:0.88rem; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35); cursor:pointer;">
-              ⚡ Pay & Get Voucher
+              Pay &amp; Get Voucher
             </button>
           </div>
         </form>
@@ -757,7 +771,7 @@
         <!-- ── UNIFIED MOMO AUTHORIZATION & VERIFICATION SCREEN ────────────────── -->
         <div id="momo-auth-screen" style="display:none; text-align:center; padding:12px 4px;">
           <div style="width:60px; height:60px; border-radius:50%; background:rgba(56,189,248,0.15); border:3px solid #38bdf8; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; animation:pulse 1.8s infinite;">
-            <span style="font-size:1.7rem;">📲</span>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
           </div>
           <h4 style="color:#38bdf8; font-size:1.12rem; margin:0 0 6px;">Authorize Mobile Money Payment</h4>
           <p style="font-size:0.84rem; color:#cbd5e1; line-height:1.4; margin:0 0 14px;">
@@ -777,7 +791,7 @@
               <div id="momo-otp-status" style="margin-bottom:10px; font-size:0.82rem; font-weight:600; min-height:1.1rem;"></div>
 
               <button type="submit" id="btnSubmitMomoOtp" class="btn primary" style="width:100%; padding:10px; font-weight:700; font-size:0.9rem; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 14px rgba(16,185,129,0.35); cursor:pointer;">
-                ⚡ Verify Code & Get Voucher
+                Verify Code &amp; Get Voucher
               </button>
             </form>
           </div>

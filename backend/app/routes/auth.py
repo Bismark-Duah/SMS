@@ -2,6 +2,7 @@ import hashlib
 import secrets
 import os
 import re
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from fastapi.responses import JSONResponse
@@ -9,7 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from ..middleware.device_session_guard import register_device_session
 from ..database import get_db
-from ..models import User, Role, School, ClassSection, House, Department, Student, UserDeviceSession
+from ..models import User, Role, School, ClassSection, House, Department, Student, UserDeviceSession, RevokedResetToken
 from ..services.auth import create_jwt, decode_jwt, hash_password, verify_password
 from ..services.audit_service import record_audit_event
 from .. import schemas
@@ -1492,13 +1493,25 @@ def reset_forgot_password(
     if not jti or jti in _used_recovery_jtis:
         raise HTTPException(status_code=401, detail="This reset token has already been used. Please request a new one.")
 
-    # Burn token nonce immediately
-    _used_recovery_jtis.add(jti)
+    # Check database persistent registry for burned nonces across server restarts
+    existing_revocation = db.query(RevokedResetToken).filter(RevokedResetToken.jti == jti).first()
+    if existing_revocation:
+        _used_recovery_jtis.add(jti)
+        raise HTTPException(status_code=401, detail="This reset token has already been used. Please request a new one.")
 
     user_id = token_payload.get("user_id")
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User account not found.")
+
+    # Validate token_version binding to prevent replaying stale tokens after prior password changes
+    expected_token_version = getattr(user, "token_version", 1) or 1
+    token_ver = token_payload.get("token_version")
+    if token_ver is not None and token_ver != expected_token_version:
+        raise HTTPException(
+            status_code=401,
+            detail="This reset token has expired due to a prior password change. Please request a new one."
+        )
 
     user_roles = [r.name.lower() for r in user.roles] if user.roles else []
     if "super_admin" in user_roles or getattr(user, "is_superadmin", False):
@@ -1507,10 +1520,20 @@ def reset_forgot_password(
             detail="SuperAdmin accounts cannot be reset via the web portal. Please use the host server recovery utility."
         )
 
+    # Burn token nonce in memory and persistent storage
+    _used_recovery_jtis.add(jti)
+    exp_ts = token_payload.get("exp")
+    expires_dt = datetime.fromtimestamp(exp_ts, tz=timezone.utc) if exp_ts else None
+    db.add(RevokedResetToken(
+        jti=jti,
+        user_id=user.id,
+        expires_at=expires_dt
+    ))
+
     # Update password and advance token version to revoke previous sessions
     user.password_hash = _hash_password(new_password)
     user.is_first_login = False
-    user.token_version = (getattr(user, "token_version", 1) or 1) + 1
+    user.token_version = expected_token_version + 1
 
     # Invalidate all active device sessions for this user
     try:

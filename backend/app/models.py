@@ -1019,6 +1019,22 @@ class UserDeviceSession(Base):
     user = relationship("User")
 
 
+class RevokedResetToken(Base):
+    """
+    Persistent registry of consumed password recovery and reset token nonces (JTIs).
+    Guarantees single-use enforcement across process restarts and horizontal scaling.
+    """
+    __tablename__ = "revoked_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    jti = Column(String(100), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    revoked_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User")
+
+
 class VoucherOrder(Base):
     """
     ACID Financial Ledger for Online Admission Voucher Purchases.

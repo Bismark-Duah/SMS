@@ -17,7 +17,7 @@
 ### Architectural Philosophy: Offline-First Hybrid Operation
 Unlike conventional web-only education portals that assume persistent cloud connectivity, EduManage 360 is engineered with a **dual operational topology**:
 1. **Local Campus Tier (Offline LAN)**: Fully self-contained local installation running on campus server or PC hardware over a local Wi-Fi router or switch. In this mode, the system operates against an embedded SQLite 3 engine configured in Write-Ahead Logging (WAL) mode. Administrative operations (roll call, gradebook entry, report card generation, cashier receipting, and gate security) execute without internet access.
-2. **Cloud Tier (Multi-School PaaS)**: Centralized deployment hosted on **Render** backed by a managed **PostgreSQL 15+** database. In this mode, the system serves multi-campus directorates, synchronizes remote school records, and provides parent and administrative oversight.
+2. **Cloud Tier (Multi-School Cloud SaaS)**: Centralized multi-tenant SaaS deployment hosted on **Render** backed by a managed **PostgreSQL 15+** database. In this mode, the system serves multi-campus directorates, synchronizes remote school records, and provides parent and administrative oversight.
 
 ### Core Architectural Characteristics
 * **Asynchronous API Framework**: Python 3.10+ powered by **FastAPI** and **Starlette**, providing non-blocking request handling, automated OpenAPI schema generation, and strict dependency injection.
@@ -109,8 +109,8 @@ The runtime request pipeline flows through distinct, decoupled layers:
                                                     │
                            ┌────────────────────────┴────────────────────────┐
                            ▼                                                 ▼
-             [ Local Campus Tier ]                             [ Cloud PaaS Tier ]
-             SQLite 3 (WAL Mode)                               PostgreSQL 15+
+             [ Local Campus Tier ]                             [ Cloud SaaS Tier ]
+             SQLite 3 (WAL Mode)                               PostgreSQL 15+ (Render)
              Zero-conf, 30s timeout                            Multi-worker pooled
 ```
 
@@ -523,7 +523,7 @@ sequenceDiagram
     participant Local as Local Campus Server
     participant Engine as Sync Engine (sync_engine.py)
     participant Outbox as Database (SyncOutbox)
-    participant Cloud as Cloud PaaS (PostgreSQL on Render)
+    participant Cloud as Cloud SaaS (PostgreSQL on Render)
 
     Note over Local: Local operations log changes to SyncOutbox
     Local->>Outbox: log_sync_change(school_id, entity, payload)

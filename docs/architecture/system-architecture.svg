@@ -50,7 +50,7 @@
 
   <!-- Title & Header -->
   <text x="600" y="45" text-anchor="middle" fill="#f8fafc" font-size="24" font-weight="700" letter-spacing="1">EDUMANAGE 360 — SYSTEM ARCHITECTURE</text>
-  <text x="600" y="70" text-anchor="middle" fill="#94a3b8" font-size="13">High-Availability Cloud PaaS (PostgreSQL) &amp; Offline-First Campus LAN (SQLite WAL)</text>
+  <text x="600" y="70" text-anchor="middle" fill="#94a3b8" font-size="13">Multi-Tenant Cloud SaaS (PostgreSQL) &amp; Offline Campus LAN (SQLite WAL)</text>
 
   <!-- 1. Client Layer -->
   <g transform="translate(60, 95)" filter="url(#shadow)">
@@ -191,7 +191,7 @@
   <!-- 6B. Production Cloud Database Tier -->
   <g transform="translate(615, 705)" filter="url(#shadow)">
     <rect width="525" height="135" rx="8" fill="url(#grad-db-pg)" stroke="#2563eb" stroke-width="1.5"/>
-    <text x="20" y="28" fill="#93c5fd" font-size="13" font-weight="700" letter-spacing="0.5">6B. PRODUCTION CLOUD DEPLOYMENT (RENDER PAAS)</text>
+    <text x="20" y="28" fill="#93c5fd" font-size="13" font-weight="700" letter-spacing="0.5">6B. PRODUCTION CLOUD SAAS (HOSTED ON RENDER)</text>
     
     <rect x="20" y="42" width="485" height="42" rx="6" fill="#0f172a" stroke="#3b82f6"/>
     <text x="262" y="60" text-anchor="middle" fill="#eff6ff" font-size="12" font-weight="600">PostgreSQL 15+ (edumanage-db)</text>

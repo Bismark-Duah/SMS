@@ -1,277 +1,515 @@
-# 🎓 EduManage 360 — Enterprise School Management System
+# EduManage 360
 
 <div align="center">
 
 ![EduManage 360 Institutional Crest](frontend/assets/logo_primary.png)
 
-### 100% Offline-First Multi-School Institutional ERP & Academic Management Engine
-*Engineered for Basic Schools (Creche to JHS 3), Senior High Schools (SHS / SHTS), and Technical / STEM Institutions.*
+**Unified Multi-School Administration & Academic Management Platform**
 
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI%200.110-009688.svg?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Database Architecture](https://img.shields.io/badge/Database-SQLite%20WAL%20%7C%20PostgreSQL-336791.svg?style=flat-square&logo=sqlite)](backend/app/database.py)
-[![Offline-First PWA](https://img.shields.io/badge/Frontend-100%25%20Offline%20PWA-4f46e5.svg?style=flat-square)](frontend/sw.js)
-[![Security Standards](https://img.shields.io/badge/Security-OWASP%20ASVS%20v4.0%20Hardened-10b981.svg?style=flat-square)](docs/SECURITY_DEFENSE_MATRIX.md)
-[![Test Verification](https://img.shields.io/badge/Automated%20Tests-81%20Suites%20Passing-brightgreen.svg?style=flat-square)](verify_all.py)
-[![Ghana Curriculum](https://img.shields.io/badge/Curriculum-NaCCA%20Basic%20%7C%20WAEC%20SHS-orange.svg?style=flat-square)](backend/app/services/grading.py)
-[![License](https://img.shields.io/badge/License-Proprietary%20Enterprise-purple.svg?style=flat-square)]()
+[![Python Version](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Database Architecture](https://img.shields.io/badge/Database-PostgreSQL%20%7C%20SQLite%20WAL-4169E1?logo=postgresql&logoColor=white)](DATABASE_MIGRATIONS.md)
+[![Deployment](https://img.shields.io/badge/Deployment-Render-46E3B7?logo=render&logoColor=white)](https://sms-nald.onrender.com)
+[![Testing Suite](https://img.shields.io/badge/Tests-81%20Suites%20Passing-brightgreen?logo=pytest&logoColor=white)](TESTING.md)
+[![Security Policy](https://img.shields.io/badge/Security-Policy%20Enforced-red?logo=shield)](SECURITY.md)
+[![Curriculum Standards](https://img.shields.io/badge/Curriculum-NaCCA%20%2F%20WAEC%20Aligned-gold)](#2-academic-management--dual-curricula)
 
 </div>
 
 ---
 
-## 🌟 Executive Summary
+## Overview
 
-**EduManage 360** is a production-grade, multi-tenant institutional enterprise resource planning (ERP) platform designed specifically for the African educational landscape. It natively incorporates Ghana Education Service (GES), National Council for Curriculum and Assessment (NaCCA), and West African Examinations Council (WAEC) standards.
+**EduManage 360** is an institutional-grade School Management System (SMS) and Enterprise Resource Planning (ERP) platform engineered specifically for Basic Schools, Senior High Schools (SHS), Technical/Vocational Institutes (TVET), and Multi-Campus Educational Networks across Ghana and the broader West African region.
 
-### 🏛️ The 100% Offline-First Operational Guarantee
-Schools in developing regions and remote districts frequently operate under intermittent or non-existent internet connectivity. **EduManage 360 is engineered to operate 100% offline indefinitely.**
-- **Zero Mandatory External APIs:** Authentication, broadsheets, terminal report cards, PDF transcripts, fee billing, and barcode scanning execute completely locally on the school's local area network (LAN / Wi-Fi).
-- **Embedded Database High-Concurrency Engine:** SQLite with Write-Ahead Logging (WAL) and 30-second busy timeout supports 30–80+ concurrent staff devices connected to a single school Wi-Fi router.
-- **Seamless Cloud & Multi-Campus Migration:** Automatic zero-code database switching to enterprise **PostgreSQL** for multi-campus networks and cloud deployments.
-- **Enterprise Offline PWA:** Full service-worker static asset caching (`frontend/sw.js`), ensuring browsers load all 35+ administrative views even when the local server is temporarily power-cycling.
+### The Problem It Solves
+Educational institutions in the region often face severe operational challenges:
+* **Connectivity Barriers**: Critical campus administrative operations (attendance, grading, admissions, cashier payments) often halt when regional internet connectivity fails.
+* **Complex Regional Curricula**: Off-the-shelf international systems lack native support for Ghanaian educational structures, including the National Council for Curriculum and Assessment (**NaCCA**) Common Core Programme and the West African Examinations Council (**WAEC**) SHS grading standards.
+* **Disjointed Multi-School Governance**: Educational directorates, dioceses, and school groups struggle to aggregate metrics across remote campuses while maintaining strict data isolation between individual schools.
 
----
-
-## 📐 System Architecture
-
-```
-                       ┌─────────────────────────────────────────────────────────┐
-                       │   Staff Devices (Laptops, Phones, Tablets on School LAN)│
-                       │           100% Offline Progressive Web App (PWA)        │
-                       └────────────────────────────┬────────────────────────────┘
-                                                    │ HTTP / WebSocket (Port 8000)
-                                                    ▼
-                       ┌─────────────────────────────────────────────────────────┐
-                       │          FastAPI High-Performance Async Gateway         │
-                       │   • Security Headers (HSTS, CSP, X-Frame-Options)       │
-                       │   • Sliding-Window Auth Rate Limiter & CORS Guard       │
-                       │   • Zero-Trust Session & Multi-Device Forensic Monitor  │
-                       └────────────────────────────┬────────────────────────────┘
-                                                    │
-                               ┌────────────────────┴────────────────────┐
-                               ▼                                         ▼
-            ┌──────────────────────────────────────┐  ┌──────────────────────────────────────┐
-            │       Local Deployment Engine        │  │       Enterprise Cloud Engine        │
-            │           SQLite (WAL Mode)          │  │              PostgreSQL              │
-            │  • Simultaneous Multi-Reader Concur. │  │  • Multi-Campus Connection Pool     │
-            │  • Immediate Sequential Write Lock   │  │  • Read-Replicas & SSL Encryption    │
-            │  • Auto-Checkpointing & 30s Timeout  │  │  • Centralized Ministry Aggregation  │
-            └──────────────────────────────────────┘  └──────────────────────────────────────┘
-                               │                                         ▲
-                               └─────────── [Sync Engine] ───────────────┘
-                                   Bi-Directional Conflict Resolution
-```
+### Architectural Solution
+EduManage 360 addresses these challenges through:
+1. **Offline-First Resilience**: Full campus operational continuity over local offline Wi-Fi / Local Area Networks (LAN) using a self-contained, concurrency-optimized local SQLite engine running in Write-Ahead Logging (WAL) mode.
+2. **Cloud Scalability**: Centralized multi-campus governance hosted on managed PostgreSQL, allowing regional synchronization and consolidated analytics.
+3. **Deep Curricular Alignment**: Automated grading engines tailored to NaCCA and WAEC standards, Computerized School Selection & Placement System (**CSSPS**) intake processing, automated constraint-satisfaction timetabling, and biometric/QR gate security.
 
 ---
 
-## 🏛️ Comprehensive Institutional Modules
+## Live System
 
-```
-                                    ┌───────────────────────────────────────┐
-                                    │       EduManage 360 Core Engine       │
-                                    └───────────────────┬───────────────────┘
-               ┌────────────────────────┬───────────────┴───────────────┬────────────────────────┐
-               ▼                        ▼                               ▼                        ▼
-       [Academic & Exams]      [Admissions & Boarding]         [Finance & Bursary]      [Security & Identity]
-       • NaCCA & GES Curriculum • CSSPS Batch CSV Intake        • Multi-category Bills   • 26 Granular RBAC Roles
-       • 30/70 & 50/50 SBA      • House/Dorm Auto-Allocator     • Student Ledgers        • Zero-Trust Session Guard
-       • Broadsheets & Matrices • QR Gate Pass Exeats           • Instant Receipts       • Offline Self-Service Reset
-       • Batch PDF Report Cards • Parent Auto-Linking           • Paystack MoMo Gateway  • Dual-Tier Audit Ledger
-```
+EduManage 360 is actively deployed and running in a live production environment:
 
-### 1. 🎓 Academic & Examination Engine
-* **Dual Curriculum Architecture:** Native support for both **Basic Schools** (Kindergarten to JHS 3 with NaCCA Grade 1–9 stanine scale) and **Senior High Schools** (SHS 1–3 with WAEC 8-aggregate and A1–F9 alpha-numeric grading).
-* **Configurable SBA Weightings:** Dynamic 30% School-Based Assessment (Class Tests, Projects, Homework) + 70% Terminal Examination, or modern 50/50 Continuous Assessment weighting.
-* **Automated Broadsheets & Matrix Ledgers:** Instant computation of raw scores, class averages, subject ranks, and official terminal rankings with RFC 4180 CSV export and formula injection sanitization (CWE-1236).
-* **Batch Print-Ready PDF Report Cards:** Single-page terminal report cards featuring high-resolution school crests, attendance summaries, conduct remarks, signature stamps, and next term resumption notices.
-* **Promotions & Semester Rollover:** Automated academic rollover engine with transactional integrity guards that preserve historical ledger integrity.
+* **Production URL**: [https://sms-nald.onrender.com](https://sms-nald.onrender.com)
+* **API Documentation**: [https://sms-nald.onrender.com/docs](https://sms-nald.onrender.com/docs) (OpenAPI / Swagger UI)
+* **System Health Check**: [https://sms-nald.onrender.com/api/system/health](https://sms-nald.onrender.com/api/system/health)
 
-### 2. 📋 Admissions, CSSPS Intake & Boarding Management
-* **Ministry CSSPS Batch Intake:** One-click CSV ingestion for Ghana Ministry of Education Computerized School Selection & Placement System (CSSPS) files with automatic alias mapping and duplicate rejection.
-* **Automated House & Dormitory Allocator:** Gender-balanced, capacity-aware automated room and bed allocator for boarding institutions.
-* **Parent-Guardian Auto-Linking:** Intelligently matches sibling records under a single unified guardian portal account based on validated phone number hashes.
-* **Cumulative Record Books (CRB):** Continuous bio-profile tracking, co-curricular records, medical histories, and automated graduating student digital clearance certificates.
-
-### 3. 💳 Bursary, Fees & Financial Accounting
-* **Flexible Multi-Category Billing:** Dynamic fee schedules differentiated by class level, academic stream, and residential status (Boarding vs. Day).
-* **Real-Time Student Ledgers:** Complete double-entry debit/credit ledger tracking, arrears reporting, and itemized outstanding balance calculations.
-* **Thermal & A4 Payment Receipts:** Print-ready official receipts with cryptographic verification hashes and timestamped operator signatures.
-* **Hybrid Payment Gateway:** Offline manual payment recording (Cash, Direct Bank Deposit, Cheque) plus automated Mobile Money (MTN MoMo, Telecel Cash, AT Money) via Paystack split-settlement integration.
-
-### 4. 🛏️ Boarding & QR-Code Exeat Gate Security
-* **Digital Multi-Stage Exeat Workflow:** Electronic exeat requests initiated by Form Masters, approved by Senior Housemasters, and dispatched to parent phones.
-* **Live QR-Coded Gate Passes:** Campus security officers scan digitally-signed student QR badges using any mobile browser to record gate departures and returns with sub-second latency.
-* **Dormitory Capacity Management:** Real-time visibility into bed capacities, house allocations, and occupancy ratios.
-
-### 5. 📅 Automated Timetable & Period Scheduling Engine
-* **Conflict-Free CSP Engine:** Constraint-satisfaction heuristic solver that schedules school-wide master timetables, eliminating room double-booking and teacher period overlaps.
-* **Teacher Workload Balancing:** Enforces GES weekly period limits (maximum 24–28 periods/week) with administrative duty exemptions.
-* **Printable Class & Master Grid Exports:** Generates crisp classroom and staff noticeboard PDF timetables.
-
-### 6. ⏱️ Attendance Scanner & Truancy Detection
-* **Multi-Modal Register Modes:** Supports manual morning/afternoon class registers, USB barcode scanners, and mobile camera QR badge check-in.
-* **Automated Truancy Alerts:** Detects consecutive unexcused absences and triggers automated parent alerts.
-
-### 7. 📢 Omnichannel Messaging Engine
-* **Offline-Safe Hybrid SMS Gateway:** Queues messages locally and simulates delivery offline; automatically dispatches through Hubtel / SMS gateways when connectivity is detected.
-* **Direct WhatsApp Integration:** Instant click-to-chat links for immediate parent notifications without API fees.
-* **Automated Event Triggers:** Automated broadcasts on payment confirmation, gate exeat check-in, attendance absence, and terminal report card publishing.
-
-### 8. 🛡️ Zero-Trust Security, RBAC & Forensic Visibility
-* **26 Granular Roles:** Comprehensive role hierarchy (Super Admin, Headmaster, Assistant Head Academic/Admin/Domestic, HOD, Form Master, Housemaster, Bursar, Teacher, Parent, Student, Security Officer).
-* **Enterprise Offline Self-Service Password Recovery:** Secure password recovery using multi-factor institutional verification (Phone + Staff ID/DOB/PIN) with sliding-window rate limiting, timing attack resistance, and single-use JWT nonces.
-* **Multi-Device Session Guard:** Active session tracking that detects concurrent device logins and terminates orphaned tokens.
-* **Dual-Tier Forensic Audit Ledger:** Real-time institutional activity feed (`frontend/audit-logs.html`) capturing user agents, client IPs, timestamps, and actions with sensitive credential masking.
+> [!NOTE]
+> Public demo credentials are intentionally not published in this repository to safeguard running instances. Access to live administrative environments is restricted to authorized personnel. To evaluate the platform locally, follow the [Local Development](#local-development) guide.
 
 ---
 
-## ⚡ Concurrency & Database Engine Comparison
+## Key Capabilities
 
-| Deployment Criterion | SQLite (WAL Mode) | PostgreSQL |
-| :--- | :---: | :---: |
-| **Recommended Concurrency** | **1 – 80+ Active Devices** | **100 – 10,000+ Active Devices** |
-| **Setup Complexity** | **Zero Setup** (Embedded single file `school.db`) | Requires local/cloud PostgreSQL service |
-| **Ideal Environment** | School Laptop, Local Wi-Fi Router, Desktop PC | Dedicated Server PC, Cloud VPS (Render/AWS) |
-| **Database Locks** | `NORMAL` sync, 30s busy timeout, WAL queue | Row-level locking with MVCC |
-| **Operational Dependency** | **100% Offline** (Zero external network) | Local LAN server or Internet for Cloud |
+EduManage 360 organizes school operations into integrated, security-scoped operational modules:
+
+### 1. School Administration & Governance
+* **Multi-Tenant Administration**: Centralized Super Admin portal to onboard, configure, inspect, and manage multiple independent schools from a single installation.
+* **Institutional Branding**: Per-school configuration of crests, color themes, grading boundaries, operational terms, and semester schedules.
+* **Staff Directory & Workload**: Comprehensive staff profiling, subject/class allocation, role assignments, and departmental oversight.
+
+### 2. Academic Management & Dual Curricula
+* **NaCCA Standards-Based Grading**: Native support for Basic School and Junior High School (JHS) 7–9 Continuous Assessment (Class Assessment Tasks, Project Work, End-of-Term Examinations).
+* **WAEC SHS Grading Scheme**: Rigorous 30% Continuous Assessment (Class Tests, Assignments, Mid-Term) + 70% Terminal Exam calculations generating standard WAEC letter grades (A1 to F9) and GPA metrics.
+* **Bulk Gradebook Entry**: Real-time tabular gradebook input with out-of-range value validation, automatic score tallying, and class ranking algorithms.
+* **Institutional Report Cards**: One-click generation of PDF terminal reports, transcripts, and broadsheets with dynamic headmaster signature blocks.
+
+### 3. Admissions & CSSPS Intake
+* **CSSPS Bulk Ingestion**: Import national Computerized School Selection & Placement System CSV/Excel exports with automated data cleansing and deduplication.
+* **Auto-Enrollment Pipeline**: Automated conversion of placed applicants into active student records, assigning index numbers, programme streams, and class sections.
+* **House & Track Assignment**: Intelligent distribution of boarding students into residential houses and academic tracks (Green, Gold, Single Track).
+
+### 4. Boarding House & QR Gate Security
+* **Exeat & Leave Authorization**: Multi-stage exeat approval workflows (Housemaster -> Senior Housemaster) with digital passes.
+* **QR Security Verification**: Security gate scanning interface to validate exeat passes, track student departures, and flag overdue returns in real time.
+* **Residential Capacity Management**: Real-time room and bed allocation monitoring across male and female boarding facilities.
+
+### 5. Automated Timetabling Engine
+* **Constraint Satisfaction Solver (CSP)**: Heuristic scheduling engine that builds conflict-free school timetables.
+* **Hard Constraint Enforcement**: Prevents teacher double-booking, room capacity violations, and overlapping class periods.
+* **Soft Constraint Optimization**: Balances teacher daily workloads, distributes difficult subjects into morning blocks, and reserves departmental planning periods.
+
+### 6. Financial Management & Ledgers
+* **Configurable Fee Schedules**: Define mandatory, optional, boarding, and day fees broken down by class, programme, or term.
+* **Student Ledger Accounting**: Real-time balance tracking, credit/debit transaction history, and automated invoice generation.
+* **Hybrid Payment Recording**: Supports cash desk transactions, bank deposits, and mobile money payment reconciliations.
+* **Defaulter Tracking & Statements**: Filterable debt recovery lists and printable financial clearance statements for exam admittance.
+
+### 7. Attendance & Truancy Tracking
+* **Daily Class Roll Call**: Quick-toggle interface for homeroom teachers (Present, Absent, Late, Excused).
+* **Subject-Level Attendance**: Track period attendance to identify subject-specific truancy.
+* **Automated Guardian Alerts**: Immediate trigger of alert dispatches when unexcused absences are logged.
+
+### 8. Omnichannel Communication
+* **Regional SMS Gateway**: Native integration with Hubtel SMS API for instant parent notifications (terminal results, fee balances, urgent notices).
+* **Direct WhatsApp Messaging**: Web-based WhatsApp template dispatching for paperless digital report card links.
+* **Internal Notice Board**: Role-scoped campus announcements broadcasted directly to student, teacher, or parent portal dashboards.
+
+### 9. Forensic Audit Trail & Data Tools
+* **Immutable Audit Logging**: Automatic recording of user, IP address, timestamp, action type, and exact state diffs for financial, grading, and authentication events.
+* **Data Export & Archiving**: Comprehensive data exports to Excel, CSV, and encrypted JSON formats with formula-injection defenses.
 
 ---
 
-## 🚀 Quick Start & Installation
+## User Roles & Access Control
 
-### Method 1: Windows 1-Click Desktop Launcher (Recommended for Schools)
-EduManage 360 includes pre-configured automation scripts with pre-boot database backups and Chrome/Edge app-window kiosk mode:
+EduManage 360 implements a **26-Role Role-Based Access Control (RBAC)** architecture enforcing the principle of least privilege:
 
-1. Double-click [`Start_EduManage360.bat`](Start_EduManage360.bat).
-2. The server creates a timestamped database backup in `backups/`, boots the async runtime on port 8000, and opens the application.
-3. To stop gracefully: Run [`Stop_EduManage360.bat`](Stop_EduManage360.bat).
-4. To restart: Run [`Restart_EduManage360.bat`](Restart_EduManage360.bat).
+```
+                                  ┌─────────────────────────┐
+                                  │       Super Admin       │
+                                  │ (Cross-Tenant Platform) │
+                                  └────────────┬────────────┘
+                                               │
+             ┌─────────────────────────────────┴─────────────────────────────────┐
+             ▼                                                                   ▼
+┌─────────────────────────┐                                         ┌─────────────────────────┐
+│     School Admin A      │                                         │     School Admin B      │
+│ (Tenant-Isolated Scope) │                                         │ (Tenant-Isolated Scope) │
+└────────────┬────────────┘                                         └────────────┬────────────┘
+             │                                                                   │
+    ┌────────┴────────┬─────────────────┬────────────────┐                      ...
+    ▼                 ▼                 ▼                ▼
+Headmaster      Accountant           Teacher          Student / Parent
+```
 
-### Method 2: Python Production Server Runner
+### Role Matrix & Permissions Overview
+
+| Role Group | Roles | Can Manage | Access Restrictions |
+|---|---|---|---|
+| **Platform Governance** | `superadmin` | All schools, platform settings, global database maintenance, cross-tenant auditing | Cannot modify individual school academic grades without administrative audit logging |
+| **School Leadership** | `school_admin`, `headmaster`, `assistant_headmaster` | School configuration, staff accounts, term dates, fee policies, final report approvals | Restricted strictly to own school (`school_id`); cannot access other school records |
+| **Academic Oversight** | `academic_head`, `senior_housemaster`, `hod` | Department curricula, class allocations, timetable approvals, exeat workflows | Cannot alter fee structures or perform cash reconciliations |
+| **Teaching Faculty** | `teacher`, `form_master`, `subject_master` | Class roll call, gradebook entry for assigned subjects, terminal comments | Cannot modify grades outside assigned subjects or terms; read-only access to student fees |
+| **Financial Operations** | `accountant`, `cashier`, `bursar` | Fee schedule setup, payment entry, receipt issuance, financial ledger reporting | No access to edit student grades, curriculum, or exeat passes |
+| **Campus Support** | `librarian`, `nurse`, `security_officer`, `storekeeper` | Library loans, infirmary visits, exeat gate validation, asset inventory | Read-only directory access; strictly scoped operational views |
+| **End Users** | `student`, `parent`, `alumni` | Personal academic reports, fee balance statements, attendance records, school notices | Strict self-service isolation; zero write access to school records |
+
+### Multi-Tenant Isolation Mechanism
+* Every query involving school-scoped data is parameterized with `WHERE school_id = :school_id`.
+* The `current_user` dependency extracts the authenticated user's `school_id` directly from cryptographically signed JWT claims.
+* School administrators cannot read or write data belonging to another institution.
+* The `X-School-Id` tenant override header is reserved exclusively for authenticated `superadmin` sessions to switch administrative contexts safely.
+
+---
+
+## System Architecture
+
+EduManage 360 uses a decoupled, layered service architecture designed to operate seamlessly across both cloud hosting and offline local campus servers.
+
+```
+                  ┌─────────────────────────────────────────────────┐
+                  │           Client Layer (Browser / PWA)          │
+                  │  Modern Vanilla JS, HTML5, CSS3, Responsive UI  │
+                  └────────────────────────┬────────────────────────┘
+                                           │ HTTP / HTTPS (REST API)
+                                           ▼
+                  ┌─────────────────────────────────────────────────┐
+                  │            API Gateway & Security Layer         │
+                  │   FastAPI Routing, CORS, SlowAPI Rate Limiting  │
+                  │       JWT Nonce Revocation, Auth Dependency     │
+                  └────────────────────────┬────────────────────────┘
+                                           │
+             ┌─────────────────────────────┴─────────────────────────────┐
+             ▼                                                           ▼
+┌───────────────────────────────┐                       ┌───────────────────────────────┐
+│     Core Business Engines     │                       │    External Gateway Adapters  │
+│  - Grading & Assessment       │                       │  - Hubtel SMS Client          │
+│  - CSP Timetable Solver       │                       │  - WhatsApp Deep-Link Engine  │
+│  - CSSPS Intake Processor     │                       │  - Cloud Storage / File Upload│
+│  - Forensic Audit Logging     │                       │  - Online Backup Engine       │
+└────────────┬──────────────────┘                       └───────────────────────────────┘
+             │
+             ▼
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│                         Data Access Layer (SQLAlchemy 2.0 ORM)                        │
+│                     Connection Pooling & Multi-Tenant Query Scoping                   │
+└──────────────────────────┬─────────────────────────────────┬──────────────────────────┘
+                           │                                 │
+                           ▼                                 ▼
+           ┌───────────────────────────────┐ ┌───────────────────────────────┐
+           │   Production Database Tier    │ │    Offline Local Campus Tier  │
+           │      PostgreSQL (Render)      │ │       SQLite 3 (WAL Mode)     │
+           │ Connection Pooling, SSL, Pk/Fk│ │  30s Busy Timeout, Zero-Conf │
+           └───────────────────────────────┘ └───────────────────────────────┘
+```
+
+---
+
+## Technology Stack
+
+| Layer | Component | Technology / Library | Architectural Role |
+|---|---|---|---|
+| **Backend** | Framework | Python 3.10+, FastAPI | High-performance asynchronous REST API framework |
+| | Data Validation | Pydantic v2 | Strict schema validation and serialization |
+| | ORM & DB Access | SQLAlchemy 2.0 | Unified object-relational mapping for SQLite and PostgreSQL |
+| | Password Security | Passlib (`bcrypt`) | 12-round salted Bcrypt password hashing |
+| | Token Management | PyJWT | Cryptographically signed JSON Web Tokens with single-use nonces |
+| | Rate Limiting | SlowAPI (Limits) | Tiered IP and route-based request throttling |
+| | Migrations | Alembic | Version-controlled schema migrations (`backend/alembic/versions/`) |
+| **Frontend** | Architecture | Vanilla HTML5 / CSS3 / ES6+ | Zero-build, offline-cached Single Page Application / PWA |
+| | Typography | Inter, Google Fonts (Local Fallbacks) | Institutional typography optimized for legibility |
+| | PDF Generation | Native HTML-to-Print / CSS Paged Media | Deterministic layout rendering for reports and transcripts |
+| | QR & Barcodes | HTML5-QRCode, JsBarcode | Real-time camera scanner for exeat verification and ID cards |
+| **Data Tier** | Production Database | PostgreSQL 15+ | Multi-worker connection pooling, row locking, cloud resilience |
+| | Local / Dev Database| SQLite 3 | WAL mode, 30-second busy timeout, zero external setup for campus LAN |
+| | Backups | Custom Cryptographic Engine | Hot online backup API, SHA-256 verification, AES-256 encryption |
+| **Deployment** | Cloud PaaS | Render (`render.yaml`) | Managed web service and managed PostgreSQL (`edumanage-db`) |
+| | Offline LAN | Windows Batch Launcher (`Start_EduManage360.bat`) | Automated 1-click venv setup, DB migration, and LAN server launch |
+| **Testing** | Test Framework | Pytest, pytest-asyncio, HTTPX | Automated test runner with `--security`, `--tenant`, `--database` suites |
+
+---
+
+## Security Architecture
+
+Security controls are embedded directly into the application framework rather than treated as an afterthought:
+
+* **Authentication & Credential Hashing**: Passwords are protected using salted Bcrypt (12 work factor rounds). A legacy migration mechanism automatically upgrades older SHA-256 hashes to Bcrypt upon successful login.
+* **Cryptographic Temporary Credentials**: Default accounts provisioned during deployment or administrative reset use `secrets.token_urlsafe()` to guarantee high entropy.
+* **Token Nonce Revocation**: All password reset tokens and session overrides include a unique cryptographic nonce tracked in the `revoked_tokens` database table. Replay attacks and reuse of expired/consumed tokens are strictly prevented.
+* **Tenant Isolation & Anti-Spoofing**: All incoming requests are validated against the authenticated tenant. Tenant override headers (`X-School-Id`) are strictly restricted to verified `superadmin` sessions; any spoofing attempt returns `403 Forbidden`.
+* **CORS Hardening**: Strict origin whitelisting configured via `CORS_ORIGINS`. Wildcards (`*`) are disallowed when credentials/cookies are active.
+* **CSV Formula Injection Mitigation (CWE-1236)**: Student broadsheets, gradebooks, and financial ledgers automatically sanitize fields starting with `=`, `+`, `-`, or `@` to neutralize spreadsheet execution vulnerabilities.
+* **Credential Masking**: Health checks, logging adapters, and migration tools automatically scrub database credentials and API secrets from output streams.
+* **Encrypted Backups**: The database backup utility incorporates AES-256-GCM envelope encryption (`cryptography.fernet`) and generates SHA-256 checksums for tamper detection.
+
+For full security specifications and disclosure procedures, consult [`SECURITY.md`](SECURITY.md).
+
+---
+
+## Database Architecture
+
+EduManage 360 uses a dual-engine architecture:
+* **Cloud Environments**: PostgreSQL provides multi-worker concurrency, connection pooling, and SSL encryption.
+* **Campus LAN Environments**: SQLite 3 operates in **WAL (Write-Ahead Logging)** mode with `busy_timeout = 30000ms`, allowing concurrent reads during write operations without locking the database.
+
+### Database Migrations
+All schema updates are version-controlled using Alembic. Migration scripts reside in `backend/alembic/versions/`.
+
+```bash
+# Apply pending schema migrations
+alembic upgrade head
+
+# Generate a new migration revision
+alembic revision --autogenerate -m "describe_schema_change"
+
+# Roll back the most recent migration
+alembic downgrade -1
+```
+
+For complete migration instructions and schema history, consult [`DATABASE_MIGRATIONS.md`](DATABASE_MIGRATIONS.md).
+
+---
+
+## API Architecture
+
+The backend exposes a modular REST API structured across 33 domain-specific route controllers under `/api`:
+
+| Route Prefix | Domain | Major Capabilities |
+|---|---|---|
+| `/api/auth` | Authentication | Login, logout, token refresh, password resets, session status |
+| `/api/schools` | Institutions | School profile, branding, academic terms, grading scales |
+| `/api/students` | Student Body | Student enrollment, profiling, class allocation, emergency contacts |
+| `/api/grades` | Assessment | Score entry, continuous assessments, terminal calculations, rankings |
+| `/api/report-cards` | Transcripts | Terminal report card generation, broadsheets, PDF formatting |
+| `/api/fees` | Financials | Fee schedules, student invoices, payment recording, ledger balances |
+| `/api/timetables` | Scheduling | CSP timetable generation, class periods, teacher workload balancing |
+| `/api/admissions` | Admissions | Applicant registration, placement processing, admission letters |
+| `/api/cssps` | CSSPS Intake | Placement spreadsheet import, automated parsing, student ingestion |
+| `/api/exeat` | Boarding Security | Exeat approvals, security gate QR verification, status audits |
+| `/api/audit` | Forensics | Immutable event logging, security logs, change tracking |
+| `/api/backups` | Data Continuity | Online hot backup creation, encryption, integrity verification |
+| `/api/system` | Maintenance | Sanitized health checks, system diagnostics, version telemetry |
+
+The interactive OpenAPI documentation is automatically available on running instances at `/docs` (Swagger UI) and `/redoc` (ReDoc).
+
+---
+
+## Local Development
+
+Follow these steps to set up and run EduManage 360 in a local development environment.
+
+### Prerequisites
+* Python 3.10 or higher
+* Git
+* SQLite 3 (included with Python) or PostgreSQL 15+ (optional for cloud testing)
+
+### Step-by-Step Setup
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/Bismark-Duah/SMS.git
 cd SMS
 
-# 2. Set up virtual environment
-python -m venv .venv
-.venv\Scripts\activate      # Windows
-# source .venv/bin/activate  # Linux / macOS
+# 2. Create and activate a Python virtual environment
+python -m venv venv
 
-# 3. Install production dependencies
+# On Windows:
+venv\Scripts\activate
+
+# On Linux/macOS:
+source venv/bin/activate
+
+# 3. Install core dependencies
 pip install -r backend/requirements.txt
 
-# 4. Copy environment configuration
-copy .env.example .env      # Windows
-# cp .env.example .env       # Linux / macOS
+# 4. Configure environment variables
+# Copy the example environment file
+cp .env.example .env
 
-# 5. Launch Production Server
-python run.py
+# Edit .env to set your application secrets:
+# SECRET_KEY=your-secure-random-secret-key-min-32-chars
+# DATABASE_URL=sqlite:///./school.db
+# INITIAL_SUPERADMIN_PASSWORD=your-secure-initial-password
+
+# 5. Run database migrations to initialize the schema
+alembic upgrade head
+
+# 6. Start the development server
+python -m uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Access the application in your browser: **`http://127.0.0.1:8000`**
-
-### Connecting Staff Devices Over School Wi-Fi (No Internet Required)
-1. Connect the host computer to the school's local Wi-Fi router.
-2. Run `ipconfig` (Windows) or `ip a` (Linux) to obtain the host's IPv4 address (e.g. `192.168.1.100`).
-3. Teachers and staff on the same Wi-Fi network open: **`http://192.168.1.100:8000`**.
+Once started, access the application in your browser:
+* **Frontend Application**: `http://localhost:8000`
+* **Interactive API Docs**: `http://localhost:8000/docs`
 
 ---
 
-## 🔑 Default Master Credentials
+## Offline Campus LAN Deployment
 
-| Account Role | Default Username | Default Password | Access Level |
-| :--- | :--- | :--- | :--- |
-| **Super Administrator** | `superadmin` | `superadmin123!` | System-wide / Multi-School Platform |
-| **School Administrator** | `admin` | `admin123!` | Primary Institutional Portal |
+For schools deploying on a local campus without internet connectivity:
+
+1. **Host PC / Local Server**: Connect a central campus PC or laptop to the school's local Wi-Fi router or switch via Ethernet.
+2. **One-Click Windows Launcher**: Run [`Start_EduManage360.bat`](Start_EduManage360.bat) from the project root. The script automatically:
+   - Validates the Python runtime
+   - Provisions the virtual environment and dependencies
+   - Applies pending Alembic migrations
+   - Launches the Uvicorn server bound to `0.0.0.0:8000`
+   - Detects the local LAN IPv4 address (e.g., `192.168.1.100`)
+3. **Staff Access**: Teachers and administrative staff can connect to the school Wi-Fi and open `http://192.168.1.100:8000` from any laptop, tablet, or smartphone.
+
+---
+
+## Production Deployment
+
+EduManage 360 is configured for declarative deployment on **Render** via [`render.yaml`](render.yaml).
+
+```
+Render Cloud
+┌─────────────────────────────────────────────────────────────┐
+│  Web Service (edumanage360-api)                             │
+│  - Runtime: Python 3.10+                                    │
+│  - Build: pip install -r backend/requirements.txt           │
+│  - Pre-Deploy: alembic upgrade head                         │
+│  - Start: uvicorn backend.app.main:app --host 0.0.0.0       │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ Internal Encrypted Connection
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Managed PostgreSQL Database (edumanage-db)                 │
+│  - Database: edumanage_production                           │
+│  - Automated backups & SSL transport                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Essential Production Environment Variables
+
+| Variable | Description | Example / Requirement |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/edumanage_production` |
+| `SECRET_KEY` | Cryptographic secret for JWT signing | 64-character random hexadecimal string |
+| `ENVIRONMENT` | Deployment environment identifier | `production` |
+| `CORS_ORIGINS` | Comma-separated list of allowed origins | `https://sms-nald.onrender.com` |
+| `INITIAL_SUPERADMIN_PASSWORD` | Initial platform administrator password | High-entropy random password (used on first initialization) |
+| `HUBTEL_CLIENT_ID` | Hubtel SMS API Client ID | Optional: required only for SMS dispatching |
+| `HUBTEL_CLIENT_SECRET`| Hubtel SMS API Client Secret | Optional: required only for SMS dispatching |
 
 > [!IMPORTANT]
-> The system enforces mandatory password change warnings upon initial deployment. Update default master credentials immediately in production under **Settings > User Management**.
+> **Production Credential Provisioning**: Production deployments must initialize administrator credentials through the secure deployment environment configuration (`INITIAL_SUPERADMIN_PASSWORD`). Privileged default credentials are intentionally not published in this repository.
 
 ---
 
-## 📦 Disaster Recovery & Client Handoff
+## Testing & Verification
+
+The repository includes a comprehensive automated test suite spanning security, multi-tenancy, database operations, and academic business logic.
+
+### Unified Test Runner
+Use the provided [`run_tests.py`](run_tests.py) test runner to execute targeted test suites:
 
 ```bash
-# Execute automated pre-handoff sanitization and timestamped backup
-python scripts/prepare_client_handoff.py
+# Run multi-tenant isolation tests
+python run_tests.py --tenant
 
-# Run standalone disaster recovery and database verification
-python backend/app/scripts/disaster_recovery.py
+# Run security, authentication, and vulnerability tests
+python run_tests.py --security
+
+# Run database, migration, and connection pooling tests
+python run_tests.py --database
+
+# Run the complete test suite
+python run_tests.py --all
 ```
+
+For complete test architecture details and test authoring standards, consult [`TESTING.md`](TESTING.md).
 
 ---
 
-## 🧪 Comprehensive Verification Suite
+## Backup & Disaster Recovery
 
-EduManage 360 features an enterprise-grade automated test runner validating **81 test suites** across security, database concurrency, academic engines, UI accessibility, and offline PWA assets:
+EduManage 360 features a dedicated cryptographic backup and restoration engine:
 
-```bash
-python verify_all.py
-```
+* **Hot Online Snapshots**: Uses SQLite's online backup API to take live point-in-time database snapshots without locking active user sessions.
+* **Integrity Hashing**: Every backup generates a companion SHA-256 hash (`.sha256`) to verify data integrity before restoration.
+* **At-Rest Encryption**: Backups can be encrypted at rest using AES-256 envelope encryption.
+* **Restoration Verification**: Built-in restoration routines validate table structures and schema versions before committing a restored database.
 
-```text
-==================================================
-               VERIFICATION REPORT                
-==================================================
- [PASS]   tests/verify_promotions.py     : PASS
- [PASS]   tests/verify_messaging.py      : PASS
- [PASS]   tests/verify_academic_hierarchy.py : PASS
- [PASS]   tests/verify_report_card.py    : PASS
- [PASS]   tests/verify_sba_weighting.py  : PASS
- [PASS]   tests/verify_timetable.py      : PASS
- [PASS]   tests/test_sqlite_wal_and_concurrency.py : PASS
- [PASS]   tests/test_fee_financial_audit.py : PASS
- [PASS]   tests/test_academic_engine_audit.py : PASS
- [PASS]   tests/test_security_audit_hardening.py : PASS
- [PASS]   tests/test_offline_pwa_audit.py : PASS
- [PASS]   tests/test_password_recovery.py : PASS
- [PASS]   tests/test_backup_and_recovery.py : PASS
- [PASS]   tests/test_frontend_authorization_assumptions.py : PASS
- [PASS]   tests/test_responsive_mobile_ux.py : PASS
- [PASS]   tests/test_accessibility_audit.py : PASS
- [PASS]   tests/test_guided_school_onboarding.py : PASS
- [PASS]   tests/test_import_export_workflows.py : PASS
- [PASS]   tests/test_audit_and_forensic_visibility.py : PASS
-==================================================
- ALL 81 SYSTEM VERIFICATION TESTS PASSED!
-==================================================
-```
+For step-by-step backup, verification, and disaster recovery procedures, consult [`docs/BACKUP_AND_RECOVERY.md`](docs/BACKUP_AND_RECOVERY.md).
 
 ---
 
-## 📁 Repository Structure
+## Performance & Scalability
+
+Operational performance varies depending on the chosen deployment tier:
+
+### Campus LAN Tier (SQLite WAL Mode)
+* **Tested Environment**: Local PC / server on a standard gigabit Wi-Fi router.
+* **Concurrency Profile**: Optimized for dozens of concurrent staff devices performing simultaneous roll calls, grading, and cashier entries.
+* **Operational Characteristics**: SQLite WAL mode permits unlimited concurrent readers while write transactions queue safely under a 30-second busy timeout.
+* **Resource Footprint**: Minimal memory (< 150 MB RAM), running comfortably on legacy school computer hardware.
+
+### Cloud Tier (PostgreSQL on Render)
+* **Production Deployment**: Hosted on Render with managed PostgreSQL.
+* **Concurrency Profile**: Multi-worker Uvicorn processes with connection pooling handle multi-school administrative workloads across campuses.
+* **Network Latency**: Sub-second API response times under standard regional broadband conditions.
+
+> [!NOTE]
+> Concurrency capacity figures are based on operational architecture. The repository does not claim unverified capacity figures (e.g., "10,000+ simultaneous devices") without documented laboratory benchmark data.
+
+---
+
+## Repository Structure
 
 ```
 SMS/
 ├── backend/
+│   ├── alembic/              # Alembic database migration revisions
+│   │   └── versions/         # Version-controlled schema migration scripts
 │   ├── app/
-│   │   ├── main.py                  # FastAPI application entrypoint & middleware
-│   │   ├── database.py              # Dual SQLite WAL & PostgreSQL database engine
-│   │   ├── models.py                # SQLAlchemy enterprise schema models
-│   │   ├── routes/                  # 30+ domain route modules (auth, students, fees, etc.)
-│   │   └── services/                # Business logic engines (grading, timetable, reports)
-│   ├── migrations/                  # Alembic database migration revisions
-│   └── requirements.txt             # Production Python dependencies
+│   │   ├── core/             # Application configuration, security, and hashing
+│   │   ├── db/               # Database session management and engine initialization
+│   │   ├── models/           # SQLAlchemy ORM database models
+│   │   ├── routes/           # 33 domain-specific FastAPI route controllers
+│   │   ├── schemas/          # Pydantic request/response validation schemas
+│   │   ├── services/         # Business logic (timetables, grading, SMS, backups)
+│   │   └── main.py           # FastAPI application entry point and middleware
+│   └── requirements.txt      # Python backend package dependencies
 ├── frontend/
-│   ├── index.html                   # Login & landing portal
-│   ├── dashboard.html               # Main executive institutional dashboard
-│   ├── audit-logs.html              # Forensic audit trail & activity feed
-│   ├── css/styles.css               # Centralized CSS design system & WCAG tokens
-│   ├── js/                          # Modular vanilla JS controllers
-│   └── sw.js                        # Offline-first Service Worker cache manifest
-├── scripts/                         # Operational utilities (client handoff, backups)
-├── docs/                            # Comprehensive engineering and security specs
-├── tests/                           # 81 automated unit, regression & integration suites
-├── run.py                           # Production server runner & port allocator
-└── verify_all.py                    # Master system-wide test verification runner
+│   ├── assets/               # Institutional branding, crests, and static icons
+│   ├── css/                  # Application stylesheets and responsive layouts
+│   ├── js/                   # Frontend controller modules and API clients
+│   └── *.html                # Role-specific HTML views and dashboard interfaces
+├── docs/                     # Architectural, security, and operational documentation
+├── scripts/                  # Administrative, migration, and maintenance utilities
+├── tests/                    # 81 automated test suites (security, tenant, DB, API)
+├── render.yaml               # Render Cloud deployment blueprint
+├── run_tests.py              # Unified CLI test runner
+├── Start_EduManage360.bat    # Windows 1-click offline campus LAN launcher
+├── SECURITY.md               # Institutional security policy and reporting protocols
+├── TESTING.md                # Automated testing documentation and guide
+├── DATABASE_MIGRATIONS.md    # Alembic database migration reference
+└── README.md                 # Primary system documentation
 ```
 
 ---
 
-## 📄 License & Proprietary Notice
+## Documentation Index
 
-© 2026 **EduManage 360**. All rights reserved.  
-Engineered for institutional academic management, governance, and digital transformation.
+Comprehensive technical documentation is maintained within the repository:
+
+* **[Security Policy](SECURITY.md)** — Vulnerability reporting protocols and security controls.
+* **[Testing Architecture](TESTING.md)** — Test runner flags, suite categorization, and CI verification.
+* **[Database Migrations](DATABASE_MIGRATIONS.md)** — Alembic schema evolution and rollback procedures.
+* **[Backup & Recovery](docs/BACKUP_AND_RECOVERY.md)** — Cryptographic backup procedures and disaster recovery.
+* **[Production Engineering Audit](docs/FINAL_PRODUCTION_ENGINEERING_AUDIT.md)** — Comprehensive architecture, security, and verification audit.
+* **[Guided School Onboarding](docs/GUIDED_SCHOOL_ONBOARDING.md)** — Institutional setup and academic term configuration.
+* **[Render PostgreSQL Setup](docs/RENDER_POSTGRES_SETUP.md)** — Cloud database provisioning and connection configuration.
+* **[Audit & Forensic Visibility](docs/AUDIT_AND_FORENSIC_VISIBILITY.md)** — Forensic event tracking specifications.
+* **[Frontend Security Audit](docs/FRONTEND_SECURITY_AUDIT.md)** — Client-side protection and sanitization review.
+* **[CORS Hardening Specification](docs/CORS_HARDENING.md)** — Cross-origin resource sharing policy specification.
+
+---
+
+## Known Limitations
+
+Transparency is essential for institutional software:
+
+1. **Cloud Synchronization**: While offline campus deployments function independently and migration scripts exist (`scripts/migrate_to_postgres.py`, `scripts/pull_cloud_database.py`), an automated, background bi-directional delta synchronization daemon is currently an architectural roadmap capability.
+2. **External SMS Delivery**: The SMS alert module requires an active internet connection to communicate with the Hubtel SMS gateway. When deployed strictly offline, SMS dispatches queue until internet connectivity is restored.
+3. **Formal Load Testing**: While SQLite WAL mode and PostgreSQL connection pooling have been validated in operational environments, formal synthetic load benchmarks establishing absolute concurrency limits remain ongoing.
+
+---
+
+## Roadmap
+
+* [ ] **Automated Delta Sync Daemon**: Continuous background synchronization between offline local campus servers and the cloud PostgreSQL database with conflict resolution.
+* [ ] **Cross-Platform Desktop Packaging**: Electron / PyInstaller bundled desktop binaries for turnkey Windows and macOS installation.
+* [ ] **Mobile Parent & Student Portal**: Lightweight, offline-capable Progressive Web Application (PWA) optimized for low-bandwidth mobile devices.
+* [ ] **Biometric Attendance Hardware Integration**: Direct USB/network fingerprint terminal integration for staff roll call and student gate logging.
+
+---
+
+## License
+
+This software is licensed under a **Proprietary Institutional License**. All rights reserved.
+
+Unauthorized copying, modification, distribution, or commercial use of this software without explicit authorization from the project maintainers is strictly prohibited. For licensing inquiries, contact the institutional development team.

@@ -20,7 +20,7 @@
 
 ## Overview
 
-**EduManage 360** is an institutional-grade School Management System (SMS) and Enterprise Resource Planning (ERP) platform engineered specifically for Basic Schools, Senior High Schools (SHS), Technical/Vocational Institutes (TVET), and Multi-Campus Educational Networks across Ghana and the broader West African region.
+**EduManage 360** is an institutional School Management System (SMS) and academic administration platform engineered specifically for Basic Schools, Senior High Schools (SHS), Technical/Vocational Institutes (TVET), and Multi-Campus Educational Networks across Ghana and the broader West African region.
 
 ### The Problem It Solves
 Educational institutions in the region often face severe operational challenges:
@@ -30,7 +30,7 @@ Educational institutions in the region often face severe operational challenges:
 
 ### Architectural Solution
 EduManage 360 addresses these challenges through:
-1. **Offline-First Resilience**: Full campus operational continuity over local offline Wi-Fi / Local Area Networks (LAN) using a self-contained, concurrency-optimized local SQLite engine running in Write-Ahead Logging (WAL) mode.
+1. **Offline/Local Campus Operation**: EduManage 360 supports offline/local operation for supported workflows (roll call, gradebook entry, report card generation, cashier receipting, and gate security) using its local database mode over a campus Wi-Fi or Local Area Network (LAN). Workflows that depend on third-party internet services (such as external SMS alerts) queue until connectivity is restored.
 2. **Cloud Scalability**: Centralized multi-campus governance hosted on managed PostgreSQL, allowing regional synchronization and consolidated analytics.
 3. **Deep Curricular Alignment**: Automated grading engines tailored to NaCCA and WAEC standards, Computerized School Selection & Placement System (**CSSPS**) intake processing, automated constraint-satisfaction timetabling, and biometric/QR gate security.
 
@@ -292,13 +292,16 @@ git clone https://github.com/Bismark-Duah/SMS.git
 cd SMS
 
 # 2. Create and activate a Python virtual environment
-python -m venv venv
+python -m venv .venv
 
-# On Windows:
-venv\Scripts\activate
+# On Windows (Command Prompt):
+.venv\Scripts\activate
+
+# On Windows (PowerShell):
+.venv\Scripts\Activate.ps1
 
 # On Linux/macOS:
-source venv/bin/activate
+source .venv/bin/activate
 
 # 3. Install core dependencies
 pip install -r backend/requirements.txt
@@ -375,7 +378,7 @@ Render Cloud
 | `HUBTEL_CLIENT_SECRET`| Hubtel SMS API Client Secret | Optional: required only for SMS dispatching |
 
 > [!IMPORTANT]
-> **Production Credential Provisioning**: Production deployments must initialize administrator credentials through the secure deployment environment configuration (`INITIAL_SUPERADMIN_PASSWORD`). Privileged default credentials are intentionally not published in this repository.
+> **Administrator Credential Provisioning**: Production administrator credentials are intentionally not published in this repository. Initial administrator setup must be completed through the secure deployment/configuration process, and temporary credentials must be rotated before normal operation.
 
 ---
 
@@ -422,18 +425,18 @@ For step-by-step backup, verification, and disaster recovery procedures, consult
 Operational performance varies depending on the chosen deployment tier:
 
 ### Campus LAN Tier (SQLite WAL Mode)
-* **Tested Environment**: Local PC / server on a standard gigabit Wi-Fi router.
-* **Concurrency Profile**: Optimized for dozens of concurrent staff devices performing simultaneous roll calls, grading, and cashier entries.
-* **Operational Characteristics**: SQLite WAL mode permits unlimited concurrent readers while write transactions queue safely under a 30-second busy timeout.
-* **Resource Footprint**: Minimal memory (< 150 MB RAM), running comfortably on legacy school computer hardware.
+* **Operational Environment**: Local PC or campus server on a standard Wi-Fi router or switch.
+* **Concurrency Profile**: Designed for local campus staff devices performing simultaneous roll calls, grading, and cashier entries over a local Wi-Fi router.
+* **Operational Characteristics**: SQLite WAL mode allows non-blocking concurrent reads while write transactions queue safely under a configurable 30-second busy timeout.
+* **Resource Footprint**: Minimal memory footprint (< 150 MB RAM), running comfortably on standard school computer hardware.
 
 ### Cloud Tier (PostgreSQL on Render)
 * **Production Deployment**: Hosted on Render with managed PostgreSQL.
 * **Concurrency Profile**: Multi-worker Uvicorn processes with connection pooling handle multi-school administrative workloads across campuses.
-* **Network Latency**: Sub-second API response times under standard regional broadband conditions.
+* **Performance Profile**: Designed to scale through PostgreSQL-backed deployment and connection pooling, and can be evaluated under larger institutional workloads through dedicated load testing.
 
 > [!NOTE]
-> Concurrency capacity figures are based on operational architecture. The repository does not claim unverified capacity figures (e.g., "10,000+ simultaneous devices") without documented laboratory benchmark data.
+> Capacity and throughput depend on the hosting environment, hardware specifications, and network infrastructure. Concurrency limits should be evaluated under specific institutional workloads through dedicated load testing.
 
 ---
 

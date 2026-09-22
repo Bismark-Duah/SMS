@@ -479,6 +479,7 @@ SMS/
 
 Comprehensive technical documentation is maintained within the repository:
 
+* **[System Architecture](docs/ARCHITECTURE.md)** — Comprehensive technical architecture, component topology, and data flows.
 * **[Security Policy](SECURITY.md)** — Vulnerability reporting protocols and security controls.
 * **[Testing Architecture](TESTING.md)** — Test runner flags, suite categorization, and CI verification.
 * **[Database Migrations](DATABASE_MIGRATIONS.md)** — Alembic schema evolution and rollback procedures.

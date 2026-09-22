@@ -1,0 +1,221 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 950" width="100%" height="100%" style="background-color: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <linearGradient id="grad-client" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="grad-security" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#31102b"/>
+      <stop offset="100%" stop-color="#1a0b18"/>
+    </linearGradient>
+    <linearGradient id="grad-gateway" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="100%" stop-color="#022c22"/>
+    </linearGradient>
+    <linearGradient id="grad-services" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#0f0e26"/>
+    </linearGradient>
+    <linearGradient id="grad-data" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#172554"/>
+      <stop offset="100%" stop-color="#0c1329"/>
+    </linearGradient>
+    <linearGradient id="grad-db-pg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#172554"/>
+    </linearGradient>
+    <linearGradient id="grad-db-lite" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#064e3b"/>
+    </linearGradient>
+    <linearGradient id="grad-roadmap" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b2d07"/>
+      <stop offset="100%" stop-color="#241a04"/>
+    </linearGradient>
+    
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#34d399"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#fbbf24"/>
+    </marker>
+  </defs>
+
+  <!-- Title & Header -->
+  <text x="600" y="45" text-anchor="middle" fill="#f8fafc" font-size="24" font-weight="700" letter-spacing="1">EDUMANAGE 360 — SYSTEM ARCHITECTURE</text>
+  <text x="600" y="70" text-anchor="middle" fill="#94a3b8" font-size="13">High-Availability Cloud PaaS (PostgreSQL) &amp; Offline-First Campus LAN (SQLite WAL)</text>
+
+  <!-- 1. Client Layer -->
+  <g transform="translate(60, 95)" filter="url(#shadow)">
+    <rect width="1080" height="95" rx="8" fill="url(#grad-client)" stroke="#334155" stroke-width="1.5"/>
+    <text x="25" y="30" fill="#38bdf8" font-size="13" font-weight="700" letter-spacing="0.5">1. CLIENT TIER (OFFLINE PWA &amp; WEB PLATFORM)</text>
+    
+    <!-- Client Nodes -->
+    <rect x="25" y="45" width="230" height="38" rx="6" fill="#1e293b" stroke="#475569"/>
+    <text x="140" y="69" text-anchor="middle" fill="#f1f5f9" font-size="12">Desktop Browser (Chrome/Edge)</text>
+
+    <rect x="280" y="45" width="230" height="38" rx="6" fill="#1e293b" stroke="#475569"/>
+    <text x="395" y="69" text-anchor="middle" fill="#f1f5f9" font-size="12">Campus Wi-Fi / LAN Kiosk</text>
+
+    <rect x="535" y="45" width="250" height="38" rx="6" fill="#1e293b" stroke="#475569"/>
+    <text x="660" y="69" text-anchor="middle" fill="#f1f5f9" font-size="12">IndexedDB Cache (offline-store.js)</text>
+
+    <rect x="810" y="45" width="245" height="38" rx="6" fill="#1e293b" stroke="#475569"/>
+    <text x="932" y="69" text-anchor="middle" fill="#f1f5f9" font-size="12">QR Camera Gate Scanner</text>
+  </g>
+
+  <!-- Connector: Client -> Security -->
+  <line x1="600" y1="190" x2="600" y2="215" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 2. Security & Edge Middleware Layer -->
+  <g transform="translate(60, 215)" filter="url(#shadow)">
+    <rect width="1080" height="90" rx="8" fill="url(#grad-security)" stroke="#701a75" stroke-width="1.5"/>
+    <text x="25" y="28" fill="#f472b6" font-size="13" font-weight="700" letter-spacing="0.5">2. PERIMETER &amp; SECURITY MIDDLEWARE STACK</text>
+    
+    <rect x="25" y="42" width="240" height="36" rx="6" fill="#2e1028" stroke="#86198f"/>
+    <text x="145" y="65" text-anchor="middle" fill="#fbcfe8" font-size="11.5">Cloudflare Perimeter Guard (IP/Proxy)</text>
+
+    <rect x="285" y="42" width="245" height="36" rx="6" fill="#2e1028" stroke="#86198f"/>
+    <text x="407" y="65" text-anchor="middle" fill="#fbcfe8" font-size="11.5">Tenant Subdomain Router (Host Context)</text>
+
+    <rect x="550" y="42" width="250" height="36" rx="6" fill="#2e1028" stroke="#86198f"/>
+    <text x="675" y="65" text-anchor="middle" fill="#fbcfe8" font-size="11.5">Device Session Guard (Zero-Trust)</text>
+
+    <rect x="820" y="42" width="235" height="36" rx="6" fill="#2e1028" stroke="#86198f"/>
+    <text x="937" y="65" text-anchor="middle" fill="#fbcfe8" font-size="11.5">SlowAPI Tiered Rate Limiter</text>
+  </g>
+
+  <!-- Connector: Security -> API Gateway -->
+  <line x1="600" y1="305" x2="600" y2="330" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 3. API Gateway Tier -->
+  <g transform="translate(60, 330)" filter="url(#shadow)">
+    <rect width="1080" height="95" rx="8" fill="url(#grad-gateway)" stroke="#065f46" stroke-width="1.5"/>
+    <text x="25" y="28" fill="#34d399" font-size="13" font-weight="700" letter-spacing="0.5">3. ASYNCHRONOUS API GATEWAY (FASTAPI &amp; STARLETTE)</text>
+    
+    <rect x="25" y="42" width="250" height="40" rx="6" fill="#042f2e" stroke="#0f766e"/>
+    <text x="150" y="60" text-anchor="middle" fill="#ccfbf1" font-size="12" font-weight="600">32 REST Route Controllers</text>
+    <text x="150" y="74" text-anchor="middle" fill="#99f6e4" font-size="10">/api/grades, /api/fees, /api/auth...</text>
+
+    <rect x="295" y="42" width="250" height="40" rx="6" fill="#042f2e" stroke="#0f766e"/>
+    <text x="420" y="60" text-anchor="middle" fill="#ccfbf1" font-size="12" font-weight="600">JWT Nonce &amp; Token Validator</text>
+    <text x="420" y="74" text-anchor="middle" fill="#99f6e4" font-size="10">Token Revocation &amp; Bcrypt 12</text>
+
+    <rect x="565" y="42" width="245" height="40" rx="6" fill="#042f2e" stroke="#0f766e"/>
+    <text x="687" y="60" text-anchor="middle" fill="#ccfbf1" font-size="12" font-weight="600">Multi-Tenant Scoper</text>
+    <text x="687" y="74" text-anchor="middle" fill="#99f6e4" font-size="10">get_school_id() IDOR/BOLA Guard</text>
+
+    <rect x="830" y="42" width="225" height="40" rx="6" fill="#042f2e" stroke="#0f766e"/>
+    <text x="942" y="60" text-anchor="middle" fill="#ccfbf1" font-size="12" font-weight="600">OpenAPI &amp; JSON Logging</text>
+    <text x="942" y="74" text-anchor="middle" fill="#99f6e4" font-size="10">Swagger UI / Structured Access Log</text>
+  </g>
+
+  <!-- Connector: API Gateway -> Business Services -->
+  <line x1="600" y1="425" x2="600" y2="450" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 4. Core Business Engines -->
+  <g transform="translate(60, 450)" filter="url(#shadow)">
+    <rect width="1080" height="115" rx="8" fill="url(#grad-services)" stroke="#3730a3" stroke-width="1.5"/>
+    <text x="25" y="28" fill="#818cf8" font-size="13" font-weight="700" letter-spacing="0.5">4. CORE DOMAIN &amp; APPLICATION SERVICES (19 BUSINESS ENGINES)</text>
+    
+    <rect x="25" y="42" width="160" height="60" rx="6" fill="#1e1b4b" stroke="#4338ca"/>
+    <text x="105" y="65" text-anchor="middle" fill="#e0e7ff" font-size="11.5" font-weight="600">Curriculum &amp; Grading</text>
+    <text x="105" y="82" text-anchor="middle" fill="#c7d2fe" font-size="9.5">NaCCA &amp; WAEC (30/70)</text>
+
+    <rect x="200" y="42" width="160" height="60" rx="6" fill="#1e1b4b" stroke="#4338ca"/>
+    <text x="280" y="65" text-anchor="middle" fill="#e0e7ff" font-size="11.5" font-weight="600">Timetable Solver</text>
+    <text x="280" y="82" text-anchor="middle" fill="#c7d2fe" font-size="9.5">CSP Backtracking</text>
+
+    <rect x="375" y="42" width="160" height="60" rx="6" fill="#1e1b4b" stroke="#4338ca"/>
+    <text x="455" y="65" text-anchor="middle" fill="#e0e7ff" font-size="11.5" font-weight="600">CSSPS &amp; Admissions</text>
+    <text x="455" y="82" text-anchor="middle" fill="#c7d2fe" font-size="9.5">Ingest &amp; House Allocation</text>
+
+    <rect x="550" y="42" width="160" height="60" rx="6" fill="#1e1b4b" stroke="#4338ca"/>
+    <text x="630" y="65" text-anchor="middle" fill="#e0e7ff" font-size="11.5" font-weight="600">Bursary &amp; Ledgers</text>
+    <text x="630" y="82" text-anchor="middle" fill="#c7d2fe" font-size="9.5">Fees, Cash &amp; MoMo</text>
+
+    <rect x="725" y="42" width="160" height="60" rx="6" fill="#1e1b4b" stroke="#4338ca"/>
+    <text x="805" y="65" text-anchor="middle" fill="#e0e7ff" font-size="11.5" font-weight="600">Boarding &amp; Exeat</text>
+    <text x="805" y="82" text-anchor="middle" fill="#c7d2fe" font-size="9.5">QR Gate Pass Verification</text>
+
+    <rect x="900" y="42" width="155" height="60" rx="6" fill="#1e1b4b" stroke="#4338ca"/>
+    <text x="977" y="65" text-anchor="middle" fill="#e0e7ff" font-size="11.5" font-weight="600">Forensic Audit Log</text>
+    <text x="977" y="82" text-anchor="middle" fill="#c7d2fe" font-size="9.5">CWE-1236 Sanitized CSV</text>
+  </g>
+
+  <!-- Connector: Services -> Data Access -->
+  <line x1="600" y1="565" x2="600" y2="590" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 5. Data Access Layer -->
+  <g transform="translate(60, 590)" filter="url(#shadow)">
+    <rect width="1080" height="75" rx="8" fill="url(#grad-data)" stroke="#1e40af" stroke-width="1.5"/>
+    <text x="25" y="26" fill="#60a5fa" font-size="13" font-weight="700" letter-spacing="0.5">5. DATA ACCESS LAYER (SQLALCHEMY 2.0 ORM &amp; MIGRATION CONTROL)</text>
+    
+    <rect x="25" y="38" width="335" height="28" rx="4" fill="#0f172a" stroke="#2563eb"/>
+    <text x="192" y="57" text-anchor="middle" fill="#bfdbfe" font-size="11">49 Relational Models (models.py)</text>
+
+    <rect x="380" y="38" width="345" height="28" rx="4" fill="#0f172a" stroke="#2563eb"/>
+    <text x="552" y="57" text-anchor="middle" fill="#bfdbfe" font-size="11">Alembic Schema Evolution (alembic/versions/)</text>
+
+    <rect x="745" y="38" width="310" height="28" rx="4" fill="#0f172a" stroke="#2563eb"/>
+    <text x="900" y="57" text-anchor="middle" fill="#bfdbfe" font-size="11">Connection Factory &amp; URL Masker</text>
+  </g>
+
+  <!-- Connectors: Data Access -> Databases -->
+  <path d="M 330 665 L 330 705" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <path d="M 870 665 L 870 705" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 6A. Local Campus Database Tier -->
+  <g transform="translate(60, 705)" filter="url(#shadow)">
+    <rect width="525" height="135" rx="8" fill="url(#grad-db-lite)" stroke="#059669" stroke-width="1.5"/>
+    <text x="20" y="28" fill="#6ee7b7" font-size="13" font-weight="700" letter-spacing="0.5">6A. LOCAL CAMPUS DEPLOYMENT (OFFLINE LAN)</text>
+    
+    <rect x="20" y="42" width="485" height="42" rx="6" fill="#022c22" stroke="#10b981"/>
+    <text x="262" y="60" text-anchor="middle" fill="#ecfdf5" font-size="12" font-weight="600">SQLite 3 — Write-Ahead Logging (WAL)</text>
+    <text x="262" y="76" text-anchor="middle" fill="#a7f3d0" font-size="10.5">busy_timeout=30s | Non-blocking Reads | Zero External Setup</text>
+
+    <rect x="20" y="92" width="235" height="30" rx="4" fill="#064e3b" stroke="#059669"/>
+    <text x="137" y="112" text-anchor="middle" fill="#d1fae5" font-size="10.5">Start_EduManage360.bat</text>
+
+    <rect x="270" y="92" width="235" height="30" rx="4" fill="#064e3b" stroke="#059669"/>
+    <text x="387" y="112" text-anchor="middle" fill="#d1fae5" font-size="10.5">AES-256 Hot Backup Snapshots</text>
+  </g>
+
+  <!-- 6B. Production Cloud Database Tier -->
+  <g transform="translate(615, 705)" filter="url(#shadow)">
+    <rect width="525" height="135" rx="8" fill="url(#grad-db-pg)" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="20" y="28" fill="#93c5fd" font-size="13" font-weight="700" letter-spacing="0.5">6B. PRODUCTION CLOUD DEPLOYMENT (RENDER PAAS)</text>
+    
+    <rect x="20" y="42" width="485" height="42" rx="6" fill="#0f172a" stroke="#3b82f6"/>
+    <text x="262" y="60" text-anchor="middle" fill="#eff6ff" font-size="12" font-weight="600">PostgreSQL 15+ (edumanage-db)</text>
+    <text x="262" y="76" text-anchor="middle" fill="#bfdbfe" font-size="10.5">Pool: 20 conns + 10 overflow | SSL Transport | Row-Level Locks</text>
+
+    <rect x="20" y="92" width="235" height="30" rx="4" fill="#1e3a8a" stroke="#2563eb"/>
+    <text x="137" y="112" text-anchor="middle" fill="#dbeafe" font-size="10.5">Declarative Blueprint (render.yaml)</text>
+
+    <rect x="270" y="92" width="235" height="30" rx="4" fill="#1e3a8a" stroke="#2563eb"/>
+    <text x="387" y="112" text-anchor="middle" fill="#dbeafe" font-size="10.5">Multi-Tenant School Isolation</text>
+  </g>
+
+  <!-- Synchronization Subsystem & Roadmap Connector -->
+  <g transform="translate(60, 855)" filter="url(#shadow)">
+    <rect width="1080" height="75" rx="8" fill="url(#grad-roadmap)" stroke="#d97706" stroke-width="1.5" stroke-dasharray="6,4"/>
+    <text x="25" y="24" fill="#fcd34d" font-size="12" font-weight="700" letter-spacing="0.5">7. SYNCHRONIZATION BRIDGE: CAMPUS LAN ↔ CLOUD POSTGRESQL</text>
+    
+    <rect x="25" y="35" width="330" height="30" rx="4" fill="#451a03" stroke="#b45309"/>
+    <text x="190" y="55" text-anchor="middle" fill="#fef3c7" font-size="11">[IMPLEMENTED] SyncOutbox &amp; HMAC Signing</text>
+
+    <rect x="375" y="35" width="330" height="30" rx="4" fill="#451a03" stroke="#b45309"/>
+    <text x="540" y="55" text-anchor="middle" fill="#fef3c7" font-size="11">[IMPLEMENTED] Operator Migration Scripts</text>
+
+    <rect x="725" y="35" width="330" height="30" rx="4" fill="#382103" stroke="#d97706" stroke-dasharray="4,2"/>
+    <text x="890" y="55" text-anchor="middle" fill="#fde68a" font-size="11" font-weight="600">[ROADMAP] Continuous Auto-Sync Daemon</text>
+  </g>
+</svg>

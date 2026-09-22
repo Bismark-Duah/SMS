@@ -3,841 +3,412 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Accept-CH" content="Sec-CH-UA-Model, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version, Sec-CH-UA-Mobile" />
-  <title>EduManage360 – One Platform. Every School. Complete Control.</title>
-  <meta name="description" content="The unified, intelligent school management system built for Ghanaian institutions. Manage students, fees, attendance, reports, and broadsheets — 100% offline." />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <title>EduManage 360 – One Platform. Every School. Complete Control.</title>
+  <meta name="description" content="Streamline administration with an offline-first school management system tailored for Ghanaian Senior High and Basic schools. Manage BECE and CSSPS admissions, generate detailed WAEC terminal broadsheets, and monitor fee collections via integrated MoMo payment receipts." />
 
-  <style>
-    /* ─── Reset & Design System Tokens ─────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <!-- OpenGraph & Social Sharing Meta Tags -->
+  <meta property="og:title" content="EduManage 360 — Institutional School Management System" />
+  <meta property="og:description" content="Offline-first school management system engineered for Ghanaian Senior High and Basic schools. WAEC broadsheets, MoMo fee reconciliation, and attendance." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://sms-nald.onrender.com/" />
+  <meta property="og:image" content="assets/landing_realistic_preview.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
 
-    :root {
-      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --font-heading: 'Outfit', 'Inter', sans-serif;
-      --teal:         #059669;
-      --teal-glow:    #10b981;
-      --teal-dark:    #047857;
-      --teal-light:   #d1fae5;
-      --cyan:         #06b6d4;
-      --cyan-glow:    #22d3ee;
-      --indigo:       #4f46e5;
-      --indigo-glow:  #6366f1;
-      --ink:          #0f172a;
-      --ink-card:     #1e293b;
-      --ink-light:    #334155;
-      --muted:        #64748b;
-      --border:       #e2e8f0;
-      --border-dark:  rgba(255, 255, 255, 0.12);
-      --bg:           #ffffff;
-      --bg-soft:      #f8fafc;
-      --radius-sm:    8px;
-      --radius-md:    14px;
-      --radius-lg:    22px;
-      --radius-pill:  999px;
-      --shadow-card:  0 10px 30px -4px rgba(15,23,42,.08), 0 2px 6px rgba(15,23,42,.04);
-      --shadow-glow:  0 0 30px rgba(5,150,105,.35);
-      --shadow-btn:   0 4px 16px rgba(5,150,105,.35);
-      --transition:   .22s cubic-bezier(.4,0,.2,1);
-    }
+  <!-- Prevent stale caching during development -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 
-    html, body {
-      font-family: var(--font-body);
-      background: var(--bg);
-      color: var(--ink);
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
-      scroll-behavior: smooth;
-    }
-
-    h1, h2, h3, h4, .brand-title {
-      font-family: var(--font-heading);
-    }
-
-    .container { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
-    a { color: inherit; text-decoration: none; }
-
-    /* ─── Top Glow Mesh ────────────────────────────── */
-    .ambient-glow-mesh {
-      position: absolute;
-      top: -160px; right: -160px;
-      width: 700px; height: 700px;
-      background: radial-gradient(circle, rgba(16,185,129,.14) 0%, rgba(6,182,212,.08) 45%, transparent 70%);
-      pointer-events: none; z-index: 0;
-      filter: blur(40px);
-    }
-
-    /* ─── NAVBAR ────────────────────────────────────── */
-    .navbar {
-      position: sticky; top: 0; z-index: 100;
-      background: rgba(255,255,255,.92);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-    }
-    .navbar-inner {
-      display: flex; align-items: center; justify-content: space-between;
-      max-width: 1200px; margin: 0 auto;
-      padding: 0 32px; height: 70px;
-    }
-    .nav-brand img {
-      height: 44px; max-width: 190px; object-fit: contain; display: block;
-    }
-    .nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
-    .nav-links a {
-      font-size: .92rem; font-weight: 600; color: var(--ink-light);
-      transition: color var(--transition);
-    }
-    .nav-links a:hover { color: var(--teal); }
-    .nav-actions { display: flex; align-items: center; gap: 12px; }
-    .btn-ghost {
-      font-size: .92rem; font-weight: 700; color: var(--ink);
-      border: 1.5px solid var(--border); border-radius: var(--radius-pill);
-      padding: 8px 22px; transition: all var(--transition);
-    }
-    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); background: rgba(5,150,105,.05); }
-    .btn-primary {
-      font-size: .92rem; font-weight: 700; color: #fff;
-      background: linear-gradient(135deg, var(--teal), var(--teal-dark));
-      border-radius: var(--radius-pill);
-      padding: 9px 24px; box-shadow: var(--shadow-btn);
-      transition: all var(--transition);
-      border: none; cursor: pointer;
-    }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(5,150,105,.45); }
-
-    /* ─── HERO SECTION ──────────────────────────────── */
-    .hero {
-      padding: 80px 0 60px;
-      position: relative; z-index: 1;
-    }
-    .hero-grid {
-      display: grid; grid-template-columns: 1.05fr 1fr;
-      align-items: center; gap: 48px;
-    }
-    .hero-left { display: flex; flex-direction: column; }
-
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--teal-light); color: var(--teal-dark);
-      font-size: .78rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
-      border-radius: var(--radius-pill); padding: 6px 16px;
-      margin-bottom: 24px; width: fit-content;
-      border: 1px solid rgba(5,150,105,.25);
-    }
-    .hero-badge::before { content: '●'; font-size: .65rem; color: var(--teal); animation: pulseDot 2s infinite; }
-
-    @keyframes pulseDot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(1.3); }
-    }
-
-    .hero-headline {
-      font-size: clamp(2.4rem, 4.2vw, 3.7rem);
-      font-weight: 900; letter-spacing: -.04em; line-height: 1.1;
-      color: var(--ink); margin-bottom: 20px;
-    }
-    .hero-headline .accent {
-      background: linear-gradient(135deg, #059669 0%, #0284c7 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .hero-sub {
-      font-size: 1.08rem; color: var(--muted); font-weight: 500;
-      max-width: 480px; margin-bottom: 34px; line-height: 1.7;
-    }
-
-    .hero-ctas { display: flex; align-items: center; gap: 14px; margin-bottom: 36px; flex-wrap: wrap; }
-    .btn-hero-primary {
-      display: inline-flex; align-items: center; gap: 10px;
-      font-size: 1rem; font-weight: 700; color: #fff;
-      background: linear-gradient(135deg, var(--teal), #047857);
-      border-radius: var(--radius-pill);
-      padding: 14px 30px; box-shadow: 0 8px 24px rgba(5,150,105,.35);
-      transition: all var(--transition);
-    }
-    .btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(5,150,105,.5); }
-    .btn-hero-ghost {
-      display: inline-flex; align-items: center; gap: 10px;
-      font-size: 1rem; font-weight: 700; color: var(--ink);
-      border: 1.5px solid var(--border); border-radius: var(--radius-pill);
-      padding: 13px 26px; transition: all var(--transition);
-      background: #fff;
-    }
-    .btn-hero-ghost:hover { border-color: var(--teal); color: var(--teal); transform: translateY(-2px); }
-    .play-circle {
-      width: 28px; height: 28px; border-radius: 50%;
-      background: var(--teal-light); color: var(--teal);
-      display: flex; align-items: center; justify-content: center;
-      font-size: .75rem; padding-left: 2px;
-    }
-
-    .trust-badges { display: flex; flex-wrap: wrap; gap: 8px; }
-    .trust-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: var(--bg-soft); border: 1px solid var(--border);
-      border-radius: var(--radius-pill); padding: 6px 14px;
-      font-size: .78rem; font-weight: 600; color: var(--ink-light);
-    }
-
-    /* ─── 3D HERO MOCKUP & FLOATING TELEMETRY BADGES ─── */
-    .hero-mockup-wrapper {
-      position: relative;
-      perspective: 1200px;
-    }
-
-    .hero-glow-orb {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: 480px; height: 480px;
-      background: radial-gradient(circle, rgba(16,185,129,.22) 0%, rgba(6,182,212,.14) 50%, transparent 70%);
-      border-radius: 50%;
-      filter: blur(50px);
-      z-index: 0;
-      pointer-events: none;
-      animation: orbBreathe 6s ease-in-out infinite alternate;
-    }
-
-    @keyframes orbBreathe {
-      0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
-      100% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
-    }
-
-    .hero-mockup-card {
-      position: relative; z-index: 1;
-      background: rgba(15, 23, 42, 0.96);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: var(--radius-lg);
-      box-shadow: 0 28px 70px -12px rgba(15,23,42,.35), 0 0 0 1px rgba(255,255,255,0.06);
-      overflow: hidden;
-      backdrop-filter: blur(20px);
-      color: #fff;
-    }
-
-    .mockup-header-bar {
-      background: rgba(30, 41, 59, 0.9);
-      padding: 12px 18px;
-      display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .mockup-brand {
-      display: flex; align-items: center; gap: 8px;
-      font-size: .82rem; font-weight: 800; color: #fff;
-    }
-    .mockup-live-pill {
-      font-size: .65rem; font-weight: 700; text-transform: uppercase;
-      background: rgba(16,185,129,.2); color: #34d399;
-      border: 1px solid rgba(16,185,129,.4);
-      padding: 2px 8px; border-radius: 12px;
-      display: inline-flex; align-items: center; gap: 4px;
-    }
-    .mockup-live-pill::before { content: '●'; font-size: .5rem; }
-
-    .mockup-content { padding: 18px; }
-    .mockup-kpi-row {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 10px; margin-bottom: 14px;
-    }
-    .mockup-kpi {
-      background: rgba(30, 41, 59, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: var(--radius-sm); padding: 10px 12px;
-    }
-    .mkpi-label { font-size: .65rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: .04em; }
-    .mkpi-val { font-size: 1.25rem; font-weight: 900; color: #fff; font-family: var(--font-heading); margin-top: 2px; }
-    .mkpi-sub { font-size: .62rem; color: #34d399; font-weight: 700; margin-top: 2px; }
-
-    .mockup-chart-row {
-      display: grid; grid-template-columns: 1.4fr 1fr;
-      gap: 10px; margin-bottom: 12px;
-    }
-    .mockup-chart-card {
-      background: rgba(30, 41, 59, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: var(--radius-sm); padding: 12px;
-    }
-    .mchart-title { font-size: .7rem; font-weight: 700; color: #cbd5e1; margin-bottom: 10px; display: flex; justify-content: space-between; }
-    .bar-chart-preview { display: flex; align-items: flex-end; gap: 6px; height: 50px; }
-    .b-bar {
-      flex: 1; border-radius: 3px 3px 0 0;
-      background: linear-gradient(to top, #059669, #34d399);
-      transition: height .4s ease;
-    }
-
-    .mockup-recent-feed {
-      background: rgba(30, 41, 59, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: var(--radius-sm); padding: 10px 12px;
-    }
-    .mfeed-title { font-size: .68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; }
-    .mfeed-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      font-size: .68rem;
-    }
-    .mfeed-item:last-child { border: none; }
-
-    /* Floating Micro-Badges */
-    .floating-badge {
-      position: absolute; z-index: 3;
-      background: rgba(15, 23, 42, 0.88);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 12px; padding: 10px 16px;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
-      display: flex; align-items: center; gap: 10px;
-      font-size: .78rem; font-weight: 700; color: #fff;
-      pointer-events: none;
-    }
-    .floating-badge.top-right {
-      top: -20px; right: -24px;
-      animation: floatSlow 5s ease-in-out infinite alternate;
-    }
-    .floating-badge.bottom-left {
-      bottom: -22px; left: -24px;
-      animation: floatSlow 5.5s ease-in-out infinite alternate-reverse;
-    }
-
-    @keyframes floatSlow {
-      0% { transform: translateY(0px); }
-      100% { transform: translateY(-12px); }
-    }
-
-    .badge-icon-box {
-      width: 32px; height: 32px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: .95rem; flex-shrink: 0;
-    }
-    .badge-icon-box.green { background: rgba(16,185,129,.2); color: #34d399; }
-    .badge-icon-box.cyan  { background: rgba(6,182,212,.2);  color: #22d3ee; }
-
-    /* ─── REGIONAL TRUST MARQUEE ────────────────────── */
-    .marquee-section {
-      padding: 30px 0;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      background: var(--bg-soft);
-      overflow: hidden;
-      position: relative;
-    }
-    .marquee-track {
-      display: flex; width: max-content;
-      animation: marqueeScroll 28s linear infinite;
-      gap: 36px; align-items: center;
-    }
-    .marquee-track:hover { animation-play-state: paused; }
-    .marquee-item {
-      display: flex; align-items: center; gap: 10px;
-      font-size: .88rem; font-weight: 700; color: var(--ink-light);
-      white-space: nowrap; opacity: 0.85;
-    }
-
-    @keyframes marqueeScroll {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
-    }
-
-    /* ─── INTERACTIVE LIVE PRODUCT TOUR ─────────────── */
-    .tour-section {
-      padding: 100px 0;
-      background: #ffffff;
-      position: relative;
-    }
-    .section-eyebrow {
-      text-align: center; font-size: .8rem; font-weight: 800;
-      letter-spacing: .08em; text-transform: uppercase; color: var(--teal);
-      margin-bottom: 12px;
-    }
-    .section-headline {
-      text-align: center; font-size: clamp(2rem, 3.5vw, 2.7rem);
-      font-weight: 900; letter-spacing: -.04em; color: var(--ink);
-      margin-bottom: 14px;
-    }
-    .section-subtext {
-      text-align: center; font-size: 1.05rem; color: var(--muted);
-      max-width: 580px; margin: 0 auto 44px;
-    }
-
-    .tour-nav-tabs {
-      display: flex; justify-content: center; gap: 10px;
-      flex-wrap: wrap; margin-bottom: 36px;
-    }
-    .tour-tab-btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 22px; border-radius: var(--radius-pill);
-      font-size: .9rem; font-weight: 700;
-      background: var(--bg-soft); border: 1.5px solid var(--border);
-      color: var(--ink-light); cursor: pointer;
-      transition: all var(--transition);
-    }
-    .tour-tab-btn:hover { border-color: var(--teal); color: var(--teal); }
-    .tour-tab-btn.active {
-      background: var(--ink); border-color: var(--ink);
-      color: #fff; box-shadow: 0 6px 18px rgba(15,23,42,.25);
-    }
-
-    .tour-showcase-box {
-      background: rgba(15, 23, 42, 0.98);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: var(--radius-lg);
-      box-shadow: 0 24px 60px rgba(0,0,0,0.25);
-      padding: 32px; color: #fff;
-      min-height: 400px;
-      transition: all .3s ease;
-    }
-
-    .tour-view-panel { display: none; animation: fadeIn .3s ease; }
-    .tour-view-panel.active { display: block; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ─── INSTITUTIONAL ROI CALCULATOR ──────────────── */
-    .calc-section {
-      padding: 90px 0;
-      background: var(--bg-soft);
-      position: relative;
-    }
-    .calc-grid {
-      display: grid; grid-template-columns: 1fr 1.1fr;
-      gap: 40px; align-items: center;
-      background: #ffffff; border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 48px;
-      box-shadow: var(--shadow-card);
-    }
-    .calc-controls { display: flex; flex-direction: column; gap: 24px; }
-    .calc-slider-group { display: flex; flex-direction: column; gap: 8px; }
-    .calc-slider-header {
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: .9rem; font-weight: 700; color: var(--ink);
-    }
-    .calc-slider-val {
-      font-family: var(--font-heading);
-      font-size: 1.15rem; font-weight: 800; color: var(--teal);
-    }
-    input[type="range"] {
-      width: 100%; height: 8px; border-radius: 4px;
-      background: #e2e8f0; outline: none; -webkit-appearance: none;
-    }
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 22px; height: 22px;
-      border-radius: 50%; background: var(--teal);
-      cursor: pointer; box-shadow: 0 2px 8px rgba(5,150,105,.4);
-      transition: transform .1s;
-    }
-    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
-
-    .calc-results-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    .calc-stat-box {
-      background: var(--bg-soft); border: 1px solid var(--border);
-      border-radius: var(--radius-md); padding: 22px;
-      display: flex; flex-direction: column;
-    }
-    .csb-val {
-      font-family: var(--font-heading);
-      font-size: 1.8rem; font-weight: 900; color: var(--teal); line-height: 1.1;
-      margin-bottom: 6px;
-    }
-    .csb-lbl { font-size: .82rem; font-weight: 600; color: var(--muted); }
-
-    /* ─── CORE MODULES (FEATURES) ───────────────────── */
-    .features-section { padding: 90px 0; background: #ffffff; }
-    .features-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-    }
-    .feature-card {
-      background: var(--bg-soft); border: 1px solid var(--border);
-      border-radius: var(--radius-md); padding: 28px 24px;
-      transition: all var(--transition); position: relative; overflow: hidden;
-    }
-    .feature-card:hover {
-      transform: translateY(-4px); background: #ffffff;
-      box-shadow: var(--shadow-card); border-color: rgba(5,150,105,.3);
-    }
-    .feature-icon {
-      width: 48px; height: 48px; border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.4rem; margin-bottom: 18px;
-    }
-    .icon-teal   { background: #d1fae5; color: #047857; }
-    .icon-amber  { background: #fef3c7; color: #b45309; }
-    .icon-blue   { background: #dbeafe; color: #1d4ed8; }
-    .icon-violet { background: #ede9fe; color: #6d28d9; }
-    .icon-rose   { background: #ffe4e6; color: #be123c; }
-    .icon-slate  { background: #f1f5f9; color: #334155; }
-
-    .feature-title { font-size: 1.05rem; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
-    .feature-desc { font-size: .88rem; color: var(--muted); line-height: 1.6; }
-
-    /* ─── CTA BANNER ────────────────────────────────── */
-    .cta-section { padding: 90px 0; }
-    .cta-card {
-      background: var(--ink); border-radius: 28px;
-      padding: 64px 48px; text-align: center;
-      position: relative; overflow: hidden; color: #fff;
-    }
-    .cta-card::before {
-      content: ''; position: absolute; top: -140px; right: -140px;
-      width: 450px; height: 450px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(16,185,129,.28), transparent 70%);
-      pointer-events: none;
-    }
-    .cta-headline {
-      font-size: clamp(2rem, 3.8vw, 2.8rem);
-      font-weight: 900; letter-spacing: -.04em; margin-bottom: 14px;
-    }
-    .cta-sub {
-      font-size: 1.05rem; color: rgba(255,255,255,.7);
-      max-width: 500px; margin: 0 auto 36px;
-    }
-    .cta-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
-    .btn-cta-primary {
-      font-size: .95rem; font-weight: 700; color: var(--ink);
-      background: #fff; border-radius: var(--radius-pill);
-      padding: 14px 30px; transition: all var(--transition);
-    }
-    .btn-cta-primary:hover { background: #f0fdf4; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,255,255,.3); }
-
-    /* ─── FOOTER ────────────────────────────────────── */
-    .footer { border-top: 1px solid var(--border); padding: 56px 0 32px; background: var(--bg-soft); }
-    .footer-inner {
-      display: grid; grid-template-columns: 1.8fr 1fr 1fr;
-      gap: 40px; margin-bottom: 40px;
-    }
-    .footer-brand img { height: 40px; object-fit: contain; margin-bottom: 14px; }
-    .footer-brand p { font-size: .88rem; color: var(--muted); max-width: 240px; line-height: 1.6; }
-    .footer-col-title { font-size: .82rem; font-weight: 800; color: var(--ink); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 16px; }
-    .footer-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .footer-links a { font-size: .88rem; color: var(--muted); font-weight: 500; transition: color var(--transition); }
-    .footer-links a:hover { color: var(--teal); }
-    .footer-contact-item { font-size: .88rem; color: var(--muted); margin-bottom: 8px; }
-    .footer-bottom {
-      display: flex; align-items: center; justify-content: center;
-      text-align: center;
-      padding-top: 24px; border-top: 1px solid var(--border);
-      font-size: .88rem; color: var(--muted);
-    }
-
-    /* ─── EDUBOT OFFLINE ASSISTANT ─────────────────── */
-    #edubot-toggle {
-      position: fixed; bottom: 28px; right: 28px; z-index: 1000;
-      width: 58px; height: 58px; border-radius: 50%;
-      background: var(--teal); color: #fff;
-      border: none; cursor: pointer; font-size: 1.4rem;
-      box-shadow: 0 8px 24px rgba(5,150,105,.4);
-      display: flex; align-items: center; justify-content: center;
-      transition: transform var(--transition), background var(--transition);
-    }
-    #edubot-toggle:hover { background: var(--teal-dark); transform: scale(1.08); }
-    #edubot-toggle.open { background: var(--ink); }
-
-    #edubot-window {
-      position: fixed; bottom: 100px; right: 28px; z-index: 999;
-      width: 370px; background: #fff;
-      border: 1px solid var(--border); border-radius: 20px;
-      box-shadow: 0 24px 64px rgba(15,23,42,.2);
-      display: none; flex-direction: column;
-      overflow: hidden; animation: slideUp .22s ease;
-    }
-    #edubot-window.open { display: flex; }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .bot-header {
-      background: var(--ink); padding: 16px 20px;
-      display: flex; align-items: center; gap: 12px; color: #fff;
-    }
-    .bot-avatar {
-      width: 36px; height: 36px; border-radius: 50%;
-      background: var(--teal); display: flex; align-items: center;
-      justify-content: center; font-size: 1.1rem; flex-shrink: 0;
-    }
-    .bot-header-info h4 { font-size: .92rem; font-weight: 700; color: #fff; }
-    .bot-header-info p  { font-size: .72rem; color: rgba(255,255,255,.6); }
-    .bot-status-dot {
-      width: 8px; height: 8px; border-radius: 50%; background: #34d399;
-      display: inline-block; margin-right: 5px;
-    }
-
-    .bot-messages {
-      flex: 1; overflow-y: auto; padding: 16px;
-      display: flex; flex-direction: column; gap: 12px; max-height: 320px;
-    }
-    .bot-msg {
-      max-width: 88%; padding: 10px 14px; border-radius: 14px;
-      font-size: .85rem; line-height: 1.55; font-weight: 500;
-    }
-    .bot-msg.bot { background: var(--bg-soft); color: var(--ink); border-radius: 4px 14px 14px 14px; align-self: flex-start; }
-    .bot-msg.user { background: var(--teal); color: #fff; border-radius: 14px 4px 14px 14px; align-self: flex-end; }
-    .bot-typing { display: flex; align-items: center; gap: 4px; padding: 10px 14px; background: var(--bg-soft); border-radius: 4px 14px 14px 14px; align-self: flex-start; }
-    .bot-typing span { width: 7px; height: 7px; background: var(--muted); border-radius: 50%; animation: bounce .9s infinite; }
-    .bot-typing span:nth-child(2) { animation-delay: .15s; }
-    .bot-typing span:nth-child(3) { animation-delay: .30s; }
-    @keyframes bounce { 0%,80%,100% { transform: scale(1); } 40% { transform: scale(1.4); } }
-
-    .bot-quick-replies { padding: 0 16px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
-    .qr-btn {
-      font-size: .75rem; font-weight: 600; color: var(--teal-dark);
-      background: var(--teal-light); border: none; border-radius: var(--radius-pill);
-      padding: 5px 12px; cursor: pointer; transition: all var(--transition);
-    }
-    .qr-btn:hover { background: var(--teal); color: #fff; }
-
-    .bot-input-row {
-      display: flex; align-items: center; gap: 8px;
-      padding: 12px 16px; border-top: 1px solid var(--border);
-    }
-    #bot-input {
-      flex: 1; border: 1.5px solid var(--border); border-radius: var(--radius-pill);
-      padding: 8px 14px; font-size: .85rem; font-family: var(--font-body);
-      outline: none; transition: border-color var(--transition);
-    }
-    #bot-input:focus { border-color: var(--teal); }
-    #bot-send {
-      width: 36px; height: 36px; border-radius: 50%; border: none;
-      background: var(--teal); color: #fff; cursor: pointer; font-size: .9rem;
-      display: flex; align-items: center; justify-content: center;
-    }
-
-    /* ─── Responsive Queries ─────────────────────────── */
-    @media (max-width: 990px) {
-      .hero-grid { grid-template-columns: 1fr; }
-      .hero-mockup-wrapper { max-width: 600px; margin: 0 auto; }
-      .calc-grid { grid-template-columns: 1fr; }
-      .features-grid { grid-template-columns: repeat(2, 1fr); }
-      .footer-inner { grid-template-columns: 1fr 1fr; }
-      .nav-links { display: none; }
-    }
-    @media (max-width: 640px) {
-      .container { padding: 0 20px; }
-      .navbar-inner { padding: 0 20px; }
-      .hero { padding: 50px 0 40px; }
-      .hero-headline { font-size: 2.3rem; }
-      .features-grid { grid-template-columns: 1fr; }
-      .calc-results-grid { grid-template-columns: 1fr; }
-      .calc-grid { padding: 28px 20px; }
-      .footer-inner { grid-template-columns: 1fr; }
-      .floating-badge { display: none; }
-      #edubot-window { width: calc(100vw - 40px); right: 20px; }
-    }
-  </style>
+  <!-- Precision Enterprise Stylesheet -->
+  <link rel="stylesheet" href="css/landing.css?v=14.6" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#059669" />
 </head>
 <body>
 
-  <div class="ambient-glow-mesh"></div>
-
-  <!-- ══════════════ NAVBAR ══════════════ -->
-  <nav class="navbar">
-    <div class="navbar-inner">
+  <!-- ══════════════ NAVIGATION HEADER ══════════════ -->
+  <header class="navbar">
+    <div class="container navbar-inner">
       <a class="nav-brand" href="index.html">
-        <img src="assets/logo_primary.png" alt="EduManage360"
-             onerror="this.onerror=null;this.src='frontend/assets/logo_primary.png';" />
+        <img
+          src="assets/logo_compact.png"
+          alt="EduManage 360 — Unified Multi-School Administration Portal"
+          class="nav-brand-img"
+          loading="eager"
+          draggable="false"
+        />
       </a>
+
       <ul class="nav-links">
-        <li><a href="#product-tour">Live Demo</a></li>
-        <li><a href="#roi-calculator">Savings Calculator</a></li>
-        <li><a href="#features">Modules</a></li>
+        <li><a href="#features">Features ▾</a></li>
+        <li><a href="#stakeholders">Solutions ▾</a></li>
+        <li><a href="#roi-calculator">Pricing</a></li>
+        <li><a href="#product-tour">Demo</a></li>
       </ul>
+
       <div class="nav-actions">
-        <a class="btn-ghost" href="auth.html">Log In</a>
-        <a class="btn-primary" href="auth.html">Launch Platform →</a>
+        <div class="nav-search-bar">
+          <span>🔍</span>
+          <span>Search</span>
+        </div>
+        <a class="btn btn-signin" href="auth.html">Sign In</a>
       </div>
+
+      <button class="menu-toggle-btn" id="mobileMenuBtn" aria-label="Open Navigation Menu">☰</button>
     </div>
-  </nav>
+  </header>
 
-  <!-- ══════════════ HERO SECTION ══════════════ -->
+  <!-- ══════════════ MOBILE NAVIGATION DRAWER ══════════════ -->
+  <div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop"></div>
+  <aside class="mobile-drawer" id="mobileNavDrawer" aria-label="Mobile Navigation">
+    <div class="drawer-header">
+      <div class="nav-brand">
+        <img
+          src="assets/logo_compact.png"
+          alt="EduManage 360"
+          class="drawer-brand-img"
+          loading="lazy"
+          draggable="false"
+        />
+      </div>
+      <button class="drawer-close-btn" id="drawerCloseBtn" aria-label="Close Navigation Menu">✕</button>
+    </div>
+
+    <ul class="drawer-links">
+      <li><a href="#product-tour">Live Demo</a></li>
+      <li><a href="#stakeholders">Stakeholder Roles</a></li>
+      <li><a href="#roi-calculator">Pricing &amp; Savings</a></li>
+      <li><a href="#features">Core Features</a></li>
+    </ul>
+
+    <div class="drawer-actions">
+      <button class="btn btn-outline trigger-demo-modal" style="width:100%;">Request Consultation</button>
+      <a class="btn btn-signin" href="auth.html" style="width:100%;">Sign In →</a>
+    </div>
+  </aside>
+
+  <!-- ══════════════ HERO SECTION (EXACT PREVIEW MATCH) ══════════════ -->
   <section class="hero">
-    <div class="container">
-      <div class="hero-grid">
+    <div class="container hero-grid">
 
-        <!-- Left Column -->
-        <div class="hero-left">
-          <div class="hero-badge">Unified Multi-School Platform • Ghana</div>
+      <!-- Left Column: Typography & CTAs -->
+      <div class="hero-left">
+        <h1 class="hero-headline">
+          One Platform.<br />
+          Every School.<br />
+          Complete Control.
+        </h1>
 
-          <h1 class="hero-headline">
-            One Platform.<br/>
-            Every School.<br/>
-            <span class="accent">Complete Control.</span>
-          </h1>
+        <p class="hero-subtext">
+          The offline-first school management platform built for Ghanaian SHS &amp; Basic institutions — from WAEC broadsheets to MoMo fee reconciliation.
+        </p>
 
-          <p class="hero-sub">
-            EduManage360 empowers Ghanaian institutions to automate BECE/CSSPS enrollment, WAEC broadsheets, fee collection, attendance, and student operations — with 100% offline resilience.
-          </p>
-
-          <div class="hero-ctas">
-            <a class="btn-hero-primary" href="auth.html">
-              Get Started Free →
-            </a>
-            <a class="btn-hero-ghost" href="#product-tour">
-              <div class="play-circle">▶</div>
-              Explore Live Modules
-            </a>
-          </div>
-
-          <div class="trust-badges">
-            <span class="trust-badge">📴 100% Offline Ready</span>
-            <span class="trust-badge">🇬🇭 Ghana Standards (GES)</span>
-            <span class="trust-badge">📜 WAEC &amp; Terminal Broadsheets</span>
-            <span class="trust-badge">🔒 Bank-Grade Security</span>
-          </div>
+        <div class="hero-feature-chips">
+          <span class="hero-chip">📜 WAEC Broadsheets</span>
+          <span class="hero-chip">💰 MoMo Fee Ledger</span>
+          <span class="hero-chip">✅ 1-Tap Attendance</span>
+          <span class="hero-chip">📴 100% Offline</span>
         </div>
 
-        <!-- Right Column (3D Hero Mockup + Floating Badges) -->
-        <div class="hero-mockup-wrapper">
-          <div class="hero-glow-orb"></div>
-
-          <!-- Floating Telemetry Badges -->
-          <div class="floating-badge top-right">
-            <div class="badge-icon-box green">✨</div>
-            <div>
-              <div>Terminal Reports</div>
-              <div style="font-size:0.65rem; color:#34d399; font-weight:600;">100% Generated • 0 Errors</div>
-            </div>
-          </div>
-
-          <div class="floating-badge bottom-left">
-            <div class="badge-icon-box cyan">💳</div>
-            <div>
-              <div>Fee Receipt Logged</div>
-              <div style="font-size:0.65rem; color:#22d3ee; font-weight:600;">GHS 1,450 • SMS Dispatched</div>
-            </div>
-          </div>
-
-          <!-- Main Interactive Mockup Card -->
-          <div class="hero-mockup-card">
-            <div class="mockup-header-bar">
-              <div class="mockup-brand">
-                <span>⬡ EduManage360 Enterprise</span>
-              </div>
-              <div class="mockup-live-pill">Live Telemetry</div>
-            </div>
-
-            <div class="mockup-content">
-              <!-- KPI Row -->
-              <div class="mockup-kpi-row">
-                <div class="mockup-kpi">
-                  <div class="mkpi-label">Active Students</div>
-                  <div class="mkpi-val">1,284</div>
-                  <div class="mkpi-sub">▲ 100% Enrolled</div>
-                </div>
-                <div class="mockup-kpi">
-                  <div class="mkpi-label">Attendance</div>
-                  <div class="mkpi-val">98.4%</div>
-                  <div class="mkpi-sub">Today Marked</div>
-                </div>
-                <div class="mockup-kpi">
-                  <div class="mkpi-label">Fee Recovery</div>
-                  <div class="mkpi-val">94.2%</div>
-                  <div class="mkpi-sub">Term Cleared</div>
-                </div>
-              </div>
-
-              <!-- Mini Charts Row -->
-              <div class="mockup-chart-row">
-                <div class="mockup-chart-card">
-                  <div class="mchart-title">
-                    <span>Enrollment Growth</span>
-                    <span style="color:#34d399;">+18% Year</span>
-                  </div>
-                  <div class="bar-chart-preview">
-                    <div class="b-bar" style="height:40%;"></div>
-                    <div class="b-bar" style="height:60%;"></div>
-                    <div class="b-bar" style="height:55%;"></div>
-                    <div class="b-bar" style="height:75%;"></div>
-                    <div class="b-bar" style="height:88%;"></div>
-                    <div class="b-bar" style="height:70%;"></div>
-                    <div class="b-bar" style="height:95%;"></div>
-                    <div class="b-bar" style="height:100%;"></div>
-                  </div>
-                </div>
-
-                <div class="mockup-chart-card" style="text-align:center;">
-                  <div class="mchart-title" style="justify-content:center;">WAEC Pass Rate</div>
-                  <div style="font-size:1.5rem; font-weight:900; font-family:var(--font-heading); color:#34d399; margin-top:4px;">96.8%</div>
-                  <div style="font-size:0.65rem; color:#94a3b8;">Distinction Average</div>
-                </div>
-              </div>
-
-              <!-- Live Operations Feed -->
-              <div class="mockup-recent-feed">
-                <div class="mfeed-title">Recent Operational Activity</div>
-                <div class="mfeed-item">
-                  <span>🎓 CSSPS Placement List Imported (Form 1 STEM)</span>
-                  <span style="color:#34d399; font-weight:700;">Completed</span>
-                </div>
-                <div class="mfeed-item">
-                  <span>💰 MoMo Fee Settlement (Kofi Mensah)</span>
-                  <span style="color:#22d3ee; font-weight:700;">GHS 850</span>
-                </div>
-                <div class="mfeed-item">
-                  <span>📜 3-Year Cumulative Broadsheet Generated</span>
-                  <span style="color:#fbbf24; font-weight:700;">Approved</span>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div class="hero-ctas">
+          <a class="btn btn-hero-primary" href="#product-tour">
+            Explore Live Demo
+          </a>
+          <a class="btn btn-hero-outline" href="auth.html">
+            Launch School Portal
+          </a>
         </div>
 
       </div>
+
+      <!-- Right Column: Real Dashboard Screenshot in Browser Chrome -->
+      <div class="app-window" id="heroAppWindow">
+        <!-- macOS-Style Browser Titlebar -->
+        <div class="app-browser-bar">
+          <div class="window-dots">
+            <span class="w-dot w-red"></span>
+            <span class="w-dot w-yellow"></span>
+            <span class="w-dot w-green"></span>
+          </div>
+          <div class="window-nav-arrows">
+            <span>‹</span>
+            <span>›</span>
+          </div>
+          <div class="window-url-box">
+            <span>🔒</span>
+            <span>edumanage.internal/dashboard</span>
+          </div>
+          <div class="window-bar-actions">
+            <span>⊞</span>
+          </div>
+        </div>
+
+        <!-- Real Dashboard Screenshot -->
+        <div class="hero-screenshot-wrap">
+          <img
+            src="assets/dashboard_preview.png"
+            alt="EduManage 360 live dashboard showing KPI cards, student overview, attendance metrics and grade distribution"
+            class="hero-dashboard-img"
+            loading="eager"
+            draggable="false"
+          />
+          <!-- Floating live-data badge -->
+          <div class="hero-live-badge">
+            <span class="live-pulse"></span>
+            Live Dashboard
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
-  <!-- ══════════════ REGIONAL TRUST MARQUEE ══════════════ -->
-  <section class="marquee-section">
-    <div class="marquee-track">
-      <div class="marquee-item">🇬🇭 Greater Accra STEM Hub</div>
-      <div class="marquee-item">🏛️ Ashanti Regional Academic Trust</div>
-      <div class="marquee-item">🏫 Kumasi Day &amp; Boarding High</div>
-      <div class="marquee-item">📚 Central Region Model Schools</div>
-      <div class="marquee-item">🎓 Northern Regional Technical Colleges</div>
-      <div class="marquee-item">🇬🇭 Western Regional Educational Directorate</div>
-      <!-- Loop duplicate -->
-      <div class="marquee-item">🇬🇭 Greater Accra STEM Hub</div>
-      <div class="marquee-item">🏛️ Ashanti Regional Academic Trust</div>
-      <div class="marquee-item">🏫 Kumasi Day &amp; Boarding High</div>
-      <div class="marquee-item">📚 Central Region Model Schools</div>
-      <div class="marquee-item">🎓 Northern Regional Technical Colleges</div>
-      <div class="marquee-item">🇬🇭 Western Regional Educational Directorate</div>
+  <!-- ══════════════ STAKEHOLDER PERSONA SECTION ══════════════ -->
+  <section class="persona-section" id="stakeholders">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-eyebrow">Enterprise Stakeholders</span>
+        <h2 class="section-title">Built for Every Institutional Leader</h2>
+        <p class="section-sub">Deliver specialized workflows tailored to every level of educational administration.</p>
+      </div>
+
+      <div class="persona-tabs">
+        <button class="persona-tab-btn active" data-target="persona-headmaster">🏛️ Headmasters &amp; Governance</button>
+        <button class="persona-tab-btn" data-target="persona-bursar">💰 Bursars &amp; Accounts</button>
+        <button class="persona-tab-btn" data-target="persona-teachers">📚 Teachers &amp; Form Masters</button>
+        <button class="persona-tab-btn" data-target="persona-security">🚪 Gate Security &amp; Exeat</button>
+      </div>
+
+      <!-- Panel 1: Headmaster -->
+      <div class="persona-panel active" id="persona-headmaster">
+        <div>
+          <h3 style="font-size:1.35rem; margin-bottom:12px;">Executive Institutional Visibility</h3>
+          <p style="font-size:0.92rem; color:var(--ink-600); margin-bottom:20px; line-height:1.6;">
+            Monitor terminal academic performance, staff attendance, and revenue collections from a single executive console — whether operating standalone or across a multi-campus network.
+          </p>
+          <ul class="persona-features-list">
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>Multi-Campus &amp; Super-Admin Oversight</h4>
+                <p>Consolidate statistics across regional branches with independent tenant isolation.</p>
+              </div>
+            </li>
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>WAEC &amp; Terminal Performance Diagnostics</h4>
+                <p>Identify subject bottlenecks and student progress across all form levels instantly.</p>
+              </div>
+            </li>
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>100% Offline Campus Autonomy</h4>
+                <p>Your school records stay within campus walls on secure local hardware.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div style="background:var(--ink-50); border:1px solid var(--ink-200); border-radius:var(--radius-md); padding:28px;">
+          <h4 style="font-size:1rem; margin-bottom:14px;">Key Governance Capabilities</h4>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:0.88rem;">
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--ink-200);">
+              <span>CSSPS Placement Import</span>
+              <strong style="color:var(--primary);">Automated Batch</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--ink-200);">
+              <span>Terminal Broadsheet Approval</span>
+              <strong style="color:var(--primary);">1-Click Sign-Off</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--ink-200);">
+              <span>Audit Logging &amp; Grade Locks</span>
+              <strong style="color:var(--primary);">Tamper-Proof</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0;">
+              <span>Automated Term Rollover</span>
+              <strong style="color:var(--primary);">Zero Data Loss</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Bursar -->
+      <div class="persona-panel" id="persona-bursar">
+        <div>
+          <h3 style="font-size:1.35rem; margin-bottom:12px;">Financial Precision &amp; Fee Recovery</h3>
+          <p style="font-size:0.92rem; color:var(--ink-600); margin-bottom:20px; line-height:1.6;">
+            Eliminate paper ledger discrepancies. Track student billings, reconcile MoMo settlements, and issue professional receipts instantly.
+          </p>
+          <ul class="persona-features-list">
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>MTN &amp; Telecel MoMo Reconciliation</h4>
+                <p>Match transaction reference IDs with student fee balances in real time.</p>
+              </div>
+            </li>
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>Debtor Tracking &amp; Automated Alerts</h4>
+                <p>Isolate outstanding student debts per term and broadcast payment prompts.</p>
+              </div>
+            </li>
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>Auditable Cashier Receipts</h4>
+                <p>Generate verifiable thermal receipts with sequence numbers and bursar signatures.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div style="background:var(--ink-50); border:1px solid var(--ink-200); border-radius:var(--radius-md); padding:28px;">
+          <h4 style="font-size:1rem; margin-bottom:14px;">Bursary Automation Highlights</h4>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:0.88rem;">
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--ink-200);">
+              <span>Daily Cash Drawer Settlement</span>
+              <strong style="color:var(--primary);">Auto-Tally</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--ink-200);">
+              <span>Clearance Slip Verification</span>
+              <strong style="color:var(--primary);">Instant Stamp</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0;">
+              <span>Fee Structure Assignment</span>
+              <strong style="color:var(--primary);">Class-Specific</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Teachers -->
+      <div class="persona-panel" id="persona-teachers">
+        <div>
+          <h3 style="font-size:1.35rem; margin-bottom:12px;">Effortless Grading &amp; Daily Registers</h3>
+          <p style="font-size:0.92rem; color:var(--ink-600); margin-bottom:20px; line-height:1.6;">
+            Free teachers from manual score addition and averaging. Focus on teaching while EduManage 360 handles rank calculation and report card generation.
+          </p>
+          <ul class="persona-features-list">
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>Bulk Continuous Assessment (C.A.) Entry</h4>
+                <p>Enter class test and exam marks via high-speed keyboard grid navigation.</p>
+              </div>
+            </li>
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>1-Tap Daily Attendance Pill Register</h4>
+                <p>Mark 50 students in under 20 seconds with instant Present/Absent toggles.</p>
+              </div>
+            </li>
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>Form Master Smart Remarks</h4>
+                <p>Select tailored academic remarks based on computed student performance tiers.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div style="background:var(--ink-50); border:1px solid var(--ink-200); border-radius:var(--radius-md); padding:28px;">
+          <h4 style="font-size:1rem; margin-bottom:14px;">Academic Tools</h4>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:0.88rem;">
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--ink-200);">
+              <span>Weighting System</span>
+              <strong style="color:var(--primary);">30% Class / 70% Exam</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--ink-200);">
+              <span>Batch PDF Report Cards</span>
+              <strong style="color:var(--primary);">1-Click Class Print</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0;">
+              <span>Timetable Conflict Detection</span>
+              <strong style="color:var(--primary);">Automatic</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 4: Security -->
+      <div class="persona-panel" id="persona-security">
+        <div>
+          <h3 style="font-size:1.35rem; margin-bottom:12px;">Campus Gate &amp; Boarding Exeat Control</h3>
+          <p style="font-size:0.92rem; color:var(--ink-600); margin-bottom:20px; line-height:1.6;">
+            Enforce gate security with digital out-passes. Campus security officers verify exeat authorizations instantly with smartphone or tablet cameras.
+          </p>
+          <ul class="persona-features-list">
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>Verifiable Exeat QR Code Slips</h4>
+                <p>Tamper-proof digital tokens signed by Housemasters and Senior Housemistresses.</p>
+              </div>
+            </li>
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>Real-Time Overdue Alerts</h4>
+                <p>Flag students who fail to report back to campus within authorized departure hours.</p>
+              </div>
+            </li>
+            <li class="persona-feature-item">
+              <div class="pfi-icon">✓</div>
+              <div class="pfi-text">
+                <h4>Incident &amp; Disciplinary Dossiers</h4>
+                <p>Maintain accurate cumulative conduct files throughout the student's 3-year tenure.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div style="background:var(--ink-50); border:1px solid var(--ink-200); border-radius:var(--radius-md); padding:28px;">
+          <h4 style="font-size:1rem; margin-bottom:14px;">Boarding House Verification</h4>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:0.88rem;">
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--ink-200);">
+              <span>Gate Scan Speed</span>
+              <strong style="color:var(--primary);">&lt; 1 Second</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--ink-200);">
+              <span>Parent Notification</span>
+              <strong style="color:var(--primary);">Departure SMS</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0;">
+              <span>Offline Gate Validation</span>
+              <strong style="color:var(--primary);">Fully Supported</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
   <!-- ══════════════ INTERACTIVE LIVE PRODUCT TOUR ══════════════ -->
   <section class="tour-section" id="product-tour">
     <div class="container">
-      <div class="section-eyebrow">Interactive Product Tour</div>
-      <h2 class="section-headline">Experience the System Live</h2>
-      <p class="section-subtext">Click through each operational module to preview how EduManage360 streamlines your school's daily workflows.</p>
-
-      <!-- Nav Tabs -->
-      <div class="tour-nav-tabs">
-        <button class="tour-tab-btn active" onclick="switchTourTab('dashboard')">📊 Executive Dashboard</button>
-        <button class="tour-tab-btn" onclick="switchTourTab('broadsheet')">📜 Terminal Broadsheet</button>
-        <button class="tour-tab-btn" onclick="switchTourTab('fees')">💰 Fee Ledger</button>
-        <button class="tour-tab-btn" onclick="switchTourTab('attendance')">📋 1-Tap Attendance</button>
+      <div class="section-header">
+        <span class="section-eyebrow">Interactive Tour</span>
+        <h2 class="section-title">Experience the Platform Live</h2>
+        <p class="section-sub">Explore the foundational modules streamlining day-to-day operations across Ghanaian schools.</p>
       </div>
 
-      <!-- Showcase Box -->
+      <div class="tour-nav-tabs">
+        <button class="tour-tab-btn active" onclick="switchTourTab('dashboard')">📊 Institutional Overview</button>
+        <button class="tour-tab-btn" onclick="switchTourTab('broadsheet')">📜 Broadsheet Engine</button>
+        <button class="tour-tab-btn" onclick="switchTourTab('fees')">💰 Fee &amp; MoMo Ledger</button>
+        <button class="tour-tab-btn" onclick="switchTourTab('attendance')">📋 Attendance Register</button>
+      </div>
+
       <div class="tour-showcase-box">
-        
-        <!-- Panel 1: Dashboard -->
+        <!-- Tour 1: Executive Dashboard -->
         <div class="tour-view-panel active" id="tour-dashboard">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
             <div>
               <h3 style="font-size:1.15rem; color:#fff; margin-bottom:4px;">📊 Institutional Executive Overview</h3>
-              <p style="font-size:0.82rem; color:#94a3b8;">High-level visibility over student enrollment, staff attendance, and revenue.</p>
+              <p style="font-size:0.82rem; color:#cbd5e1;">High-level visibility over student enrollment, staff attendance, and revenue.</p>
             </div>
             <span style="font-size:0.75rem; background:rgba(16,185,129,0.2); color:#34d399; padding:4px 12px; border-radius:12px; font-weight:700;">Live Feed Active</span>
           </div>
@@ -861,12 +432,12 @@
           </div>
         </div>
 
-        <!-- Panel 2: Broadsheet -->
+        <!-- Tour 2: Broadsheet Engine -->
         <div class="tour-view-panel" id="tour-broadsheet">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
             <div>
               <h3 style="font-size:1.15rem; color:#fff; margin-bottom:4px;">📜 Form 3 Science A — Terminal Broadsheet</h3>
-              <p style="font-size:0.82rem; color:#94a3b8;">Automatic score weighting, cumulative rank calculation, and remark suggestions.</p>
+              <p style="font-size:0.82rem; color:#cbd5e1;">Automatic score weighting, cumulative rank calculation, and remark suggestions.</p>
             </div>
             <span style="font-size:0.75rem; background:rgba(99,102,241,0.2); color:#a5b4fc; padding:4px 12px; border-radius:12px; font-weight:700;">GES / WAEC Mode</span>
           </div>
@@ -892,7 +463,7 @@
                   <td><span style="color:#34d399; font-weight:700;">92 (A1)</span></td>
                   <td style="font-weight:800; color:#818cf8;">256.0</td>
                   <td><span style="background:rgba(245,158,11,0.2); color:#fbbf24; padding:2px 8px; border-radius:8px; font-weight:800;">1st</span></td>
-                  <td style="color:#94a3b8; font-size:0.8rem;">Brilliant performance, keep it up.</td>
+                  <td style="color:#cbd5e1; font-size:0.8rem;">Brilliant performance, keep it up.</td>
                 </tr>
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
                   <td style="text-align:left; padding:10px; font-weight:600;">Ama Serwaa</td>
@@ -901,7 +472,7 @@
                   <td><span style="color:#34d399; font-weight:700;">85 (A1)</span></td>
                   <td style="font-weight:800; color:#818cf8;">241.0</td>
                   <td><span style="background:rgba(99,102,241,0.2); color:#a5b4fc; padding:2px 8px; border-radius:8px; font-weight:800;">2nd</span></td>
-                  <td style="color:#94a3b8; font-size:0.8rem;">Outstanding command of language.</td>
+                  <td style="color:#cbd5e1; font-size:0.8rem;">Outstanding command of language.</td>
                 </tr>
                 <tr>
                   <td style="text-align:left; padding:10px; font-weight:600;">Kwame Boateng</td>
@@ -910,19 +481,19 @@
                   <td><span style="color:#22d3ee; font-weight:700;">72 (B3)</span></td>
                   <td style="font-weight:800; color:#818cf8;">206.0</td>
                   <td><span style="background:rgba(255,255,255,0.1); color:#fff; padding:2px 8px; border-radius:8px; font-weight:800;">3rd</span></td>
-                  <td style="color:#94a3b8; font-size:0.8rem;">Good effort, can do better in Math.</td>
+                  <td style="color:#cbd5e1; font-size:0.8rem;">Good effort, can do better in Math.</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Panel 3: Fees -->
+        <!-- Tour 3: Fee Ledger -->
         <div class="tour-view-panel" id="tour-fees">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
             <div>
               <h3 style="font-size:1.15rem; color:#fff; margin-bottom:4px;">💰 Live Fee &amp; Payment Ledger</h3>
-              <p style="font-size:0.82rem; color:#94a3b8;">Real-time payment reconciliations with instant automated receipt generation.</p>
+              <p style="font-size:0.82rem; color:#cbd5e1;">Real-time payment reconciliations with instant automated receipt generation.</p>
             </div>
             <span style="font-size:0.75rem; background:rgba(16,185,129,0.2); color:#34d399; padding:4px 12px; border-radius:12px; font-weight:700;">Audit Trail Active</span>
           </div>
@@ -946,7 +517,7 @@
                   <td>Form 2 General Arts</td>
                   <td style="color:#34d399; font-weight:700;">GHS 1,450.00</td>
                   <td>MTN MoMo</td>
-                  <td><span style="background:rgba(16,185,129,0.2); color:#34d399; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">✅ Paid in Full</span></td>
+                  <td><span style="background:rgba(16,185,129,0.2); color:#34d399; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">Paid in Full</span></td>
                 </tr>
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
                   <td style="padding:10px; font-family:monospace; color:#38bdf8;">RCP-2026-080</td>
@@ -954,7 +525,7 @@
                   <td>Form 1 Business</td>
                   <td style="color:#fbbf24; font-weight:700;">GHS 600.00</td>
                   <td>Bank Deposit</td>
-                  <td><span style="background:rgba(245,158,11,0.2); color:#fbbf24; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">⏳ Partial Balance</span></td>
+                  <td><span style="background:rgba(245,158,11,0.2); color:#fbbf24; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">Partial Balance</span></td>
                 </tr>
                 <tr>
                   <td style="padding:10px; font-family:monospace; color:#38bdf8;">RCP-2026-079</td>
@@ -962,31 +533,30 @@
                   <td>Form 3 Science</td>
                   <td style="color:#34d399; font-weight:700;">GHS 1,200.00</td>
                   <td>Cash at Bursary</td>
-                  <td><span style="background:rgba(16,185,129,0.2); color:#34d399; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">✅ Paid in Full</span></td>
+                  <td><span style="background:rgba(16,185,129,0.2); color:#34d399; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">Paid in Full</span></td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Panel 4: Attendance -->
+        <!-- Tour 4: Attendance Register -->
         <div class="tour-view-panel" id="tour-attendance">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
             <div>
               <h3 style="font-size:1.15rem; color:#fff; margin-bottom:4px;">📋 1-Tap Daily Class Attendance Register</h3>
-              <p style="font-size:0.82rem; color:#94a3b8;">High-velocity tap marking with instant live count tallies and SMS alerts.</p>
+              <p style="font-size:0.82rem; color:#cbd5e1;">High-velocity tap marking with instant live count tallies and SMS alerts.</p>
             </div>
             <span style="font-size:0.75rem; background:rgba(6,182,212,0.2); color:#22d3ee; padding:4px 12px; border-radius:12px; font-weight:700;">Form 2 Visual Arts</span>
           </div>
 
-          <!-- Tally Pill -->
           <div style="display:flex; gap:16px; background:rgba(30,41,59,0.6); padding:10px 16px; border-radius:8px; margin-bottom:16px; font-size:0.85rem; font-weight:700;">
-            <span style="color:#34d399;">✅ 42 Present</span>
+            <span style="color:#34d399;">✓ 42 Present</span>
             <span>•</span>
-            <span style="color:#f87171;">❌ 2 Absent</span>
+            <span style="color:#f87171;">✕ 2 Absent</span>
             <span>•</span>
             <span style="color:#fbbf24;">⏰ 1 Late</span>
-            <span style="margin-left:auto; color:#fff;">95.5% Attendance Rate</span>
+            <span style="margin-left:auto; color:#fff;">95.5% Marked</span>
           </div>
 
           <div style="display:flex; flex-direction:column; gap:8px;">
@@ -1008,352 +578,237 @@
             </div>
           </div>
         </div>
-
       </div>
+
     </div>
   </section>
 
   <!-- ══════════════ INSTITUTIONAL ROI CALCULATOR ══════════════ -->
   <section class="calc-section" id="roi-calculator">
     <div class="container">
-      <div class="section-eyebrow">Institutional Efficiency</div>
-      <h2 class="section-headline">Calculate Your School's Savings</h2>
-      <p class="section-subtext">See how many hundreds of staff hours and financial resources EduManage360 preserves each academic term.</p>
+      <div class="section-header">
+        <span class="section-eyebrow">Efficiency Metrics</span>
+        <h2 class="section-title">Calculate Your School's Savings</h2>
+        <p class="section-sub">See how many hundreds of staff hours and financial resources EduManage 360 preserves each academic term.</p>
+      </div>
 
       <div class="calc-grid">
-        
         <!-- Controls Column -->
         <div class="calc-controls">
-          <h3 style="font-size:1.3rem; margin-bottom:4px;">Institutional Parameters</h3>
-          <p style="font-size:0.85rem; color:var(--muted); margin-bottom:16px;">Adjust the sliders to reflect your school's current size:</p>
+          <h3 style="font-size:1.3rem; margin-bottom:6px;">Institutional Parameters</h3>
+          <p style="font-size:0.86rem; color:var(--ink-600); margin-bottom:20px;">Adjust the sliders to reflect your school's current size:</p>
 
-          <!-- Slider 1: Student Enrollment -->
           <div class="calc-slider-group">
             <div class="calc-slider-header">
               <span>Student Enrollment:</span>
               <span class="calc-slider-val" id="calcStudentDisplay">650 Students</span>
             </div>
-            <input type="range" id="calcStudentRange" min="100" max="3000" step="50" value="650" oninput="updateCalculator()" />
+            <input type="range" id="calcStudentRange" min="100" max="3000" step="50" value="650" />
           </div>
 
-          <!-- Slider 2: Staff Count -->
           <div class="calc-slider-group">
             <div class="calc-slider-header">
               <span>Teaching &amp; Admin Staff:</span>
               <span class="calc-slider-val" id="calcStaffDisplay">45 Staff</span>
             </div>
-            <input type="range" id="calcStaffRange" min="10" max="150" step="5" value="45" oninput="updateCalculator()" />
+            <input type="range" id="calcStaffRange" min="10" max="150" step="5" value="45" />
           </div>
         </div>
 
         <!-- Real-Time Results Column -->
         <div class="calc-results-grid">
           <div class="calc-stat-box">
-            <div class="csb-val" id="calcHoursSaved">163 hrs</div>
-            <div class="csb-lbl">Staff Hours Saved / Term on Report Cards &amp; Averaging</div>
+            <div class="csb-val" id="calcHoursSaved">169 hrs</div>
+            <div class="csb-lbl">Staff Hours Saved per Term on Grading, Broadsheets &amp; Averaging</div>
           </div>
           <div class="calc-stat-box">
             <div class="csb-val" id="calcCostSaved">GHS 4,225</div>
-            <div class="csb-lbl">Annual Savings on Paper, Printing &amp; Manual Ledger Waste</div>
+            <div class="csb-lbl">Preserved per Term on Paper, Printing &amp; Manual Ledger Waste</div>
           </div>
           <div class="calc-stat-box">
             <div class="csb-val" style="color:#0284c7;">100%</div>
-            <div class="csb-lbl">Elimination of Grade Calculation &amp; Ranking Errors</div>
+            <div class="csb-lbl">Elimination of Grade Calculation &amp; Ranking Computation Errors</div>
           </div>
           <div class="calc-stat-box">
-            <div class="csb-val" style="color:#6366f1;">+98.5%</div>
-            <div class="csb-lbl">Fee Collection Velocity via Automated Receipts</div>
+            <div class="csb-val" style="color:#4f46e5;">+98.5%</div>
+            <div class="csb-lbl">Fee Collection Velocity via Automated MoMo SMS Receipts</div>
           </div>
         </div>
-
       </div>
+
     </div>
   </section>
 
   <!-- ══════════════ CORE MODULES (FEATURES) ══════════════ -->
   <section class="features-section" id="features">
     <div class="container">
-      <div class="section-eyebrow">Enterprise Core Modules</div>
-      <h2 class="section-headline">Everything your school needs.<br/>Nothing it doesn't.</h2>
-      <p class="section-subtext">Engineered for Ghanaian institutions with zero bloated dependencies.</p>
+      <div class="section-header">
+        <span class="section-eyebrow">Core Capabilities</span>
+        <h2 class="section-title">Everything Your School Needs.<br />Nothing It Doesn't.</h2>
+        <p class="section-sub">Engineered specifically for Ghanaian basic and senior secondary institutional standards.</p>
+      </div>
 
       <div class="features-grid">
-
         <div class="feature-card">
-          <div class="feature-icon icon-teal">🎓</div>
+          <div class="feature-icon-box">🎓</div>
           <h3 class="feature-title">Student Management</h3>
-          <p class="feature-desc">BECE/CSSPS enrollment import, profile dossiers, house &amp; dormitory allocation, and academic history tracking.</p>
+          <p class="feature-desc">BECE/CSSPS enrollment import, complete profile dossiers, house &amp; dormitory allocation, and 3-year academic history tracking.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon icon-amber">💰</div>
+          <div class="feature-icon-box">💰</div>
           <h3 class="feature-title">Fee &amp; Finance Ledger</h3>
-          <p class="feature-desc">Automate student billing, log MoMo/Cash payments, track debtors, and generate instant printable receipts.</p>
+          <p class="feature-desc">Automate student billing, log MTN MoMo and Telecel Cash settlements, track debtors, and generate instant printable thermal receipts.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon icon-blue">📊</div>
+          <div class="feature-icon-box">📊</div>
           <h3 class="feature-title">Reports &amp; Broadsheets</h3>
-          <p class="feature-desc">One-click terminal report cards (PDF), WAEC-standard broadsheets, and 3-year cumulative academic transcripts.</p>
+          <p class="feature-desc">One-click terminal report cards (PDF), WAEC-standard class broadsheets, and cumulative academic transcripts with grade ranking.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon icon-violet">✅</div>
+          <div class="feature-icon-box">✅</div>
           <h3 class="feature-title">1-Tap Attendance</h3>
-          <p class="feature-desc">Daily class register with instant pill toggles, real-time absence tallies, and period-by-period absence alerts.</p>
+          <p class="feature-desc">Daily class registers with instant pill toggles, real-time absence tallies, and period-by-period parent alert triggers.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon icon-rose">💬</div>
-          <h3 class="feature-title">Communication &amp; Exeat</h3>
-          <p class="feature-desc">Parent portal access, boarding exeat management, discipline tracking, and bulk SMS broadcasting.</p>
+          <div class="feature-icon-box">🚪</div>
+          <h3 class="feature-title">Gate Exeat &amp; Discipline</h3>
+          <p class="feature-desc">QR-verifiable boarding exeat permits, gate scanner validation, incident logging, and cumulative conduct records.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon icon-slate">📅</div>
+          <div class="feature-icon-box">📅</div>
           <h3 class="feature-title">Timetable &amp; Schedules</h3>
-          <p class="feature-desc">Interactive period scheduler, master timetable view, and conflict-free teacher allocation.</p>
+          <p class="feature-desc">Interactive period scheduler, master school timetable view, and conflict-free teacher and classroom allocation.</p>
         </div>
-
       </div>
+
     </div>
   </section>
 
-  <!-- ══════════════ CTA BANNER ══════════════ -->
-  <section class="cta-section" id="cta-banner">
+  <!-- ══════════════ INSTITUTIONAL CTA BANNER ══════════════ -->
+  <section class="cta-section">
     <div class="container">
       <div class="cta-card">
-        <h2 class="cta-headline">Ready to bring EduManage360<br/>to <span style="color:#34d399;">your school?</span></h2>
-        <p class="cta-sub">Join leading Ghanaian educational institutions. Elevate your school administration today with 100% offline control.</p>
+        <h2 class="cta-headline">Ready to Bring EduManage 360<br />to Your School?</h2>
+        <p class="cta-sub">Elevate your school administration today with 100% offline control, automated broadsheets, and transparent bursary management.</p>
         <div class="cta-actions">
-          <a class="btn-cta-primary" href="auth.html">Launch School Portal →</a>
+          <button class="btn btn-hero-outline trigger-demo-modal" style="background:#fff; color:var(--ink-900);">Request Consultation / LAN Setup</button>
+          <a class="btn btn-hero-primary" href="auth.html">Launch School Portal →</a>
         </div>
       </div>
     </div>
   </section>
 
   <!-- ══════════════ FOOTER ══════════════ -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-inner">
-        <div class="footer-brand">
-          <img src="assets/logo_primary.png" alt="EduManage360"
-               onerror="this.onerror=null;this.src='frontend/assets/logo_primary.png';" />
-          <p>The unified school management system built for Ghanaian institutions.</p>
-        </div>
-        <div>
-          <h4 class="footer-col-title">Platform</h4>
-          <ul class="footer-links">
-            <li><a href="#product-tour">Live Demo</a></li>
-            <li><a href="#roi-calculator">Savings Calculator</a></li>
-            <li><a href="auth.html">School Portal</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="footer-col-title">Modules</h4>
-          <ul class="footer-links">
-            <li><a href="#features">Academics &amp; Broadsheets</a></li>
-            <li><a href="#features">Fee Management</a></li>
-            <li><a href="#features">Attendance Registers</a></li>
-            <li><a href="#features">Parent Portal</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>&copy; 2026 EduManage360 Enterprise. All rights reserved.</span>
-      </div>
-    </div>
+  <footer class="footer-minimal">
+    <p>&copy; 2026 EduManage 360 Enterprise. All rights reserved.</p>
   </footer>
 
-  <!-- ══════════════ EDUBOT WIDGET ══════════════ -->
+  <!-- ══════════════ CONSULTATION / DEMO REQUEST MODAL ══════════════ -->
+  <div class="modal-backdrop" id="consultationModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modalTitle">Request Institutional Consultation</h3>
+        <button class="modal-close-btn" id="modalCloseBtn" aria-label="Close Modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="consultationForm">
+          <p style="font-size:0.88rem; color:var(--ink-600); margin-bottom:18px;">
+            Schedule a personalized walkthrough or inquire about on-campus offline LAN server deployment for your school.
+          </p>
+
+          <div class="form-group">
+            <label for="leadSchoolName">School / Institution Name *</label>
+            <input type="text" id="leadSchoolName" class="form-control" placeholder="e.g. Achimota Senior High School" required />
+          </div>
+
+          <div class="form-group">
+            <label for="leadContactPerson">Headmaster / Administrator Name *</label>
+            <input type="text" id="leadContactPerson" class="form-control" placeholder="e.g. Rev. Dr. K. Mensah" required />
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label for="leadPhone">Phone / WhatsApp *</label>
+              <input type="tel" id="leadPhone" class="form-control" placeholder="e.g. 024 123 4567" required />
+            </div>
+            <div class="form-group">
+              <label for="leadRegion">Region *</label>
+              <select id="leadRegion" class="form-control" required>
+                <option value="">Select Region</option>
+                <option value="Greater Accra">Greater Accra</option>
+                <option value="Ashanti">Ashanti</option>
+                <option value="Central">Central</option>
+                <option value="Western">Western</option>
+                <option value="Eastern">Eastern</option>
+                <option value="Northern">Northern</option>
+                <option value="Volta">Volta</option>
+                <option value="Other">Other Region</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="leadStudentCount">Approx. Student Population</label>
+            <select id="leadStudentCount" class="form-control">
+              <option value="100 - 500">100 – 500 Students</option>
+              <option value="500 - 1500" selected>500 – 1,500 Students</option>
+              <option value="1500 - 3000">1,500 – 3,000 Students</option>
+              <option value="3000+">3,000+ Students (Multi-Campus)</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-hero-primary" style="width:100%; padding:12px; margin-top:8px;">
+            Submit Consultation Request →
+          </button>
+        </form>
+
+        <div id="consultationSuccess" style="display:none; text-align:center; padding:24px 12px;">
+          <div style="font-size:2.4rem; margin-bottom:8px;">✅</div>
+          <h4 style="font-size:1.15rem; margin-bottom:6px;">Consultation Request Received</h4>
+          <p style="font-size:0.88rem; color:var(--ink-600);">
+            Thank you! Our institutional deployment team will reach out via phone/WhatsApp to schedule your demo.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ EDUBOT OFFLINE ASSISTANT ══════════════ -->
   <button id="edubot-toggle" title="Ask EduBot" aria-label="Open EduBot Assistant">💬</button>
 
   <div id="edubot-window" role="dialog" aria-label="EduBot Assistant">
     <div class="bot-header">
       <div class="bot-avatar">🤖</div>
       <div class="bot-header-info">
-        <h4>EduBot</h4>
-        <p><span class="bot-status-dot"></span>Powered by EduManage360 · 100% Offline</p>
+        <h4>EduBot Assistant</h4>
+        <p>100% Offline Knowledge Engine</p>
       </div>
     </div>
     <div class="bot-messages" id="bot-messages"></div>
     <div class="bot-quick-replies" id="quick-replies"></div>
     <div class="bot-input-row">
-      <input id="bot-input" type="text" placeholder="Ask me anything…" autocomplete="off" />
-      <button id="bot-send" aria-label="Send">➤</button>
+      <input id="bot-input" type="text" placeholder="Ask about broadsheets, fees, exeat..." autocomplete="off" />
+      <button id="bot-send" aria-label="Send Message">➤</button>
     </div>
   </div>
 
-  <!-- ══════════════ SCRIPTS ══════════════ -->
+  <!-- Modular Landing Page Scripts -->
+  <script src="js/landing.js?v=14.0"></script>
+
+  <!-- Service Worker Registration for Offline Capabilities -->
   <script>
-    /* ── Interactive Tour Switcher ─────────────────────── */
-    function switchTourTab(tabKey) {
-      document.querySelectorAll('.tour-tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('onclick').includes(tabKey));
-      });
-      document.querySelectorAll('.tour-view-panel').forEach(panel => {
-        panel.classList.toggle('active', panel.id === `tour-${tabKey}`);
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+          console.warn('Service Worker registration skipped:', err);
+        });
       });
     }
-
-    /* ── ROI & Savings Calculator Logic ────────────────── */
-    function updateCalculator() {
-      const students = parseInt(document.getElementById('calcStudentRange').value);
-      const staff = parseInt(document.getElementById('calcStaffRange').value);
-
-      document.getElementById('calcStudentDisplay').textContent = `${students.toLocaleString()} Students`;
-      document.getElementById('calcStaffDisplay').textContent = `${staff} Staff`;
-
-      // Calculations
-      const hoursSaved = Math.round(students * 0.25);
-      const costSaved = Math.round(students * 6.5);
-
-      document.getElementById('calcHoursSaved').textContent = `${hoursSaved.toLocaleString()} hrs`;
-      document.getElementById('calcCostSaved').textContent = `GHS ${costSaved.toLocaleString()}`;
-    }
-
-    // Initialize calculator
-    updateCalculator();
-
-    /* ── EduBot Knowledge Base (100% Offline) ──────────── */
-    const KB = [
-      {
-        keys: ['add student','new student','enroll student','register student','admission','add a student','how do i add','create student','student profile'],
-        answer: '🎓 To add a student:\n1. Log in → go to <b>Students</b>\n2. Click <b>Add New Student</b>\n3. Fill in the student details and save.\n\nFor CSSPS/BECE placements, use the <b>Enrollment</b> module.'
-      },
-      {
-        keys: ['fee','payment','record payment','fee balance','fee ledger','outstanding'],
-        answer: '💰 To record a fee payment:\n1. Go to <b>Fees</b> in the sidebar\n2. Search for the student\n3. Click <b>Record Payment</b>, enter the amount and save.\n\nReceipts are auto-generated for each transaction.'
-      },
-      {
-        keys: ['attendance','take attendance','mark attendance','absent','present'],
-        answer: '✅ To take attendance:\n1. Go to <b>Attendance</b>\n2. Select the class and date\n3. Mark each student Present or Absent and submit.\n\nTerm-end attendance reports are auto-generated.'
-      },
-      {
-        keys: ['report card','report','terminal report','generate report','broadsheet','pdf'],
-        answer: '📄 To generate a report card:\n1. Go to <b>Reports</b>\n2. Select the academic term and class\n3. Click <b>Generate Report Card</b> — a PDF is produced instantly.\n\nBroadsheets for the full class are also available.'
-      },
-      {
-        keys: ['exeat','out pass','leave','permission'],
-        answer: '🚪 To issue an exeat:\n1. Go to <b>Exeat</b>\n2. Click <b>New Exeat Request</b>\n3. Enter the student name, destination and return date, then approve.'
-      },
-      {
-        keys: ['timetable','schedule','class schedule','period'],
-        answer: '📅 To build a timetable:\n1. Go to <b>Timetable</b>\n2. Select a class\n3. Assign subjects and teachers to each period.\n\nConflicts are automatically detected.'
-      },
-      {
-        keys: ['discipline','incident','behaviour','sanction','warning'],
-        answer: '⚖️ To log a discipline incident:\n1. Go to <b>Discipline</b>\n2. Click <b>New Incident</b>\n3. Select the student, describe the incident and apply a sanction if needed.'
-      },
-      {
-        keys: ['message','messaging','send message','communication','staff message'],
-        answer: '💬 To send an internal message:\n1. Go to <b>Messaging</b>\n2. Click <b>New Message</b>\n3. Select recipient(s) — staff, teachers or parents — and send.'
-      },
-      {
-        keys: ['password','reset password','forgot password','login','log in','access'],
-        answer: '🔐 Password reset:\n1. Contact your school administrator\n2. They can reset your password from <b>Users</b> → select user → <b>Reset Password</b>.\n\nDefault login page: <a href="auth.html">auth.html</a>'
-      },
-      {
-        keys: ['multi school','multiple schools','super admin','all schools','school group'],
-        answer: '🏫 Yes! EduManage360 supports multiple schools.\nThe <b>Super Admin</b> panel lets you:\n• View all schools at a glance\n• Switch between institutions\n• Monitor students, fees & staff across all schools from one dashboard.'
-      },
-      {
-        keys: ['offline','internet','no internet','works offline','connection'],
-        answer: '📴 EduManage360 works 100% offline.\nAll data is stored locally using SQLite — no internet connection is required for daily operations including attendance, fees, reports and messaging.'
-      },
-      {
-        keys: ['backup','restore','data backup','database'],
-        answer: '💾 To back up your data:\n1. Go to <b>Data Tools</b> or <b>Settings</b>\n2. Click <b>Backup Database</b>\n3. Save the backup file to a secure location.\n\nRestore is equally straightforward from the same screen.'
-      },
-      {
-        keys: ['parent','parent portal','guardian','parent view'],
-        answer: '👨‍👩‍👧 Parents can log in via the <b>Parent Portal</b> to:\n• View their child\'s results and attendance\n• Check fee balance\n• Read school announcements\n\nParent accounts are created by the school administrator.'
-      },
-      {
-        keys: ['hello','hi','hey','good morning','good afternoon','start','help'],
-        answer: '👋 Hello! I\'m <b>EduBot</b>, your EduManage360 assistant.\n\nI can help you with:\n• Adding students & recording fees\n• Attendance & reports\n• Exeat, discipline & timetable\n• Multi-school admin & login\n\nWhat do you need help with today?'
-      }
-    ];
-
-    const FALLBACK = "🤔 I'm not sure about that one. Please:\n• Try rephrasing your question\n• Contact your school administrator\n• Or visit the <a href='auth.html'>login page</a> to get started.";
-
-    function findAnswer(text) {
-      const t = text.toLowerCase();
-      for (const entry of KB) {
-        if (entry.keys.some(k => t.includes(k))) return entry.answer;
-      }
-      return FALLBACK;
-    }
-
-    /* ── EduBot DOM ── */
-    const toggle   = document.getElementById('edubot-toggle');
-    const win      = document.getElementById('edubot-window');
-    const msgs     = document.getElementById('bot-messages');
-    const input    = document.getElementById('bot-input');
-    const sendBtn  = document.getElementById('bot-send');
-    const quickRep = document.getElementById('quick-replies');
-    let opened = false;
-
-    const QUICK = ['Add a student', 'Record a payment', 'Take attendance', 'Generate report card', 'Exeat / out pass'];
-
-    function appendMsg(text, role) {
-      const div = document.createElement('div');
-      div.className = `bot-msg ${role}`;
-      div.innerHTML = text.replace(/\n/g, '<br/>');
-      msgs.appendChild(div);
-      msgs.scrollTop = msgs.scrollHeight;
-    }
-
-    function showTyping() {
-      const t = document.createElement('div');
-      t.className = 'bot-typing'; t.id = 'typing-indicator';
-      t.innerHTML = '<span></span><span></span><span></span>';
-      msgs.appendChild(t);
-      msgs.scrollTop = msgs.scrollHeight;
-    }
-
-    function hideTyping() {
-      const t = document.getElementById('typing-indicator');
-      if (t) t.remove();
-    }
-
-    function buildQuickReplies() {
-      quickRep.innerHTML = '';
-      QUICK.forEach(q => {
-        const btn = document.createElement('button');
-        btn.className = 'qr-btn'; btn.textContent = q;
-        btn.onclick = () => sendMessage(q);
-        quickRep.appendChild(btn);
-      });
-    }
-
-    function sendMessage(text) {
-      const msg = text.trim();
-      if (!msg) return;
-      appendMsg(msg, 'user');
-      input.value = '';
-      quickRep.innerHTML = '';
-      showTyping();
-      setTimeout(() => {
-        hideTyping();
-        appendMsg(findAnswer(msg), 'bot');
-        buildQuickReplies();
-      }, 700);
-    }
-
-    toggle.addEventListener('click', () => {
-      opened = !opened;
-      win.classList.toggle('open', opened);
-      toggle.classList.toggle('open', opened);
-      toggle.textContent = opened ? '✕' : '💬';
-      if (opened && msgs.children.length === 0) {
-        appendMsg('👋 Hi! I\'m <b>EduBot</b>. Ask me anything about EduManage360.', 'bot');
-        buildQuickReplies();
-      }
-    });
-
-    sendBtn.addEventListener('click', () => sendMessage(input.value));
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(input.value); });
   </script>
 </body>
 </html>

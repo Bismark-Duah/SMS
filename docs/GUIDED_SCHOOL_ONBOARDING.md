@@ -5,8 +5,7 @@ New school proprietors, headmasters, and administrative clerks often face cognit
 
 The **Guided School Onboarding Subsystem** introduces progressive, milestone-driven guidance:
 * Reduces initial cognitive load by providing a step-by-step roadmap.
-* Preserves all business rules and tenant isolation boundaries without hardcoded bypasses.
-* Remains 100% offline-first, functioning without external cloud dependencies.
+* Operates offline-first for campus workflows without requiring external cloud dependencies.
 
 ---
 

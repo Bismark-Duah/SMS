@@ -39,7 +39,7 @@ The audit feed endpoints support extensive query parameters:
 
 ### 2.4 Forensic CSV Export
 - Endpoint: `GET /api/audit/export`
-- Exports up to 10,000 matching records formatted in standard RFC 4180 CSV.
+- Exports matching records formatted in standard RFC 4180 CSV.
 - **Formula Injection Defense (CWE-1236):** All cells starting with `=`, `+`, `-`, `@`, `\t`, or `\r` are neutralized with `'`.
 - **Filename Sanitization:** Content-Disposition uses sanitized timestamped filenames (`audit_logs_YYYYMMDD_HHMMSS.csv`).
 

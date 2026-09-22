@@ -42,7 +42,7 @@ pytest tests/test_system_telemetry_hardening.py
 
 ## 2. Core Testing Principles
 
-1. **100% Offline Execution**:
+1. **Offline Test Execution**:
    - All tests execute strictly against local SQLite or in-memory fixtures.
    - Zero tests require internet access, third-party APIs, or external payment gateways.
 2. **Database Isolation & Cleanliness**:

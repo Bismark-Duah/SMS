@@ -6,7 +6,7 @@ This guide describes how to reproduce the complete test environment, execute uni
 
 ## 1. Prerequisites & Environment Setup
 
-EduManage 360 requires **Python 3.10+** (verified through Python 3.14) and operates with **100% offline-first compatibility** using local SQLite WAL or production-grade PostgreSQL.
+EduManage 360 requires **Python 3.10+** (verified through Python 3.14) and supports **offline-first local operation** using local SQLite WAL or cloud PostgreSQL.
 
 ### 1.1 Create & Activate Virtual Environment
 ```bash

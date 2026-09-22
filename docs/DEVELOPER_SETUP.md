@@ -23,10 +23,15 @@ cd SMS
 ### Step 2: Initialize Python Virtual Environment
 It is strictly recommended to use an isolated virtual environment to prevent package collisions:
 
-**Windows (PowerShell or Command Prompt):**
+**Windows (Command Prompt / PowerShell):**
 ```powershell
 python -m venv .venv
+
+# Command Prompt:
 .venv\Scripts\activate
+
+# PowerShell:
+.venv\Scripts\Activate.ps1
 ```
 
 **Linux / macOS:**
@@ -84,17 +89,9 @@ For school office staff and test demonstration environments:
 
 ---
 
-## 4. Default Master Credentials
+## 4. Administrator Credential Provisioning
 
-Upon initial database seeding, the following default credentials are created:
-
-| Role | Username | Password | Purpose |
-| :--- | :--- | :--- | :--- |
-| **Super Administrator** | `superadmin` | `superadmin123!` | System-wide configuration & multi-school portal |
-| **School Administrator** | `admin` | `admin123!` | Institutional administration & staff management |
-
-> [!CAUTION]
-> In production environments (`ENVIRONMENT=production`), the application runtime performs a pre-flight audit via `backend/app/env_audit.py` and will refuse to boot if default or insecure secrets are detected. Update default credentials immediately under **Settings > User Management**.
+Production administrator credentials are intentionally not published in this repository. Initial administrator setup must be completed through the secure deployment/configuration process (e.g., via `INITIAL_SUPERADMIN_PASSWORD` in your environment or the initial onboarding wizard), and temporary credentials must be rotated before normal operation.
 
 ---
 

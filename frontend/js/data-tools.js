@@ -358,13 +358,7 @@ window.importStudentCSV = async function() {
 // ── User / Staff CSV Template & Import ───────────────────────────────────────
 window.downloadUserCSVTemplate = function() {
   const headers = ['full_name', 'gender', 'phone', 'email', 'roles', 'department', 'primary_subject', 'form_class', 'house_assigned', 'password'];
-  const sampleRows = [
-    ['David Barimah', 'Male', '0240000001', 'david.barimah@jakstem.edu.gh', 'teacher|senior_house_master', 'Technical & Applied Technology Department', 'Applied Technology', '', 'House 1', ''],
-    ['Margaret Serwaa', '', '0240000002', '', 'teacher|senior_house_mistress', 'Home Economics & Visual Arts Department', 'Food and Nutrition', '', 'House 1', ''],
-    ['Daniel Boah', 'Male', '0240000003', '', 'teacher|hod', 'Social Studies & Physical Education Department', 'Social Studies', '', 'House 4', ''],
-    ['Titus Owusu', '', '0240000004', '', 'teacher|form_master', 'Mathematics & ICT Department', 'Core Mathematics', '1ST3', '', '']
-  ];
-  const csvContent = headers.join(',') + '\n' + sampleRows.map(r => r.map(f => f.includes(',') ? `"${f}"` : f).join(',')).join('\n') + '\n';
+  const csvContent = headers.join(',') + '\n';
   window.triggerBlobDownload(csvContent, 'Official_Staff_Institutional_Provisioning_Template.csv');
 };
 

@@ -44,8 +44,9 @@
   const NAV_ITEMS = [
     { title: 'Dashboard & Analytics', url: 'dashboard.html', icon: '📊', category: 'Pages', keywords: 'home overview kpis analytics stats charts' },
     { title: 'Students Roster & Enrollment', url: 'students.html', icon: '👥', category: 'Pages', keywords: 'students admission enroll cssps guardians profile' },
+    { title: 'Teacher Score Entry (Assessment Desk)', url: 'bulk-entry.html', icon: '📝', category: 'Pages', keywords: 'scores sba exam marks enter grading continuous assessment bulk results teacher score entry' },
+    { title: 'Results & Continuous Assessment Sheet', url: 'results.html', icon: '📊', category: 'Pages', keywords: 'results scores continuous assessment sheet sba breakdown wassce bece grades' },
     { title: 'Broadsheet & Terminal Marks', url: 'broadsheet.html', icon: '📑', category: 'Pages', keywords: 'broadsheet grades marks assessment positions ranks transcripts' },
-    { title: 'Teacher Score Entry', url: 'scores.html', icon: '📝', category: 'Pages', keywords: 'scores sba exam marks enter grading continuous assessment' },
     { title: 'Student Attendance Register', url: 'attendance.html', icon: '📅', category: 'Pages', keywords: 'attendance present absent roll call daily period exeat' },
     { title: 'Class Sections & Stages', url: 'classes.html', icon: '🏫', category: 'Pages', keywords: 'classes form arms streams levels stages form master' },
     { title: 'Subjects & Classifications', url: 'subjects.html', icon: '📚', category: 'Pages', keywords: 'subjects core elective wassce ncca curriculum stem' },

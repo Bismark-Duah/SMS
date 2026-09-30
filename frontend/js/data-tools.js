@@ -12,6 +12,26 @@ function getHeaders(headers = {}) {
   return h;
 }
 
+window.triggerBlobDownload = function(blobOrContent, filename, mimeType = 'text/csv;charset=utf-8;') {
+  try {
+    const blob = (blobOrContent instanceof Blob) ? blobOrContent : new Blob([blobOrContent], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (document.body.contains(a)) document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 250);
+  } catch (err) {
+    console.error('Download error:', err);
+    alert('Download failed: ' + (err.message || err));
+  }
+};
+
 // ── CSSPS CSV Template & Import ──────────────────────────────────────────────
 window.downloadCSSPSCSVTemplate = function() {
   const headers = [
@@ -53,12 +73,7 @@ window.downloadCSSPSCSVTemplate = function() {
   ];
 
   const csvContent = [headers.join(','), sampleRow.join(',')].join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.setAttribute('href', url);
-  a.setAttribute('download', `CSSPS_Official_Placement_Template.csv`);
-  a.click();
+  window.triggerBlobDownload(csvContent, 'CSSPS_Official_Placement_Template.csv');
 };
 
 window.triggerCSSPSCSVUpload = function() {
@@ -89,12 +104,7 @@ window.downloadBasicStudentsTemplate = function() {
   ];
 
   const csvContent = [headers.join(','), ...sampleRows].join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.setAttribute('href', url);
-  a.setAttribute('download', `Basic_School_Students_Enrollment_Template.csv`);
-  a.click();
+  window.triggerBlobDownload(csvContent, 'Basic_School_Students_Enrollment_Template.csv');
 };
 
 window.triggerBasicStudentsCSVUpload = function() {
@@ -130,12 +140,7 @@ window.downloadContinuingStudentsTemplate = function() {
   ];
 
   const csvContent = [headers.join(','), ...sampleRows].join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.setAttribute('href', url);
-  a.setAttribute('download', `Continuing_Students_Direct_Enrollment_Template.csv`);
-  a.click();
+  window.triggerBlobDownload(csvContent, 'Continuing_Students_Direct_Enrollment_Template.csv');
 };
 
 window.triggerContinuingStudentsCSVUpload = function() {
@@ -350,6 +355,35 @@ window.importStudentCSV = async function() {
   }
 };
 
+// ── User / Staff CSV Template & Import ───────────────────────────────────────
+window.downloadUserCSVTemplate = function() {
+  const headers = ['full_name', 'gender', 'phone', 'email', 'roles', 'department', 'primary_subject', 'form_class', 'house_assigned', 'password'];
+  const sampleRows = [
+    ['David Barimah', 'Male', '0240000001', 'david.barimah@jakstem.edu.gh', 'teacher|senior_house_master', 'Technical & Applied Technology Department', 'Applied Technology', '', 'House 1', ''],
+    ['Margaret Serwaa', '', '0240000002', '', 'teacher|senior_house_mistress', 'Home Economics & Visual Arts Department', 'Food and Nutrition', '', 'House 1', ''],
+    ['Daniel Boah', 'Male', '0240000003', '', 'teacher|hod', 'Social Studies & Physical Education Department', 'Social Studies', '', 'House 4', ''],
+    ['Titus Owusu', '', '0240000004', '', 'teacher|form_master', 'Mathematics & ICT Department', 'Core Mathematics', '1ST3', '', '']
+  ];
+  const csvContent = headers.join(',') + '\n' + sampleRows.map(r => r.map(f => f.includes(',') ? `"${f}"` : f).join(',')).join('\n') + '\n';
+  window.triggerBlobDownload(csvContent, 'Official_Staff_Institutional_Provisioning_Template.csv');
+};
+
+window.downloadGeneratedCredentialsCSV = function() {
+  if (!window._lastGeneratedCredentials || window._lastGeneratedCredentials.length === 0) {
+    alert("No credentials to export.");
+    return;
+  }
+  const rows = ['full_name,username,roles,temporary_password'];
+  for (const c of window._lastGeneratedCredentials) {
+    const fn = (c.full_name || '').replace(/"/g, '""');
+    const un = (c.username || '').replace(/"/g, '""');
+    const rl = (c.roles || '').replace(/"/g, '""');
+    const pw = (c.temporary_password || '').replace(/"/g, '""');
+    rows.push(`"${fn}","${un}","${rl}","${pw}"`);
+  }
+  window.triggerBlobDownload(rows.join('\n'), `Staff_Temporary_Credentials_${new Date().toISOString().slice(0, 10)}.csv`);
+};
+
 window.importUserCSV = async function() {
   const fileInput = document.getElementById('userCsvFile');
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -361,7 +395,7 @@ window.importUserCSV = async function() {
   formData.append('file', fileInput.files[0]);
 
   const resultEl = document.getElementById('importUserResult');
-  if (resultEl) resultEl.innerHTML = '<span style="opacity:.7">Uploading and processing...</span>';
+  if (resultEl) resultEl.innerHTML = '<span style="opacity:.7">⏳ Uploading and provisioning user accounts...</span>';
 
   try {
     const res = await fetch(`${API_BASE}/auth/import-users-csv`, {
@@ -371,7 +405,58 @@ window.importUserCSV = async function() {
     });
     const data = await res.json();
     if (res.ok) {
-      if (resultEl) resultEl.innerHTML = `<span style="color:var(--success-color)">✔ Successfully imported ${data.imported} users.</span>`;
+      let html = `<div style="padding:12px 16px; border-radius:8px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; font-weight:600; margin-bottom:12px;">
+        ✔ Successfully provisioned ${data.imported} user account${data.imported === 1 ? '' : 's'}.
+      </div>`;
+
+      if (data.temporary_credentials && data.temporary_credentials.length > 0) {
+        window._lastGeneratedCredentials = data.temporary_credentials;
+        html += `
+          <div style="margin-top:12px; padding:14px; background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.15); border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+              <strong style="color:#f1f5f9; font-size:0.9rem;">🔐 Auto-Generated Temporary Passwords (${data.temporary_credentials.length})</strong>
+              <button class="btn sm" onclick="downloadGeneratedCredentialsCSV()" style="font-size:0.8rem; padding:4px 10px; background:#3b82f6; color:#fff; border:none; border-radius:6px; cursor:pointer;">💾 Download Credentials (CSV)</button>
+            </div>
+            <p style="font-size:0.82rem; color:#94a3b8; margin:0 0 10px 0;">Please copy or download these credentials now to distribute to staff. Users will be prompted to set a new private password upon first login.</p>
+            <div style="max-height:260px; overflow-y:auto; border:1px solid rgba(255,255,255,0.1); border-radius:6px;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left;">
+                <thead>
+                  <tr style="background:rgba(255,255,255,0.06); color:#cbd5e1;">
+                    <th style="padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.1);">Full Name</th>
+                    <th style="padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.1);">Username</th>
+                    <th style="padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.1);">Roles Assigned</th>
+                    <th style="padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.1);">Temporary Password</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.temporary_credentials.map(c => `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                      <td style="padding:8px 12px; font-weight:600; color:#f8fafc;">${c.full_name || c.username}</td>
+                      <td style="padding:8px 12px; color:#a5b4fc; font-family:monospace;">${c.username}</td>
+                      <td style="padding:8px 12px; color:#cbd5e1; font-size:0.78rem;">${c.roles || 'Teacher'}</td>
+                      <td style="padding:8px 12px; font-family:monospace; color:#38bdf8; font-weight:600;">${c.temporary_password}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      if (data.errors && data.errors.length > 0) {
+        html += `
+          <div style="margin-top:12px; padding:12px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; color:#f87171; font-size:0.85rem;">
+            <strong>⚠️ Warnings / Skipped Rows (${data.errors.length}):</strong>
+            <ul style="margin:6px 0 0 16px; padding:0;">
+              ${data.errors.map(err => `<li>${err}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+
+      if (resultEl) resultEl.innerHTML = html;
+      fileInput.value = '';
     } else {
       if (resultEl) resultEl.innerHTML = `<span style="color:var(--danger-color)">Error: ${data.detail || 'Import failed'}</span>`;
     }
@@ -379,6 +464,7 @@ window.importUserCSV = async function() {
     if (resultEl) resultEl.innerHTML = '<span style="color:var(--danger-color)">Network error during import.</span>';
   }
 };
+
 
 // ── Export ──────────────────────────────────────────────────────────────────
 window.exportStudentsCSV = async function() {
@@ -410,12 +496,7 @@ window.exportStudentsCSV = async function() {
       csvRows.push(values.join(','));
     }
 
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('href', url);
-    a.setAttribute('download', `Students_Export_${new Date().toISOString().slice(0, 10)}.csv`);
-    a.click();
+    window.triggerBlobDownload(csvRows.join('\n'), `Students_Export_${new Date().toISOString().slice(0, 10)}.csv`);
   } catch (e) {
     alert("Export failed: " + e.message);
   }
@@ -656,12 +737,7 @@ window.pullCloudSnapshot = async function() {
     });
     const data = await res.json();
     if (res.ok && data.snapshot) {
-      const blob = new Blob([JSON.stringify(data.snapshot, null, 2)], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `School_Snapshot_${data.school_id}_${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
+      window.triggerBlobDownload(JSON.stringify(data.snapshot, null, 2), `School_Snapshot_${data.school_id}_${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
       if (msg) msg.innerHTML = `<span style="color:var(--success-color); font-weight:700;">✔ Cloud snapshot successfully exported (${data.snapshot.students_count || 0} students, ${data.snapshot.scores_count || 0} scores).</span>`;
     } else {
       if (msg) msg.innerHTML = `<span style="color:var(--danger-color)">Failed to pull snapshot: ${data.detail || 'Error'}</span>`;

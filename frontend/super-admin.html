@@ -1024,6 +1024,13 @@
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
             <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">School Ownership *</label>
+              <select id="schoolOwnership" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;">
+                <option value="PUBLIC" selected>Public / Government School (GES)</option>
+                <option value="PRIVATE">Private Institution</option>
+              </select>
+            </div>
+            <div>
               <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Boarding Facility</label>
               <select id="schoolBoarding" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;">
                 <option value="BOARDING_AND_DAY" selected>Boarding &amp; Day</option>
@@ -1031,9 +1038,21 @@
                 <option value="BOARDING_ONLY">Boarding Only</option>
               </select>
             </div>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Campus Address <span style="font-weight:400; font-size:0.75rem; color:var(--sa-text-muted);">(Optional)</span></label>
+            <input id="schoolAddress" name="no_autofill_sch_addr" placeholder="e.g. Antoa, Ashanti Region" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
             <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Campus Address <span style="font-weight:400; font-size:0.75rem; color:var(--sa-text-muted);">(Optional)</span></label>
-              <input id="schoolAddress" name="no_autofill_sch_addr" placeholder="e.g. Antoa, Ashanti Region" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">School Phone <span style="font-weight:400; font-size:0.75rem; color:var(--sa-text-muted);">(Optional)</span></label>
+              <input id="schoolPhone" name="no_autofill_sch_phone" placeholder="e.g. 0244123456" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">School Email <span style="font-weight:400; font-size:0.75rem; color:var(--sa-text-muted);">(Optional)</span></label>
+              <input id="schoolEmail" name="no_autofill_sch_email" type="email" placeholder="e.g. info@school.edu.gh" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
             </div>
           </div>
 
@@ -1042,15 +1061,20 @@
             <span>Initial School Administrator Account</span>
           </h4>
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
             <div>
               <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Admin Username *</label>
               <input id="adminUsername" name="no_autofill_admin_user" placeholder="e.g. antoa_admin" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
             </div>
             <div>
-              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Admin Password *</label>
-              <input id="adminPassword" name="no_autofill_admin_pass" type="password" placeholder="••••••••" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Admin Email <span style="font-weight:400; font-size:0.75rem; color:var(--sa-text-muted);">(Optional)</span></label>
+              <input id="adminEmail" name="no_autofill_admin_email" type="email" placeholder="e.g. admin@school.edu.gh" style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
             </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Admin Password *</label>
+            <input id="adminPassword" name="no_autofill_admin_pass" type="password" placeholder="••••••••" required style="width:100%; box-sizing:border-box; padding:9px 12px; background:#090d16; border:1px solid var(--sa-card-border); border-radius:6px; color:#fff;" />
           </div>
 
           <div style="display:flex; gap:10px;">

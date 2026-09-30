@@ -12,11 +12,12 @@ from ..models import Student, StudentGuardian, StudentHealth, Program, House, Cl
 from ..schemas import CSSPSEnrollmentCreate
 from ..services.allocation import allocate_student_house_and_dorm
 from ..services.admission_package import AdmissionPackageService
-from ..services.program_transfer_service import ProgramTransferService
 from ..dependencies import get_current_user, get_school_id
 from ..services.import_export_service import validate_and_read_csv_upload
+from ..services.gender_detector import detect_gender_from_name
 
 router = APIRouter(prefix="/api/cssps", tags=["CSSPS Enrollment"])
+
 
 @router.post("/enroll", status_code=status.HTTP_201_CREATED)
 def enroll_student(data: CSSPSEnrollmentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -91,7 +92,7 @@ def enroll_student(data: CSSPSEnrollmentCreate, db: Session = Depends(get_db), c
         enrollment_status="Fully Registered",
         school_type="SHS",
         form=1,
-        gender=data.gender,
+        gender="Female" if (data.gender and str(data.gender).strip().upper().startswith("F")) else ("Male" if (data.gender and str(data.gender).strip().upper().startswith("M")) else detect_gender_from_name(full_name)),
         date_of_birth=dob,
         program_id=data.program_id,
         class_section_id=class_sec_id,
@@ -414,11 +415,11 @@ async def import_cssps_csv(file: UploadFile = File(...), db: Session = Depends(g
                 if not full_name:
                     full_name = f"CSSPS Candidate {bece_idx}"
 
-                gender_raw = get_val(row, GENDER_ALIASES, "Male").upper()
-                if gender_raw.startswith("F"):
-                    gender = "Female"
+                gender_raw = get_val(row, GENDER_ALIASES, "").strip()
+                if gender_raw:
+                    gender = "Female" if gender_raw.upper().startswith("F") else "Male"
                 else:
-                    gender = "Male"
+                    gender = detect_gender_from_name(full_name, prog_str)
 
                 dob = None
                 dob_str = get_val(row, DOB_ALIASES)

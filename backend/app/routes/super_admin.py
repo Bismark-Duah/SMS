@@ -40,7 +40,7 @@ class SchoolCreateSchema(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     admin_username: str
-    admin_email: str
+    admin_email: Optional[str] = None
     admin_password: str
     accredited_program_ids: Optional[List[int]] = None
     active_subject_ids: Optional[List[int]] = None
@@ -453,9 +453,10 @@ def create_new_school(
         db.flush()
 
     # Create School Admin User
+    admin_email_val = payload.admin_email.strip() if payload.admin_email else f"{payload.admin_username.strip().lower()}@{payload.code.strip().lower()}.local"
     school_admin = User(
         username=payload.admin_username.strip(),
-        email=payload.admin_email.strip(),
+        email=admin_email_val,
         password_hash=get_password_hash(payload.admin_password),
         school_id=new_school.id,
         is_active=True
@@ -476,7 +477,8 @@ def create_new_school(
         ("active_academic_year_id", "1"),
         ("active_semester_id", "1"),
         ("report_title", "TERMINAL REPORT"),
-        ("report_publishing_mode", "HYBRID_BOTH")
+        ("report_publishing_mode", "HYBRID_BOTH"),
+        ("ownership_type", new_school.ownership_type)
     ]
     for k, v in default_settings:
         db.add(Setting(school_id=new_school.id, key=k, value=v))

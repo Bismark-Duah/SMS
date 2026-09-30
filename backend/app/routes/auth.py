@@ -10,9 +10,10 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from ..middleware.device_session_guard import register_device_session
 from ..database import get_db
-from ..models import User, Role, School, ClassSection, House, Department, Student, UserDeviceSession, RevokedResetToken
+from ..models import User, Role, School, ClassSection, House, Department, Student, UserDeviceSession, RevokedResetToken, Subject, Semester, TeacherAssignment
 from ..services.auth import create_jwt, decode_jwt, hash_password, verify_password
 from ..services.audit_service import record_audit_event
+from ..services.gender_detector import detect_gender_from_name
 from .. import schemas
 from ..services.guardian_service import link_students_for_parent_user
 from ..dependencies import rate_limit_auth, get_current_user, get_school_id
@@ -903,6 +904,132 @@ import csv
 import io
 from ..services.import_export_service import validate_and_read_csv_upload
 
+def _derive_unique_username(db: Session, full_name: str, preferred_username: Optional[str] = None) -> str:
+    if preferred_username and preferred_username.strip():
+        cand = re.sub(r'[^a-zA-Z0-9._-]', '', preferred_username.strip().lower().replace(' ', '.'))
+        if cand:
+            base = cand
+            suffix = 1
+            while db.query(User).filter(func.lower(User.username) == cand.lower()).first():
+                suffix += 1
+                cand = f"{base}{suffix}"
+            return cand
+
+    # Strip salutations & honorary titles
+    cleaned = re.sub(r'^(mr\.|mrs\.|ms\.|miss|dr\.|rev\.|madam|master|hon\.)\s+', '', (full_name or '').strip(), flags=re.IGNORECASE)
+    tokens = [t.lower() for t in re.findall(r'[a-zA-Z0-9]+', cleaned)]
+    if not tokens:
+        cand = f"user.{secrets.token_hex(3)}"
+    elif len(tokens) == 1:
+        cand = tokens[0]
+    else:
+        cand = f"{tokens[0]}.{tokens[-1]}"
+
+    base = cand
+    suffix = 1
+    while db.query(User).filter(func.lower(User.username) == cand.lower()).first():
+        suffix += 1
+        cand = f"{base}{suffix}"
+    return cand
+
+
+def _match_department(db: Session, target_sch_id: Optional[int], dept_str: Optional[str]) -> Optional[Department]:
+    if not dept_str or not dept_str.strip():
+        return None
+    raw = dept_str.strip().lower()
+
+    query = db.query(Department)
+    if target_sch_id:
+        depts = query.filter(Department.school_id == target_sch_id).all()
+        if not depts:
+            depts = query.filter(Department.school_id.is_(None)).all()
+    else:
+        depts = query.all()
+
+    # 1. Exact match on code or name
+    for d in depts:
+        if (d.code or '').lower() == raw or (d.name or '').lower() == raw:
+            return d
+
+    # 2. Token / word boundary checks for standard school departments
+    categories = [
+        ('English Language Department', r'\b(eng|english|languages?)\b'),
+        ('Social Studies & Physical Education Department', r'\b(soc|social|pe|humanities|physical)\b'),
+        ('Science & STEM Engineering Department', r'\b(sci|science|stem|engineering|physics|chemistry|biology)\b'),
+        ('Mathematics & ICT Department', r'\b(math|mathematics|ict|computing)\b'),
+        ('Technical & Applied Technology Department', r'\b(tech|technical|applied)\b'),
+        ('Home Economics & Visual Arts Department', r'\b(home|hec|economics|art|arts|visual|vpa)\b')
+    ]
+    for dept_name, pattern in categories:
+        if re.search(pattern, raw):
+            for d in depts:
+                if d.name == dept_name or (d.code or '').lower() in pattern:
+                    return d
+
+    # 3. Fallback to general substring in department name or code
+    for d in depts:
+        if raw in d.name.lower() or (d.code and raw in d.code.lower()):
+            return d
+
+    return None
+
+
+def _match_class_section(db: Session, target_sch_id: Optional[int], class_str: Optional[str]) -> Optional[ClassSection]:
+    if not class_str or not class_str.strip():
+        return None
+    clean_raw = re.sub(r'[^a-zA-Z0-9]', '', class_str).upper()
+
+    query = db.query(ClassSection)
+    if target_sch_id:
+        classes = query.filter(ClassSection.school_id == target_sch_id).all()
+        if not classes:
+            classes = query.filter(ClassSection.school_id.is_(None)).all()
+    else:
+        classes = query.all()
+
+    for c in classes:
+        if re.sub(r'[^a-zA-Z0-9]', '', c.name).upper() == clean_raw:
+            return c
+
+    for c in classes:
+        if c.name.lower() == class_str.strip().lower():
+            return c
+
+    return None
+
+
+def _match_house(db: Session, target_sch_id: Optional[int], house_str: Optional[str]) -> Optional[House]:
+    if not house_str or not house_str.strip():
+        return None
+    raw = house_str.strip().lower()
+
+    query = db.query(House)
+    if target_sch_id:
+        houses = query.filter(House.school_id == target_sch_id).all()
+        if not houses:
+            houses = query.filter(House.school_id.is_(None)).all()
+    else:
+        houses = query.all()
+
+    for h in houses:
+        if h.name.lower() == raw:
+            return h
+
+    # Match numeric house identifier, e.g. '1', 'House 1', 'H1', 'House 1 - David Barimah'
+    num_match = re.search(r'(?:house\s*|h|^)\s*([1-9][0-9]*)', raw)
+    if num_match:
+        digit = num_match.group(1)
+        for h in houses:
+            if h.name.lower() == f"house {digit}" or h.name.lower() == digit:
+                return h
+
+    for h in houses:
+        if raw in h.name.lower():
+            return h
+
+    return None
+
+
 @router.post("/import-users-csv")
 async def import_users_csv(
     file: UploadFile = File(...),
@@ -943,28 +1070,45 @@ async def import_users_csv(
             with db.begin_nested():
                 clean_row = {str(k).strip().lower(): str(v).strip() if v else "" for k, v in row.items() if k}
                 
-                username = clean_row.get("username") or clean_row.get("user_name") or clean_row.get("name")
-                if not username:
-                    errors.append(f"Row {reader.line_num}: Missing username")
-                    continue
-                    
-                if db.query(User).filter(User.username == username).first():
-                    errors.append(f"Row {reader.line_num}: Username '{username}' already exists")
+                full_name = clean_row.get("full_name") or clean_row.get("fullname") or clean_row.get("name") or clean_row.get("staff_name") or ""
+                pref_username = clean_row.get("username") or clean_row.get("user_name") or ""
+                
+                if not full_name and not pref_username:
+                    errors.append(f"Row {reader.line_num}: Missing full name or username")
                     continue
 
-                email = clean_row.get("email") or clean_row.get("e-mail")
-                gender = clean_row.get("gender")
+                username = _derive_unique_username(db, full_name, pref_username)
+
+                email = clean_row.get("email") or clean_row.get("e-mail") or None
+                if email:
+                    email = email.lower().strip()
+                    if db.query(User).filter(User.email == email).first():
+                        errors.append(f"Row {reader.line_num}: Email '{email}' is already registered")
+                        continue
+
+                phone_number = clean_row.get("phone") or clean_row.get("phone_number") or clean_row.get("mobile") or clean_row.get("telephone") or None
+                staff_id = clean_row.get("staff_id") or clean_row.get("staffid") or None
+
+                raw_gender = clean_row.get("gender") or ""
+                if raw_gender.lower() in ("f", "female"):
+                    gender = "Female"
+                elif raw_gender.lower() in ("m", "male"):
+                    gender = "Male"
+                else:
+                    # Offline automatic name-based gender detection
+                    gender = detect_gender_from_name(full_name or username)
+
                 raw_password = (clean_row.get("password") or clean_row.get("pass") or "").strip()
                 is_generated = False
                 if not raw_password or len(raw_password) < 6:
                     raw_password = f"Tmp#{secrets.token_urlsafe(8)}"
                     is_generated = True
 
-                raw_roles_str = clean_row.get("roles") or clean_row.get("role") or clean_row.get("user_role") or clean_row.get("user_roles")
+                raw_roles_str = clean_row.get("roles") or clean_row.get("role") or clean_row.get("user_role") or clean_row.get("user_roles") or ""
                 assigned_roles = []
                 
                 if raw_roles_str:
-                    delimiters = "|" if "|" in raw_roles_str else ("," if "," in raw_roles_str else None)
+                    delimiters = "|" if "|" in raw_roles_str else ("," if "," in raw_roles_str else (";" if ";" in raw_roles_str else None))
                     r_items = raw_roles_str.split(delimiters) if delimiters else [raw_roles_str]
                     
                     for r_item in r_items:
@@ -973,21 +1117,52 @@ async def import_users_csv(
                         matched_role = all_roles.get(mapped_name)
                         if matched_role and matched_role not in assigned_roles:
                             assigned_roles.append(matched_role)
-                
+
                 # Non-super-admins cannot grant super_admin or admin via CSV
                 if not is_super:
                     assigned_roles = [r for r in assigned_roles if r.name.lower() not in ["super_admin", "admin", "headmaster", "headmistress"]]
 
+                # Normalize gender-specific roles
+                role_names = [r.name.lower() for r in assigned_roles]
+                if gender == "Female":
+                    swap_map = {
+                        "form_master": "form_mistress",
+                        "house_master": "house_mistress",
+                        "assistant_house_master": "assistant_house_mistress",
+                        "senior_house_master": "senior_house_mistress"
+                    }
+                else:
+                    swap_map = {
+                        "form_mistress": "form_master",
+                        "house_mistress": "house_master",
+                        "assistant_house_mistress": "assistant_house_master",
+                        "senior_house_mistress": "senior_house_master"
+                    }
+                for old_r, new_r in swap_map.items():
+                    if old_r in role_names and all_roles.get(new_r):
+                        assigned_roles = [all_roles[new_r] if r.name.lower() == old_r else r for r in assigned_roles]
+
+                # Default to teacher if role list is empty
                 if not assigned_roles and default_role:
                     assigned_roles.append(default_role)
+
+                # If staff has academic/pastoral responsibility, ensure teacher role is present
+                academic_leadership = {"form_master", "form_mistress", "hod", "house_master", "house_mistress", "senior_house_master", "senior_house_mistress", "assistant_house_master", "assistant_house_mistress"}
+                if any(r.name.lower() in academic_leadership for r in assigned_roles):
+                    t_role = all_roles.get("teacher")
+                    if t_role and t_role not in assigned_roles:
+                        assigned_roles.append(t_role)
 
                 new_user = User(
                     username=username,
                     email=email,
+                    phone_number=phone_number,
+                    staff_id=staff_id,
                     password_hash=_hash_password(raw_password),
                     gender=gender,
                     is_active=True,
                     is_first_login=True,
+                    contact_verified=bool(phone_number or email),
                     school_id=target_sch_id
                 )
                 for role in assigned_roles:
@@ -995,11 +1170,96 @@ async def import_users_csv(
                 
                 db.add(new_user)
                 db.flush()
+
+                # ── 1. Department & HOD Binding ──
+                dept_str = clean_row.get("department") or clean_row.get("dept")
+                matched_dept = _match_department(db, target_sch_id, dept_str)
+                if matched_dept:
+                    new_user.department_id = matched_dept.id
+                    if any(r.name.lower() in ("hod", "head_of_department") for r in new_user.roles):
+                        matched_dept.hod_id = new_user.id
+                        hod_role = all_roles.get("hod")
+                        if hod_role and hod_role not in new_user.roles:
+                            new_user.roles.append(hod_role)
+
+                # ── 2. Form Class & Form Master Binding ──
+                class_str = clean_row.get("form_class") or clean_row.get("class") or clean_row.get("class_section") or clean_row.get("section")
+                matched_class = _match_class_section(db, target_sch_id, class_str)
+                if matched_class:
+                    matched_class.form_master_id = new_user.id
+                    fm_role_name = "form_mistress" if gender == "Female" else "form_master"
+                    fm_role = all_roles.get(fm_role_name) or all_roles.get("form_master")
+                    if fm_role and fm_role not in new_user.roles:
+                        new_user.roles.append(fm_role)
+
+                # ── 3. House & House Leadership Binding ──
+                house_str = clean_row.get("house_assigned") or clean_row.get("house") or clean_row.get("boarding_house")
+                matched_house = _match_house(db, target_sch_id, house_str)
+                if matched_house:
+                    role_names_set = {r.name.lower() for r in new_user.roles}
+                    is_fem = (gender == "Female")
+
+                    if "senior_house_master" in role_names_set or "senior_housemaster" in role_names_set:
+                        matched_house.senior_in_charge_id = new_user.id
+                    elif "senior_house_mistress" in role_names_set or "senior_housemistress" in role_names_set:
+                        matched_house.senior_in_charge_girls_id = new_user.id
+                    elif "assistant_house_master" in role_names_set or "assistant_housemaster" in role_names_set:
+                        if is_fem:
+                            matched_house.assistant_house_master_girls_id = new_user.id
+                        else:
+                            matched_house.assistant_house_master_id = new_user.id
+                    elif "assistant_house_mistress" in role_names_set or "assistant_housemistress" in role_names_set:
+                        matched_house.assistant_house_master_girls_id = new_user.id
+                    elif "house_mistress" in role_names_set or "housemistress" in role_names_set:
+                        matched_house.house_master_girls_id = new_user.id
+                    elif "house_master" in role_names_set or "housemaster" in role_names_set:
+                        if is_fem:
+                            matched_house.house_master_girls_id = new_user.id
+                        else:
+                            matched_house.house_master_id = new_user.id
+                    else:
+                        # Auto-assign House Master/Mistress role if house is assigned without house role
+                        if is_fem:
+                            matched_house.house_master_girls_id = new_user.id
+                            hm_r = all_roles.get("house_mistress")
+                        else:
+                            matched_house.house_master_id = new_user.id
+                            hm_r = all_roles.get("house_master")
+                        if hm_r and hm_r not in new_user.roles:
+                            new_user.roles.append(hm_r)
+
+                # ── 4. Primary Subject & Teacher Assignment (Optional) ──
+                subj_str = clean_row.get("primary_subject") or clean_row.get("subject")
+                if subj_str and matched_class:
+                    matched_subj = db.query(Subject).filter(
+                        (func.lower(Subject.name) == subj_str.lower()) |
+                        (func.lower(Subject.code) == subj_str.lower())
+                    ).first()
+                    if matched_subj:
+                        cur_sem = db.query(Semester).filter(Semester.is_current == True).first()
+                        if cur_sem:
+                            existing_ta = db.query(TeacherAssignment).filter(
+                                TeacherAssignment.teacher_id == new_user.id,
+                                TeacherAssignment.subject_id == matched_subj.id,
+                                TeacherAssignment.class_section_id == matched_class.id,
+                                TeacherAssignment.semester_id == cur_sem.id
+                            ).first()
+                            if not existing_ta:
+                                new_ta = TeacherAssignment(
+                                    teacher_id=new_user.id,
+                                    subject_id=matched_subj.id,
+                                    class_section_id=matched_class.id,
+                                    semester_id=cur_sem.id
+                                )
+                                db.add(new_ta)
+
                 link_students_for_parent_user(db, new_user)
                 imported_count += 1
                 if is_generated:
                     generated_credentials.append({
+                        "full_name": full_name or username,
                         "username": username,
+                        "roles": ", ".join([r.name for r in new_user.roles]),
                         "temporary_password": raw_password
                     })
         except Exception as e:

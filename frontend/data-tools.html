@@ -33,13 +33,83 @@
           </a>
         </div>
       </section>
-      <section class="card">
-        <h3>Import Users (CSV)</h3>
-        <p style="color:var(--text-muted);font-size:.9rem;">Upload a CSV with columns: username, email, roles (pipe-separated)</p>
-        <input type="file" id="userCsvFile" accept=".csv" />
-        <button class="btn primary" onclick="importUserCSV()">Import Users</button>
-        <div id="importUserResult" style="margin-top:12px;"></div>
+      <!-- ── Bulk Staff & User Onboarding ── -->
+      <section class="card" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 22px; margin-bottom: 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px; margin-bottom:14px;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+              <span>👥</span> Bulk Staff &amp; User Onboarding (CSV)
+            </h3>
+            <p style="color:var(--text-muted); font-size:0.88rem; margin:6px 0 0 0; line-height:1.4;">
+              Upload faculty, leadership appointments, auxiliary staff, and parent accounts in bulk. Missing passwords automatically generate secure temporary login credentials.
+            </p>
+          </div>
+          <button type="button" class="btn" onclick="downloadUserCSVTemplate()" style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; font-weight:600; font-size:0.85rem; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); color:#818cf8; border-radius:8px; cursor:pointer; transition:all 0.15s ease;">
+            <span>📥</span> Download User CSV Template
+          </button>
+        </div>
+
+        <!-- Role Legend Reference Drawer -->
+        <details style="margin-bottom:16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; font-size:0.84rem;">
+          <summary style="font-weight:700; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
+            <span>📖</span> CSV Column Specification &amp; Supported Staff Roles (Click to expand)
+          </summary>
+          <div style="margin-top:12px; display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; color:var(--text-secondary); line-height:1.45;">
+            <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border-left:3px solid #3b82f6;">
+              <strong style="color:#60a5fa; display:block; margin-bottom:4px;">📋 CSV Columns &amp; Optional Fields:</strong>
+              • <code>full_name</code> <span style="color:#ef4444; font-weight:600;">(Required)</span>: Staff full name.<br>
+              • <code>roles</code> <span style="color:#ef4444; font-weight:600;">(Required)</span>: Multi-roles separated by <code>|</code>.<br>
+              • <code>gender</code> <em>(Optional)</em>: Auto-detected offline if omitted.<br>
+              • <code>phone</code> <em>(Optional)</em>: Mobile / SMS contact.<br>
+              • <code>email</code> <em>(Optional)</em>: Login &amp; notification email.<br>
+              • <code>department</code> <em>(Optional)</em>: Links staff &amp; auto-binds HOD.<br>
+              • <code>form_class</code> <em>(Optional)</em>: Class e.g. <code>1ST3</code> (auto-binds Form Master).<br>
+              • <code>house_assigned</code> <em>(Optional)</em>: House e.g. <code>House 1</code> (auto-binds House Staff).<br>
+              • <code>password</code> <em>(Optional)</em>: Auto-generates secure password if omitted.
+            </div>
+            <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border-left:3px solid #6366f1;">
+              <strong style="color:#818cf8; display:block; margin-bottom:4px;">🏛️ Executive &amp; Admin Leadership:</strong>
+              • <code>assistant_headmaster_academic</code><br>
+              • <code>assistant_headmaster_domestic</code><br>
+              • <code>assistant_headmaster_admin</code><br>
+              • <code>school_administrator</code><br>
+              • <code>ict_coordinator</code>
+            </div>
+            <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border-left:3px solid #f59e0b;">
+              <strong style="color:#fbbf24; display:block; margin-bottom:4px;">🏠 Boarding &amp; Houses:</strong>
+              • <code>senior_house_master</code> / <code>senior_house_mistress</code><br>
+              • <code>house_master</code> / <code>house_mistress</code><br>
+              • <code>assistant_house_master</code> / <code>assistant_house_mistress</code>
+            </div>
+            <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border-left:3px solid #10b981;">
+              <strong style="color:#34d399; display:block; margin-bottom:4px;">📘 Academic &amp; Faculty:</strong>
+              • <code>hod</code> (Head of Department)<br>
+              • <code>form_master</code> / <code>form_mistress</code><br>
+              • <code>teacher</code> (Subject Tutor)
+            </div>
+            <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border-left:3px solid #06b6d4;">
+              <strong style="color:#22d3ee; display:block; margin-bottom:4px;">💼 Financial, Auxiliary &amp; Community:</strong>
+              • <code>bursar</code> (Accountant)<br>
+              • <code>storekeeper</code> (Inventory)<br>
+              • <code>security_officer</code> (Gate/Exeat)<br>
+              • <code>parent</code> (Guardian Account)
+            </div>
+          </div>
+          <p style="margin:10px 0 0 0; font-size:0.8rem; color:#94a3b8;">
+            💡 <em>Tip: You can assign multiple roles using the pipe symbol (e.g. <code>teacher|senior_house_master</code> or <code>teacher|hod|form_master</code>). Leaving the password column blank automatically generates secure temporary credentials. Gender will be inferred automatically from Ghanaian, Christian, and Islamic naming conventions if left blank.</em>
+          </p>
+        </details>
+
+        <!-- Upload File Controls -->
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <input type="file" id="userCsvFile" accept=".csv" style="flex:1; min-width:240px; padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-size:0.85rem;" />
+          <button class="btn primary" onclick="importUserCSV()" style="padding:9px 18px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+            <span>🚀</span> Upload &amp; Provision Accounts
+          </button>
+        </div>
+        <div id="importUserResult" style="margin-top:14px;"></div>
       </section>
+
       <section class="card">
         <h3>Export & Data Portability</h3>
         <button class="btn" onclick="exportStudentsCSV()">Export Students CSV</button>
@@ -151,7 +221,34 @@
         </div>
       </section>
     </main>
-    <script src="js/guard.js"></script>
-    <script src="js/data-tools.js"></script>
+    <script>
+      // Resilient fallback definition in case data-tools.js is cached by Service Worker
+      if (!window.downloadUserCSVTemplate) {
+        window.downloadUserCSVTemplate = function() {
+          const headers = ['full_name', 'gender', 'phone', 'email', 'roles', 'department', 'primary_subject', 'form_class', 'house_assigned', 'password'];
+          const sampleRows = [
+            ['David Barimah', 'Male', '0240000001', 'david.barimah@jakstem.edu.gh', 'teacher|senior_house_master', 'Technical & Applied Technology Department', 'Applied Technology', '', 'House 1', ''],
+            ['Margaret Serwaa', '', '0240000002', '', 'teacher|senior_house_mistress', 'Home Economics & Visual Arts Department', 'Food and Nutrition', '', 'House 1', ''],
+            ['Daniel Boah', 'Male', '0240000003', '', 'teacher|hod', 'Social Studies & Physical Education Department', 'Social Studies', '', 'House 4', ''],
+            ['Titus Owusu', '', '0240000004', '', 'teacher|form_master', 'Mathematics & ICT Department', 'Core Mathematics', '1ST3', '', '']
+          ];
+          const csvContent = headers.join(',') + '\n' + sampleRows.map(r => r.map(f => f.includes(',') ? `"${f}"` : f).join(',')).join('\n') + '\n';
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = 'Official_Staff_Institutional_Provisioning_Template.csv';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            if (document.body.contains(a)) document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          }, 250);
+        };
+      }
+    </script>
+    <script src="js/guard.js?v=2.3"></script>
+    <script src="js/data-tools.js?v=2.3"></script>
   </body>
 </html>

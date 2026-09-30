@@ -475,6 +475,10 @@ def serve_super_admin():
 def serve_bulk_entry():
     return _serve("bulk-entry.html")
 
+@app.get("/scores.html")
+def serve_scores():
+    return RedirectResponse(url="/bulk-entry.html")
+
 
 # ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/health")

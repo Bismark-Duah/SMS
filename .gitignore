@@ -23,13 +23,15 @@ backend/.env
 *.env
 first_run_credentials.txt
 
-# ── Database Files (contain all student/staff/financial data) ────────
+# ── Database & Data Files (contain student/staff/financial data) ───────
 school.db
 school.db-shm
 school.db-wal
 *.db
 *.sqlite
 *.sqlite3
+student_data_files/
+data/
 
 # ── Backups (database dumps — never commit) ──────────────────────────
 backups/

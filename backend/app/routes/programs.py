@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from ..database import get_db
@@ -59,16 +59,25 @@ def _auto_sync_program_from_class_sections(p: Program, db: Session, school_id: O
 def list_programs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
 ):
-    school_id = get_school_id(current_user)
+    school_id = get_school_id(current_user, x_school_id)
+    query = db.query(Program)
+    has_accredited_programs = False
+
     if school_id:
         sch = db.query(School).filter(School.id == school_id).first()
         if sch and sch.school_mode == "BASIC_ONLY":
             return []
+        if sch and sch.accredited_programs:
+            has_accredited_programs = True
+            accredited_ids = [p.id for p in sch.accredited_programs]
+            query = query.filter((Program.id.in_(accredited_ids)) | (Program.school_id == school_id))
 
-    query = db.query(Program)
-    if school_id is not None and hasattr(Program, "school_id"):
-        query = query.filter(Program.school_id == school_id)
+    if not has_accredited_programs:
+        if school_id is not None and hasattr(Program, "school_id"):
+            query = query.filter((Program.school_id == school_id) | (Program.school_id.is_(None)))
+
     programs = query.order_by(Program.name.asc()).all()
 
     result = []
@@ -126,6 +135,8 @@ def create_program(
         data["school_id"] = school_id
     db_program = Program(**data)
     db.add(db_program)
+    if school_id and sch:
+        sch.accredited_programs.append(db_program)
     db.commit()
     db.refresh(db_program)
     return db_program
@@ -139,7 +150,7 @@ def get_program(
     school_id = get_school_id(current_user)
     query = db.query(Program).filter(Program.id == program_id)
     if school_id is not None and hasattr(Program, "school_id"):
-        query = query.filter(Program.school_id == school_id)
+        query = query.filter((Program.school_id == school_id) | (Program.school_id.is_(None)))
     item = query.first()
     if not item:
         raise HTTPException(status_code=404, detail="Program not found")
@@ -173,7 +184,7 @@ def get_program_curriculum(
     school_id = get_school_id(current_user)
     query = db.query(Program).filter(Program.id == program_id)
     if school_id is not None and hasattr(Program, "school_id"):
-        query = query.filter(Program.school_id == school_id)
+        query = query.filter((Program.school_id == school_id) | (Program.school_id.is_(None)))
     program = query.first()
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
@@ -261,7 +272,7 @@ def set_program_core_subjects(
     school_id = get_school_id(current_user)
     query = db.query(Program).filter(Program.id == program_id)
     if school_id is not None and hasattr(Program, "school_id"):
-        query = query.filter(Program.school_id == school_id)
+        query = query.filter((Program.school_id == school_id) | (Program.school_id.is_(None)))
     program = query.first()
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
@@ -459,10 +470,12 @@ def get_program_subjects(
     school_id = get_school_id(current_user)
     query = db.query(Program).filter(Program.id == program_id)
     if school_id is not None and hasattr(Program, "school_id"):
-        query = query.filter(Program.school_id == school_id)
+        query = query.filter((Program.school_id == school_id) | (Program.school_id.is_(None)))
     program = query.first()
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
+        
+    _auto_sync_program_from_class_sections(program, db, school_id)
         
     subjects = list(program.subjects)
     if not subjects:
@@ -495,7 +508,7 @@ def set_program_subjects(
     school_id = get_school_id(current_user)
     query = db.query(Program).filter(Program.id == program_id)
     if school_id is not None and hasattr(Program, "school_id"):
-        query = query.filter(Program.school_id == school_id)
+        query = query.filter((Program.school_id == school_id) | (Program.school_id.is_(None)))
     program = query.first()
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")

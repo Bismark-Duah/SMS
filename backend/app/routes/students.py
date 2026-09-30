@@ -16,8 +16,10 @@ from ..services.admission_package import AdmissionPackageService
 from ..services.program_transfer_service import ProgramTransferService
 from ..services.sync_engine import log_sync_change
 from ..services.import_export_service import validate_and_read_csv_upload, sanitize_csv_cell
+from ..services.gender_detector import detect_gender_from_name
 
 router = APIRouter()
+
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -242,6 +244,18 @@ def create_student(
         except ValueError:
             pass
 
+    # Determine or auto-detect gender if not provided
+    gender = student.gender
+    if not gender or str(gender).strip().lower() in ("", "unknown", "none", "null", "select"):
+        cls_name = None
+        if student.class_section_id:
+            cls_obj = db.query(ClassSection).filter(ClassSection.id == student.class_section_id).first()
+            if cls_obj:
+                cls_name = cls_obj.name
+        gender = detect_gender_from_name(student.full_name, cls_name)
+    else:
+        gender = "Female" if str(gender).strip().upper().startswith("F") else "Male"
+
     db_student = Student(
         student_code=student.student_code,
         full_name=student.full_name,
@@ -249,7 +263,7 @@ def create_student(
         program_id=student.program_id,
         parent_id=student.parent_id,
         form=student.form,
-        gender=student.gender,
+        gender=gender,
         date_of_birth=dob,
         address=student.address,
         phone=student.phone,
@@ -599,8 +613,11 @@ async def import_students_csv(
             if not prog_id and row.get("program_id") and str(row.get("program_id")).isdigit():
                 prog_id = int(row.get("program_id"))
 
-        gender_raw = (row.get("gender") or row.get("sex") or "Male").strip().upper()
-        gender = "Female" if gender_raw.startswith("F") else "Male"
+        gender_raw = (row.get("gender") or row.get("sex") or "").strip()
+        if gender_raw:
+            gender = "Female" if gender_raw.upper().startswith("F") else "Male"
+        else:
+            gender = detect_gender_from_name(full_name, class_input)
 
         res_raw = (row.get("residential_status") or row.get("boarding_status") or "D").strip().upper()
         residential_status = "B" if (res_raw.startswith("B") or "BOARD" in res_raw) else "D"

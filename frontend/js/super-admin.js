@@ -1152,17 +1152,24 @@ window.downloadSchoolBackup = async function(schoolId, schoolCode) {
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  const schoolName = document.getElementById('schoolName')?.value?.trim() || '';
+  const schoolCode = document.getElementById('schoolCode')?.value?.trim()?.toUpperCase() || '';
+  const adminUsername = document.getElementById('adminUsername')?.value?.trim() || '';
+  const adminPassword = document.getElementById('adminPassword')?.value || '';
+  const adminEmail = document.getElementById('adminEmail')?.value?.trim() || (adminUsername ? `${adminUsername.toLowerCase()}@${schoolCode.toLowerCase() || 'school'}.local` : 'admin@school.local');
+
   const payload = {
-    name: document.getElementById('schoolName').value.trim(),
-    code: document.getElementById('schoolCode').value.trim().toUpperCase(),
-    school_mode: document.getElementById('schoolMode').value,
-    boarding_type: document.getElementById('schoolBoarding').value,
-    address: document.getElementById('schoolAddress').value.trim() || null,
-    phone: document.getElementById('schoolPhone').value.trim() || null,
-    email: document.getElementById('schoolEmail').value.trim() || null,
-    admin_username: document.getElementById('adminUsername').value.trim(),
-    admin_email: document.getElementById('adminEmail').value.trim(),
-    admin_password: document.getElementById('adminPassword').value
+    name: schoolName,
+    code: schoolCode,
+    school_mode: document.getElementById('schoolMode')?.value || 'COMBINED',
+    ownership_type: document.getElementById('schoolOwnership')?.value || 'PUBLIC',
+    boarding_type: document.getElementById('schoolBoarding')?.value || 'BOARDING_AND_DAY',
+    address: document.getElementById('schoolAddress')?.value?.trim() || null,
+    phone: document.getElementById('schoolPhone')?.value?.trim() || null,
+    email: document.getElementById('schoolEmail')?.value?.trim() || null,
+    admin_username: adminUsername,
+    admin_email: adminEmail,
+    admin_password: adminPassword
   };
 
   try {

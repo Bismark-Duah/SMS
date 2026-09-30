@@ -174,7 +174,7 @@
       // Resilient fallback definition in case data-tools.js is cached by Service Worker
       if (!window.downloadUserCSVTemplate) {
         window.downloadUserCSVTemplate = function() {
-          const headers = ['full_name', 'gender', 'phone', 'email', 'roles', 'department', 'primary_subject', 'form_class', 'house_assigned', 'password'];
+          const headers = ['full_name', 'gender', 'phone', 'email', 'roles', 'department', 'subject', 'form_class', 'house_assigned', 'password'];
           const csvContent = headers.join(',') + '\n';
           const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
           const url = window.URL.createObjectURL(blob);

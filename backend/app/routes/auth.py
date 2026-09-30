@@ -1228,8 +1228,8 @@ async def import_users_csv(
                         if hm_r and hm_r not in new_user.roles:
                             new_user.roles.append(hm_r)
 
-                # ── 4. Primary Subject & Teacher Assignment (Optional) ──
-                subj_str = clean_row.get("primary_subject") or clean_row.get("subject")
+                # ── 4. Subject & Teacher Assignment (Optional) ──
+                subj_str = clean_row.get("subject") or clean_row.get("primary_subject") or clean_row.get("subject_specification")
                 if subj_str and matched_class:
                     matched_subj = db.query(Subject).filter(
                         (func.lower(Subject.name) == subj_str.lower()) |

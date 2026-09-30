@@ -357,7 +357,7 @@ window.importStudentCSV = async function() {
 
 // ── User / Staff CSV Template & Import ───────────────────────────────────────
 window.downloadUserCSVTemplate = function() {
-  const headers = ['full_name', 'gender', 'phone', 'email', 'roles', 'department', 'primary_subject', 'form_class', 'house_assigned', 'password'];
+  const headers = ['full_name', 'gender', 'phone', 'email', 'roles', 'department', 'subject', 'form_class', 'house_assigned', 'password'];
   const csvContent = headers.join(',') + '\n';
   window.triggerBlobDownload(csvContent, 'Official_Staff_Institutional_Provisioning_Template.csv');
 };

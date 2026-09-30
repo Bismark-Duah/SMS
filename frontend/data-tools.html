@@ -49,57 +49,6 @@
           </button>
         </div>
 
-        <!-- Role Legend Reference Drawer -->
-        <details style="margin-bottom:16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; font-size:0.84rem;">
-          <summary style="font-weight:700; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
-            <span>📖</span> CSV Column Specification &amp; Supported Staff Roles (Click to expand)
-          </summary>
-          <div style="margin-top:12px; display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; color:var(--text-secondary); line-height:1.45;">
-            <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border-left:3px solid #3b82f6;">
-              <strong style="color:#60a5fa; display:block; margin-bottom:4px;">📋 CSV Columns &amp; Optional Fields:</strong>
-              • <code>full_name</code> <span style="color:#ef4444; font-weight:600;">(Required)</span>: Staff full name.<br>
-              • <code>roles</code> <span style="color:#ef4444; font-weight:600;">(Required)</span>: Multi-roles separated by <code>|</code>.<br>
-              • <code>gender</code> <em>(Optional)</em>: Auto-detected offline if omitted.<br>
-              • <code>phone</code> <em>(Optional)</em>: Mobile / SMS contact.<br>
-              • <code>email</code> <em>(Optional)</em>: Login &amp; notification email.<br>
-              • <code>department</code> <em>(Optional)</em>: Links staff &amp; auto-binds HOD.<br>
-              • <code>form_class</code> <em>(Optional)</em>: Class e.g. <code>1ST3</code> (auto-binds Form Master).<br>
-              • <code>house_assigned</code> <em>(Optional)</em>: House e.g. <code>House 1</code> (auto-binds House Staff).<br>
-              • <code>password</code> <em>(Optional)</em>: Auto-generates secure password if omitted.
-            </div>
-            <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border-left:3px solid #6366f1;">
-              <strong style="color:#818cf8; display:block; margin-bottom:4px;">🏛️ Executive &amp; Admin Leadership:</strong>
-              • <code>assistant_headmaster_academic</code><br>
-              • <code>assistant_headmaster_domestic</code><br>
-              • <code>assistant_headmaster_admin</code><br>
-              • <code>school_administrator</code><br>
-              • <code>ict_coordinator</code>
-            </div>
-            <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border-left:3px solid #f59e0b;">
-              <strong style="color:#fbbf24; display:block; margin-bottom:4px;">🏠 Boarding &amp; Houses:</strong>
-              • <code>senior_house_master</code> / <code>senior_house_mistress</code><br>
-              • <code>house_master</code> / <code>house_mistress</code><br>
-              • <code>assistant_house_master</code> / <code>assistant_house_mistress</code>
-            </div>
-            <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border-left:3px solid #10b981;">
-              <strong style="color:#34d399; display:block; margin-bottom:4px;">📘 Academic &amp; Faculty:</strong>
-              • <code>hod</code> (Head of Department)<br>
-              • <code>form_master</code> / <code>form_mistress</code><br>
-              • <code>teacher</code> (Subject Tutor)
-            </div>
-            <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border-left:3px solid #06b6d4;">
-              <strong style="color:#22d3ee; display:block; margin-bottom:4px;">💼 Financial, Auxiliary &amp; Community:</strong>
-              • <code>bursar</code> (Accountant)<br>
-              • <code>storekeeper</code> (Inventory)<br>
-              • <code>security_officer</code> (Gate/Exeat)<br>
-              • <code>parent</code> (Guardian Account)
-            </div>
-          </div>
-          <p style="margin:10px 0 0 0; font-size:0.8rem; color:#94a3b8;">
-            💡 <em>Tip: You can assign multiple roles using the pipe symbol (e.g. <code>teacher|senior_house_master</code> or <code>teacher|hod|form_master</code>). Leaving the password column blank automatically generates secure temporary credentials. Gender will be inferred automatically from Ghanaian, Christian, and Islamic naming conventions if left blank.</em>
-          </p>
-        </details>
-
         <!-- Upload File Controls -->
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <input type="file" id="userCsvFile" accept=".csv" style="flex:1; min-width:240px; padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-size:0.85rem;" />

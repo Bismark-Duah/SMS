@@ -38,20 +38,25 @@
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px; margin-bottom:14px;">
           <div>
             <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
-              <span>👥</span> Bulk Staff &amp; User Onboarding (CSV)
+              <span>👥</span> Bulk Staff &amp; Faculty Onboarding (Excel / CSV)
             </h3>
             <p style="color:var(--text-muted); font-size:0.88rem; margin:6px 0 0 0; line-height:1.4;">
-              Upload faculty, leadership appointments, auxiliary staff, and parent accounts in bulk. Missing passwords automatically generate secure temporary login credentials.
+              Upload faculty, leadership appointments, auxiliary staff, and parent accounts in bulk. The interactive Excel template features dynamic dropdowns populated with your school's registered subjects, departments, houses, and classes.
             </p>
           </div>
-          <button type="button" class="btn" onclick="downloadUserCSVTemplate()" style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; font-weight:600; font-size:0.85rem; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); color:#818cf8; border-radius:8px; cursor:pointer; transition:all 0.15s ease;">
-            <span>📥</span> Download User CSV Template
-          </button>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <button type="button" class="btn primary" onclick="downloadUserExcelTemplate()" style="display:inline-flex; align-items:center; gap:8px; padding:9px 16px; font-weight:700; font-size:0.88rem; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:1px solid #059669; color:#ffffff; border-radius:8px; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.25); transition:all 0.15s ease;">
+              <span>📊</span> Download Interactive Excel Template (.xlsx)
+            </button>
+            <button type="button" class="btn" onclick="downloadUserCSVTemplate()" style="display:inline-flex; align-items:center; gap:8px; padding:9px 14px; font-weight:600; font-size:0.85rem; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); color:#818cf8; border-radius:8px; cursor:pointer; transition:all 0.15s ease;">
+              <span>📄</span> Plain CSV
+            </button>
+          </div>
         </div>
 
         <!-- Upload File Controls -->
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <input type="file" id="userCsvFile" accept=".csv" style="flex:1; min-width:240px; padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-size:0.85rem;" />
+          <input type="file" id="userCsvFile" accept=".xlsx, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/csv" style="flex:1; min-width:240px; padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-size:0.85rem;" />
           <button class="btn primary" onclick="importUserCSV()" style="padding:9px 18px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
             <span>🚀</span> Upload &amp; Provision Accounts
           </button>
@@ -191,7 +196,7 @@
         };
       }
     </script>
-    <script src="js/guard.js?v=2.3"></script>
-    <script src="js/data-tools.js?v=2.3"></script>
+    <script src="js/guard.js?v=2.4"></script>
+    <script src="js/data-tools.js?v=2.4"></script>
   </body>
 </html>

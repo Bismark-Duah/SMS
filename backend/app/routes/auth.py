@@ -5,9 +5,10 @@ import re
 from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from ..services.excel_template_service import generate_staff_onboarding_excel, parse_uploaded_staff_file
 from ..middleware.device_session_guard import register_device_session
 from ..database import get_db
 from ..models import User, Role, School, ClassSection, House, Department, Student, UserDeviceSession, RevokedResetToken, Subject, Semester, TeacherAssignment
@@ -1030,6 +1031,40 @@ def _match_house(db: Session, target_sch_id: Optional[int], house_str: Optional[
     return None
 
 
+@router.get("/staff-template-xlsx")
+def download_staff_template_xlsx(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id")
+):
+    caller_roles = [r.name.lower() for r in current_user.roles] if current_user.roles else []
+    is_super = "super_admin" in caller_roles
+    is_admin = "admin" in caller_roles or is_super
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if is_super:
+        target_sch_id = int(school_id) if isinstance(school_id, (int, float)) else None
+        if target_sch_id is None and isinstance(x_school_id, str) and x_school_id.strip():
+            try:
+                target_sch_id = int(x_school_id.strip())
+            except ValueError:
+                pass
+        if target_sch_id is None:
+            first_sch = db.query(School).first()
+            target_sch_id = first_sch.id if first_sch else None
+    else:
+        target_sch_id = current_user.school_id
+
+    content, filename = generate_staff_onboarding_excel(db, target_sch_id)
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
 @router.post("/import-users-csv")
 async def import_users_csv(
     file: UploadFile = File(...),
@@ -1054,9 +1089,7 @@ async def import_users_csv(
     else:
         target_sch_id = current_user.school_id
 
-    decoded, safe_filename = await validate_and_read_csv_upload(file, max_bytes=10 * 1024 * 1024)
-    stream = io.StringIO(decoded)
-    reader = csv.DictReader(stream)
+    rows, safe_filename = await parse_uploaded_staff_file(file, max_bytes=15 * 1024 * 1024)
     
     imported_count = 0
     errors = []
@@ -1065,16 +1098,15 @@ async def import_users_csv(
     all_roles = {r.name.lower(): r for r in db.query(Role).all()}
     default_role = all_roles.get("teacher") or db.query(Role).first()
     
-    for row in reader:
+    for row_idx, clean_row in enumerate(rows, start=2):
         try:
             with db.begin_nested():
-                clean_row = {str(k).strip().lower(): str(v).strip() if v else "" for k, v in row.items() if k}
                 
                 full_name = clean_row.get("full_name") or clean_row.get("fullname") or clean_row.get("name") or clean_row.get("staff_name") or ""
                 pref_username = clean_row.get("username") or clean_row.get("user_name") or ""
                 
                 if not full_name and not pref_username:
-                    errors.append(f"Row {reader.line_num}: Missing full name or username")
+                    errors.append(f"Row {row_idx}: Missing full name or username")
                     continue
 
                 username = _derive_unique_username(db, full_name, pref_username)
@@ -1083,7 +1115,7 @@ async def import_users_csv(
                 if email:
                     email = email.lower().strip()
                     if db.query(User).filter(User.email == email).first():
-                        errors.append(f"Row {reader.line_num}: Email '{email}' is already registered")
+                        errors.append(f"Row {row_idx}: Email '{email}' is already registered")
                         continue
 
                 phone_number = clean_row.get("phone") or clean_row.get("phone_number") or clean_row.get("mobile") or clean_row.get("telephone") or None
@@ -1263,7 +1295,7 @@ async def import_users_csv(
                         "temporary_password": raw_password
                     })
         except Exception as e:
-            errors.append(f"Row {reader.line_num}: {str(e)}")
+            errors.append(f"Row {row_idx}: {str(e)}")
             
     db.commit()
     batch_status = "success" if not errors else ("partial_success" if imported_count > 0 else "error")

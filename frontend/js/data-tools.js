@@ -355,7 +355,47 @@ window.importStudentCSV = async function() {
   }
 };
 
-// ── User / Staff CSV Template & Import ───────────────────────────────────────
+// ── User / Staff CSV & Excel Template & Import ─────────────────────────────
+window.downloadUserExcelTemplate = async function() {
+  const btn = event ? event.target.closest('button') : null;
+  const originalHtml = btn ? btn.innerHTML : '';
+  if (btn) btn.innerHTML = '<span>⏳</span> Generating Excel...';
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/staff-template-xlsx`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(`Failed to generate Excel template: ${err.detail || res.statusText}`);
+      return;
+    }
+    const blob = await res.blob();
+    let filename = 'Staff_Onboarding_Template_Dropdowns.xlsx';
+    const disp = res.headers.get('content-disposition');
+    if (disp && disp.includes('filename=')) {
+      filename = disp.split('filename=')[1].replace(/["']/g, '').trim();
+    }
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (document.body.contains(a)) document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 250);
+  } catch (error) {
+    console.error("Error downloading excel template:", error);
+    alert("Network error downloading Excel template. Falling back to plain CSV template.");
+    window.downloadUserCSVTemplate();
+  } finally {
+    if (btn) btn.innerHTML = originalHtml;
+  }
+};
+
 window.downloadUserCSVTemplate = function() {
   const headers = ['full_name', 'gender', 'phone', 'email', 'roles', 'department', 'subject', 'form_class', 'house_assigned', 'password'];
   const csvContent = headers.join(',') + '\n';
@@ -381,7 +421,7 @@ window.downloadGeneratedCredentialsCSV = function() {
 window.importUserCSV = async function() {
   const fileInput = document.getElementById('userCsvFile');
   if (!fileInput.files || fileInput.files.length === 0) {
-    alert("Please select a user CSV file first.");
+    alert("Please select an Excel (.xlsx) or CSV (.csv) file first.");
     return;
   }
 

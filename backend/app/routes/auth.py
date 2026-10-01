@@ -508,6 +508,10 @@ def _normalize_role_for_gender(r_name: str, gender: Optional[str]) -> str:
             return "senior_housemistress"
         if raw in ["assistant_house_master", "assistant_housemaster", "assistant_house_mistress", "assistant_housemistress"]:
             return "assistant_house_mistress"
+        if raw in ["sports_master", "sportsmaster", "sports_mistress", "sportsmistress"]:
+            return "sports_mistress"
+        if raw in ["cadet_master", "cadetmaster", "cadet_mistress", "cadetmistress"]:
+            return "cadet_mistress"
     else:
         if raw in ["form_master", "form_mistress"]:
             return "form_master"
@@ -517,6 +521,10 @@ def _normalize_role_for_gender(r_name: str, gender: Optional[str]) -> str:
             return "senior_housemaster"
         if raw in ["assistant_house_master", "assistant_housemaster", "assistant_house_mistress", "assistant_housemistress"]:
             return "assistant_house_master"
+        if raw in ["sports_master", "sportsmaster", "sports_mistress", "sportsmistress"]:
+            return "sports_master"
+        if raw in ["cadet_master", "cadetmaster", "cadet_mistress", "cadetmistress"]:
+            return "cadet_master"
     return raw
 
 def _resolve_or_create_role(db: Session, r_name: str) -> Optional[Role]:
@@ -837,7 +845,46 @@ ROLE_ALIASES = {
     "admin": "admin",
     "teacher": "teacher",
     "student": "student",
-    "parent": "parent"
+    "parent": "parent",
+    # STEM, Technical & Institutional Portfolios
+    "workshop master": "workshop_master",
+    "workshop_master": "workshop_master",
+    "lab technician": "lab_technician",
+    "lab_technician": "lab_technician",
+    "laboratory technician": "lab_technician",
+    "robotics coach": "robotics_coach",
+    "robotics_coach": "robotics_coach",
+    "stem coordinator": "robotics_coach",
+    "industrial liaison officer": "industrial_liaison_officer",
+    "industrial_liaison_officer": "industrial_liaison_officer",
+    "liaison officer": "industrial_liaison_officer",
+    "exam officer": "exam_officer",
+    "exam_officer": "exam_officer",
+    "examination officer": "exam_officer",
+    "timetable officer": "timetable_officer",
+    "timetable_officer": "timetable_officer",
+    "guidance counsellor": "guidance_counsellor",
+    "guidance_counsellor": "guidance_counsellor",
+    "counsellor": "guidance_counsellor",
+    "sports master": "sports_master",
+    "sports_master": "sports_master",
+    "sports mistress": "sports_mistress",
+    "sports_mistress": "sports_mistress",
+    "cadet master": "cadet_master",
+    "cadet_master": "cadet_master",
+    "cadet mistress": "cadet_mistress",
+    "cadet_mistress": "cadet_mistress",
+    "chaplain": "chaplain",
+    "school nurse": "school_nurse",
+    "school_nurse": "school_nurse",
+    "nurse": "school_nurse",
+    "matron": "matron",
+    "estate officer": "estate_officer",
+    "estate_officer": "estate_officer",
+    "maintenance officer": "estate_officer",
+    "transport officer": "transport_officer",
+    "transport_officer": "transport_officer",
+    "driver": "transport_officer"
 }
 
 @router.get("/roles")
@@ -1161,14 +1208,18 @@ async def import_users_csv(
                         "form_master": "form_mistress",
                         "house_master": "house_mistress",
                         "assistant_house_master": "assistant_house_mistress",
-                        "senior_house_master": "senior_house_mistress"
+                        "senior_house_master": "senior_house_mistress",
+                        "sports_master": "sports_mistress",
+                        "cadet_master": "cadet_mistress"
                     }
                 else:
                     swap_map = {
                         "form_mistress": "form_master",
                         "house_mistress": "house_master",
                         "assistant_house_mistress": "assistant_house_master",
-                        "senior_house_mistress": "senior_house_master"
+                        "senior_house_mistress": "senior_house_master",
+                        "sports_mistress": "sports_master",
+                        "cadet_mistress": "cadet_master"
                     }
                 for old_r, new_r in swap_map.items():
                     if old_r in role_names and all_roles.get(new_r):
@@ -1179,8 +1230,20 @@ async def import_users_csv(
                     assigned_roles.append(default_role)
 
                 # If staff has academic/pastoral responsibility, ensure teacher role is present
-                academic_leadership = {"form_master", "form_mistress", "hod", "house_master", "house_mistress", "senior_house_master", "senior_house_mistress", "assistant_house_master", "assistant_house_mistress"}
-                if any(r.name.lower() in academic_leadership for r in assigned_roles):
+                academic_leadership = {
+                    "form_master", "form_mistress", "hod", "house_master", "house_mistress",
+                    "senior_house_master", "senior_house_mistress", "assistant_house_master", "assistant_house_mistress",
+                    "exam_officer", "timetable_officer", "guidance_counsellor", "sports_master", "sports_mistress",
+                    "cadet_master", "cadet_mistress", "chaplain", "workshop_master", "lab_technician",
+                    "robotics_coach", "industrial_liaison_officer",
+                    "assistant_headmaster_academic", "assistant_headmaster_domestic", "assistant_headmaster_admin"
+                }
+                # Check if any role specifies teaching or academic leadership
+                has_teaching_duty = any(
+                    r.name.lower() in academic_leadership or "teacher" in r.name.lower()
+                    for r in assigned_roles
+                )
+                if has_teaching_duty:
                     t_role = all_roles.get("teacher")
                     if t_role and t_role not in assigned_roles:
                         assigned_roles.append(t_role)

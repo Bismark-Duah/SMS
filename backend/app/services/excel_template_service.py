@@ -89,23 +89,51 @@ def get_school_onboarding_lookups(db: Session, target_sch_id: Optional[int]) -> 
     # 5. Genders
     genders_list = ["Male", "Female"]
 
-    # 6. Roles
+    # 6. Roles (Curated 38 Institutional Appointments across 6 Functional Tiers)
     roles_list = [
+        # Tier 1: Core Classroom & Department Leadership
         "teacher",
         "teacher|hod",
+        "teacher|hod|form_master",
         "teacher|form_master",
-        "teacher|senior_house_master",
+        # Tier 2: Pastoral & Boarding Administration
         "teacher|house_master",
         "teacher|assistant_house_master",
+        "teacher|senior_house_master",
+        "teacher|house_master|form_master",
+        "teacher|assistant_house_master|form_master",
+        "teacher|senior_house_master|form_master",
+        "teacher|hod|house_master",
+        # Tier 3: STEM, TVET & Technical Portfolios
+        "teacher|workshop_master",
+        "teacher|lab_technician",
+        "teacher|robotics_coach",
+        "teacher|industrial_liaison_officer",
+        "teacher|ict_coordinator",
+        # Tier 4: Academic Committees & Campus Life
+        "teacher|exam_officer",
+        "teacher|timetable_officer",
+        "teacher|guidance_counsellor",
+        "teacher|sports_master",
+        "teacher|cadet_master",
+        "teacher|chaplain",
+        # Tier 5: Executive Leadership (Administrative & Teaching Dual-Appointments)
         "assistant_headmaster_academic",
         "assistant_headmaster_domestic",
         "assistant_headmaster_admin",
+        "teacher|assistant_headmaster_academic",
+        "teacher|assistant_headmaster_domestic",
+        "teacher|assistant_headmaster_admin",
+        # Tier 6: Administration, Healthcare, Finance & Operations
         "school_administrator",
-        "ict_coordinator",
         "bursar",
         "storekeeper",
-        "security_officer",
         "secretary",
+        "school_nurse",
+        "matron",
+        "estate_officer",
+        "transport_officer",
+        "security_officer",
         "parent"
     ]
 
@@ -204,8 +232,8 @@ def generate_staff_onboarding_excel(db: Session, target_sch_id: Optional[int]) -
     if lookups["roles"]:
         max_r = len(lookups["roles"]) + 1
         dv_roles = DataValidation(type="list", formula1=f"=Lookups!$B$2:$B${max_r}", allow_blank=True)
-        dv_roles.prompt = "Select role(s) or type custom roles separated by |"
-        dv_roles.promptTitle = "Assigned Roles"
+        dv_roles.promptTitle = "Institutional Appointment"
+        dv_roles.prompt = "Choose from the dropdown or type custom combinations with '|' (e.g. teacher|hod|form_master)."
         ws_main.add_data_validation(dv_roles)
         dv_roles.add("E2:E500")
 

@@ -3,7 +3,7 @@ import json
 from datetime import datetime, time
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from fastapi.responses import Response
 from sqlalchemy.orm import Session, joinedload
 from xhtml2pdf import pisa
@@ -210,13 +210,14 @@ def auto_generate_timetable(
     payload: AutoGenerateSchema,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
 ):
     """
     1-Click Autonomous Constraint Solver:
     Solves and builds the master conflict-free schedule in < 1.5 seconds.
     """
     require_admin(current_user)
-    school_id = get_school_id(current_user)
+    school_id = get_school_id(current_user, x_school_id)
     if not school_id:
         raise HTTPException(status_code=400, detail="Active school context required")
 
@@ -258,14 +259,16 @@ def auto_generate_timetable(
 def get_teacher_workloads(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
 ):
     """Admin: view all teachers' assigned period counts vs their legal workload caps."""
     require_admin(current_user)
-    school_id = get_school_id(current_user)
+    school_id = get_school_id(current_user, x_school_id)
 
-    teachers = db.query(User).filter(
-        (User.school_id == school_id) | (User.school_id.is_(None))
-    ).all()
+    if school_id is not None:
+        teachers = db.query(User).filter(User.school_id == school_id).all()
+    else:
+        teachers = db.query(User).filter(User.school_id.is_(None)).all()
 
     workloads = []
     for t in teachers:
@@ -356,12 +359,13 @@ def execute_teacher_handover(
 def get_campus_radar(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
 ):
     """
     📡 Live Campus Radar ("Now Teaching"):
     Returns the currently active period, room occupancy map, and currently free staff.
     """
-    school_id = get_school_id(current_user)
+    school_id = get_school_id(current_user, x_school_id)
     now = datetime.now()
     now_day = now.weekday()  # 0=Mon ... 6=Sun
 
@@ -391,22 +395,26 @@ def get_campus_radar(
         current_period = 8
 
     # Query all slots for today & current period
+    slot_filter = [
+        Timetable.day_of_week == (now_day if now_day <= 4 else 0),
+        Timetable.period_number == current_period
+    ]
+    if school_id is not None:
+        slot_filter.append(ClassSection.school_id == school_id)
+
     active_slots = db.query(Timetable).options(
         joinedload(Timetable.class_section),
         joinedload(Timetable.subject),
         joinedload(Timetable.teacher)
-    ).join(Timetable.class_section).filter(
-        (ClassSection.school_id == school_id) | (ClassSection.school_id.is_(None)),
-        Timetable.day_of_week == (now_day if now_day <= 4 else 0),
-        Timetable.period_number == current_period
-    ).all()
+    ).join(Timetable.class_section).filter(*slot_filter).all()
 
     busy_teachers = {s.teacher_id for s in active_slots if s.teacher_id}
 
     # Find free teachers right now
-    all_teachers = db.query(User).filter(
-        (User.school_id == school_id) | (User.school_id.is_(None))
-    ).all()
+    if school_id is not None:
+        all_teachers = db.query(User).filter(User.school_id == school_id).all()
+    else:
+        all_teachers = db.query(User).filter(User.school_id.is_(None)).all()
     free_teachers = []
     for t in all_teachers:
         roles = [r.name for r in t.roles] if t.roles else []

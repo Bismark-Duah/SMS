@@ -103,7 +103,7 @@ class TimetableSolver:
 
     def _load_teachers(self) -> Dict[int, User]:
         """Fetch all teachers with their responsibility caps and duty exempt windows."""
-        all_users = self.db.query(User).all()
+        all_users = self.db.query(User).filter(User.school_id == self.school_id).all()
 
         teacher_map = {}
         for t in all_users:
@@ -175,7 +175,7 @@ class TimetableSolver:
     def _load_classes_and_units(self, teacher_map: Dict[int, User]) -> List[SchedulingUnit]:
         """Build the list of scheduling units (periods) required across all classes."""
         classes = self.db.query(ClassSection).filter(
-            (ClassSection.school_id == self.school_id) | (ClassSection.school_id.is_(None))
+            ClassSection.school_id == self.school_id
         ).options(
             joinedload(ClassSection.subjects),
             joinedload(ClassSection.program)

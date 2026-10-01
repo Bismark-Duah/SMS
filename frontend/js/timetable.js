@@ -1,9 +1,15 @@
 // ── Config & Auth ────────────────────────────────────────────────────────────
-const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
-const token = localStorage.getItem('accessToken');
-if (!token) window.location.href = 'auth.html';
+var API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
+var token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') || localStorage.getItem('token');
+if (!token && !window.location.pathname.includes('auth.html')) window.location.href = 'auth.html';
 
-function H(extra = {}) { return { 'Authorization': `Bearer ${token}`, ...extra }; }
+function H(extra = {}) {
+  const currentToken = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') || localStorage.getItem('token');
+  const h = { 'Authorization': `Bearer ${currentToken}`, ...extra };
+  const schId = sessionStorage.getItem('selectedSchoolId') || sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+  if (schId && schId !== 'all') h['X-School-Id'] = String(schId);
+  return h;
+}
 function J(extra = {}) { return H({ 'Content-Type': 'application/json', ...extra }); }
 
 // ── Constants ────────────────────────────────────────────────────────────────

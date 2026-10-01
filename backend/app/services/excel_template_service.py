@@ -89,8 +89,8 @@ def get_school_onboarding_lookups(db: Session, target_sch_id: Optional[int]) -> 
     # 5. Genders
     genders_list = ["Male", "Female"]
 
-    # 6. Roles (Curated 38 Institutional Appointments across 6 Functional Tiers)
-    roles_list = [
+    # 6. Roles: Dual Parallel Curated Sets (Male & Female)
+    roles_male = [
         # Tier 1: Core Classroom & Department Leadership
         "teacher",
         "teacher|hod",
@@ -117,7 +117,7 @@ def get_school_onboarding_lookups(db: Session, target_sch_id: Optional[int]) -> 
         "teacher|sports_master",
         "teacher|cadet_master",
         "teacher|chaplain",
-        # Tier 5: Executive Leadership (Administrative & Teaching Dual-Appointments)
+        # Tier 5: Executive Leadership Triad
         "assistant_headmaster_academic",
         "assistant_headmaster_domestic",
         "assistant_headmaster_admin",
@@ -137,6 +137,24 @@ def get_school_onboarding_lookups(db: Session, target_sch_id: Optional[int]) -> 
         "parent"
     ]
 
+    female_swap = {
+        "form_master": "form_mistress",
+        "house_master": "house_mistress",
+        "assistant_house_master": "assistant_house_mistress",
+        "senior_house_master": "senior_house_mistress",
+        "sports_master": "sports_mistress",
+        "cadet_master": "cadet_mistress",
+        "assistant_headmaster_academic": "assistant_headmistress_academic",
+        "assistant_headmaster_domestic": "assistant_headmistress_domestic",
+        "assistant_headmaster_admin": "assistant_headmistress_admin",
+    }
+    roles_female = []
+    for r in roles_male:
+        f_role = r
+        for m_str, f_str in female_swap.items():
+            f_role = f_role.replace(m_str, f_str)
+        roles_female.append(f_role)
+
     return {
         "school_name": school.name if school else "Institutional",
         "subjects": subjects_list,
@@ -144,7 +162,9 @@ def get_school_onboarding_lookups(db: Session, target_sch_id: Optional[int]) -> 
         "houses": houses_list,
         "classes": classes_list,
         "genders": genders_list,
-        "roles": roles_list
+        "roles": roles_male,
+        "roles_male": roles_male,
+        "roles_female": roles_female
     }
 
 
@@ -202,9 +222,11 @@ def generate_staff_onboarding_excel(db: Session, target_sch_id: Optional[int]) -
         cell.border = thin_border
 
     # ── Populate Sheet 2 (Lookups) ──
+    # Col A: Gender | Col B: Roles_Male | Col C: Roles_Female | Col D: Depts | Col E: Subjs | Col F: Classes | Col G: Houses
     ref_columns = [
         ("Gender", lookups["genders"]),
-        ("Roles", lookups["roles"]),
+        ("Roles_Male", lookups["roles_male"]),
+        ("Roles_Female", lookups["roles_female"]),
         ("Departments", lookups["departments"]),
         ("Subjects", lookups["subjects"]),
         ("Classes", lookups["classes"]),
@@ -228,46 +250,51 @@ def generate_staff_onboarding_excel(db: Session, target_sch_id: Optional[int]) -
         ws_main.add_data_validation(dv_gender)
         dv_gender.add("B2:B500")
 
-    # Column E: Roles -> Lookups!$B$2:$B${len}
-    if lookups["roles"]:
-        max_r = len(lookups["roles"]) + 1
-        dv_roles = DataValidation(type="list", formula1=f"=Lookups!$B$2:$B${max_r}", allow_blank=True)
-        dv_roles.promptTitle = "Institutional Appointment"
-        dv_roles.prompt = "Choose from the dropdown or type custom combinations with '|' (e.g. teacher|hod|form_master)."
-        ws_main.add_data_validation(dv_roles)
-        dv_roles.add("E2:E500")
+    # Column E: Roles -> Dynamic Cascading based on B2 (Gender)
+    # If B2 is "Female" -> Lookups!$C$2:$C$39 (female titles)
+    # Otherwise -> Lookups!$B$2:$B$39 (male/standard titles)
+    max_roles_r = max(len(lookups["roles_male"]), len(lookups["roles_female"])) + 1
+    dv_roles = DataValidation(
+        type="list",
+        formula1=f'=IF(B2="Female", Lookups!$C$2:$C${max_roles_r}, Lookups!$B$2:$B${max_roles_r})',
+        allow_blank=True
+    )
+    dv_roles.promptTitle = "Institutional Appointment"
+    dv_roles.prompt = "Tailored to selected gender. Choose from dropdown or type custom roles with '|'."
+    ws_main.add_data_validation(dv_roles)
+    dv_roles.add("E2:E500")
 
-    # Column F: Department -> Lookups!$C$2:$C${len}
+    # Column F: Department -> Lookups!$D$2:$D${len}
     if lookups["departments"]:
         max_r = len(lookups["departments"]) + 1
-        dv_dept = DataValidation(type="list", formula1=f"=Lookups!$C$2:$C${max_r}", allow_blank=True)
+        dv_dept = DataValidation(type="list", formula1=f"=Lookups!$D$2:$D${max_r}", allow_blank=True)
         dv_dept.prompt = "Select department from the school's registered departments"
         dv_dept.promptTitle = "School Department"
         ws_main.add_data_validation(dv_dept)
         dv_dept.add("F2:F500")
 
-    # Column G: Subject -> Lookups!$D$2:$D${len}
+    # Column G: Subject -> Lookups!$E$2:$E${len}
     if lookups["subjects"]:
         max_r = len(lookups["subjects"]) + 1
-        dv_subj = DataValidation(type="list", formula1=f"=Lookups!$D$2:$D${max_r}", allow_blank=True)
+        dv_subj = DataValidation(type="list", formula1=f"=Lookups!$E$2:$E${max_r}", allow_blank=True)
         dv_subj.prompt = "Select accredited/custom subject taught by this staff member"
         dv_subj.promptTitle = "Teaching Subject"
         ws_main.add_data_validation(dv_subj)
         dv_subj.add("G2:G500")
 
-    # Column H: Form Class -> Lookups!$E$2:$E${len}
+    # Column H: Form Class -> Lookups!$F$2:$F${len}
     if lookups["classes"]:
         max_r = len(lookups["classes"]) + 1
-        dv_cls = DataValidation(type="list", formula1=f"=Lookups!$E$2:$E${max_r}", allow_blank=True)
+        dv_cls = DataValidation(type="list", formula1=f"=Lookups!$F$2:$F${max_r}", allow_blank=True)
         dv_cls.prompt = "Select class section for Form Master/Mistress assignment (e.g. 1ST3)"
         dv_cls.promptTitle = "Form Class"
         ws_main.add_data_validation(dv_cls)
         dv_cls.add("H2:H500")
 
-    # Column I: House Assigned -> Lookups!$F$2:$F${len}
+    # Column I: House Assigned -> Lookups!$G$2:$G${len}
     if lookups["houses"]:
         max_r = len(lookups["houses"]) + 1
-        dv_house = DataValidation(type="list", formula1=f"=Lookups!$F$2:$F${max_r}", allow_blank=True)
+        dv_house = DataValidation(type="list", formula1=f"=Lookups!$G$2:$G${max_r}", allow_blank=True)
         dv_house.prompt = "Select boarding house for House Master/Mistress assignment"
         dv_house.promptTitle = "House Assigned"
         ws_main.add_data_validation(dv_house)

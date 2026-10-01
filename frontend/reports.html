@@ -99,7 +99,7 @@
 
           <div style="margin-top:20px; display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;">Performance Data</h4>
-            <button class="btn" onclick="exportAcademicCSV()">📥 Export Filtered CSV</button>
+            <button class="btn" onclick="openBroadsheetExportWizard()" style="background:#4f46e5; border:1px solid #4338ca; color:white; font-weight:600; padding:6px 12px; font-size:0.85rem; border-radius:6px; cursor:pointer;"><span>📊</span> Broadsheet Export Wizard</button>
           </div>
 
           <div style="overflow-x:auto; margin-top:10px;">
@@ -145,7 +145,7 @@
 
           <div style="margin-top:20px; display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h4 style="margin:0;">Fee Balances</h4>
-            <button class="btn" onclick="exportFinancialCSV()">📥 Export Filtered CSV</button>
+            <button class="btn" onclick="openFeeExportWizard()" style="background:#059669; border:1px solid #047857; color:white; font-weight:600; padding:6px 12px; font-size:0.85rem; border-radius:6px; cursor:pointer;"><span>💰</span> Financial Export Wizard</button>
           </div>
 
           <div style="overflow-x:auto; margin-top:10px;">
@@ -172,7 +172,8 @@
       </div>
     </main>
 
-    <script src="js/guard.js"></script>
-    <script src="js/reports.js"></script>
+    <script src="js/guard.js?v=2.5"></script>
+    <script src="js/data-tools.js?v=2.5"></script>
+    <script src="js/reports.js?v=2.5"></script>
   </body>
 </html>

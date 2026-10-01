@@ -18,6 +18,11 @@ from ..services.communication_service import CommunicationService
 from ..payments.paystack import initialize_paystack_transaction, verify_paystack_transaction, verify_paystack_signature
 from ..services.payment_orchestrator import process_unified_payment_webhook
 from ..sms.hubtel import send_sms_hubtel
+from ..services.fee_export_service import (
+    build_filtered_fee_query,
+    build_filtered_payment_query,
+    generate_fee_export_dataset
+)
 
 router = APIRouter()
 
@@ -213,6 +218,104 @@ def _filter_fee_query(query, db: Session, school_id=None):
     elif mode == "SHS_ONLY":
         return query.join(Fee.student, isouter=True).join(Student.class_section, isouter=True).join(ClassSection.stage, isouter=True).filter(SchoolStage.school_type == "SHS")
     return query
+
+
+# ── Financial & Bursar Desk Export Wizard Endpoints ──────────────────────────
+
+@router.get("/export-wizard-count")
+def get_fee_export_wizard_count(
+    preset: str = Query("defaulters"),
+    form: Optional[int] = Query(None),
+    class_id: Optional[int] = Query(None),
+    fee_type: Optional[str] = Query(None),
+    academic_year: Optional[str] = Query(None),
+    term: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    payment_method: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Returns the live count of financial records matching the Export Wizard filters."""
+    require_admin(current_user)
+    school_id = get_school_id(current_user)
+    filters = {
+        "form": form,
+        "class_id": class_id,
+        "fee_type": fee_type,
+        "academic_year": academic_year,
+        "term": term,
+        "status": status,
+        "payment_method": payment_method,
+        "start_date": start_date,
+        "end_date": end_date
+    }
+
+    if preset == "collections":
+        q = build_filtered_payment_query(db, school_id, filters)
+        return {"count": q.count()}
+    elif preset == "reconciliation":
+        cls_q = db.query(ClassSection)
+        if school_id is not None:
+            cls_q = cls_q.filter(ClassSection.school_id == school_id)
+        if form:
+            cls_q = cls_q.filter(ClassSection.name.like(f"{form}%"))
+        return {"count": cls_q.count()}
+    else:
+        # Default: defaulters
+        q = build_filtered_fee_query(db, school_id, filters)
+        q = q.filter(Fee.amount > Fee.amount_paid)
+        return {"count": q.count()}
+
+
+@router.get("/export-wizard")
+def export_fees_wizard(
+    preset: str = Query("defaulters"),
+    file_format: str = Query("xlsx"),
+    form: Optional[int] = Query(None),
+    class_id: Optional[int] = Query(None),
+    fee_type: Optional[str] = Query(None),
+    academic_year: Optional[str] = Query(None),
+    term: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    payment_method: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Generates and streams preset-driven financial exports in styled .xlsx or universal .csv.
+    """
+    require_admin(current_user)
+    school_id = get_school_id(current_user)
+    filters = {
+        "form": form,
+        "class_id": class_id,
+        "fee_type": fee_type,
+        "academic_year": academic_year,
+        "term": term,
+        "status": status,
+        "payment_method": payment_method,
+        "start_date": start_date,
+        "end_date": end_date
+    }
+
+    content, filename, mime_type = generate_fee_export_dataset(
+        db=db,
+        school_id=school_id,
+        preset_key=preset,
+        file_format=file_format,
+        filters=filters
+    )
+
+    return Response(
+        content=content,
+        media_type=mime_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
 
 @router.get("/summary")
 def get_fee_summary(

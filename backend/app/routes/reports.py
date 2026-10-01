@@ -11,6 +11,10 @@ from ..models import Student, User, Score, Attendance, ClassSection, Fee, Studen
 from ..services.auth import decode_jwt
 from ..dependencies import get_current_user, get_school_id
 from ..services.import_export_service import generate_safe_csv_content, sanitize_filename, sanitize_row_for_export
+from ..services.broadsheet_export_service import (
+    get_broadsheet_lookups,
+    generate_broadsheet_export_dataset
+)
 
 router = APIRouter()
 
@@ -296,6 +300,97 @@ def export_class_summary(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'}
     )
+
+
+# ── Academic Broadsheet & Scores Export Wizard Endpoints ─────────────────────
+
+@router.get("/broadsheet-wizard-lookups")
+def get_broadsheet_wizard_lookups_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Returns classes, semesters, and subjects for the Broadsheet Export Wizard."""
+    school_id = get_school_id(current_user)
+    return get_broadsheet_lookups(db, school_id)
+
+
+@router.get("/broadsheet-wizard-count")
+def get_broadsheet_wizard_count(
+    preset: str = Query("master_broadsheet"),
+    semester_id: Optional[int] = Query(None),
+    class_id: Optional[int] = Query(None),
+    subject_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Returns count of matching student/score records for the Broadsheet Wizard."""
+    school_id = get_school_id(current_user)
+    if preset == "master_broadsheet":
+        st_q = db.query(Student).filter(Student.is_active == True)
+        if school_id is not None:
+            st_q = st_q.filter(Student.school_id == school_id)
+        if class_id:
+            st_q = st_q.filter(Student.class_section_id == class_id)
+        return {"count": st_q.count()}
+    elif preset == "subject_summary":
+        sc_q = db.query(Score).join(Student, Score.student_id == Student.id)
+        if school_id is not None:
+            sc_q = sc_q.filter(Student.school_id == school_id)
+        if semester_id:
+            sc_q = sc_q.filter(Score.semester_id == semester_id)
+        if class_id:
+            sc_q = sc_q.filter(Student.class_section_id == class_id)
+        if subject_id:
+            sc_q = sc_q.filter(Score.subject_id == subject_id)
+        return {"count": sc_q.count()}
+    else:
+        # sba_waec
+        sc_q = db.query(Score).join(Student, Score.student_id == Student.id)
+        if school_id is not None:
+            sc_q = sc_q.filter(Student.school_id == school_id)
+        if semester_id:
+            sc_q = sc_q.filter(Score.semester_id == semester_id)
+        if class_id:
+            sc_q = sc_q.filter(Student.class_section_id == class_id)
+        if subject_id:
+            sc_q = sc_q.filter(Score.subject_id == subject_id)
+        return {"count": sc_q.count()}
+
+
+@router.get("/broadsheet-wizard")
+def export_broadsheet_wizard(
+    preset: str = Query("master_broadsheet"),
+    file_format: str = Query("xlsx"),
+    semester_id: Optional[int] = Query(None),
+    class_id: Optional[int] = Query(None),
+    subject_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Generates and streams preset-driven academic broadsheet and scores exports in styled .xlsx or universal .csv.
+    """
+    school_id = get_school_id(current_user)
+    filters = {
+        "semester_id": semester_id,
+        "class_id": class_id,
+        "subject_id": subject_id
+    }
+
+    content, filename, mime_type = generate_broadsheet_export_dataset(
+        db=db,
+        school_id=school_id,
+        preset_key=preset,
+        file_format=file_format,
+        filters=filters
+    )
+
+    return Response(
+        content=content,
+        media_type=mime_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
 
 @router.get("/financial-summary")
 def get_financial_summary(

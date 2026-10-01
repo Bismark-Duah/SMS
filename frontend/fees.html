@@ -86,11 +86,14 @@
   </head>
   <body>
     <main class="page">
-      <header class="topbar">
+      <header class="topbar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
         <div>
           <h1 style="margin:0;font-size:1.2rem;">Fee & Finance Management</h1>
           <p style="margin:0;opacity:.7;font-size:.85rem;">Track invoices, record student payments, and view outstanding balances</p>
         </div>
+        <button type="button" class="btn" onclick="openFeeExportWizard()" style="background:#059669; border:1px solid #047857; color:#ffffff; font-weight:700; font-size:0.85rem; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:8px; cursor:pointer; box-shadow:0 2px 6px rgba(5,150,105,0.25);">
+          <span>💰</span> Financial Export Wizard
+        </button>
       </header>
 
       <!-- Stat Cards -->
@@ -312,7 +315,8 @@
       </div>
     </div>
 
-    <script src="js/guard.js"></script>
-    <script src="js/fees.js"></script>
+    <script src="js/guard.js?v=2.5"></script>
+    <script src="js/data-tools.js?v=2.5"></script>
+    <script src="js/fees.js?v=2.5"></script>
   </body>
 </html>

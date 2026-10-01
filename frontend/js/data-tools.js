@@ -802,6 +802,570 @@ window.triggerStudentExportDownload = async function() {
 window.exportStudentsCSV = window.openStudentExportWizard;
 
 
+// ── Financial & Bursar Desk Export Wizard ──────────────────────────────────
+window.openFeeExportWizard = async function() {
+  const existing = document.getElementById('fee-export-wizard-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'fee-export-wizard-modal';
+  modal.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.8); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; padding:16px;';
+
+  modal.innerHTML = `
+    <div style="background:var(--surface-card, #1e293b); color:var(--text-main, #f8fafc); border-radius:16px; max-width:680px; width:100%; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.12); overflow:hidden;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg, #059669 0%, #0d9488 100%); padding:16px 22px; color:#ffffff; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">💰</span>
+          <div>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:700;">Financial & Bursar Desk Export Wizard</h3>
+            <p style="margin:2px 0 0; font-size:0.78rem; opacity:0.9;">Export debtor rosters, bank collections ledgers, and class fee summaries in styled Excel or CSV.</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('fee-export-wizard-modal').remove()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div style="padding:20px; overflow-y:auto; flex:1;">
+        <!-- Step 1: Filters -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#34d399; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            1. Scoping & Financial Filters
+          </label>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Form / Year</label>
+              <select id="few_form" onchange="window.updateFeeExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Forms</option>
+                <option value="1">Form 1</option>
+                <option value="2">Form 2</option>
+                <option value="3">Form 3</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Class Section</label>
+              <select id="few_class_id" onchange="window.updateFeeExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Fee Category</label>
+              <select id="few_fee_type" onchange="window.updateFeeExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Fee Types</option>
+                <option value="Tuition">Tuition Fee</option>
+                <option value="Boarding">Boarding / Feeding</option>
+                <option value="Exam">Examination</option>
+                <option value="PTA">PTA Levy</option>
+                <option value="Uniform">Uniform</option>
+                <option value="Books">Books</option>
+                <option value="Facility">Facility Usage</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Payment Status</label>
+              <select id="few_status" onchange="window.updateFeeExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="owing">Owing / Defaulters Only</option>
+                <option value="all">All Records (Paid & Owing)</option>
+                <option value="paid">Fully Paid Only</option>
+                <option value="partial">Partially Paid</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Start Date (Ledger)</label>
+              <input type="date" id="few_start_date" onchange="window.updateFeeExportWizardCount()" style="width:100%; padding:7px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;" />
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">End Date (Ledger)</label>
+              <input type="date" id="few_end_date" onchange="window.updateFeeExportWizardCount()" style="width:100%; padding:7px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Presets -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#34d399; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            2. Choose Financial Report Preset
+          </label>
+          <div style="display:grid; grid-template-columns:1fr; gap:10px;">
+            <!-- Preset: Defaulters -->
+            <label class="few-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:2px solid #059669; border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="few_preset" value="defaulters" checked onchange="window.onFeePresetChange()" style="margin-top:3px; accent-color:#059669;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>🚨</span> Fee Defaulters & Arrears Recovery Roster
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Lists students owing fees with balance, contact phone numbers for parents/guardians, class details, and residential status.
+                </div>
+              </div>
+            </label>
+
+            <!-- Preset: Collections -->
+            <label class="few-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="few_preset" value="collections" onchange="window.onFeePresetChange()" style="margin-top:3px; accent-color:#059669;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>💳</span> Daily & Date-Range Collections / Audit Ledger
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Complete transaction log of payments received with receipt numbers, payment modes (Cash, MoMo, Bank), and cashier signatures.
+                </div>
+              </div>
+            </label>
+
+            <!-- Preset: Reconciliation -->
+            <label class="few-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="few_preset" value="reconciliation" onchange="window.onFeePresetChange()" style="margin-top:3px; accent-color:#059669;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>📊</span> Class Fee Reconciliation & Collection Rate Summary
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Class-by-class financial performance comparing expected billing vs collected revenue with recovery percentages.
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Live Count Banner -->
+        <div style="background:rgba(5, 150, 105, 0.12); border:1px solid rgba(5, 150, 105, 0.3); border-radius:8px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+          <div style="font-size:0.82rem; color:#34d399; font-weight:600; display:flex; align-items:center; gap:8px;">
+            <span>ℹ️</span> Matching Financial Records:
+          </div>
+          <div id="few_count_badge" style="font-size:0.95rem; font-weight:800; color:#10b981;">
+            Calculating...
+          </div>
+        </div>
+
+        <!-- Step 3: Format & Export -->
+        <div>
+          <label style="font-size:0.8rem; font-weight:700; color:#34d399; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            3. Select Export Format
+          </label>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button type="button" onclick="window.triggerFeeExportDownload('xlsx')" class="btn" style="flex:1; min-width:180px; padding:11px 16px; background:linear-gradient(135deg, #059669 0%, #047857 100%); color:#ffffff; font-weight:700; font-size:0.88rem; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 10px rgba(5,150,105,0.25);">
+              <span>📊</span> Download Styled Excel (.xlsx)
+            </button>
+            <button type="button" onclick="window.triggerFeeExportDownload('csv')" class="btn" style="flex:1; min-width:180px; padding:11px 16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#f8fafc; font-weight:700; font-size:0.88rem; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <span>📄</span> Download Universal CSV (.csv)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Populate Classes Dropdown if lookups available
+  const clsSelect = document.getElementById('few_class_id');
+  if (clsSelect) {
+    if (window._exportLookups && window._exportLookups.classes) {
+      window._exportLookups.classes.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        clsSelect.appendChild(opt);
+      });
+    } else {
+      fetch(`${API_BASE}/classes/`, { headers: getHeaders() })
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            data.forEach(c => {
+              const opt = document.createElement('option');
+              opt.value = c.id;
+              opt.textContent = c.name;
+              clsSelect.appendChild(opt);
+            });
+          }
+        }).catch(() => {});
+    }
+  }
+
+  window.updateFeeExportWizardCount();
+};
+
+window.onFeePresetChange = function() {
+  const cards = document.querySelectorAll('.few-preset-card');
+  const checked = document.querySelector('input[name="few_preset"]:checked');
+  cards.forEach(c => {
+    const radio = c.querySelector('input');
+    if (radio && radio.checked) {
+      c.style.borderColor = '#059669';
+      c.style.background = 'rgba(5, 150, 105, 0.08)';
+    } else {
+      c.style.borderColor = 'rgba(255,255,255,0.1)';
+      c.style.background = 'rgba(255,255,255,0.03)';
+    }
+  });
+  window.updateFeeExportWizardCount();
+};
+
+window.updateFeeExportWizardCount = async function() {
+  const badge = document.getElementById('few_count_badge');
+  if (!badge) return;
+  badge.textContent = 'Calculating...';
+
+  const preset = (document.querySelector('input[name="few_preset"]:checked') || {}).value || 'defaulters';
+  const form = (document.getElementById('few_form') || {}).value || '';
+  const classId = (document.getElementById('few_class_id') || {}).value || '';
+  const feeType = (document.getElementById('few_fee_type') || {}).value || '';
+  const status = (document.getElementById('few_status') || {}).value || '';
+  const startDate = (document.getElementById('few_start_date') || {}).value || '';
+  const endDate = (document.getElementById('few_end_date') || {}).value || '';
+
+  const params = new URLSearchParams({
+    preset: preset,
+    form: form,
+    class_id: classId,
+    fee_type: feeType,
+    status: status,
+    start_date: startDate,
+    end_date: endDate
+  });
+
+  try {
+    const res = await fetch(`${API_BASE}/fees/export-wizard-count?${params.toString()}`, {
+      headers: getHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const unit = preset === 'collections' ? 'Payments' : (preset === 'reconciliation' ? 'Classes' : 'Defaulter Invoices');
+      badge.textContent = `${data.count} ${unit}`;
+    } else {
+      badge.textContent = 'Ready to Export';
+    }
+  } catch (err) {
+    badge.textContent = 'Ready to Export';
+  }
+};
+
+window.triggerFeeExportDownload = async function(format) {
+  const preset = (document.querySelector('input[name="few_preset"]:checked') || {}).value || 'defaulters';
+  const form = (document.getElementById('few_form') || {}).value || '';
+  const classId = (document.getElementById('few_class_id') || {}).value || '';
+  const feeType = (document.getElementById('few_fee_type') || {}).value || '';
+  const status = (document.getElementById('few_status') || {}).value || '';
+  const startDate = (document.getElementById('few_start_date') || {}).value || '';
+  const endDate = (document.getElementById('few_end_date') || {}).value || '';
+
+  const params = new URLSearchParams({
+    preset: preset,
+    file_format: format,
+    form: form,
+    class_id: classId,
+    fee_type: feeType,
+    status: status,
+    start_date: startDate,
+    end_date: endDate
+  });
+
+  const downloadUrl = `${API_BASE}/fees/export-wizard?${params.toString()}`;
+  if (window.showToast) window.showToast(`Preparing ${preset.toUpperCase()} export...`, 'info');
+
+  try {
+    const res = await fetch(downloadUrl, { headers: getHeaders() });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server returned ${res.status}`);
+    }
+
+    const disposition = res.headers.get('Content-Disposition') || '';
+    let filename = `Financial_Report_${preset}_${new Date().toISOString().slice(0, 10)}.${format}`;
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) filename = match[1];
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+
+    if (window.showToast) window.showToast(`✔ Downloaded ${filename}!`, 'success');
+  } catch (err) {
+    if (window.showToast) window.showToast(`Export failed: ${err.message}`, 'error');
+    else alert(`Export failed: ${err.message}`);
+  }
+};
+
+window.exportFinancialCSV = window.openFeeExportWizard;
+
+
+// ── Academic Broadsheet & Scores Export Wizard ─────────────────────────────
+window.openBroadsheetExportWizard = async function() {
+  const existing = document.getElementById('broadsheet-export-wizard-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'broadsheet-export-wizard-modal';
+  modal.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.8); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; padding:16px;';
+
+  modal.innerHTML = `
+    <div style="background:var(--surface-card, #1e293b); color:var(--text-main, #f8fafc); border-radius:16px; max-width:680px; width:100%; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.12); overflow:hidden;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg, #4f46e5 0%, #2563eb 100%); padding:16px 22px; color:#ffffff; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">📊</span>
+          <div>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:700;">Academic Broadsheet & Scores Export Wizard</h3>
+            <p style="margin:2px 0 0; font-size:0.78rem; opacity:0.9;">Export class scores broadsheets, continuous assessment rosters, and subject performance tables.</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('broadsheet-export-wizard-modal').remove()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div style="padding:20px; overflow-y:auto; flex:1;">
+        <!-- Step 1: Filters -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#818cf8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            1. Academic Term & Class Scoping
+          </label>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Semester / Academic Term *</label>
+              <select id="bew_semester_id" onchange="window.updateBroadsheetExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">Active Semester</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Class Section</label>
+              <select id="bew_class_id" onchange="window.updateBroadsheetExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Subject</label>
+              <select id="bew_subject_id" onchange="window.updateBroadsheetExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Subjects (Master Broadsheet)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Presets -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#818cf8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            2. Choose Broadsheet Report Preset
+          </label>
+          <div style="display:grid; grid-template-columns:1fr; gap:10px;">
+            <!-- Preset: Master Broadsheet -->
+            <label class="bew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(79, 70, 229, 0.08); border:2px solid #4f46e5; border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="bew_preset" value="master_broadsheet" checked onchange="window.onBroadsheetPresetChange()" style="margin-top:3px; accent-color:#4f46e5;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>📋</span> Master Class Scores Broadsheet
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Multi-column master grid listing each student across all class subjects with marks, grades, grand totals, averages, and class ranks.
+                </div>
+              </div>
+            </label>
+
+            <!-- Preset: SBA / WAEC -->
+            <label class="bew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="bew_preset" value="sba_waec" onchange="window.onBroadsheetPresetChange()" style="margin-top:3px; accent-color:#4f46e5;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>📝</span> Continuous Assessment (SBA) / WAEC Format Roster
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Standardized continuous assessment score sheet (30% class + 70% exam) suitable for official district and WAEC examination portal uploads.
+                </div>
+              </div>
+            </label>
+
+            <!-- Preset: Subject League Table -->
+            <label class="bew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="bew_preset" value="subject_summary" onchange="window.onBroadsheetPresetChange()" style="margin-top:3px; accent-color:#4f46e5;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>🏆</span> Subject Performance & League Standings
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Subject pass rates, candidate counts, highest/lowest scores, and average attainment benchmarks for departmental review.
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Live Count Banner -->
+        <div style="background:rgba(79, 70, 229, 0.12); border:1px solid rgba(79, 70, 229, 0.3); border-radius:8px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+          <div style="font-size:0.82rem; color:#a5b4fc; font-weight:600; display:flex; align-items:center; gap:8px;">
+            <span>ℹ️</span> Matching Student / Score Cohort:
+          </div>
+          <div id="bew_count_badge" style="font-size:0.95rem; font-weight:800; color:#818cf8;">
+            Calculating...
+          </div>
+        </div>
+
+        <!-- Step 3: Format & Export -->
+        <div>
+          <label style="font-size:0.8rem; font-weight:700; color:#818cf8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            3. Select Export Format
+          </label>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button type="button" onclick="window.triggerBroadsheetExportDownload('xlsx')" class="btn" style="flex:1; min-width:180px; padding:11px 16px; background:linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); color:#ffffff; font-weight:700; font-size:0.88rem; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 10px rgba(79,70,229,0.25);">
+              <span>📊</span> Download Styled Excel (.xlsx)
+            </button>
+            <button type="button" onclick="window.triggerBroadsheetExportDownload('csv')" class="btn" style="flex:1; min-width:180px; padding:11px 16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#f8fafc; font-weight:700; font-size:0.88rem; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <span>📄</span> Download Universal CSV (.csv)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Load Broadsheet Lookups
+  try {
+    const res = await fetch(`${API_BASE}/reports/broadsheet-wizard-lookups`, { headers: getHeaders() });
+    if (res.ok) {
+      const lookups = await res.json();
+      const semSelect = document.getElementById('bew_semester_id');
+      const clsSelect = document.getElementById('bew_class_id');
+      const subSelect = document.getElementById('bew_subject_id');
+
+      if (semSelect && lookups.semesters) {
+        lookups.semesters.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = s.name + (s.is_current ? ' (Current)' : '');
+          if (s.is_current) opt.selected = true;
+          semSelect.appendChild(opt);
+        });
+      }
+
+      if (clsSelect && lookups.classes) {
+        lookups.classes.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name;
+          clsSelect.appendChild(opt);
+        });
+      }
+
+      if (subSelect && lookups.subjects) {
+        lookups.subjects.forEach(sub => {
+          const opt = document.createElement('option');
+          opt.value = sub.id;
+          opt.textContent = sub.name;
+          subSelect.appendChild(opt);
+        });
+      }
+    }
+  } catch (err) {}
+
+  window.updateBroadsheetExportWizardCount();
+};
+
+window.onBroadsheetPresetChange = function() {
+  const cards = document.querySelectorAll('.bew-preset-card');
+  cards.forEach(c => {
+    const radio = c.querySelector('input');
+    if (radio && radio.checked) {
+      c.style.borderColor = '#4f46e5';
+      c.style.background = 'rgba(79, 70, 229, 0.08)';
+    } else {
+      c.style.borderColor = 'rgba(255,255,255,0.1)';
+      c.style.background = 'rgba(255,255,255,0.03)';
+    }
+  });
+  window.updateBroadsheetExportWizardCount();
+};
+
+window.updateBroadsheetExportWizardCount = async function() {
+  const badge = document.getElementById('bew_count_badge');
+  if (!badge) return;
+  badge.textContent = 'Calculating...';
+
+  const preset = (document.querySelector('input[name="bew_preset"]:checked') || {}).value || 'master_broadsheet';
+  const semesterId = (document.getElementById('bew_semester_id') || {}).value || '';
+  const classId = (document.getElementById('bew_class_id') || {}).value || '';
+  const subjectId = (document.getElementById('bew_subject_id') || {}).value || '';
+
+  const params = new URLSearchParams({
+    preset: preset,
+    semester_id: semesterId,
+    class_id: classId,
+    subject_id: subjectId
+  });
+
+  try {
+    const res = await fetch(`${API_BASE}/reports/broadsheet-wizard-count?${params.toString()}`, {
+      headers: getHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const unit = preset === 'master_broadsheet' ? 'Enrolled Students' : 'Assessment Scores';
+      badge.textContent = `${data.count} ${unit}`;
+    } else {
+      badge.textContent = 'Ready to Export';
+    }
+  } catch (err) {
+    badge.textContent = 'Ready to Export';
+  }
+};
+
+window.triggerBroadsheetExportDownload = async function(format) {
+  const preset = (document.querySelector('input[name="bew_preset"]:checked') || {}).value || 'master_broadsheet';
+  const semesterId = (document.getElementById('bew_semester_id') || {}).value || '';
+  const classId = (document.getElementById('bew_class_id') || {}).value || '';
+  const subjectId = (document.getElementById('bew_subject_id') || {}).value || '';
+
+  const params = new URLSearchParams({
+    preset: preset,
+    file_format: format,
+    semester_id: semesterId,
+    class_id: classId,
+    subject_id: subjectId
+  });
+
+  const downloadUrl = `${API_BASE}/reports/broadsheet-wizard?${params.toString()}`;
+  if (window.showToast) window.showToast(`Preparing ${preset.toUpperCase()} export...`, 'info');
+
+  try {
+    const res = await fetch(downloadUrl, { headers: getHeaders() });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server returned ${res.status}`);
+    }
+
+    const disposition = res.headers.get('Content-Disposition') || '';
+    let filename = `Broadsheet_${preset}_${new Date().toISOString().slice(0, 10)}.${format}`;
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) filename = match[1];
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+
+    if (window.showToast) window.showToast(`✔ Downloaded ${filename}!`, 'success');
+  } catch (err) {
+    if (window.showToast) window.showToast(`Export failed: ${err.message}`, 'error');
+    else alert(`Export failed: ${err.message}`);
+  }
+};
+
+window.exportAcademicCSV = window.openBroadsheetExportWizard;
+
+
 // ── Database Backups ────────────────────────────────────────────────────────
 window.loadBackups = async function() {
   const body = document.getElementById('backupListBody');

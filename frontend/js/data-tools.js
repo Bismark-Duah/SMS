@@ -53,26 +53,7 @@ window.downloadCSSPSCSVTemplate = function() {
     'address'
   ];
 
-  const sampleRow = [
-    '100000000026',
-    'CSSPS-2026-X89',
-    'Kwame',
-    'Kofi',
-    'Mensah',
-    'Male',
-    '2009-04-12',
-    '430',
-    '8',
-    'Achimota Junior High',
-    'General Science',
-    'Boarding',
-    'Mr. Ebenezer Mensah',
-    '0244123456',
-    '0200000000',
-    '"House 12, West Legon, Accra"'
-  ];
-
-  const csvContent = [headers.join(','), sampleRow.join(',')].join('\n');
+  const csvContent = headers.join(',') + '\n';
   window.triggerBlobDownload(csvContent, 'CSSPS_Official_Placement_Template.csv');
 };
 
@@ -97,13 +78,7 @@ window.downloadBasicStudentsTemplate = function() {
     'allergies'
   ];
 
-  const sampleRows = [
-    'Kwame Mensah,BAS-2024-001,Class 4B,Male,2015-06-12,Mr. Ebenezer Mensah,0244123456,0200000000,"House 12, Kumasi",O+,"Peanut allergy"',
-    'Ama Konadu,BAS-2024-002,KG 2,Female,2019-10-04,Madam Grace Konadu,0501234567,,"Plot 4, Sunyani",A+,',
-    'Yaw Osei,BAS-2024-003,JHS 1A,Male,2012-03-21,Opanin Yaw Osei,0209876543,,"Accra Enclave",B+,"Asthma"'
-  ];
-
-  const csvContent = [headers.join(','), ...sampleRows].join('\n');
+  const csvContent = headers.join(',') + '\n';
   window.triggerBlobDownload(csvContent, 'Basic_School_Students_Enrollment_Template.csv');
 };
 
@@ -133,13 +108,7 @@ window.downloadContinuingStudentsTemplate = function() {
     'address'
   ];
 
-  const sampleRows = [
-    'Kwame Mensah,SHS-2024-001,2,SHS 2 Science 1,General Science,Male,Boarding,Kwame Nkrumah House,Block A Room 1,Mr. Ebenezer Mensah,0244123456,"House 12, Kumasi"',
-    'Abena Serwaa,SHS-2023-089,3,SHS 3 General Arts 2,General Arts,Female,Day,,,Madam Grace Serwaa,0501234567,"Plot 4, Sunyani"',
-    'Kofi Boateng,SHS-2024-045,2,SHS 2 Business A,Business,Male,Boarding,Aggrey House,Room 4,Opanin Yaw Boateng,0209876543,"Accra Enclave"'
-  ];
-
-  const csvContent = [headers.join(','), ...sampleRows].join('\n');
+  const csvContent = headers.join(',') + '\n';
   window.triggerBlobDownload(csvContent, 'Continuing_Students_Direct_Enrollment_Template.csv');
 };
 
@@ -500,41 +469,338 @@ window.importUserCSV = async function() {
 };
 
 
-// ── Export ──────────────────────────────────────────────────────────────────
-window.exportStudentsCSV = async function() {
+// ── Student Data Export Wizard ──────────────────────────────────────────────
+window.openStudentExportWizard = async function() {
+  const existing = document.getElementById('student-export-wizard-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'student-export-wizard-modal';
+  modal.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.8); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; padding:16px;';
+
+  modal.innerHTML = `
+    <div style="background:var(--surface-card, #1e293b); color:var(--text-main, #f8fafc); border-radius:16px; max-width:680px; width:100%; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.12); overflow:hidden;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); padding:16px 22px; color:#ffffff; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">🎓</span>
+          <div>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:700;">Student Data Export Wizard</h3>
+            <p style="margin:2px 0 0; font-size:0.78rem; opacity:0.9;">Export scoped student cohorts in styled Excel (.xlsx) or universal CSV format.</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('student-export-wizard-modal').remove()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div style="padding:20px; overflow-y:auto; flex:1;">
+        <!-- Step 1: Filters -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#818cf8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            1. Filter Cohort (Optional)
+          </label>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Form / Year</label>
+              <select id="ew_form" onchange="window.updateExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Forms</option>
+                <option value="1">Form 1</option>
+                <option value="2">Form 2</option>
+                <option value="3">Form 3</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Class Section</label>
+              <select id="ew_class_id" onchange="window.updateExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Program / Track</label>
+              <select id="ew_program_id" onchange="window.updateExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Programs</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Residential Status</label>
+              <select id="ew_residential_status" onchange="window.updateExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All (Boarding & Day)</option>
+                <option value="Boarding">Boarding Only</option>
+                <option value="Day">Day Only</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Boarding House</label>
+              <select id="ew_house_id" onchange="window.updateExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Houses</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Gender</label>
+              <select id="ew_gender" onchange="window.updateExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Genders</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Presets -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#818cf8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            2. Choose Column Preset
+          </label>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:10px;">
+            <label class="ew-preset-card" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:8px; cursor:pointer;">
+              <input type="radio" name="ew_preset" value="academic" checked style="margin-top:3px;" />
+              <div>
+                <strong style="font-size:0.88rem; color:#f1f5f9;">🎓 Academic Class Roster</strong>
+                <p style="margin:2px 0 0; font-size:0.75rem; color:#94a3b8;">Code, Name, Gender, Form, Class, Program, Subject / Electives</p>
+              </div>
+            </label>
+            <label class="ew-preset-card" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:8px; cursor:pointer;">
+              <input type="radio" name="ew_preset" value="boarding" style="margin-top:3px;" />
+              <div>
+                <strong style="font-size:0.88rem; color:#f1f5f9;">🏠 Boarding & House Directory</strong>
+                <p style="margin:2px 0 0; font-size:0.75rem; color:#94a3b8;">Name, Class, Residential Status, House, Dormitory, Emergency Tel</p>
+              </div>
+            </label>
+            <label class="ew-preset-card" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:8px; cursor:pointer;">
+              <input type="radio" name="ew_preset" value="cssps" style="margin-top:3px;" />
+              <div>
+                <strong style="font-size:0.88rem; color:#f1f5f9;">📋 CSSPS & WAEC Audit</strong>
+                <p style="margin:2px 0 0; font-size:0.75rem; color:#94a3b8;">Code, BECE Index, Name, Gender, DOB, JHS Attended, Scores</p>
+              </div>
+            </label>
+            <label class="ew-preset-card" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:8px; cursor:pointer;">
+              <input type="radio" name="ew_preset" value="guardian" style="margin-top:3px;" />
+              <div>
+                <strong style="font-size:0.88rem; color:#f1f5f9;">📞 Guardian & Emergency Desk</strong>
+                <p style="margin:2px 0 0; font-size:0.75rem; color:#94a3b8;">Name, Class, Guardian Name, Primary Phone, Address</p>
+              </div>
+            </label>
+            <label class="ew-preset-card" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:8px; cursor:pointer;">
+              <input type="radio" name="ew_preset" value="health" style="margin-top:3px;" />
+              <div>
+                <strong style="font-size:0.88rem; color:#f1f5f9;">🏥 Health & Medical Profile</strong>
+                <p style="margin:2px 0 0; font-size:0.75rem; color:#94a3b8;">Name, Class, House, Blood Group, Allergies, Chronic Conditions</p>
+              </div>
+            </label>
+            <label class="ew-preset-card" style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:8px; cursor:pointer;">
+              <input type="radio" name="ew_preset" value="master" style="margin-top:3px;" />
+              <div>
+                <strong style="font-size:0.88rem; color:#f1f5f9;">📦 Master Institutional Archive</strong>
+                <p style="margin:2px 0 0; font-size:0.75rem; color:#94a3b8;">All 20+ academic, pastoral, and bio fields combined</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Step 3: Format & Status -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(255,255,255,0.02); padding:12px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+          <div>
+            <label style="font-size:0.78rem; font-weight:700; color:#94a3b8; display:block; margin-bottom:6px;">Export Format</label>
+            <div style="display:flex; gap:14px;">
+              <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem; font-weight:600; color:#34d399;">
+                <input type="radio" name="ew_format" value="xlsx" checked /> 📊 Excel Workbook (.xlsx)
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem; font-weight:600; color:#60a5fa;">
+                <input type="radio" name="ew_format" value="csv" /> 📄 Universal CSV (.csv)
+              </label>
+            </div>
+          </div>
+          <div id="ew_counter_pill" style="font-size:0.84rem; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:6px 14px; border-radius:999px;">
+            🟢 Calculating...
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding:14px 20px; background:rgba(0,0,0,0.25); border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn" onclick="document.getElementById('student-export-wizard-modal').remove()" style="padding:8px 16px;">Cancel</button>
+        <button type="button" id="ew_download_btn" class="btn primary" onclick="window.triggerStudentExportDownload()" style="display:inline-flex; align-items:center; gap:8px; padding:9px 20px; font-weight:700; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:none; border-radius:8px; cursor:pointer; color:#ffffff;">
+          <span>🚀</span> Download Student Export
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Populate dynamic dropdowns and initial count
+  await window.loadExportWizardLookups();
+  await window.updateExportWizardCount();
+};
+
+window.loadExportWizardLookups = async function() {
   try {
-    const res = await fetch(`${API_BASE}/students/`, { headers: getHeaders() });
-    const students = await res.json();
-    if (!students || students.length === 0) {
-      alert("No student data available to export.");
+    const [clsRes, progRes, houseRes] = await Promise.all([
+      fetch(`${API_BASE}/classes/`, { headers: getHeaders() }).catch(() => null),
+      fetch(`${API_BASE}/programs/`, { headers: getHeaders() }).catch(() => null),
+      fetch(`${API_BASE}/houses/`, { headers: getHeaders() }).catch(() => null)
+    ]);
+
+    if (clsRes && clsRes.ok) {
+      const classes = await clsRes.json();
+      const sel = document.getElementById('ew_class_id');
+      if (sel && Array.isArray(classes)) {
+        classes.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name;
+          sel.appendChild(opt);
+        });
+      }
+    }
+
+    if (progRes && progRes.ok) {
+      const programs = await progRes.json();
+      const sel = document.getElementById('ew_program_id');
+      if (sel && Array.isArray(programs)) {
+        programs.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          sel.appendChild(opt);
+        });
+      }
+    }
+
+    if (houseRes && houseRes.ok) {
+      const houses = await houseRes.json();
+      const sel = document.getElementById('ew_house_id');
+      if (sel && Array.isArray(houses)) {
+        houses.forEach(h => {
+          const opt = document.createElement('option');
+          opt.value = h.id;
+          opt.textContent = h.name;
+          sel.appendChild(opt);
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("Error loading export wizard lookups:", e);
+  }
+};
+
+window.updateExportWizardCount = async function() {
+  const pill = document.getElementById('ew_counter_pill');
+  if (!pill) return;
+  pill.textContent = '⏳ Calculating...';
+
+  const params = new URLSearchParams();
+  const form = document.getElementById('ew_form')?.value;
+  const classId = document.getElementById('ew_class_id')?.value;
+  const programId = document.getElementById('ew_program_id')?.value;
+  const resStatus = document.getElementById('ew_residential_status')?.value;
+  const houseId = document.getElementById('ew_house_id')?.value;
+  const gender = document.getElementById('ew_gender')?.value;
+
+  if (form) params.append('form', form);
+  if (classId) params.append('class_id', classId);
+  if (programId) params.append('program_id', programId);
+  if (resStatus) params.append('residential_status', resStatus);
+  if (houseId) params.append('house_id', houseId);
+  if (gender) params.append('gender', gender);
+
+  try {
+    const res = await fetch(`${API_BASE}/students/export-wizard-count?${params.toString()}`, {
+      headers: getHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const count = data.count || 0;
+      pill.textContent = `🟢 ${count} Student${count === 1 ? '' : 's'} Selected`;
+    } else {
+      pill.textContent = '⚪ Scope Active';
+    }
+  } catch (e) {
+    pill.textContent = '⚪ Ready';
+  }
+};
+
+window.triggerStudentExportDownload = async function() {
+  const btn = document.getElementById('ew_download_btn');
+  const originalHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = '<span>⏳</span> Generating Export...';
+    btn.disabled = true;
+  }
+
+  try {
+    const params = new URLSearchParams();
+    const presetRadio = document.querySelector('input[name="ew_preset"]:checked');
+    const formatRadio = document.querySelector('input[name="ew_format"]:checked');
+    const preset = presetRadio ? presetRadio.value : 'academic';
+    const format = formatRadio ? formatRadio.value : 'xlsx';
+
+    params.append('preset', preset);
+    params.append('file_format', format);
+
+    const form = document.getElementById('ew_form')?.value;
+    const classId = document.getElementById('ew_class_id')?.value;
+    const programId = document.getElementById('ew_program_id')?.value;
+    const resStatus = document.getElementById('ew_residential_status')?.value;
+    const houseId = document.getElementById('ew_house_id')?.value;
+    const gender = document.getElementById('ew_gender')?.value;
+
+    if (form) params.append('form', form);
+    if (classId) params.append('class_id', classId);
+    if (programId) params.append('program_id', programId);
+    if (resStatus) params.append('residential_status', resStatus);
+    if (houseId) params.append('house_id', houseId);
+    if (gender) params.append('gender', gender);
+
+    const res = await fetch(`${API_BASE}/students/export-wizard?${params.toString()}`, {
+      headers: getHeaders()
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(`Export failed: ${err.detail || res.statusText}`);
       return;
     }
 
-    const headers = ['id', 'student_code', 'full_name', 'gender', 'date_of_birth', 'guardian_name', 'phone', 'address', 'class_section_id', 'program_name', 'bece_index_number'];
-    const csvRows = [headers.join(',')];
-
-    for (const s of students) {
-      const values = [
-        s.id,
-        `"${s.student_code || ''}"`,
-        `"${s.full_name || ''}"`,
-        `"${s.gender || ''}"`,
-        `"${s.date_of_birth || ''}"`,
-        `"${s.guardian_name || ''}"`,
-        `"${s.phone || ''}"`,
-        `"${s.address || ''}"`,
-        s.class_section_id || '',
-        `"${s.program_name || ''}"`,
-        `"${s.bece_index_number || ''}"`
-      ];
-      csvRows.push(values.join(','));
+    const blob = await res.blob();
+    let filename = `Student_Export_${new Date().toISOString().slice(0, 10)}.${format}`;
+    const disp = res.headers.get('content-disposition');
+    if (disp && disp.includes('filename=')) {
+      filename = disp.split('filename=')[1].replace(/["']/g, '').trim();
     }
 
-    window.triggerBlobDownload(csvRows.join('\n'), `Students_Export_${new Date().toISOString().slice(0, 10)}.csv`);
-  } catch (e) {
-    alert("Export failed: " + e.message);
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (document.body.contains(a)) document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 250);
+
+    const modal = document.getElementById('student-export-wizard-modal');
+    if (modal) modal.remove();
+
+    if (window.showToast) {
+      window.showToast(`✔ Export successfully downloaded: ${filename}`, 'success');
+    }
+  } catch (error) {
+    console.error("Export error:", error);
+    alert("Network error during student export: " + error.message);
+  } finally {
+    if (btn) {
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
+    }
   }
 };
+
+// Aliased so all existing buttons launch the wizard
+window.exportStudentsCSV = window.openStudentExportWizard;
+
 
 // ── Database Backups ────────────────────────────────────────────────────────
 window.loadBackups = async function() {

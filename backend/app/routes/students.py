@@ -188,7 +188,83 @@ def list_students(
     except Exception as e:
         print("Error in list_students query:", e)
         return []
+# ── Student Export Wizard Endpoints ──────────────────────────────────────────
 
+from ..services.student_export_service import (
+    build_filtered_student_query,
+    generate_student_export_dataset,
+    PRESET_DEFINITIONS
+)
+
+@router.get("/export-wizard-count")
+def get_export_wizard_count(
+    form: Optional[int] = Query(None),
+    class_id: Optional[int] = Query(None),
+    program_id: Optional[int] = Query(None),
+    residential_status: Optional[str] = Query(None),
+    house_id: Optional[int] = Query(None),
+    gender: Optional[str] = Query(None),
+    include_inactive: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Returns the live count of students matching the Export Wizard filters."""
+    school_id = get_school_id(current_user)
+    filters = {
+        "form": form,
+        "class_id": class_id,
+        "program_id": program_id,
+        "residential_status": residential_status,
+        "house_id": house_id,
+        "gender": gender,
+        "include_inactive": include_inactive
+    }
+    query = build_filtered_student_query(db, school_id, current_user, filters)
+    return {"count": query.count()}
+
+
+@router.get("/export-wizard")
+def export_students_wizard(
+    preset: str = Query("academic"),
+    file_format: str = Query("xlsx"),
+    form: Optional[int] = Query(None),
+    class_id: Optional[int] = Query(None),
+    program_id: Optional[int] = Query(None),
+    residential_status: Optional[str] = Query(None),
+    house_id: Optional[int] = Query(None),
+    gender: Optional[str] = Query(None),
+    include_inactive: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Generates and streams preset-driven student exports in styled .xlsx or universal .csv.
+    """
+    school_id = get_school_id(current_user)
+    filters = {
+        "form": form,
+        "class_id": class_id,
+        "program_id": program_id,
+        "residential_status": residential_status,
+        "house_id": house_id,
+        "gender": gender,
+        "include_inactive": include_inactive
+    }
+
+    content, filename, mime_type = generate_student_export_dataset(
+        db=db,
+        school_id=school_id,
+        current_user=current_user,
+        preset_key=preset,
+        file_format=file_format,
+        filters=filters
+    )
+
+    return Response(
+        content=content,
+        media_type=mime_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 # ── GET /{id} — Student Profile ───────────────────────────────────────────────
@@ -821,7 +897,5 @@ def change_student_program(
         current_user=current_user,
         school_id=school_id
     )
-
-
 
 

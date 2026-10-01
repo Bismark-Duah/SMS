@@ -106,7 +106,7 @@
             </div>
             <button class="btn" id="printIdCardsBtn" onclick="openPrintableIDCardsModal()" style="background:#059669; border-color:#047857; color:white; padding:6px 12px; font-size:.85rem; font-weight:600;">Print ID Cards</button>
             <button class="btn" id="autoLinkBtn" onclick="autoLinkGuardians()" style="background:var(--primary, #4f46e5); color:white; padding:6px 12px; font-size:.85rem; font-weight:600;">Auto-Link Guardians</button>
-            <button class="btn" id="exportCsvBtn" onclick="exportStudentsCSV()" style="background:#10b981; border-color:#059669; color:white; padding:6px 12px; font-size:.85rem; font-weight:600;">Export CSV</button>
+            <button class="btn" id="exportCsvBtn" onclick="openStudentExportWizard()" style="background:#10b981; border-color:#059669; color:white; padding:6px 12px; font-size:.85rem; font-weight:600;"><span>📊</span> Export Wizard</button>
             <button class="btn basic-only-feature" id="basicTemplateBtn" data-feature="showBasicForm" onclick="downloadBasicStudentsTemplate()" style="background:#059669; border-color:#047857; color:white; padding:6px 12px; font-size:.85rem; font-weight:600;" title="Download CSV template for Basic School (Creche, KG, Primary, JHS)">Basic School Template</button>
             <button class="btn basic-only-feature" id="basicImportBtn" data-feature="showBasicForm" onclick="triggerBasicStudentsCSVUpload()" style="background:#0284c7; border-color:#0369a1; color:white; padding:6px 12px; font-size:.85rem; font-weight:600;" title="Instantly enroll Basic School students via CSV">Import Basic CSV</button>
             <input type="file" id="basicStudentsCsvFileInput" accept=".csv" style="display:none;" onchange="handleBasicStudentsCSVSelected(event)" />
@@ -580,8 +580,8 @@
       </div>
     </div>
 
-    <script src="js/guard.js"></script>
-    <script src="js/data-tools.js"></script>
-    <script src="js/students.js"></script>
+    <script src="js/guard.js?v=2.5"></script>
+    <script src="js/data-tools.js?v=2.5"></script>
+    <script src="js/students.js?v=2.5"></script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status, Response, Header
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 import csv
@@ -127,8 +127,9 @@ def list_students(
     offset: Optional[int] = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
 ):
-    school_id = get_school_id(current_user)
+    school_id = get_school_id(current_user, x_school_id)
     mode = _get_school_mode(db, school_id)
     query = db.query(Student).options(
         joinedload(Student.class_section),

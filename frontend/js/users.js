@@ -1,7 +1,7 @@
-const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
+var API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
 
-const token = localStorage.getItem('accessToken');
-if (!token) {
+var token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') || localStorage.getItem('token');
+if (!token && !window.location.pathname.includes('auth.html')) {
   window.location.href = 'auth.html';
 }
 
@@ -98,7 +98,8 @@ function getRoleIcon(name) {
 let allRawRoles = [];
 let allUsersData = [];
 let allStudentsData = [];
-let selectedSchoolScope = localStorage.getItem('school_id') || 'system_only';
+let activeSchoolScopeId = sessionStorage.getItem('selectedSchoolId') || sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+let selectedSchoolScope = activeSchoolScopeId || 'system_only';
 
 // ── Load & Categorize Available Roles ──────────────────────────────────────────
 
@@ -242,8 +243,12 @@ window.onTenantFilterChange = function(val) {
   selectedSchoolScope = val;
   if (val === 'system_only' || val === 'all') {
     localStorage.removeItem('school_id');
+    sessionStorage.removeItem('school_id');
+    sessionStorage.removeItem('selectedSchoolId');
   } else {
     localStorage.setItem('school_id', val);
+    sessionStorage.setItem('school_id', val);
+    sessionStorage.setItem('selectedSchoolId', val);
   }
   loadData();
 };
@@ -260,6 +265,8 @@ async function loadData() {
     const reqHeaders = getHeaders();
     if (selectedSchoolScope === 'system_only') {
       delete reqHeaders['X-School-Id'];
+    } else if (selectedSchoolScope && selectedSchoolScope !== 'all') {
+      reqHeaders['X-School-Id'] = String(selectedSchoolScope);
     }
 
     const [resUsers, resStudents] = await Promise.all([
@@ -276,6 +283,8 @@ async function loadData() {
     const isSuperAdminSession = (localStorage.getItem('is_super_admin') === 'true' || localStorage.getItem('userRole') === 'super_admin');
     if (isSuperAdminSession && selectedSchoolScope === 'system_only') {
       users = users.filter(u => u.roles.some(r => r.name === 'super_admin') || u.school_id === null);
+    } else if (isSuperAdminSession && selectedSchoolScope !== 'all' && selectedSchoolScope !== 'system_only') {
+      users = users.filter(u => String(u.school_id) === String(selectedSchoolScope));
     } else if (!isSuperAdminSession) {
       users = users.filter(u => !u.roles.some(r => r.name === 'super_admin'));
     }
@@ -287,20 +296,30 @@ async function loadData() {
 
     // Populate Student Select
     if (studentSelect) {
-      studentSelect.innerHTML = '<option value="">Select Student...</option>' + 
-        students.map(s => `<option value="${s.id}">${s.full_name} (${s.student_code})</option>`).join('');
+      if (students.length > 0) {
+        studentSelect.innerHTML = '<option value="">Select Student...</option>' + 
+          students.map(s => `<option value="${s.id}">${escapeHtml(s.full_name)} (${escapeHtml(s.student_code || 'ID: ' + s.id)})</option>`).join('');
+      } else {
+        studentSelect.innerHTML = '<option value="">No students found in current scope</option>';
+      }
     }
 
     // Populate Parent Select (Filter by 'parent' role)
     if (parentSelect) {
-      const parents = users.filter(u => u.roles.some(r => r.name === 'parent'));
-      parentSelect.innerHTML = '<option value="">Select Parent...</option>' + 
-        parents.map(p => `<option value="${p.id}">${p.username}</option>`).join('');
+      const parents = users.filter(u => (u.roles || []).some(r => r.name === 'parent'));
+      if (parents.length > 0) {
+        parentSelect.innerHTML = '<option value="">Select Parent...</option>' + 
+          parents.map(p => `<option value="${p.id}">${escapeHtml(p.username)}</option>`).join('');
+      } else {
+        parentSelect.innerHTML = '<option value="">No parent accounts found</option>';
+      }
     }
 
   } catch (error) {
     console.error('Error loading data:', error);
     if (userList) userList.innerHTML = '<div style="padding:16px; color:var(--danger,#ef4444);">Failed to load user directory.</div>';
+    if (studentSelect) studentSelect.innerHTML = '<option value="">Failed to load students</option>';
+    if (parentSelect) parentSelect.innerHTML = '<option value="">Failed to load parents</option>';
   }
 }
 

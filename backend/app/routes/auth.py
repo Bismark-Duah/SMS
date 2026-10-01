@@ -1031,24 +1031,26 @@ from ..services.import_export_service import validate_and_read_csv_upload
 
 def _derive_unique_username(db: Session, full_name: str, preferred_username: Optional[str] = None) -> str:
     if preferred_username and preferred_username.strip():
-        cand = re.sub(r'[^a-zA-Z0-9._-]', '', preferred_username.strip().lower().replace(' ', '.'))
+        # Clean but preserve spaces for "firstname lastname" style usernames
+        cand = re.sub(r'[^a-zA-Z0-9\s._-]', '', preferred_username.strip().lower())
+        cand = re.sub(r'\s+', ' ', cand).strip()
         if cand:
             base = cand
             suffix = 1
             while db.query(User).filter(func.lower(User.username) == cand.lower()).first():
                 suffix += 1
-                cand = f"{base}{suffix}"
+                cand = f"{base} {suffix}"
             return cand
 
     # Strip salutations & honorary titles
     cleaned = re.sub(r'^(mr\.|mrs\.|ms\.|miss|dr\.|rev\.|madam|master|hon\.)\s+', '', (full_name or '').strip(), flags=re.IGNORECASE)
     tokens = [t.lower() for t in re.findall(r'[a-zA-Z0-9]+', cleaned)]
     if not tokens:
-        cand = f"user.{secrets.token_hex(3)}"
+        cand = f"user {secrets.token_hex(3)}"
     elif len(tokens) == 1:
         cand = tokens[0]
     else:
-        cand = f"{tokens[0]}.{tokens[-1]}"
+        cand = f"{tokens[0]} {tokens[-1]}"
 
     base = cand
     suffix = 1
@@ -1274,9 +1276,9 @@ async def import_users_csv(
                         if matched_role and matched_role not in assigned_roles:
                             assigned_roles.append(matched_role)
 
-                # Non-super-admins cannot grant super_admin or admin via CSV
+                # Non-super-admins cannot grant super_admin via CSV
                 if not is_super:
-                    assigned_roles = [r for r in assigned_roles if r.name.lower() not in ["super_admin", "admin", "headmaster", "headmistress"]]
+                    assigned_roles = [r for r in assigned_roles if r.name.lower() not in ["super_admin"]]
 
                 # Normalize gender-specific roles
                 role_names = [r.name.lower() for r in assigned_roles]

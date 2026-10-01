@@ -1928,6 +1928,266 @@ window.triggerAttendanceExportDownload = async function(format) {
 };
 
 
+// ── Staff, Faculty & Governance Export Wizard ─────────────────────────────
+window.openUserExportWizard = async function() {
+  const existing = document.getElementById('user-export-wizard-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'user-export-wizard-modal';
+  modal.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.8); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; padding:16px;';
+
+  modal.innerHTML = `
+    <div style="background:var(--surface-card, #1e293b); color:var(--text-main, #f8fafc); border-radius:16px; max-width:680px; width:100%; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.12); overflow:hidden;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-bottom:2px solid #3b82f6; padding:16px 22px; color:#ffffff; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">👥</span>
+          <div>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:700;">Staff, Faculty & Governance Export Wizard</h3>
+            <p style="margin:2px 0 0; font-size:0.78rem; opacity:0.85;">Export teaching allocations, staff contact registers, and security audit ledgers.</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('user-export-wizard-modal').remove()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div style="padding:20px; overflow-y:auto; flex:1;">
+        <!-- Step 1: Filters -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            1. Scoping & Faculty Filters
+          </label>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Staff Role</label>
+              <select id="uew_role" onchange="window.updateUserExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="ALL">All Roles</option>
+                <option value="teacher">Teachers</option>
+                <option value="form_master">Form Masters / Mistresses</option>
+                <option value="hod">HODs</option>
+                <option value="house_master">Housemasters / Mistresses</option>
+                <option value="bursar">Bursars / Accountants</option>
+                <option value="proprietor">Proprietors / School Owners</option>
+                <option value="headmaster">Headmasters / Principals</option>
+                <option value="admin">Administrators</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Academic Department</label>
+              <select id="uew_dept_id" onchange="window.updateUserExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Departments</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Account Status</label>
+              <select id="uew_status" onchange="window.updateUserExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="ALL">All Statuses</option>
+                <option value="active">Active Only</option>
+                <option value="inactive">Suspended / Inactive</option>
+              </select>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Search Staff (Name, Staff ID, Contact)</label>
+              <input type="text" id="uew_search" placeholder="Type keyword to filter..." oninput="window.updateUserExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Presets -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            2. Choose Governance Report Preset
+          </label>
+          <div style="display:grid; grid-template-columns:1fr; gap:10px;">
+            <!-- Preset: Teaching Allocation -->
+            <label class="uew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(59, 130, 246, 0.08); border:2px solid #3b82f6; border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="uew_preset" value="teaching_allocation" checked onchange="window.onUserPresetChange()" style="margin-top:3px; accent-color:#3b82f6;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>📚</span> Teaching Staff & Subject Allocation Matrix
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Roster of academic teachers, their assigned classes, subjects taught, weekly period limits, and active teaching exemptions.
+                </div>
+              </div>
+            </label>
+
+            <!-- Preset: Staff Directory -->
+            <label class="uew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="uew_preset" value="staff_directory" onchange="window.onUserPresetChange()" style="margin-top:3px; accent-color:#3b82f6;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>📇</span> Staff Contact & Institutional Directory
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Master staff roster with Staff ID, phone numbers, email addresses, departments, and leadership responsibilities.
+                </div>
+              </div>
+            </label>
+
+            <!-- Preset: Security Audit -->
+            <label class="uew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="uew_preset" value="security_audit" onchange="window.onUserPresetChange()" style="margin-top:3px; accent-color:#3b82f6;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>🛡️</span> Role & Privilege Security Audit Ledger
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Security audit matrix displaying system permission roles, initial login status, verification timestamps, and account states.
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Scope Badge -->
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(0,0,0,0.25); border-radius:8px; border:1px solid rgba(255,255,255,0.08); margin-bottom:18px;">
+          <span style="font-size:0.8rem; color:#94a3b8;">Matching Faculty Records:</span>
+          <span id="uew_count_badge" style="font-size:0.85rem; font-weight:700; color:#60a5fa; background:rgba(59,130,246,0.15); padding:3px 10px; border-radius:12px; border:1px solid rgba(59,130,246,0.3);">
+            Calculating...
+          </span>
+        </div>
+
+        <!-- Step 3: Format & Export -->
+        <div>
+          <label style="font-size:0.8rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            3. Select Export Format
+          </label>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button type="button" onclick="window.triggerUserExportDownload('xlsx')" class="btn" style="flex:1; min-width:180px; padding:11px 16px; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#ffffff; font-weight:700; font-size:0.88rem; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 10px rgba(2,132,199,0.25);">
+              <span>📊</span> Download Styled Excel (.xlsx)
+            </button>
+            <button type="button" onclick="window.triggerUserExportDownload('csv')" class="btn" style="flex:1; min-width:180px; padding:11px 16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#f8fafc; font-weight:700; font-size:0.88rem; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <span>📄</span> Download Universal CSV (.csv)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Populate Departments
+  const deptSelect = document.getElementById('uew_dept_id');
+  if (deptSelect) {
+    fetch(`${API_BASE}/departments/`, { headers: getHeaders() })
+      .then(r => r.json())
+      .then(depts => {
+        if (Array.isArray(depts)) {
+          depts.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = d.name;
+            deptSelect.appendChild(opt);
+          });
+        }
+      }).catch(() => {});
+  }
+
+  window.updateUserExportWizardCount();
+};
+
+window.onUserPresetChange = function() {
+  const cards = document.querySelectorAll('.uew-preset-card');
+  cards.forEach(c => {
+    const radio = c.querySelector('input');
+    if (radio && radio.checked) {
+      c.style.borderColor = '#3b82f6';
+      c.style.background = 'rgba(59, 130, 246, 0.08)';
+    } else {
+      c.style.borderColor = 'rgba(255,255,255,0.1)';
+      c.style.background = 'rgba(255,255,255,0.03)';
+    }
+  });
+  window.updateUserExportWizardCount();
+};
+
+window.updateUserExportWizardCount = async function() {
+  const badge = document.getElementById('uew_count_badge');
+  if (!badge) return;
+  badge.textContent = 'Calculating...';
+
+  const preset = (document.querySelector('input[name="uew_preset"]:checked') || {}).value || 'teaching_allocation';
+  const role = (document.getElementById('uew_role') || {}).value || '';
+  const deptId = (document.getElementById('uew_dept_id') || {}).value || '';
+  const status = (document.getElementById('uew_status') || {}).value || '';
+  const search = (document.getElementById('uew_search') || {}).value || '';
+
+  const params = new URLSearchParams({
+    preset: preset,
+    role: role,
+    department_id: deptId,
+    status: status,
+    search: search
+  });
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/users/export-wizard-count?${params.toString()}`, {
+      headers: getHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const unit = preset === 'teaching_allocation' ? 'Teaching Faculty' : 'Staff Members';
+      badge.textContent = `${data.total_records} ${unit}`;
+    } else {
+      badge.textContent = 'Ready to Export';
+    }
+  } catch (err) {
+    badge.textContent = 'Ready to Export';
+  }
+};
+
+window.triggerUserExportDownload = async function(format) {
+  const preset = (document.querySelector('input[name="uew_preset"]:checked') || {}).value || 'teaching_allocation';
+  const role = (document.getElementById('uew_role') || {}).value || '';
+  const deptId = (document.getElementById('uew_dept_id') || {}).value || '';
+  const status = (document.getElementById('uew_status') || {}).value || '';
+  const search = (document.getElementById('uew_search') || {}).value || '';
+
+  const params = new URLSearchParams({
+    preset: preset,
+    format: format,
+    role: role,
+    department_id: deptId,
+    status: status,
+    search: search
+  });
+
+  const downloadUrl = `${API_BASE}/auth/users/export-wizard?${params.toString()}`;
+  if (window.showToast) window.showToast(`Preparing ${preset.toUpperCase()} export...`, 'info');
+
+  try {
+    const res = await fetch(downloadUrl, { headers: getHeaders() });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server returned ${res.status}`);
+    }
+
+    const disposition = res.headers.get('Content-Disposition') || '';
+    let filename = `Staff_${preset}_${new Date().toISOString().slice(0, 10)}.${format}`;
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) filename = match[1];
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+
+    if (window.showToast) window.showToast(`✔ Downloaded ${filename}!`, 'success');
+  } catch (err) {
+    if (window.showToast) window.showToast(`Export failed: ${err.message}`, 'error');
+    else alert(`Export failed: ${err.message}`);
+  }
+};
+
+
 // ── Database Backups ────────────────────────────────────────────────────────
 window.loadBackups = async function() {
   const body = document.getElementById('backupListBody');

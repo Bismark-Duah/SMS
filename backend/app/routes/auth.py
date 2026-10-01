@@ -406,6 +406,83 @@ def impersonate_user(
         "is_impersonating": True
     }
 
+# ── Staff, Faculty & Governance Export Wizard ─────────────────────────────
+
+@router.get("/users/export-wizard-count")
+def get_user_wizard_count(
+    preset: str = "staff_directory",
+    role: Optional[str] = None,
+    department_id: Optional[int] = None,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id)
+):
+    from ..services.user_export_service import count_user_wizard_records
+
+    # Authorization: Admins, HR/Bursars, Headmasters, HODs can export staff data
+    user_roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, "roles") and current_user.roles else []
+    allowed_roles = {"admin", "super_admin", "headmaster", "headmistress", "principal", "proprietor", "bursar", "school_administrator", "hod"}
+    if not (any(r in allowed_roles for r in user_roles)):
+        raise HTTPException(status_code=403, detail="Unauthorized: Insufficient privileges to view staff governance export counts.")
+
+    target_sch_id = school_id or current_user.school_id
+    filters = {
+        "role": role,
+        "department_id": department_id,
+        "status": status,
+        "search": search
+    }
+    total = count_user_wizard_records(db, target_sch_id, preset, filters)
+    return {"preset": preset, "total_records": total}
+
+
+@router.get("/users/export-wizard")
+def export_user_wizard_endpoint(
+    preset: str = "staff_directory",
+    format: str = "xlsx",
+    role: Optional[str] = None,
+    department_id: Optional[int] = None,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id)
+):
+    from ..services.user_export_service import export_user_wizard
+
+    user_roles = [r.name.lower() for r in current_user.roles] if hasattr(current_user, "roles") and current_user.roles else []
+    allowed_roles = {"admin", "super_admin", "headmaster", "headmistress", "principal", "proprietor", "bursar", "school_administrator", "hod"}
+    if not (any(r in allowed_roles for r in user_roles)):
+        raise HTTPException(status_code=403, detail="Unauthorized: Insufficient privileges to export staff governance data.")
+
+    target_sch_id = school_id or current_user.school_id
+    filters = {
+        "role": role,
+        "department_id": department_id,
+        "status": status,
+        "search": search
+    }
+
+    file_bytes, filename, media_type = export_user_wizard(
+        db=db,
+        school_id=target_sch_id,
+        preset=preset,
+        export_format=format,
+        filters=filters
+    )
+
+    return Response(
+        content=file_bytes,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+    )
+
+
 @router.get("/users", response_model=List[schemas.User])
 def list_users(
     db: Session = Depends(get_db),

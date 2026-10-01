@@ -1366,6 +1366,568 @@ window.triggerBroadsheetExportDownload = async function(format) {
 window.exportAcademicCSV = window.openBroadsheetExportWizard;
 
 
+// ── Exeat Gate & Boarding Operations Export Wizard ─────────────────────────
+window.openExeatExportWizard = async function() {
+  const existing = document.getElementById('exeat-export-wizard-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'exeat-export-wizard-modal';
+  modal.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.8); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; padding:16px;';
+
+  modal.innerHTML = `
+    <div style="background:var(--surface-card, #1e293b); color:var(--text-main, #f8fafc); border-radius:16px; max-width:680px; width:100%; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.12); overflow:hidden;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg, #ea580c 0%, #d97706 100%); padding:16px 22px; color:#ffffff; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">🚪</span>
+          <div>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:700;">Exeat Gate & Boarding Operations Export Wizard</h3>
+            <p style="margin:2px 0 0; font-size:0.78rem; opacity:0.9;">Export gate manifests, overdue return alerts, and boarding house room registers.</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('exeat-export-wizard-modal').remove()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div style="padding:20px; overflow-y:auto; flex:1;">
+        <!-- Step 1: Filters -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#fb923c; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            1. Scoping & Gate Filters
+          </label>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Boarding House</label>
+              <select id="eew_house_id" onchange="window.updateExeatExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Boarding Houses</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Exeat Type</label>
+              <select id="eew_exeat_type" onchange="window.updateExeatExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Exeat Types</option>
+                <option value="Day">Day Exeat</option>
+                <option value="Weekend">Weekend Exeat</option>
+                <option value="Medical">Medical / Infirmary</option>
+                <option value="Emergency">Emergency</option>
+                <option value="Special">Special / Official</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Status Filter</label>
+              <select id="eew_status" onchange="window.updateExeatExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="active_out">Active Out-of-Campus Only</option>
+                <option value="all">All Records</option>
+                <option value="overdue">Overdue Return Only</option>
+                <option value="Approved">Approved (Not Yet Departed)</option>
+                <option value="Returned">Returned / In Campus</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Start Date</label>
+              <input type="date" id="eew_start_date" onchange="window.updateExeatExportWizardCount()" style="width:100%; padding:7px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;" />
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">End Date</label>
+              <input type="date" id="eew_end_date" onchange="window.updateExeatExportWizardCount()" style="width:100%; padding:7px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Presets -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#fb923c; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            2. Choose Pastoral Report Preset
+          </label>
+          <div style="display:grid; grid-template-columns:1fr; gap:10px;">
+            <!-- Preset: Active Out -->
+            <label class="eew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(234, 88, 12, 0.08); border:2px solid #ea580c; border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="eew_preset" value="active_out" checked onchange="window.onExeatPresetChange()" style="margin-top:3px; accent-color:#ea580c;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>🚪</span> Active Out-of-Campus Security Manifest
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Real-time list of all students currently outside school grounds with destination, emergency phone, and expected return time for gate checks.
+                </div>
+              </div>
+            </label>
+
+            <!-- Preset: History -->
+            <label class="eew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="eew_preset" value="history" onchange="window.onExeatPresetChange()" style="margin-top:3px; accent-color:#ea580c;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>📜</span> Historical Exeat Audit Ledger
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Comprehensive pastoral log showing all granted exeats, reasons, actual departure/arrival timestamps, approving house master, and gate officers.
+                </div>
+              </div>
+            </label>
+
+            <!-- Preset: Overdue -->
+            <label class="eew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="eew_preset" value="overdue" onchange="window.onExeatPresetChange()" style="margin-top:3px; accent-color:#ea580c;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>⚠️</span> Overdue Exeats & Truancy Alert Roster
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Urgent alert roster of students past their expected return deadline who have not verified return at the security gate, including hours overdue.
+                </div>
+              </div>
+            </label>
+
+            <!-- Preset: Dorm Allocation -->
+            <label class="eew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="eew_preset" value="dorm_allocation" onchange="window.onExeatPresetChange()" style="margin-top:3px; accent-color:#ea580c;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>🛏️</span> Boarding House & Dormitory Allocation Register
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Room-by-room bed roll call directory for all active boarders, sorted by boarding house and dormitory for inspection and roll call.
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Live Count Banner -->
+        <div style="background:rgba(234, 88, 12, 0.12); border:1px solid rgba(234, 88, 12, 0.3); border-radius:8px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+          <div style="font-size:0.82rem; color:#fdba74; font-weight:600; display:flex; align-items:center; gap:8px;">
+            <span>ℹ️</span> Matching Pastoral / Gate Records:
+          </div>
+          <div id="eew_count_badge" style="font-size:0.95rem; font-weight:800; color:#fb923c;">
+            Calculating...
+          </div>
+        </div>
+
+        <!-- Step 3: Format & Export -->
+        <div>
+          <label style="font-size:0.8rem; font-weight:700; color:#fb923c; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            3. Select Export Format
+          </label>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button type="button" onclick="window.triggerExeatExportDownload('xlsx')" class="btn" style="flex:1; min-width:180px; padding:11px 16px; background:linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color:#ffffff; font-weight:700; font-size:0.88rem; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 10px rgba(234,88,12,0.25);">
+              <span>📊</span> Download Styled Excel (.xlsx)
+            </button>
+            <button type="button" onclick="window.triggerExeatExportDownload('csv')" class="btn" style="flex:1; min-width:180px; padding:11px 16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#f8fafc; font-weight:700; font-size:0.88rem; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <span>📄</span> Download Universal CSV (.csv)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Populate Houses
+  const houseSelect = document.getElementById('eew_house_id');
+  if (houseSelect) {
+    fetch(`${API_BASE}/houses/`, { headers: getHeaders() })
+      .then(r => r.json())
+      .then(houses => {
+        if (Array.isArray(houses)) {
+          houses.forEach(h => {
+            const opt = document.createElement('option');
+            opt.value = h.id;
+            opt.textContent = h.name;
+            houseSelect.appendChild(opt);
+          });
+        }
+      }).catch(() => {});
+  }
+
+  window.updateExeatExportWizardCount();
+};
+
+window.onExeatPresetChange = function() {
+  const cards = document.querySelectorAll('.eew-preset-card');
+  cards.forEach(c => {
+    const radio = c.querySelector('input');
+    if (radio && radio.checked) {
+      c.style.borderColor = '#ea580c';
+      c.style.background = 'rgba(234, 88, 12, 0.08)';
+    } else {
+      c.style.borderColor = 'rgba(255,255,255,0.1)';
+      c.style.background = 'rgba(255,255,255,0.03)';
+    }
+  });
+  window.updateExeatExportWizardCount();
+};
+
+window.updateExeatExportWizardCount = async function() {
+  const badge = document.getElementById('eew_count_badge');
+  if (!badge) return;
+  badge.textContent = 'Calculating...';
+
+  const preset = (document.querySelector('input[name="eew_preset"]:checked') || {}).value || 'active_out';
+  const houseId = (document.getElementById('eew_house_id') || {}).value || '';
+  const exeatType = (document.getElementById('eew_exeat_type') || {}).value || '';
+  const status = (document.getElementById('eew_status') || {}).value || '';
+  const startDate = (document.getElementById('eew_start_date') || {}).value || '';
+  const endDate = (document.getElementById('eew_end_date') || {}).value || '';
+
+  const params = new URLSearchParams({
+    preset: preset,
+    house_id: houseId,
+    exeat_type: exeatType,
+    status: status,
+    start_date: startDate,
+    end_date: endDate
+  });
+
+  try {
+    const res = await fetch(`${API_BASE}/exeat/export-wizard-count?${params.toString()}`, {
+      headers: getHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const unit = preset === 'dorm_allocation' ? 'Boarders' : 'Exeat Records';
+      badge.textContent = `${data.count} ${unit}`;
+    } else {
+      badge.textContent = 'Ready to Export';
+    }
+  } catch (err) {
+    badge.textContent = 'Ready to Export';
+  }
+};
+
+window.triggerExeatExportDownload = async function(format) {
+  const preset = (document.querySelector('input[name="eew_preset"]:checked') || {}).value || 'active_out';
+  const houseId = (document.getElementById('eew_house_id') || {}).value || '';
+  const exeatType = (document.getElementById('eew_exeat_type') || {}).value || '';
+  const status = (document.getElementById('eew_status') || {}).value || '';
+  const startDate = (document.getElementById('eew_start_date') || {}).value || '';
+  const endDate = (document.getElementById('eew_end_date') || {}).value || '';
+
+  const params = new URLSearchParams({
+    preset: preset,
+    file_format: format,
+    house_id: houseId,
+    exeat_type: exeatType,
+    status: status,
+    start_date: startDate,
+    end_date: endDate
+  });
+
+  const downloadUrl = `${API_BASE}/exeat/export-wizard?${params.toString()}`;
+  if (window.showToast) window.showToast(`Preparing ${preset.toUpperCase()} export...`, 'info');
+
+  try {
+    const res = await fetch(downloadUrl, { headers: getHeaders() });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server returned ${res.status}`);
+    }
+
+    const disposition = res.headers.get('Content-Disposition') || '';
+    let filename = `Exeat_${preset}_${new Date().toISOString().slice(0, 10)}.${format}`;
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) filename = match[1];
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+
+    if (window.showToast) window.showToast(`✔ Downloaded ${filename}!`, 'success');
+  } catch (err) {
+    if (window.showToast) window.showToast(`Export failed: ${err.message}`, 'error');
+    else alert(`Export failed: ${err.message}`);
+  }
+};
+
+
+// ── Attendance & Truancy Audit Export Wizard ───────────────────────────────
+window.openAttendanceExportWizard = async function() {
+  const existing = document.getElementById('attendance-export-wizard-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'attendance-export-wizard-modal';
+  modal.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.8); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; padding:16px;';
+
+  modal.innerHTML = `
+    <div style="background:var(--surface-card, #1e293b); color:var(--text-main, #f8fafc); border-radius:16px; max-width:680px; width:100%; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.12); overflow:hidden;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding:16px 22px; color:#ffffff; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">📅</span>
+          <div>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:700;">Attendance & Truancy Audit Export Wizard</h3>
+            <p style="margin:2px 0 0; font-size:0.78rem; opacity:0.9;">Export class attendance registers, truancy warning rosters, and subject lesson cuts.</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('attendance-export-wizard-modal').remove()" style="background:none; border:none; color:#ffffff; font-size:1.5rem; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div style="padding:20px; overflow-y:auto; flex:1;">
+        <!-- Step 1: Filters -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#c084fc; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            1. Scoping & Audit Filters
+          </label>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Class Section</label>
+              <select id="aew_class_id" onchange="window.updateAttendanceExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Subject</label>
+              <select id="aew_subject_id" onchange="window.updateAttendanceExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="">All Subjects (Daily Roll Call)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Truancy Threshold</label>
+              <select id="aew_threshold" onchange="window.updateAttendanceExportWizardCount()" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;">
+                <option value="75">Below 75% (Statutory Chronic)</option>
+                <option value="80">Below 80% (Warning Tier)</option>
+                <option value="85">Below 85% (Moderate Concern)</option>
+                <option value="90">Below 90% (Strict Oversight)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Start Date</label>
+              <input type="date" id="aew_start_date" onchange="window.updateAttendanceExportWizardCount()" style="width:100%; padding:7px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;" />
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">End Date</label>
+              <input type="date" id="aew_end_date" onchange="window.updateAttendanceExportWizardCount()" style="width:100%; padding:7px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8fafc; font-size:0.84rem;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Presets -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.8rem; font-weight:700; color:#c084fc; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            2. Choose Attendance Report Preset
+          </label>
+          <div style="display:grid; grid-template-columns:1fr; gap:10px;">
+            <!-- Preset: Register Matrix -->
+            <label class="aew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(124, 58, 237, 0.08); border:2px solid #7c3aed; border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="aew_preset" value="register_matrix" checked onchange="window.onAttendancePresetChange()" style="margin-top:3px; accent-color:#7c3aed;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>📋</span> Class Attendance Register Matrix (Date Columns)
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Full monthly or termly grid listing students against daily date columns with P/A/L/E markers, total sessions present, and percentage rates.
+                </div>
+              </div>
+            </label>
+
+            <!-- Preset: Truancy Alert -->
+            <label class="aew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="aew_preset" value="truancy_alert" onchange="window.onAttendancePresetChange()" style="margin-top:3px; accent-color:#7c3aed;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>🚨</span> Chronic Absenteeism & Truancy Alert Roster
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Targeted list of all students falling below the statutory attendance threshold with days missed, parent emergency phone numbers, and residential status.
+                </div>
+              </div>
+            </label>
+
+            <!-- Preset: Subject Cuts -->
+            <label class="aew-preset-card" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; cursor:pointer; transition:all 0.2s;">
+              <input type="radio" name="aew_preset" value="subject_cuts" onchange="window.onAttendancePresetChange()" style="margin-top:3px; accent-color:#7c3aed;" />
+              <div>
+                <div style="font-weight:700; font-size:0.92rem; color:#f8fafc; display:flex; align-items:center; gap:6px;">
+                  <span>✂️</span> Subject / Lesson Period Cut Truancy Audit
+                </div>
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                  Subject-by-subject audit of period lesson cuts logged by individual subject teachers during classroom instruction.
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Live Count Banner -->
+        <div style="background:rgba(124, 58, 237, 0.12); border:1px solid rgba(124, 58, 237, 0.3); border-radius:8px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+          <div style="font-size:0.82rem; color:#d8b4fe; font-weight:600; display:flex; align-items:center; gap:8px;">
+            <span>ℹ️</span> Matching Attendance Records / Alerts:
+          </div>
+          <div id="aew_count_badge" style="font-size:0.95rem; font-weight:800; color:#c084fc;">
+            Calculating...
+          </div>
+        </div>
+
+        <!-- Step 3: Format & Export -->
+        <div>
+          <label style="font-size:0.8rem; font-weight:700; color:#c084fc; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+            3. Select Export Format
+          </label>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button type="button" onclick="window.triggerAttendanceExportDownload('xlsx')" class="btn" style="flex:1; min-width:180px; padding:11px 16px; background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color:#ffffff; font-weight:700; font-size:0.88rem; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 10px rgba(124,58,237,0.25);">
+              <span>📊</span> Download Styled Excel (.xlsx)
+            </button>
+            <button type="button" onclick="window.triggerAttendanceExportDownload('csv')" class="btn" style="flex:1; min-width:180px; padding:11px 16px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#f8fafc; font-weight:700; font-size:0.88rem; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <span>📄</span> Download Universal CSV (.csv)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Populate Classes and Subjects
+  const clsSelect = document.getElementById('aew_class_id');
+  const subSelect = document.getElementById('aew_subject_id');
+
+  if (clsSelect) {
+    fetch(`${API_BASE}/classes/`, { headers: getHeaders() })
+      .then(r => r.json())
+      .then(classes => {
+        if (Array.isArray(classes)) {
+          classes.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.name;
+            clsSelect.appendChild(opt);
+          });
+        }
+      }).catch(() => {});
+  }
+
+  if (subSelect) {
+    fetch(`${API_BASE}/subjects/`, { headers: getHeaders() })
+      .then(r => r.json())
+      .then(subjects => {
+        if (Array.isArray(subjects)) {
+          subjects.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.name;
+            subSelect.appendChild(opt);
+          });
+        }
+      }).catch(() => {});
+  }
+
+  window.updateAttendanceExportWizardCount();
+};
+
+window.onAttendancePresetChange = function() {
+  const cards = document.querySelectorAll('.aew-preset-card');
+  cards.forEach(c => {
+    const radio = c.querySelector('input');
+    if (radio && radio.checked) {
+      c.style.borderColor = '#7c3aed';
+      c.style.background = 'rgba(124, 58, 237, 0.08)';
+    } else {
+      c.style.borderColor = 'rgba(255,255,255,0.1)';
+      c.style.background = 'rgba(255,255,255,0.03)';
+    }
+  });
+  window.updateAttendanceExportWizardCount();
+};
+
+window.updateAttendanceExportWizardCount = async function() {
+  const badge = document.getElementById('aew_count_badge');
+  if (!badge) return;
+  badge.textContent = 'Calculating...';
+
+  const preset = (document.querySelector('input[name="aew_preset"]:checked') || {}).value || 'register_matrix';
+  const classId = (document.getElementById('aew_class_id') || {}).value || '';
+  const subjectId = (document.getElementById('aew_subject_id') || {}).value || '';
+  const threshold = (document.getElementById('aew_threshold') || {}).value || '75';
+  const startDate = (document.getElementById('aew_start_date') || {}).value || '';
+  const endDate = (document.getElementById('aew_end_date') || {}).value || '';
+
+  const params = new URLSearchParams({
+    preset: preset,
+    class_id: classId,
+    subject_id: subjectId,
+    threshold: threshold,
+    start_date: startDate,
+    end_date: endDate
+  });
+
+  try {
+    const res = await fetch(`${API_BASE}/attendance/export-wizard-count?${params.toString()}`, {
+      headers: getHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const unit = preset === 'truancy_alert' ? 'Truancy Alerts' : (preset === 'subject_cuts' ? 'Lesson Cuts' : 'Students in Class');
+      badge.textContent = `${data.count} ${unit}`;
+    } else {
+      badge.textContent = 'Ready to Export';
+    }
+  } catch (err) {
+    badge.textContent = 'Ready to Export';
+  }
+};
+
+window.triggerAttendanceExportDownload = async function(format) {
+  const preset = (document.querySelector('input[name="aew_preset"]:checked') || {}).value || 'register_matrix';
+  const classId = (document.getElementById('aew_class_id') || {}).value || '';
+  const subjectId = (document.getElementById('aew_subject_id') || {}).value || '';
+  const threshold = (document.getElementById('aew_threshold') || {}).value || '75';
+  const startDate = (document.getElementById('aew_start_date') || {}).value || '';
+  const endDate = (document.getElementById('aew_end_date') || {}).value || '';
+
+  const params = new URLSearchParams({
+    preset: preset,
+    file_format: format,
+    class_id: classId,
+    subject_id: subjectId,
+    threshold: threshold,
+    start_date: startDate,
+    end_date: endDate
+  });
+
+  const downloadUrl = `${API_BASE}/attendance/export-wizard?${params.toString()}`;
+  if (window.showToast) window.showToast(`Preparing ${preset.toUpperCase()} export...`, 'info');
+
+  try {
+    const res = await fetch(downloadUrl, { headers: getHeaders() });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server returned ${res.status}`);
+    }
+
+    const disposition = res.headers.get('Content-Disposition') || '';
+    let filename = `Attendance_${preset}_${new Date().toISOString().slice(0, 10)}.${format}`;
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) filename = match[1];
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+
+    if (window.showToast) window.showToast(`✔ Downloaded ${filename}!`, 'success');
+  } catch (err) {
+    if (window.showToast) window.showToast(`Export failed: ${err.message}`, 'error');
+    else alert(`Export failed: ${err.message}`);
+  }
+};
+
+
 // ── Database Backups ────────────────────────────────────────────────────────
 window.loadBackups = async function() {
   const body = document.getElementById('backupListBody');

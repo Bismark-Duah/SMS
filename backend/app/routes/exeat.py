@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
 from typing import List, Optional
@@ -9,6 +10,10 @@ from ..models import ExeatRecord, Student, House, Dormitory, User, Role, Setting
 from ..schemas import ExeatCreate, ExeatUpdate, ExeatResponse, ExeatStats, GateVerifyRequest
 from ..dependencies import get_current_user, get_school_id
 from ..services.communication_service import CommunicationService
+from ..services.exeat_export_service import (
+    build_filtered_exeat_query,
+    generate_exeat_export_dataset
+)
 
 router = APIRouter()
 
@@ -223,6 +228,98 @@ def list_exeats(
 
     exeats = query.order_by(ExeatRecord.id.desc()).all()
     return [_format_exeat_response(ex, db) for ex in exeats]
+
+
+# ── Exeat Gate & Boarding Operations Export Wizard Endpoints ────────────────
+
+@router.get("/export-wizard-count")
+def get_exeat_export_wizard_count(
+    preset: str = Query("active_out"),
+    house_id: Optional[int] = Query(None),
+    exeat_type: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Returns the live count of exeat or boarding records matching the Export Wizard filters."""
+    school_id = get_school_id(current_user)
+    filters = {
+        "house_id": house_id,
+        "exeat_type": exeat_type,
+        "status": status,
+        "start_date": start_date,
+        "end_date": end_date
+    }
+
+    if preset == "dorm_allocation":
+        st_q = db.query(Student).filter(
+            Student.is_active == True,
+            Student.residential_status.ilike("%boarding%")
+        )
+        if school_id is not None:
+            st_q = st_q.filter(Student.school_id == school_id)
+        if house_id:
+            st_q = st_q.filter(Student.house_id == house_id)
+        return {"count": st_q.count()}
+    elif preset == "overdue":
+        now = datetime.now()
+        q = build_filtered_exeat_query(db, school_id, filters)
+        q = q.filter(
+            or_(
+                ExeatRecord.status == "Overdue",
+                and_(ExeatRecord.status == "Departed", ExeatRecord.expected_return < now)
+            )
+        )
+        return {"count": q.count()}
+    elif preset == "active_out":
+        q = build_filtered_exeat_query(db, school_id, filters)
+        q = q.filter(ExeatRecord.status.in_(["Departed", "Overdue"]))
+        return {"count": q.count()}
+    else:
+        # history
+        q = build_filtered_exeat_query(db, school_id, filters)
+        return {"count": q.count()}
+
+
+@router.get("/export-wizard")
+def export_exeat_wizard(
+    preset: str = Query("active_out"),
+    file_format: str = Query("xlsx"),
+    house_id: Optional[int] = Query(None),
+    exeat_type: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Generates and streams preset-driven exeat and boarding exports in styled .xlsx or universal .csv.
+    """
+    school_id = get_school_id(current_user)
+    filters = {
+        "house_id": house_id,
+        "exeat_type": exeat_type,
+        "status": status,
+        "start_date": start_date,
+        "end_date": end_date
+    }
+
+    content, filename, mime_type = generate_exeat_export_dataset(
+        db=db,
+        school_id=school_id,
+        preset_key=preset,
+        file_format=file_format,
+        filters=filters
+    )
+
+    return Response(
+        content=content,
+        media_type=mime_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 @router.get("/stats", response_model=ExeatStats)

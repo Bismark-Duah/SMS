@@ -24,8 +24,9 @@
           <!-- Tab buttons injected by JS based on role -->
         </div>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" style="background:#0284c7; color:white; font-weight:600; font-size:0.85rem;" onclick="openAttendanceExportWizard()">📅 Attendance Export Wizard</button>
           <button class="btn" style="background:#7c3aed; color:white; font-weight:600; font-size:0.85rem;" onclick="dispatchTruancyAlerts()">Dispatch Truancy SMS</button>
-          <button class="btn" style="background:#0284c7; color:white; font-weight:600; font-size:0.85rem;" onclick="downloadAttendanceLedgerPDF()">Download PDF Ledger</button>
+          <button class="btn" style="background:#059669; color:white; font-weight:600; font-size:0.85rem;" onclick="downloadAttendanceLedgerPDF()">Download PDF Ledger</button>
           <button class="btn btn-secondary no-print" title="Print attendance register (landscape)" onclick="(function(){var s=document.createElement('style');s.id='_landscapeHint';s.textContent='@page{size:A4 landscape;}';document.head.appendChild(s);window.print();setTimeout(function(){var el=document.getElementById('_landscapeHint');if(el)el.parentNode.removeChild(el);},1000);})()">Print View</button>
         </div>
       </div>
@@ -405,6 +406,7 @@
     </main>
 
     <script src="js/guard.js"></script>
+    <script src="js/data-tools.js?v=2.6"></script>
     <script src="js/attendance.js"></script>
   </body>
 </html>

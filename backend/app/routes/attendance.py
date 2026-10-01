@@ -16,6 +16,10 @@ from ..models import (
 from ..schemas import AttendanceCreate
 from ..dependencies import get_current_user, get_school_id, get_user_assigned_scope, get_form_master_class_ids, ATTENDANCE_ADMIN_ROLES
 from ..services.communication_service import CommunicationService
+from ..services.attendance_export_service import (
+    build_filtered_attendance_query,
+    generate_attendance_export_dataset
+)
 
 router = APIRouter()
 
@@ -87,6 +91,107 @@ def _handle_absence_alert(db: Session, student_id: int, target_date: date, statu
         # Status changed away from Absent -> remove pending alert draft if present
         if existing_msg and existing_msg.status == "PENDING":
             db.delete(existing_msg)
+
+
+# ── Attendance & Truancy Audit Export Wizard Endpoints ───────────────────────
+
+@router.get("/export-wizard-count")
+def get_attendance_export_wizard_count(
+    preset: str = Query("register_matrix"),
+    class_id: Optional[int] = Query(None),
+    subject_id: Optional[int] = Query(None),
+    attendance_type: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    threshold: Optional[float] = Query(75.0),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Returns live count of attendance or truancy records matching filters."""
+    school_id = get_school_id(current_user)
+    filters = {
+        "class_id": class_id,
+        "subject_id": subject_id,
+        "attendance_type": attendance_type,
+        "start_date": start_date,
+        "end_date": end_date,
+        "threshold": threshold
+    }
+
+    if preset == "subject_cuts":
+        q = build_filtered_attendance_query(db, school_id, filters)
+        q = q.filter(
+            Attendance.attendance_type == "period",
+            Attendance.status.in_(["Absent", "Late"])
+        )
+        return {"count": q.count()}
+    elif preset == "truancy_alert":
+        # Count students with attendance below threshold
+        st_query = db.query(Student).filter(Student.is_active == True)
+        if school_id is not None:
+            st_query = st_query.filter(Student.school_id == school_id)
+        if class_id:
+            st_query = st_query.filter(Student.class_section_id == class_id)
+        students = st_query.options(joinedload(Student.attendance)).all()
+        flagged = 0
+        thresh = threshold or 75.0
+        for s in students:
+            daily_att = [a for a in s.attendance if a.attendance_type == "daily"]
+            tot = len(daily_att)
+            if tot > 0:
+                pres = sum(1 for a in daily_att if a.status in ("Present", "Late"))
+                if (pres / tot * 100.0) < thresh:
+                    flagged += 1
+        return {"count": flagged}
+    else:
+        # register_matrix: student count in selected class
+        st_q = db.query(Student).filter(Student.is_active == True)
+        if school_id is not None:
+            st_q = st_q.filter(Student.school_id == school_id)
+        if class_id:
+            st_q = st_q.filter(Student.class_section_id == class_id)
+        return {"count": st_q.count()}
+
+
+@router.get("/export-wizard")
+def export_attendance_wizard(
+    preset: str = Query("register_matrix"),
+    file_format: str = Query("xlsx"),
+    class_id: Optional[int] = Query(None),
+    subject_id: Optional[int] = Query(None),
+    attendance_type: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    threshold: Optional[float] = Query(75.0),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Generates and streams preset-driven attendance & truancy exports in styled .xlsx or universal .csv.
+    """
+    school_id = get_school_id(current_user)
+    filters = {
+        "class_id": class_id,
+        "subject_id": subject_id,
+        "attendance_type": attendance_type,
+        "start_date": start_date,
+        "end_date": end_date,
+        "threshold": threshold
+    }
+
+    content, filename, mime_type = generate_attendance_export_dataset(
+        db=db,
+        school_id=school_id,
+        preset_key=preset,
+        file_format=file_format,
+        filters=filters
+    )
+
+    return Response(
+        content=content,
+        media_type=mime_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 # ── Existing Endpoints ─────────────────────────────────────────────────────────

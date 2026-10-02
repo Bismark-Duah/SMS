@@ -458,6 +458,33 @@ window.importUserCSV = async function() {
         `;
       }
 
+      if (data.staffing_conflicts && data.staffing_conflicts.length > 0) {
+        html += `
+          <div style="margin-top:14px; padding:16px; background:linear-gradient(135deg, rgba(239,68,68,0.18) 0%, rgba(15,23,42,0.9) 100%); border:1px solid rgba(239,68,68,0.4); border-radius:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <div>
+                <strong style="color:#f87171; font-size:0.95rem; display:flex; align-items:center; gap:6px;">
+                  <span>⚠️</span> Staffing Conflicts Detected (${data.staffing_conflicts.length} Overloaded Subject${data.staffing_conflicts.length === 1 ? '' : 's'})
+                </strong>
+                <p style="margin:4px 0 0; font-size:0.83rem; color:#cbd5e1;">
+                  Assigned teachers exceed GES weekly period limits. Smart Distribution can automatically balance these classes across qualified teachers.
+                </p>
+              </div>
+              <button class="btn primary" onclick="openStaffingConflictsModal(window._lastStaffingConflicts, ${data.semester_id || 'null'})" style="background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border:none; font-weight:700; font-size:0.84rem; padding:8px 16px; border-radius:8px;">
+                ⚡ Review Conflicts &amp; Smart Distribute
+              </button>
+            </div>
+          </div>
+        `;
+        window._lastStaffingConflicts = data.staffing_conflicts;
+        // Automatically open the Staffing Conflicts review screen as per architecture specification
+        if (typeof openStaffingConflictsModal === 'function') {
+          setTimeout(() => {
+            openStaffingConflictsModal(data.staffing_conflicts, data.semester_id);
+          }, 350);
+        }
+      }
+
       if (resultEl) resultEl.innerHTML = html;
       fileInput.value = '';
     } else {

@@ -43,7 +43,7 @@
               <option value="student">Students</option>
             </select>
 
-            <button type="button" class="btn" onclick="openUserExportWizard()" style="background:#0284c7; color:white; font-size:0.83rem; padding:7px 14px; font-weight:600;">👥 Staff Export Wizard</button>
+            <button type="button" class="btn" onclick="openUserExportWizard()" style="background:#0284c7; color:white; font-size:0.83rem; padding:7px 14px; font-weight:600;">Staff Export Wizard</button>
             <a href="#userFormCard" class="btn primary" style="font-size:0.83rem; padding:7px 14px;">+ Add New User</a>
           </div>
 
@@ -163,7 +163,48 @@
           <input type="hidden" id="editUserId" />
           <p id="editUserSubtitle" style="font-size:0.85rem; color:var(--text-secondary); margin-top:0;"></p>
           
-          <div id="editRolesContainer" style="max-height:300px; overflow-y:auto; margin-bottom:16px;">
+          <!-- Permanent Competency & Governance (HR Domain) -->
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px; margin-bottom:14px;">
+            <div style="font-size:0.78rem; font-weight:700; color:var(--text); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">
+              Permanent Capability &amp; GES Governance (HR Domain)
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+              <div>
+                <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Staff ID</label>
+                <input id="editStaffId" placeholder="e.g. GES-T-8492" style="width:100%; padding:5px 8px; font-size:0.8rem; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text); box-sizing:border-box;" />
+              </div>
+              <div>
+                <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Department</label>
+                <select id="editDepartmentSelect" style="width:100%; padding:5px 8px; font-size:0.8rem; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text); box-sizing:border-box;">
+                  <option value="">(No Department)</option>
+                </select>
+              </div>
+            </div>
+            <div style="margin-bottom:8px;">
+              <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Primary Qualified Subject</label>
+              <select id="editPrimarySubjectSelect" style="width:100%; padding:5px 8px; font-size:0.8rem; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text); box-sizing:border-box;">
+                <option value="">(Select Subject Specialization)</option>
+              </select>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:center;">
+              <div>
+                <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">GES Workload Cap (Periods/Wk)</label>
+                <input id="editMaxPeriods" type="number" min="0" max="40" placeholder="24" style="width:100%; padding:5px 8px; font-size:0.8rem; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text); box-sizing:border-box;" />
+              </div>
+              <div style="padding-top:14px;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; cursor:pointer;">
+                  <input type="checkbox" id="editTeachingExempt" />
+                  <span>Teaching Duty-Exempt</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-size:0.78rem; font-weight:700; color:var(--text); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">
+            Institutional Roles &amp; Privileges
+          </div>
+
+          <div id="editRolesContainer" style="max-height:220px; overflow-y:auto; margin-bottom:16px;">
             Loading roles...
           </div>
           

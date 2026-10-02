@@ -17,10 +17,16 @@ class UserBase(BaseModel):
     phone_number: Optional[str] = None
     staff_id: Optional[str] = None
     gender: Optional[str] = None
+    department_id: Optional[int] = None
+    primary_subject_id: Optional[int] = None
+    responsibility_role: Optional[str] = "REGULAR_TEACHER"
+    max_weekly_periods: Optional[int] = 28
+    is_teaching_exempt: Optional[bool] = False
 
 class UserCreate(UserBase):
     password: str
     role_names: List[str] = ["teacher"]
+    qualified_subject_ids: Optional[List[int]] = []
 
 class User(UserBase):
     id: int
@@ -29,6 +35,9 @@ class User(UserBase):
     contact_verified: Optional[bool] = False
     roles: List[Role] = []
     department_id: Optional[int] = None
+    primary_subject_name: Optional[str] = None
+    qualified_subject_ids: List[int] = []
+    qualified_subject_names: List[str] = []
     children: List[int] = [] # List of student IDs
 
     @field_validator("children", mode="before")
@@ -163,6 +172,7 @@ class CumulativeRecordUpdate(BaseModel):
 class AcademicYearCreate(BaseModel):
     label: str
     is_current: bool = False
+    school_id: Optional[int] = None
 
 class AcademicYearUpdate(BaseModel):
     label: str
@@ -172,6 +182,7 @@ class SemesterCreate(BaseModel):
     name: str
     academic_year_id: int
     is_current: bool = False
+    school_id: Optional[int] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 

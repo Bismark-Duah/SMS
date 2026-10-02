@@ -220,9 +220,40 @@
           <button id="vBtnWorkloads" class="btn" onclick="switchView('workloads')">Staff Workload Audit</button>
         </div>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button id="btnTimetableConflicts" class="btn" onclick="openStaffingConflictsModal()" style="display:none; background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.5); color:#fca5a5; font-weight:700; font-size:0.85rem; padding:6px 14px; border-radius:6px; align-items:center; gap:6px;">
+            <span>⚠️</span> Staffing Conflicts (<span id="timetableConflictsCount">0</span>) &bull; Smart Distribute
+          </button>
           <button class="btn primary" style="font-weight:600; font-size:0.85rem; padding:6px 14px;" onclick="openAutoGenerateModal()">Auto-Generate</button>
           <button class="btn" style="font-size:0.85rem; padding:6px 12px;" onclick="openPreferencesModal()">Preferences</button>
           <button class="btn" style="font-size:0.85rem; padding:6px 12px;" onclick="openHandoverModal()">Staff Handover</button>
+          <button class="btn" style="font-size:0.85rem; padding:6px 12px; color:#f87171; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.08);" onclick="executeClearTimetable()">🗑️ Clear Timetable</button>
+        </div>
+      </div>
+
+      <!-- ── 1-Click Rollback / Undo Banner ── -->
+      <div id="timetableUndoBanner" style="display:none; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); border-radius:8px; padding:12px 16px; margin-bottom:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-size:1.4rem;">↩️</span>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <strong id="undoBannerTitle" style="color:#818cf8; font-size:0.9rem;">Previous Timetable Snapshot Available</strong>
+              <span id="undoSlotCountBadge" style="background:rgba(99,102,241,0.25); color:#c7d2fe; font-size:0.75rem; padding:2px 8px; border-radius:10px; font-weight:700;">592 slots</span>
+            </div>
+            <div id="undoBannerSubtitle" style="color:var(--text-secondary); font-size:0.78rem; margin-top:2px;">
+              Not satisfied with this draft? Restore your previous schedule or discard completely back to blank.
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn" onclick="executeUndoTimetable()" style="padding:6px 14px; font-size:0.82rem; background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.4); color:#c7d2fe; font-weight:700; cursor:pointer;">
+            ↩️ Restore Previous
+          </button>
+          <button type="button" class="btn" onclick="executeDiscardDraft()" style="padding:6px 14px; font-size:0.82rem; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#f87171; font-weight:700; cursor:pointer;">
+            🗑️ Discard &amp; Clear to Blank
+          </button>
+          <button type="button" class="btn" onclick="dismissUndoBanner()" style="padding:6px 12px; font-size:0.82rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:var(--text-secondary); cursor:pointer;">
+            Keep &amp; Dismiss
+          </button>
         </div>
       </div>
 
@@ -323,11 +354,48 @@
         <div class="card" style="padding:20px;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
             <div>
-              <h2 style="margin:0; font-size:1.15rem;">📊 Staff Teaching Workload & Duty Quota Audit</h2>
-              <p style="margin:2px 0 0 0; color:var(--text-secondary); font-size:0.85rem;">Verifies administrative exemptions (Admin, Secretary, Assistant Heads: 0 periods) and teaching workload limits.</p>
+              <h2 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+                <span>📊 Staff Competency &amp; GES Workload Governance Audit</span>
+                <span style="font-size:0.75rem; background:rgba(99,102,241,0.15); color:#818cf8; padding:2px 8px; border-radius:12px; font-weight:600;">Two-Tier Enterprise HR/Academic</span>
+              </h2>
+              <p style="margin:4px 0 0 0; color:var(--text-secondary); font-size:0.82rem;">
+                Separates permanent staff capabilities (Subject Specializations &amp; Department) from operational semester teaching loads. Audits compliance with Ghana Education Service (GES) workload caps.
+              </p>
             </div>
-            <button class="btn" style="background:#0f172a; border:1px solid #334155;" onclick="loadTeacherWorkloads()">🔄 Refresh Audit</button>
+            <div style="display:flex; gap:8px;">
+              <button class="btn" style="background:rgba(99,102,241,0.1); border:1px solid #6366f1; color:#818cf8; font-weight:600; font-size:0.82rem;" onclick="promptRolloverAssignments()">
+                📋 1-Click Rollover to Current Term
+              </button>
+              <button class="btn" style="background:#0f172a; border:1px solid #334155; font-size:0.82rem;" onclick="loadTeacherWorkloads()">
+                🔄 Refresh Audit
+              </button>
+            </div>
           </div>
+
+          <!-- Quick Summary Metrics Grid -->
+          <div id="workloadStatsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:18px;">
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px; text-align:center;">
+              <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">Total Staff</div>
+              <div id="statTotalStaff" style="font-size:1.3rem; font-weight:700; color:var(--text); margin-top:2px;">-</div>
+            </div>
+            <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.2); border-radius:8px; padding:10px 12px; text-align:center;">
+              <div style="font-size:0.72rem; color:#10b981; text-transform:uppercase; font-weight:600;">Optimal (18–24)</div>
+              <div id="statOptimalStaff" style="font-size:1.3rem; font-weight:700; color:#10b981; margin-top:2px;">-</div>
+            </div>
+            <div style="background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.2); border-radius:8px; padding:10px 12px; text-align:center;">
+              <div style="font-size:0.72rem; color:#f59e0b; text-transform:uppercase; font-weight:600;">Underloaded (&lt;18)</div>
+              <div id="statUnderStaff" style="font-size:1.3rem; font-weight:700; color:#f59e0b; margin-top:2px;">-</div>
+            </div>
+            <div style="background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 12px; text-align:center;">
+              <div style="font-size:0.72rem; color:#ef4444; text-transform:uppercase; font-weight:600;">Overallocated</div>
+              <div id="statOverStaff" style="font-size:1.3rem; font-weight:700; color:#ef4444; margin-top:2px;">-</div>
+            </div>
+            <div style="background:rgba(100,116,139,0.08); border:1px solid rgba(100,116,139,0.2); border-radius:8px; padding:10px 12px; text-align:center;">
+              <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:600;">Duty Exempt (0)</div>
+              <div id="statExemptStaff" style="font-size:1.3rem; font-weight:700; color:#94a3b8; margin-top:2px;">-</div>
+            </div>
+          </div>
+
           <div id="workloadsTableContainer" style="overflow-x:auto;">
             <div style="color:var(--text-secondary); text-align:center; padding:30px;">Loading teacher workload metrics...</div>
           </div>
@@ -337,41 +405,178 @@
     </main>
 
     <!-- ── Auto-Generate Wizard Modal ── -->
+    <!-- ── Auto-Generate Pre-Flight Control Modal ── -->
     <div id="autoGenModal" class="modal-backdrop">
-      <div class="modal-dialog">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <h2 style="margin:0; font-size:1.2rem;">⚡ Auto-Generate Timetable</h2>
+      <div class="modal-dialog" style="max-width:680px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="background:rgba(14,165,233,0.15); color:#0284c7; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; font-weight:700;">⚡</div>
+            <div>
+              <h2 style="margin:0; font-size:1.25rem; font-weight:700;">Auto-Generate Master Timetable</h2>
+              <div style="font-size:0.8rem; color:var(--text-secondary);">Autonomous constraint solver with live collision prevention & lab staggering</div>
+            </div>
+          </div>
           <button onclick="closeAutoGenerateModal()" style="background:none; border:none; color:var(--text-secondary); font-size:1.4rem; cursor:pointer;">&times;</button>
         </div>
-        <p style="color:var(--text-secondary); font-size:0.85rem; margin-top:0;">
-          The system will automatically schedule all classes, subjects, and teachers with zero collisions in &lt; 1.5 seconds.
-        </p>
 
         <form id="autoGenForm" onsubmit="runAutoGenerator(); return false;">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
-            <div>
-              <label>Target Semester / Term</label>
-              <select id="agSemesterSelect"><option value="">Current Active Term</option></select>
-            </div>
-            <div>
-              <label>Mon - Thu Periods / Day</label>
-              <input type="number" id="agPeriodsPerDay" min="6" max="10" value="8" required />
-            </div>
+          <!-- Academic Term Scope -->
+          <div style="margin-bottom:14px;">
+            <label style="font-weight:600; font-size:0.85rem; margin-bottom:6px; display:block;">Target Academic Semester / Term</label>
+            <select id="agSemesterSelect" style="width:100%; padding:9px 12px; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text); font-size:0.9rem;">
+              <option value="">Current Active Term</option>
+            </select>
           </div>
-          <div style="display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:16px;">
-            <div>
-              <label>Friday Periods / Day</label>
-              <input type="number" id="agFridayPeriods" min="5" max="8" value="6" required />
+
+          <!-- Pre-Flight Summary Card -->
+          <div style="background:rgba(15,23,42,0.55); border:1px solid rgba(56,189,248,0.25); border-radius:10px; padding:16px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
+              <div style="font-weight:700; font-size:0.88rem; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+                <span>📋 Active School Bells & Routine</span>
+                <span id="agProfileBadge" style="background:rgba(56,189,248,0.15); color:#38bdf8; padding:2px 8px; border-radius:12px; font-size:0.75rem;">SHS</span>
+              </div>
+              <button type="button" class="btn" onclick="toggleBellsDrawer()" style="font-size:0.78rem; padding:4px 10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15);">
+                <span id="agBellsToggleIcon">⚙️</span> <span id="agBellsToggleText">Edit Bells & Hours</span>
+              </button>
+            </div>
+
+            <!-- Quick Readout Grid -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; font-size:0.82rem;">
+              <div style="background:rgba(255,255,255,0.03); padding:8px 10px; border-radius:6px;">
+                <div style="color:var(--text-secondary); font-size:0.72rem; text-transform:uppercase;">Daily Start</div>
+                <div id="agSumStart" style="font-weight:700; font-size:0.95rem; margin-top:2px;">08:00 AM</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); padding:8px 10px; border-radius:6px;">
+                <div style="color:var(--text-secondary); font-size:0.72rem; text-transform:uppercase;">Period Duration</div>
+                <div id="agSumDuration" style="font-weight:700; font-size:0.95rem; margin-top:2px;">45 mins</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); padding:8px 10px; border-radius:6px;">
+                <div style="color:var(--text-secondary); font-size:0.72rem; text-transform:uppercase;">Mon-Thu Closes</div>
+                <div id="agSumCloseMonThu" style="font-weight:700; font-size:0.95rem; color:#10b981; margin-top:2px;">15:00</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); padding:8px 10px; border-radius:6px;">
+                <div style="color:var(--text-secondary); font-size:0.72rem; text-transform:uppercase;">Friday Closes</div>
+                <div id="agSumCloseFri" style="font-weight:700; font-size:0.95rem; color:#10b981; margin-top:2px;">13:30</div>
+              </div>
+            </div>
+
+            <!-- Routine Details Pill Row -->
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; font-size:0.76rem;">
+              <span id="agSumPeriodsPill" style="background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:4px; color:var(--text-secondary);">🔔 8 Mon-Thu | 6 Fri</span>
+              <span id="agSumBreaksPill" style="background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:4px; color:var(--text-secondary);">🥪 Snack (20m) &bull; 🍽️ Lunch (40m)</span>
+              <span id="agSumWorshipPill" style="background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:4px; color:var(--text-secondary);">⛪ Wed Chapel (P1)</span>
+              <span id="agSumTeacherDayPill" style="background:rgba(99,102,241,0.15); color:#818cf8; padding:3px 8px; border-radius:4px; font-weight:600;">⏱️ Campus Day: 8.0 hrs</span>
+            </div>
+
+            <!-- Inline Bells & Hours Accordion Drawer -->
+            <div id="agBellsDrawer" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed rgba(255,255,255,0.12);">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                <div>
+                  <label style="font-size:0.78rem;">Daily Start Time</label>
+                  <input type="time" id="agStartTime" value="08:00" oninput="calcPreFlightTimes()" style="width:100%; padding:6px 10px; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text);" />
+                </div>
+                <div>
+                  <label style="font-size:0.78rem;">Period Duration (Minutes)</label>
+                  <input type="number" id="agDuration" value="45" min="30" max="60" oninput="calcPreFlightTimes()" style="width:100%; padding:6px 10px; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text);" />
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                <div>
+                  <label style="font-size:0.78rem;">Mon - Thu Periods / Day</label>
+                  <input type="number" id="agPeriodsPerDay" value="8" min="6" max="10" oninput="calcPreFlightTimes()" style="width:100%; padding:6px 10px; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text);" />
+                </div>
+                <div>
+                  <label style="font-size:0.78rem;">Friday Periods / Day</label>
+                  <input type="number" id="agFridayPeriods" value="6" min="5" max="8" oninput="calcPreFlightTimes()" style="width:100%; padding:6px 10px; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text);" />
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                <div>
+                  <label style="font-size:0.78rem;">Mid-Week Worship / Chapel Block</label>
+                  <select id="agWorshipDay" onchange="calcPreFlightTimes()" style="width:100%; padding:6px 10px; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text);">
+                    <option value="wed_p1">Wednesday Chapel (Period 1)</option>
+                    <option value="fri_pm">Friday Jummah (Afternoon)</option>
+                    <option value="none">No Mid-Week Worship Block</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:0.78rem;">Teacher Campus Hours Target</label>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <button type="button" class="btn" onclick="stepWorkingHours(-0.5)" style="padding:4px 10px; font-weight:700;">-</button>
+                    <span id="agWorkingHoursVal" style="font-weight:700; font-size:0.85rem; min-width:60px; text-align:center;">8.0 hrs</span>
+                    <button type="button" class="btn" onclick="stepWorkingHours(0.5)" style="padding:4px 10px; font-weight:700;">+</button>
+                    <span style="font-size:0.72rem; color:var(--text-secondary);">(Ghana GES standard)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                  <label style="font-size:0.78rem;">Snack / Breakfast Duration</label>
+                  <select id="agSnackMins" onchange="calcPreFlightTimes()" style="width:100%; padding:6px 10px; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text);">
+                    <option value="20" selected>20 minutes (Standard)</option>
+                    <option value="25">25 minutes</option>
+                    <option value="30">30 minutes</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:0.78rem;">Lunch / Mid-day Recess</label>
+                  <select id="agLunchMins" onchange="calcPreFlightTimes()" style="width:100%; padding:6px 10px; border-radius:6px; border:var(--glass-border); background:var(--input-bg); color:var(--text);">
+                    <option value="35">35 minutes</option>
+                    <option value="40" selected>40 minutes (Standard)</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">60 minutes (1 Hour)</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div id="agProgressCard" style="display:none; padding:16px; background:rgba(16,185,129,0.1); border:1px solid #10b981; border-radius:8px; margin-bottom:16px; text-align:center;">
+          <!-- Specialized Laboratories & Studios (Dynamic from school programs) -->
+          <div id="agFacilitiesSection" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <div>
+                <span style="font-weight:700; font-size:0.85rem; color:var(--text);">🏫 Campus Laboratories &amp; Workshops</span>
+                <span style="font-size:0.73rem; color:var(--text-secondary); margin-left:6px;">(Program-detected capacity)</span>
+              </div>
+              <span id="agFacCountBadge" style="font-size:0.72rem; background:rgba(99,102,241,0.15); color:#818cf8; padding:2px 8px; border-radius:4px; font-weight:600;">Active Programs</span>
+            </div>
+            <p style="font-size:0.76rem; color:var(--text-secondary); margin:0 0 10px 0;">
+              Specify available room counts. If <strong>0</strong>, practicals stay in standard homeroom. If <strong>1</strong>, classes share it without clashes. If <strong>2+</strong>, multiple classes can use labs simultaneously.
+            </p>
+            <div id="agFacilitiesContainer" style="display:flex; flex-direction:column; gap:8px;">
+              <div style="color:var(--text-secondary); font-size:0.78rem;">Loading campus facilities...</div>
+            </div>
+          </div>
+
+          <!-- Pedagogical Solver Options -->
+          <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; margin-bottom:14px;">
+            <div style="font-weight:600; font-size:0.78rem; margin-bottom:6px; color:var(--text-secondary); text-transform:uppercase;">SOLVER QUALITY CONSTRAINTS</div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; margin-bottom:6px; cursor:pointer;">
+              <input type="checkbox" id="agOptStaggerLabs" checked />
+              <span>🔬 Auto-stagger Science & Workshop Labs across days (prevent room contention)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; margin-bottom:6px; cursor:pointer;">
+              <input type="checkbox" id="agOptMorningCore" checked />
+              <span>🧠 Prioritize Mathematics & Sciences in Morning (Periods 1–4)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; cursor:pointer;">
+              <input type="checkbox" id="agOptWorkloadCaps" checked />
+              <span>🛡️ Enforce Teacher & HOD Workload Caps (protect duty-exempt staff)</span>
+            </label>
+          </div>
+
+          <!-- Progress / Status Card -->
+          <div id="agProgressCard" style="display:none; padding:16px; background:rgba(16,185,129,0.1); border:1px solid #10b981; border-radius:8px; margin-bottom:14px; text-align:center;">
             <div id="agProgressText" style="font-weight:700; color:#10b981; font-size:0.95rem;">⚡ Solving constraints...</div>
           </div>
 
-          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <!-- Action Buttons -->
+          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
             <button type="button" class="btn" onclick="closeAutoGenerateModal()">Cancel</button>
-            <button type="submit" id="agSubmitBtn" class="btn primary" style="font-weight:700;">🚀 Execute Generator</button>
+            <button type="submit" id="agSubmitBtn" class="btn primary" style="font-weight:700; padding:8px 18px;">⚡ Run Conflict-Free Solver</button>
           </div>
         </form>
       </div>
@@ -388,21 +593,35 @@
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:12px;">
             <div>
               <label>Daily Start Time</label>
-              <input type="time" id="prefStartTime" value="08:00" required />
+              <input type="time" id="prefStartTime" value="08:00" oninput="calcPrefClosingTime()" required />
             </div>
             <div>
               <label>Period Duration (Mins)</label>
-              <input type="number" id="prefDuration" min="30" max="60" value="45" required />
+              <input type="number" id="prefDuration" min="30" max="60" value="45" oninput="calcPrefClosingTime()" required />
             </div>
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
             <div>
               <label>Mon - Thu Periods</label>
-              <input type="number" id="prefMonThu" min="6" max="10" value="8" required />
+              <input type="number" id="prefMonThu" min="6" max="10" value="8" oninput="calcPrefClosingTime()" required />
             </div>
             <div>
               <label>Friday Periods</label>
-              <input type="number" id="prefFri" min="5" max="8" value="6" required />
+              <input type="number" id="prefFri" min="5" max="8" value="6" oninput="calcPrefClosingTime()" required />
+            </div>
+          </div>
+
+          <!-- Live Calculated Dismissal Readout -->
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.82rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div>
+                <span style="color:var(--text-secondary);">Calculated Dismissal:</span>
+                <strong id="prefMonThuDismissal" style="color:#10b981; margin-left:4px;">15:00</strong> (Mon–Thu) &bull;
+                <strong id="prefFriDismissal" style="color:#10b981; margin-left:4px;">13:30</strong> (Fri)
+              </div>
+              <div style="color:var(--text-secondary);">
+                Campus Day: <strong id="prefHoursPill" style="color:#818cf8;">8.0 hrs</strong>
+              </div>
             </div>
           </div>
 
@@ -473,7 +692,48 @@
       </div>
     </div>
 
+    <!-- Staffing Conflicts & Smart Distribution Review Modal -->
+    <div id="staffingConflictsModal" class="modal">
+      <div class="modal-dialog wide" style="max-height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden; max-width:960px;">
+        <!-- Modal Header -->
+        <div class="modal-header" style="flex-shrink:0; padding:18px 24px; background:linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(15,23,42,0.9) 100%); border-bottom:1px solid rgba(239,68,68,0.25);">
+          <div>
+            <h3 class="modal-title" style="color:#f87171; display:flex; align-items:center; gap:8px;">
+              <span>⚠️</span> Pre-Flight Check: Staffing Conflicts Detected
+            </h3>
+            <p style="margin:4px 0 0; font-size:0.82rem; color:#cbd5e1;">
+              The timetable solver detected teacher period overloads that would cause unplaced classes or collisions. Please review and <strong>Smart Distribute</strong> below before generating.
+            </p>
+          </div>
+          <button type="button" class="btn sm" onclick="closeStaffingConflictsModal()" style="padding:4px 10px; margin-left:16px;">&times; Close</button>
+        </div>
+
+        <!-- Scrollable Body -->
+        <div style="flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:20px;">
+          <div id="conflictsSummaryBanner" style="padding:12px 16px; border-radius:8px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); font-size:0.85rem; color:#fca5a5; line-height:1.5;">
+            Loading conflict audit details...
+          </div>
+
+          <div id="conflictsListContainer" style="display:flex; flex-direction:column; gap:16px;"></div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer" style="padding:16px 24px; background:var(--card-bg, #1e293b); border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div style="font-size:0.8rem; color:#94a3b8;">
+            * Approving will commit balanced allocations and immediately generate the conflict-free timetable.
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button type="button" class="btn" onclick="closeStaffingConflictsModal()">Cancel</button>
+            <button type="button" id="btnApproveAllProposed" class="btn primary" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:none; font-weight:700; display:none;" onclick="commitApprovedDistributions()">
+              ✔ Approve &amp; Save All Proposed Distributions
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="js/guard.js"></script>
+    <script src="js/staff-conflicts.js?v=1.0"></script>
     <script src="js/timetable.js"></script>
   </body>
 </html>

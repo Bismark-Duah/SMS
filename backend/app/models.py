@@ -49,6 +49,14 @@ program_subjects = Table(
     Column("subject_id", Integer, ForeignKey("subjects.id", ondelete="CASCADE"), primary_key=True),
 )
 
+# Many-to-many relationship table for Teachers and Qualified Subjects (HR competency)
+teacher_qualified_subjects = Table(
+    "teacher_qualified_subjects",
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("subject_id", Integer, ForeignKey("subjects.id", ondelete="CASCADE"), primary_key=True),
+)
+
 # Many-to-many relationship table for Departments and Subjects
 department_subjects = Table(
     "department_subjects",
@@ -137,6 +145,7 @@ class User(Base):
     max_weekly_periods = Column(Integer, default=28, nullable=True)
     is_teaching_exempt = Column(Boolean, default=False)
     duty_exempt_periods = Column(Text, nullable=True)  # JSON string e.g. '[{"day": 2, "period": 1}]'
+    primary_subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True, index=True)
     recovery_question = Column(String(255), nullable=True)
     recovery_answer_hash = Column(String(255), nullable=True)
     recovery_pin_hash = Column(String(255), nullable=True)
@@ -147,6 +156,20 @@ class User(Base):
     teacher_assignments = relationship("TeacherAssignment", back_populates="teacher")
     children = relationship("Student", back_populates="parent")
     department = relationship("Department", foreign_keys=[department_id])
+    primary_subject = relationship("Subject", foreign_keys=[primary_subject_id])
+    qualified_subjects = relationship("Subject", secondary=teacher_qualified_subjects, backref="qualified_teachers")
+
+    @property
+    def primary_subject_name(self):
+        return self.primary_subject.name if self.primary_subject else None
+
+    @property
+    def qualified_subject_ids(self):
+        return [s.id for s in self.qualified_subjects] if self.qualified_subjects else []
+
+    @property
+    def qualified_subject_names(self):
+        return [s.name for s in self.qualified_subjects] if self.qualified_subjects else []
 
 class Role(Base):
     __tablename__ = "roles"
@@ -160,9 +183,11 @@ class AcademicYear(Base):
     __tablename__ = "academic_years"
 
     id = Column(Integer, primary_key=True, index=True)
-    label = Column(String, unique=True, index=True, nullable=False)
+    label = Column(String, index=True, nullable=False)
     is_current = Column(Boolean, default=False)
-    
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=None)
+
+    school = relationship("School")
     semesters = relationship("Semester", back_populates="academic_year")
 
 class Semester(Base):
@@ -176,7 +201,9 @@ class Semester(Base):
     locked_at = Column(DateTime, nullable=True)
     start_date = Column(DateTime, nullable=True)
     end_date = Column(DateTime, nullable=True)
-    
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, default=None)
+
+    school = relationship("School")
     academic_year = relationship("AcademicYear", back_populates="semesters")
     scores = relationship("Score", back_populates="semester")
 
@@ -604,6 +631,7 @@ class TimetableConfig(Base):
     friday_periods = Column(Integer, default=6)
     days_of_week = Column(String(50), default="0,1,2,3,4")  # Mon to Fri
     break_schedule = Column(Text, nullable=True)  # JSON array of breaks/worship slots
+    facility_counts = Column(Text, nullable=True)  # JSON dictionary of facility counts e.g. {"physics_lab": 1, ...}
     is_published = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -644,6 +672,19 @@ class TimetableSyllabusLog(Base):
     class_section = relationship("ClassSection")
     subject = relationship("Subject")
     teacher = relationship("User")
+
+class TimetableSnapshot(Base):
+    __tablename__ = "timetable_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    semester_id = Column(Integer, ForeignKey("semesters.id", ondelete="CASCADE"), nullable=True)
+    snapshot_data = Column(Text, nullable=False)  # JSON-serialized list of previous timetable slots
+    slot_count = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    school = relationship("School")
+    semester = relationship("Semester")
 
 # ── Discipline Records ────────────────────────────────────────────────────────
 

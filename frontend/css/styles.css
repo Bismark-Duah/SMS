@@ -5317,4 +5317,302 @@ table th[scope="row"] {
   border-left: 4px solid var(--error, #ef4444);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   ENTERPRISE UI SYSTEM: SEGMENTED TABS, CARDS, MODALS & RESPONSIVENESS
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Segmented Control / Tab Pill Bar */
+.segmented-control-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.segmented-control-bar::-webkit-scrollbar {
+  display: none;
+}
+.segmented-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.segmented-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+.segmented-btn.active {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.segmented-btn .pill-count {
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+.segmented-btn.active .pill-count {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+/* Enterprise Workload Profile Banner */
+.workload-profile-card {
+  padding: 14px 18px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.workload-stat-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.workload-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+}
+.workload-stat-chip.primary-subj {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.08);
+  color: #34d399;
+}
+.workload-stat-chip.dept {
+  border-color: rgba(14, 165, 233, 0.3);
+  background: rgba(14, 165, 233, 0.08);
+  color: #38bdf8;
+}
+.workload-stat-chip.metric {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(99, 102, 241, 0.08);
+  color: #818cf8;
+}
+.workload-stat-chip.leadership {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.1);
+  color: #a5b4fc;
+}
+.workload-stat-chip.exempt {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(148, 163, 184, 0.08);
+  color: #cbd5e1;
+}
+
+/* Tier Badges */
+.badge.exempt {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.badge.leadership {
+  background: rgba(99, 102, 241, 0.18);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.badge.faculty {
+  background: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* Institutional Notice Banner */
+.policy-notice-box {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(180, 83, 9, 0.08);
+  border: 1px solid rgba(180, 83, 9, 0.3);
+  color: #fde68a;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.policy-notice-box svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Modal Dialog Standardization */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+.modal.active, .modal[style*="display: flex"] {
+  display: flex !important;
+}
+.modal-dialog {
+  background: var(--card-bg, #111827);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  position: relative;
+  box-sizing: border-box;
+}
+.modal-dialog.wide {
+  max-width: 820px;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+}
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 14px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RESPONSIVE MEDIA QUERIES (DESKTOP, TABLET, MOBILE)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Tablet (max-width: 1024px) */
+@media screen and (max-width: 1024px) {
+  .assignment-form-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .modal-dialog {
+    padding: 20px;
+  }
+}
+
+/* Mobile & Small Tablets (max-width: 768px) */
+@media screen and (max-width: 768px) {
+  .assignment-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .chip-grid-classes {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+  }
+  .chip-grid-subjects {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+  }
+  .workload-profile-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .modal-dialog {
+    width: 96% !important;
+    padding: 16px !important;
+    max-height: 92vh !important;
+  }
+  .modal-footer {
+    flex-direction: column-reverse !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .modal-footer button,
+  .modal-footer .btn {
+    width: 100% !important;
+    justify-content: center !important;
+    min-width: 100% !important;
+  }
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .segmented-control-bar {
+    width: 100%;
+  }
+}
+
+/* Small Mobile Screens (max-width: 480px) */
+@media screen and (max-width: 480px) {
+  .chip-grid-classes,
+  .chip-grid-subjects {
+    grid-template-columns: 1fr !important;
+  }
+  .assign-chip-label {
+    min-height: 44px;
+    padding: 10px 12px !important;
+  }
+  .segmented-btn {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+}
+
+
 

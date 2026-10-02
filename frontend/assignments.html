@@ -16,6 +16,11 @@
           <h1 style="margin:0;font-size:1.2rem;">Teacher Assignments & Workload Register</h1>
           <p style="margin:0;opacity:.7;font-size:.85rem;">Manage teacher subject allocations, class sections, and leadership roles.</p>
         </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button id="btnOpenStaffingConflicts" class="btn" onclick="openStaffingConflictsModal()" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#f87171; font-weight:700; font-size:0.85rem; padding:6px 14px; border-radius:8px; align-items:center; gap:6px;">
+            <span>⚠️</span> Staffing Conflicts (<span id="conflictsHeaderCount">0</span>)
+          </button>
+        </div>
       </header>
 
       <!-- Super Admin Multi-Tenant Filter Bar -->
@@ -39,9 +44,9 @@
             <span style="font-size: 0.8rem; opacity: 0.7;">Select a staff member and assign teaching subjects or leadership roles</span>
           </div>
 
-          <div id="teacherWorkloadBadge" style="display:none; margin-bottom:14px; padding:10px 14px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); border-radius:8px; font-size:0.88rem; color:var(--text-primary); transition:all 0.3s ease;"></div>
+          <div id="teacherWorkloadBadge" class="workload-profile-card" style="display:none; transition:all 0.3s ease;"></div>
 
-          <form id="assignmentForm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+          <form id="assignmentForm" class="assignment-form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
             <label>Staff Member / Teacher
               <select id="teacherSelect" required onchange="handleTeacherSelectChange(this.value)"><option value="">Loading staff...</option></select>
             </label>
@@ -67,7 +72,7 @@
                   <button type="button" id="clearAllClassesBtn" class="btn sm" style="padding: 2px 8px; font-size: 0.78rem;">Clear All</button>
                 </div>
               </div>
-              <div id="classesCheckboxList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; max-height: 180px; overflow-y: auto; padding: 4px;">
+              <div id="classesCheckboxList" class="chip-grid-classes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; max-height: 200px; overflow-y: auto; padding: 4px;">
                 <span style="opacity: 0.6; font-style: italic; font-size: 0.85rem;">Loading class sections...</span>
               </div>
             </div>
@@ -88,7 +93,7 @@
                   </div>
                 </div>
                 
-                <div id="subjectsCheckboxList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; max-height: 220px; overflow-y: auto; padding: 4px;">
+                <div id="subjectsCheckboxList" class="chip-grid-subjects" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; max-height: 240px; overflow-y: auto; padding: 4px;">
                   <span style="opacity: 0.6; font-style: italic; font-size: 0.85rem;">Select a Class Section above to load subjects...</span>
                 </div>
               </div>
@@ -140,20 +145,30 @@
 
         <!-- Bottom Full-Width Tables Section -->
         <section class="card" style="width: 100%;">
-          <!-- Filter Navigation Pills & Actions -->
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button id="filterRoleAll" class="btn primary sm" onclick="setWorkloadRoleFilter('all')" style="font-size: 0.85rem; padding: 4px 12px;">All Staff</button>
-              <button id="filterRoleHod" class="btn sm" onclick="setWorkloadRoleFilter('hod')" style="font-size: 0.85rem; padding: 4px 12px;">Heads of Dept (HODs)</button>
-              <button id="filterRoleFormMaster" class="btn sm" onclick="setWorkloadRoleFilter('form_master')" style="font-size: 0.85rem; padding: 4px 12px;">Form Masters / Tutors</button>
-              <button id="filterRoleHouseMaster" class="btn sm" onclick="setWorkloadRoleFilter('house_master')" style="font-size: 0.85rem; padding: 4px 12px;">House Supervisors</button>
-              <button id="filterRoleUnassigned" class="btn sm" onclick="setWorkloadRoleFilter('unassigned')" style="font-size: 0.85rem; padding: 4px 12px;">Unassigned Staff</button>
+          <!-- Segmented Filter Control & Actions -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <div class="segmented-control-bar" id="assignmentSegmentedControl">
+              <button id="filterRoleAll" class="segmented-btn active" onclick="setWorkloadRoleFilter('all')">
+                All Staff <span class="pill-count" id="countAllStaff">0</span>
+              </button>
+              <button id="filterRoleFaculty" class="segmented-btn" onclick="setWorkloadRoleFilter('faculty')">
+                Teaching Faculty <span class="pill-count" id="countFaculty">0</span>
+              </button>
+              <button id="filterRoleLeadership" class="segmented-btn" onclick="setWorkloadRoleFilter('leadership')">
+                Academic Leadership <span class="pill-count" id="countLeadership">0</span>
+              </button>
+              <button id="filterRoleExecutive" class="segmented-btn" onclick="setWorkloadRoleFilter('executive')">
+                Executive &amp; Admin (Exempt) <span class="pill-count" id="countExecutive">0</span>
+              </button>
+              <button id="filterRoleUnassigned" class="segmented-btn" onclick="setWorkloadRoleFilter('unassigned')">
+                Unassigned <span class="pill-count" id="countUnassigned">0</span>
+              </button>
             </div>
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <button type="button" id="btnOpenPrimaryFastAssign" class="btn sm" onclick="openPrimaryFastAssignModal()" style="font-size:0.82rem; padding:4px 12px; background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; font-weight:600; display:none;">1-Click Fast Assign</button>
-              <button type="button" class="btn sm" onclick="openCopyWorkloadModal()" style="font-size:0.82rem; padding:4px 10px;">Copy to Next Term</button>
-              <button type="button" class="btn sm btn-secondary no-print" onclick="printStaffWorkloadRegister()" style="font-size:0.82rem; padding:4px 10px;">Print Roster</button>
-              <button id="tabPrivilegesBtn" class="btn sm" onclick="toggleAssignmentTab()" style="font-size: 0.82rem; padding: 4px 10px; opacity: 0.85;">View Raw Privileges</button>
+              <button type="button" id="btnOpenPrimaryFastAssign" class="btn sm" onclick="openPrimaryFastAssignModal()" style="font-size:0.82rem; padding:6px 12px; background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; font-weight:600; display:none; border-radius:6px;">1-Click Fast Assign</button>
+              <button type="button" class="btn sm" onclick="openCopyWorkloadModal()" style="font-size:0.82rem; padding:6px 12px; border-radius:6px;">Copy to Next Term</button>
+              <button type="button" class="btn sm btn-secondary no-print" onclick="printStaffWorkloadRegister()" style="font-size:0.82rem; padding:6px 12px; border-radius:6px;">Print Roster</button>
+              <button id="tabPrivilegesBtn" class="btn sm" onclick="toggleAssignmentTab()" style="font-size:0.82rem; padding:6px 12px; opacity:0.85; border-radius:6px;">Raw Privileges</button>
             </div>
           </div>
           
@@ -175,18 +190,16 @@
     </main>
 
     <!-- Consolidated Edit Teacher Workload Modal -->
-    <div id="editAssignmentModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center; padding:16px;">
-      <div class="modal-content" style="background:#1e293b; width:100%; max-width:700px; max-height:88vh; display:flex; flex-direction:column; border-radius:14px; border:1px solid rgba(255,255,255,0.12); box-shadow:0 20px 60px rgba(0,0,0,0.7); overflow:hidden;">
+    <div id="editAssignmentModal" class="modal">
+      <div class="modal-dialog wide" style="max-height:88vh; display:flex; flex-direction:column; padding:0; overflow:hidden;">
 
         <!-- Modal Header (sticky) -->
-        <div style="flex-shrink:0; padding:20px 24px 16px 24px; border-bottom:1px solid rgba(255,255,255,0.1); background:#1e293b;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <div>
-              <h3 style="margin:0 0 4px 0; font-size:1.1rem; color:#f8fafc; font-weight:600;" id="editModalTeacherName">Edit Teacher Workload</h3>
-              <span style="font-size:0.8rem; color:#94a3b8;" id="editModalTeacherSub">Manage all subject &amp; class section allocations for staff member</span>
-            </div>
-            <button class="btn sm" onclick="closeEditAssignmentModal()" style="padding:4px 10px; flex-shrink:0; margin-left:16px;">✕ Close</button>
+        <div class="modal-header" style="flex-shrink:0; padding:18px 24px; margin-bottom:0; background:var(--card-bg, #1e293b);">
+          <div>
+            <h3 class="modal-title" id="editModalTeacherName">Edit Teacher Workload</h3>
+            <span style="font-size:0.8rem; color:var(--text-secondary);" id="editModalTeacherSub">Manage all subject &amp; class section allocations for staff member</span>
           </div>
+          <button type="button" class="btn sm" onclick="closeEditAssignmentModal()" style="padding:4px 10px; flex-shrink:0; margin-left:16px;">&times; Close</button>
         </div>
 
         <input type="hidden" id="editModalTeacherId" />
@@ -196,7 +209,7 @@
 
           <!-- Section 1: Active Workload Table -->
           <div style="margin-bottom:24px;">
-            <h4 style="margin:0 0 10px 0; font-size:0.9rem; font-weight:600; color:#60a5fa; text-transform:uppercase; letter-spacing:0.05em;">Current Teaching Allocations</h4>
+            <h4 style="margin:0 0 10px 0; font-size:0.88rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:0.04em;">Current Teaching Allocations</h4>
             <div id="modalActiveWorkloadContainer" style="background:rgba(15,23,42,0.5); border-radius:8px; border:1px solid rgba(255,255,255,0.08); overflow:hidden;">
               Loading allocations...
             </div>
@@ -206,29 +219,29 @@
 
           <!-- Section 2: Add New Allocations -->
           <div>
-            <h4 style="margin:0 0 14px 0; font-size:0.9rem; font-weight:600; color:#f8fafc; text-transform:uppercase; letter-spacing:0.05em;">Add New Teaching Allocations</h4>
+            <h4 style="margin:0 0 14px 0; font-size:0.88rem; font-weight:700; color:#f8fafc; text-transform:uppercase; letter-spacing:0.04em;">Add New Teaching Allocations</h4>
             <form id="editModalAddForm" onsubmit="submitAddWorkloadInModal(event)" style="display:flex; flex-direction:column; gap:16px;">
 
               <div style="display:flex; flex-direction:column; gap:6px;">
-                <label style="font-size:0.82rem; font-weight:500; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em;">Academic Term / Semester</label>
-                <select id="modalSemesterSelect" required style="width:100%; padding:10px 12px; border-radius:8px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); color:#f8fafc; font-size:0.88rem; appearance:auto; -webkit-appearance:auto; cursor:pointer; outline:none;"></select>
+                <label style="font-size:0.82rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Academic Term / Semester</label>
+                <select id="modalSemesterSelect" required style="width:100%; padding:10px 12px; border-radius:8px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); color:#f8fafc; font-size:0.88rem; outline:none;"></select>
               </div>
 
               <div style="display:flex; flex-direction:column; gap:6px;">
-                <label style="font-size:0.82rem; font-weight:500; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em;">Class Section(s)</label>
+                <label style="font-size:0.82rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Class Section(s)</label>
                 <div id="modalClassesCheckboxList" style="max-height:170px; overflow-y:auto; padding:10px 12px; border-radius:8px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); color:#f8fafc;"></div>
               </div>
 
               <div style="display:flex; flex-direction:column; gap:6px;">
-                <label style="font-size:0.82rem; font-weight:500; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em;">Teaching Subject(s)</label>
+                <label style="font-size:0.82rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Teaching Subject(s)</label>
                 <div id="modalSubjectsCheckboxList" style="max-height:190px; overflow-y:auto; padding:10px 12px; border-radius:8px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); color:#f8fafc;">
                   <span style="color:#64748b; font-style:italic; font-size:0.82rem;">Select class section(s) above to load subjects...</span>
                 </div>
               </div>
 
-              <div style="display:flex; justify-content:flex-end; gap:10px; padding-top:4px;">
+              <div class="modal-footer">
                 <button type="button" class="btn" onclick="closeEditAssignmentModal()">Cancel</button>
-                <button type="submit" class="btn primary" style="min-width:170px;">Add Selected Allocations</button>
+                <button type="submit" class="btn primary">Add Selected Allocations</button>
               </div>
 
             </form>
@@ -239,14 +252,14 @@
     </div>
 
     <!-- Copy Workload to Next Term Modal -->
-    <div id="copyWorkloadModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
-      <div class="modal-content" style="background:var(--card-bg, #1e293b); width:90%; max-width:480px; border-radius:12px; padding:24px; border:1px solid var(--border-color); box-shadow:0 10px 40px rgba(0,0,0,0.5);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
-          <h3 style="margin:0; font-size:1.1rem; color:var(--text-primary);">Copy Workload to Next Term</h3>
-          <button class="btn sm" onclick="closeCopyWorkloadModal()" style="padding:2px 8px;">✕</button>
+    <div id="copyWorkloadModal" class="modal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">Copy Workload to Next Term</h3>
+          <button type="button" class="btn sm" onclick="closeCopyWorkloadModal()" style="padding:2px 8px;">&times;</button>
         </div>
         <form id="copyWorkloadForm" onsubmit="submitCopyWorkload(event)" style="display:flex; flex-direction:column; gap:14px;">
-          <p style="font-size:0.85rem; opacity:0.85; margin:0;">Select the source term and the target term to automatically copy all teacher subject &amp; class allocations forward.</p>
+          <p style="font-size:0.85rem; opacity:0.85; margin:0; line-height:1.45;">Select the source term and the target term to automatically copy all teacher subject &amp; class allocations forward.</p>
 
           <label style="font-size:0.85rem; display:flex; flex-direction:column; gap:4px;">Source Term (Copy From)
             <select id="copyFromSemesterSelect" required style="width:100%; padding:8px; border-radius:6px; background:var(--bg-dark); border:1px solid var(--border-color); color:var(--text-primary);"></select>
@@ -256,23 +269,23 @@
             <select id="copyToSemesterSelect" required style="width:100%; padding:8px; border-radius:6px; background:var(--bg-dark); border:1px solid var(--border-color); color:var(--text-primary);"></select>
           </label>
 
-          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
+          <div class="modal-footer">
             <button type="button" class="btn" onclick="closeCopyWorkloadModal()">Cancel</button>
-            <button type="submit" class="btn primary" style="min-width:140px;">Execute Copy</button>
+            <button type="submit" class="btn primary">Execute Copy</button>
           </div>
         </form>
       </div>
     </div>
 
     <!-- 1-Click Primary Class Teacher Fast Allocation Modal -->
-    <div id="primaryFastAssignModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
-      <div class="modal-content" style="background:var(--card-bg, #1e293b); width:92%; max-width:540px; border-radius:14px; padding:24px; border:1px solid rgba(16,185,129,0.3); box-shadow:0 12px 40px rgba(0,0,0,0.5);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
+    <div id="primaryFastAssignModal" class="modal">
+      <div class="modal-dialog">
+        <div class="modal-header">
           <div>
-            <h3 style="margin:0; font-size:1.1rem; color:#34d399;">1-Click Primary Class Teacher Allocation</h3>
+            <h3 class="modal-title" style="color:#34d399;">1-Click Primary Class Teacher Allocation</h3>
             <p style="margin:2px 0 0; font-size:0.78rem; opacity:0.75;">Assign a teacher as Class Teacher and bind them to all class subjects in one click.</p>
           </div>
-          <button class="btn sm" onclick="closePrimaryFastAssignModal()" style="padding:2px 8px;">✕</button>
+          <button type="button" class="btn sm" onclick="closePrimaryFastAssignModal()" style="padding:2px 8px;">&times;</button>
         </div>
 
         <form id="primaryFastAssignForm" onsubmit="submitPrimaryFastAssign(event)" style="display:flex; flex-direction:column; gap:14px;">
@@ -288,15 +301,15 @@
             <select id="fastSemesterSelect" required style="width:100%; padding:8px; border-radius:6px; background:var(--bg-dark); border:1px solid var(--border-color); color:var(--text-primary);"></select>
           </label>
 
-          <div id="fastAssignNotice" style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); padding:10px 12px; border-radius:8px; font-size:0.8rem; color:#a7f3d0;">
-            <strong>How this works:</strong> This teacher will be designated as the official <strong>Class Teacher</strong> and automatically assigned to teach all active subjects (English, Maths, Science, OWOP, RME, Computing, etc.) for this stream.
+          <div id="fastAssignNotice" style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); padding:10px 12px; border-radius:8px; font-size:0.8rem; color:#a7f3d0; line-height:1.45;">
+            <strong>GES Basic School Policy:</strong> This teacher will be designated as the official <strong>Class Teacher</strong> and automatically assigned to teach all active subjects (English, Maths, Science, OWOP, RME, Computing, etc.) for this stream.
           </div>
 
           <div id="fastAssignMsg" style="font-size:0.85rem;"></div>
 
-          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+          <div class="modal-footer">
             <button type="button" class="btn" onclick="closePrimaryFastAssignModal()">Cancel</button>
-            <button type="submit" id="btnRunFastAssign" class="btn primary" style="background:linear-gradient(135deg, #10b981, #059669); border:none; font-weight:700; min-width:180px;">
+            <button type="submit" id="btnRunFastAssign" class="btn primary" style="background:linear-gradient(135deg, #10b981, #059669); border:none; font-weight:700;">
               Assign to All Subjects
             </button>
           </div>
@@ -304,7 +317,48 @@
       </div>
     </div>
 
-    <script src="js/guard.js?v=10.0"></script>
-    <script src="js/assignments.js?v=10.0"></script>
+    <!-- Staffing Conflicts & Smart Distribution Review Modal -->
+    <div id="staffingConflictsModal" class="modal">
+      <div class="modal-dialog wide" style="max-height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden; max-width:960px;">
+        <!-- Modal Header -->
+        <div class="modal-header" style="flex-shrink:0; padding:18px 24px; background:linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(15,23,42,0.9) 100%); border-bottom:1px solid rgba(239,68,68,0.25);">
+          <div>
+            <h3 class="modal-title" style="color:#f87171; display:flex; align-items:center; gap:8px;">
+              <span>⚠️</span> Staffing Conflicts &amp; Workload Distribution Review
+            </h3>
+            <p style="margin:4px 0 0; font-size:0.82rem; color:#cbd5e1;">
+              The system detected teaching overloads that exceed Ghana Education Service (GES) weekly period caps or physical timetable scheduling limits.
+            </p>
+          </div>
+          <button type="button" class="btn sm" onclick="closeStaffingConflictsModal()" style="padding:4px 10px; margin-left:16px;">&times; Close</button>
+        </div>
+
+        <!-- Scrollable Body -->
+        <div style="flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:20px;">
+          <div id="conflictsSummaryBanner" style="padding:12px 16px; border-radius:8px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); font-size:0.85rem; color:#fca5a5; line-height:1.5;">
+            Loading conflict audit details...
+          </div>
+
+          <div id="conflictsListContainer" style="display:flex; flex-direction:column; gap:16px;"></div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer" style="padding:16px 24px; background:var(--card-bg, #1e293b); border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div style="font-size:0.8rem; color:#94a3b8;">
+            * Changes are only committed to the database when you click <strong>Approve &amp; Save Assignments</strong>.
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button type="button" class="btn" onclick="closeStaffingConflictsModal()">Close &amp; Keep Current</button>
+            <button type="button" id="btnApproveAllProposed" class="btn primary" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:none; font-weight:700; display:none;" onclick="commitApprovedDistributions()">
+              ✔ Approve &amp; Save All Proposed Distributions
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/guard.js?v=11.0"></script>
+    <script src="js/staff-conflicts.js?v=1.0"></script>
+    <script src="js/assignments.js?v=14.0"></script>
   </body>
 </html>

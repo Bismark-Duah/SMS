@@ -8,10 +8,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function getAuthHeader() {
   const token = localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
-  return {
+  const h = {
     "Content-Type": "application/json",
     "Authorization": token ? `Bearer ${token}` : ""
   };
+  const schId = sessionStorage.getItem('selectedSchoolId') || sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+  if (schId && schId !== 'all') h['X-School-Id'] = String(schId);
+  return h;
 }
 
 async function initBroadsheetPage() {

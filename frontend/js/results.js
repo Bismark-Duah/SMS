@@ -4,7 +4,10 @@ const token = localStorage.getItem('accessToken');
 if (!token) window.location.href = 'auth.html';
 
 function getHeaders(extra = {}) {
-  return { 'Authorization': `Bearer ${token}`, ...extra };
+  const h = { 'Authorization': `Bearer ${token}`, ...extra };
+  const schId = sessionStorage.getItem('selectedSchoolId') || sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+  if (schId && schId !== 'all') h['X-School-Id'] = String(schId);
+  return h;
 }
 
 function getScoreWeights() {

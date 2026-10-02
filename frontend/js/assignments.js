@@ -1,21 +1,35 @@
 const API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (window.location.origin + '/api') : 'http://127.0.0.1:8000/api');
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 const token = localStorage.getItem('accessToken');
 if (!token) {
   window.location.href = 'auth.html';
 }
 
 let selectedSchoolFilter = sessionStorage.getItem('selectedSchoolId') || sessionStorage.getItem('school_id') || localStorage.getItem('school_id') || '';
+if (selectedSchoolFilter === 'system_only' || selectedSchoolFilter === 'all') {
+  selectedSchoolFilter = '';
+}
 
 function getHeaders(headers = {}) {
   const currentToken = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
   const h = { ...headers };
   if (currentToken) h['Authorization'] = `Bearer ${currentToken}`;
-  if (selectedSchoolFilter && selectedSchoolFilter !== 'all') {
-    h['X-School-Id'] = String(selectedSchoolFilter);
+  const isValidSch = (val) => val && val !== 'all' && val !== 'system_only' && !isNaN(parseInt(val));
+  if (isValidSch(selectedSchoolFilter)) {
+    h['X-School-Id'] = String(parseInt(selectedSchoolFilter));
   } else {
     const schId = sessionStorage.getItem('selectedSchoolId') || sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
-    if (schId && schId !== 'all') h['X-School-Id'] = String(schId);
+    if (isValidSch(schId)) h['X-School-Id'] = String(parseInt(schId));
   }
   return h;
 }
@@ -40,7 +54,7 @@ async function setupSuperAdminSchoolFilter() {
     if (res.ok) {
       const schools = await res.json();
       if (schools && schools.length > 0) {
-        if (!selectedSchoolFilter || selectedSchoolFilter === 'all') {
+        if (!selectedSchoolFilter || selectedSchoolFilter === 'all' || selectedSchoolFilter === 'system_only' || !schools.some(s => String(s.id) === String(selectedSchoolFilter))) {
           selectedSchoolFilter = String(schools[0].id);
           sessionStorage.setItem('school_id', selectedSchoolFilter);
           sessionStorage.setItem('selectedSchoolId', selectedSchoolFilter);
@@ -53,6 +67,7 @@ async function setupSuperAdminSchoolFilter() {
         filterSelect.innerHTML = optionsHtml;
 
         const activeSch = schools.find(s => String(s.id) === String(selectedSchoolFilter)) || schools[0];
+        window.currentSchoolMode = activeSch ? activeSch.school_mode : (localStorage.getItem('school_mode') || 'SHS_ONLY');
         if (modeBadge && activeSch) {
           const modeLabel = activeSch.school_mode === 'BASIC_ONLY' ? 'Basic School Mode' : (activeSch.school_mode === 'SHS_ONLY' ? 'SHS Mode' : 'Combined Mode');
           modeBadge.textContent = modeLabel;
@@ -79,6 +94,7 @@ window.onAssignmentSchoolFilterChange = async function(val) {
     if (res.ok) {
       const schools = await res.json();
       const activeSch = schools.find(s => String(s.id) === String(val));
+      window.currentSchoolMode = activeSch ? activeSch.school_mode : (localStorage.getItem('school_mode') || 'SHS_ONLY');
       if (modeBadge && activeSch) {
         const modeLabel = activeSch.school_mode === 'BASIC_ONLY' ? 'Basic School Mode' : (activeSch.school_mode === 'SHS_ONLY' ? 'SHS Mode' : 'Combined Mode');
         modeBadge.textContent = modeLabel;
@@ -130,36 +146,125 @@ async function loadDropdowns() {
       fetch(`${API_BASE}/departments/`, { headers: getHeaders() }),
     ]);
 
-    const users = await resUsers.json();
-    allClasses = await resClasses.json();
-    allSemesters = await resSemesters.json();
-    allHouses = await resHouses.json();
+    const users = resUsers.ok ? await resUsers.json() : [];
+    allClasses = resClasses.ok ? await resClasses.json() : [];
+    allSemesters = resSemesters.ok ? await resSemesters.json() : [];
+    allHouses = resHouses.ok ? await resHouses.json() : [];
     allDepartments = resDepts.ok ? await resDepts.json() : [];
 
-    const isAdmin = _userIsAdmin();
+    if (!Array.isArray(users)) {
+      if (resUsers.status === 401) {
+        console.warn('Session expired. Redirecting to auth.');
+        window.location.href = 'auth.html';
+        return;
+      }
+      allTeachers = [];
+    } else {
+      const isAdmin = _userIsAdmin();
 
-    allTeachers = users.filter(u => u.roles && u.roles.some(r => {
-      const rName = (typeof r === 'string' ? r : r.name || '').toLowerCase();
-      return !['student', 'parent'].includes(rName);
-    }));
+      allTeachers = users.filter(u => u.roles && u.roles.some(r => {
+        const rName = (typeof r === 'string' ? r : r.name || '').toLowerCase();
+        return !['student', 'parent'].includes(rName);
+      }));
 
-    if (!isAdmin) {
-      allTeachers = allTeachers.filter(u => {
-        const roleNames = u.roles ? u.roles.map(r => (typeof r === 'string' ? r : r.name || '').toLowerCase()) : [];
-        return !roleNames.includes('super_admin') && !roleNames.includes('admin');
-      });
+      if (!isAdmin) {
+        allTeachers = allTeachers.filter(u => {
+          const roleNames = u.roles ? u.roles.map(r => (typeof r === 'string' ? r : r.name || '').toLowerCase()) : [];
+          return !roleNames.includes('super_admin') && !roleNames.includes('admin');
+        });
 
-      const assignTypeSelect = document.getElementById('assignmentTypeSelect');
-      if (assignTypeSelect) {
-        assignTypeSelect.innerHTML = `
-          <option value="teaching" selected>Subject Teaching Assignment (HOD Scope)</option>
-        `;
-        assignTypeSelect.disabled = true;
+        const assignTypeSelect = document.getElementById('assignmentTypeSelect');
+        if (assignTypeSelect) {
+          assignTypeSelect.innerHTML = `
+            <option value="teaching" selected>Subject Teaching Assignment (HOD Scope)</option>
+          `;
+          assignTypeSelect.disabled = true;
+        }
       }
     }
 
-    teacherSelect.innerHTML = '<option value="">Select Teacher / Staff Member...</option>' +
-      allTeachers.map(t => `<option value="${t.id}">${t.full_name || t.username} (${t.email || 'Staff'})</option>`).join('');
+    if (!window.currentSchoolMode) {
+      window.currentSchoolMode = localStorage.getItem('school_mode') || 'SHS_ONLY';
+    }
+    const isSHSSchool = window.currentSchoolMode === 'SHS_ONLY' || window.currentSchoolMode === 'SHS' || (allClasses.some(c => (c.stage_name || '').toUpperCase().includes('SHS') || (c.name || '').toUpperCase().includes('FORM')));
+
+    // ── Segmentation into Three Executive Tiers ──
+    const executiveStaff = [];
+    const dualLeadershipStaff = [];
+    const facultyByDept = {};
+
+    const _EXEC_ROLES = new Set([
+      'headmaster', 'headmistress', 'principal', 'bursar', 'school_administrator',
+      'secretary', 'school_secretary', 'accountant', 'storekeeper', 'matron', 'school_nurse',
+      'estate_officer', 'transport_officer', 'security_officer'
+    ]);
+
+    const _DUAL_ROLES = new Set([
+      'assistant_headmaster_academic', 'assistant_head_academic',
+      'assistant_headmaster_admin', 'assistant_head_admin',
+      'assistant_headmaster_domestic', 'assistant_head_domestic',
+      'hod', 'head_of_department',
+      'senior_house_master', 'senior_house_mistress',
+      'house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress',
+      'form_master', 'form_mistress',
+      'exam_officer', 'timetable_officer', 'guidance_counsellor', 'sports_master', 'sports_mistress',
+      'cadet_master', 'cadet_mistress', 'chaplain', 'workshop_master', 'lab_technician'
+    ]);
+
+    allTeachers.forEach(t => {
+      const rNames = t.roles ? t.roles.map(r => (typeof r === 'string' ? r : r.name || '').toLowerCase()) : [];
+      const resp = (t.responsibility_role || '').toUpperCase();
+      const isHead = rNames.some(r => ['headmaster', 'headmistress', 'principal'].includes(r)) || resp === 'HEADMASTER';
+      const isExecutive = isHead || t.is_teaching_exempt || (rNames.some(r => _EXEC_ROLES.has(r)) && !t.primary_subject_name);
+      const isDual = !isExecutive && (rNames.some(r => _DUAL_ROLES.has(r)) || ['ASSISTANT_HEAD', 'HOD', 'HOUSEMASTER'].includes(resp));
+
+      if (isExecutive) {
+        executiveStaff.push(t);
+      } else if (isDual) {
+        dualLeadershipStaff.push(t);
+      } else {
+        const dept = allDepartments.find(d => d.id === t.department_id);
+        const deptName = dept ? dept.name : 'Unassigned Department';
+        if (!facultyByDept[deptName]) facultyByDept[deptName] = [];
+        facultyByDept[deptName].push(t);
+      }
+    });
+
+    let optGroupsHtml = '<option value="">Select Staff Member...</option>';
+
+    if (executiveStaff.length > 0) {
+      optGroupsHtml += '<optgroup label="Executive Leadership &amp; Administration (Teaching Exempt)">';
+      executiveStaff.forEach(t => {
+        const rNames = t.roles ? t.roles.map(r => (typeof r === 'string' ? r : r.name || '').toLowerCase()) : [];
+        const isHead = rNames.some(r => ['headmaster', 'headmistress', 'principal'].includes(r)) || t.responsibility_role === 'HEADMASTER';
+        const roleLabel = isHead ? 'Headmaster — Teaching Exempt' : (t.responsibility_role || rNames[0] || 'Executive');
+        optGroupsHtml += `<option value="${t.id}" data-is-head="${isHead ? '1' : '0'}" data-tier="executive">${t.full_name || t.username} — ${roleLabel}</option>`;
+      });
+      optGroupsHtml += '</optgroup>';
+    }
+
+    if (dualLeadershipStaff.length > 0) {
+      optGroupsHtml += '<optgroup label="Academic Leadership (Dual Role: Administration &amp; Teaching)">';
+      dualLeadershipStaff.forEach(t => {
+        const subjTag = t.primary_subject_name ? ` [${t.primary_subject_name}]` : '';
+        const dept = allDepartments.find(d => d.id === t.department_id);
+        const deptTag = dept ? ` (${dept.name})` : '';
+        optGroupsHtml += `<option value="${t.id}" data-is-head="0" data-tier="leadership">${t.full_name || t.username}${subjTag}${deptTag}</option>`;
+      });
+      optGroupsHtml += '</optgroup>';
+    }
+
+    const deptKeys = Object.keys(facultyByDept).sort();
+    deptKeys.forEach(dName => {
+      optGroupsHtml += `<optgroup label="Teaching Faculty: ${dName}">`;
+      facultyByDept[dName].forEach(t => {
+        const subjTag = t.primary_subject_name ? ` [${t.primary_subject_name}]` : '';
+        optGroupsHtml += `<option value="${t.id}" data-is-head="0" data-tier="faculty">${t.full_name || t.username}${subjTag}</option>`;
+      });
+      optGroupsHtml += '</optgroup>';
+    });
+
+    teacherSelect.innerHTML = optGroupsHtml;
 
     // Populate Multi-Class Checkboxes
     renderClassCheckboxes();
@@ -354,13 +459,13 @@ async function handleClassCheckboxChange() {
 
         if (filterIndicator) {
           filterIndicator.style.display = 'inline-flex';
-          filterIndicator.innerHTML = `🔬 ${teacherDept.name} (${matchingDeptSubjects.length} subject${matchingDeptSubjects.length === 1 ? '' : 's'})`;
+          filterIndicator.innerHTML = `${escapeHtml(teacherDept.name)} (${matchingDeptSubjects.length} subject${matchingDeptSubjects.length === 1 ? '' : 's'})`;
           filterIndicator.style.background = 'rgba(14,165,233,0.15)';
           filterIndicator.style.color = '#38bdf8';
         }
         if (toggleBtn) {
           toggleBtn.style.display = 'inline-flex';
-          toggleBtn.textContent = `🌐 Show All Class Subjects (${allClassSubjects.length})`;
+          toggleBtn.textContent = `Show All Class Subjects (${allClassSubjects.length})`;
           toggleBtn.title = 'Switch to view subjects from all departments for these classes';
         }
       } else {
@@ -369,13 +474,13 @@ async function handleClassCheckboxChange() {
 
         if (filterIndicator) {
           filterIndicator.style.display = 'inline-flex';
-          filterIndicator.innerHTML = `🌐 All Departments (${allClassSubjects.length} subjects)`;
+          filterIndicator.innerHTML = `All Departments (${allClassSubjects.length} subjects)`;
           filterIndicator.style.background = 'rgba(255,255,255,0.08)';
           filterIndicator.style.color = 'var(--text-secondary,#94a3b8)';
         }
         if (toggleBtn) {
           toggleBtn.style.display = 'inline-flex';
-          toggleBtn.textContent = `🔬 Filter: ${teacherDept.name} (${matchingDeptSubjects.length})`;
+          toggleBtn.textContent = `Filter: ${escapeHtml(teacherDept.name)} (${matchingDeptSubjects.length})`;
           toggleBtn.title = `Filter back to ${teacherDept.name} subjects only`;
         }
       }
@@ -384,9 +489,9 @@ async function handleClassCheckboxChange() {
       if (filterIndicator) {
         if (selectedTeacherId) {
           filterIndicator.style.display = 'inline-flex';
-          filterIndicator.innerHTML = `💡 General / Unassigned Dept (${allClassSubjects.length} subjects)`;
-          filterIndicator.style.background = 'rgba(234,179,8,0.15)';
-          filterIndicator.style.color = '#fde047';
+          filterIndicator.innerHTML = `General / Unassigned (${allClassSubjects.length} subjects)`;
+          filterIndicator.style.background = 'rgba(99,102,241,0.12)';
+          filterIndicator.style.color = '#a5b4fc';
         } else {
           filterIndicator.style.display = 'none';
         }
@@ -397,13 +502,13 @@ async function handleClassCheckboxChange() {
     if (displaySubjects.length === 0) {
       if (teacherDept && isSubjectDeptFilterActive) {
         cbListContainer.innerHTML = `
-          <div style="grid-column: 1 / -1; padding: 14px; text-align: center; background: rgba(234,179,8,0.06); border: 1px dashed rgba(234,179,8,0.3); border-radius: 8px;">
-            <p style="margin: 0 0 8px 0; font-size: 0.85rem; color: #fde047;">No subjects from <strong>${teacherDept.name}</strong> are assigned to the selected class section(s).</p>
-            <button type="button" class="btn sm" onclick="toggleSubjectDeptFilter()" style="padding: 4px 10px; font-size: 0.8rem; background: #0284c7; color: #fff;">🌐 Show All Subjects For This Class</button>
+          <div style="grid-column: 1 / -1; padding: 14px; text-align: center; background: rgba(99,102,241,0.06); border: 1px dashed rgba(99,102,241,0.3); border-radius: 8px;">
+            <p style="margin: 0 0 8px 0; font-size: 0.85rem; color: #a5b4fc;">No subjects from <strong>${escapeHtml(teacherDept.name)}</strong> are assigned to the selected class section(s).</p>
+            <button type="button" class="btn sm" onclick="toggleSubjectDeptFilter()" style="padding: 4px 10px; font-size: 0.8rem; background: #0284c7; color: #fff;">Show All Subjects For This Class</button>
           </div>
         `;
       } else {
-        cbListContainer.innerHTML = '<span style="opacity:0.6; font-style:italic; font-size:0.85rem; color:var(--warning);">No subjects found for the selected class section(s).</span>';
+        cbListContainer.innerHTML = '<span style="opacity:0.6; font-style:italic; font-size:0.85rem; color:var(--text-secondary);">No subjects found for the selected class section(s).</span>';
       }
     } else {
       const teacherAssignedSubjectIds = selectedTeacherId ? allAssignmentsData.filter(a => a.teacher_id == selectedTeacherId).map(a => a.subject_id) : [];
@@ -413,27 +518,34 @@ async function handleClassCheckboxChange() {
           ${displaySubjects.map(s => {
             const isAlreadyAssigned = teacherAssignedSubjectIds.includes(s.id);
             const isDeptSubject = deptSubjectIds.has(s.id);
+            const selectedTeacher = allTeachers.find(t => t.id == selectedTeacherId);
+            const isPrimarySpecialization = selectedTeacher && (
+              selectedTeacher.primary_subject_id === s.id ||
+              (selectedTeacher.primary_subject_name && selectedTeacher.primary_subject_name.toLowerCase() === s.name.toLowerCase()) ||
+              (selectedTeacher.qualified_subject_ids && selectedTeacher.qualified_subject_ids.includes(s.id))
+            );
+            const isChecked = isPrimarySpecialization && !isAlreadyAssigned;
             const borderColor = isAlreadyAssigned 
-              ? 'rgba(234,179,8,0.5)' 
-              : (isDeptSubject ? 'rgba(56,189,248,0.4)' : 'rgba(255,255,255,0.1)');
+              ? 'rgba(99,102,241,0.4)' 
+              : (isPrimarySpecialization ? 'rgba(16,185,129,0.7)' : (isDeptSubject ? 'rgba(56,189,248,0.4)' : 'rgba(255,255,255,0.1)'));
             const bgColor = isAlreadyAssigned 
-              ? 'rgba(234,179,8,0.08)' 
-              : (isDeptSubject ? 'rgba(14,165,233,0.06)' : 'rgba(255,255,255,0.04)');
+              ? 'rgba(99,102,241,0.08)' 
+              : (isPrimarySpecialization ? 'rgba(16,185,129,0.12)' : (isDeptSubject ? 'rgba(14,165,233,0.06)' : 'rgba(255,255,255,0.04)'));
 
             return `
               <label class="assign-chip-label assign-subject-chip" onclick="handleAssignChipToggle(this, 'assign-subject-cb', null)"
                 style="display:flex; align-items:flex-start; gap:6px; padding:8px 10px; border-radius:7px;
-                       background:${bgColor}; border:1px solid ${borderColor};
+                       background:${isChecked ? 'rgba(16,185,129,0.18)' : bgColor}; border:1px solid ${isChecked ? 'rgba(16,185,129,0.8)' : borderColor};
                        cursor:pointer; transition:all 0.15s ease; user-select:none; position:relative;">
-                <input type="checkbox" class="assign-subject-cb" value="${s.id}" data-name="${s.name}" style="display:none;" />
-                <span class="assign-chip-check" style="margin-top:2px; width:14px; height:14px; border-radius:3px; border:1.5px solid rgba(255,255,255,0.3); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px; transition:all 0.15s;"></span>
+                <input type="checkbox" class="assign-subject-cb" value="${s.id}" data-name="${s.name}" ${isChecked ? 'checked' : ''} style="display:none;" />
+                <span class="assign-chip-check" style="margin-top:2px; width:14px; height:14px; border-radius:3px; border:1.5px solid ${isChecked ? '#34d399' : 'rgba(255,255,255,0.3)'}; background:${isChecked ? '#10b981' : 'transparent'}; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; transition:all 0.15s;">${isChecked ? '✓' : ''}</span>
                 <div style="flex:1; min-width:0;">
                   <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
                     <span style="font-size:0.82rem; font-weight:600; color:#f1f5f9; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${s.name}">${s.name}</span>
-                    ${isDeptSubject ? '<span style="font-size:0.65rem; background:rgba(14,165,233,0.25); color:#38bdf8; padding:1px 4px; border-radius:3px; flex-shrink:0;">Dept</span>' : ''}
+                    ${isPrimarySpecialization ? '<span style="font-size:0.65rem; background:rgba(16,185,129,0.25); color:#34d399; padding:1px 5px; border-radius:3px; flex-shrink:0; font-weight:700;">Specialization</span>' : (isDeptSubject ? '<span style="font-size:0.65rem; background:rgba(14,165,233,0.25); color:#38bdf8; padding:1px 4px; border-radius:3px; flex-shrink:0;">Dept</span>' : '')}
                   </div>
                   <div style="font-size:0.72rem; color:#64748b; margin-top:1px;">${s.is_core ? 'Core' : 'Elective'}</div>
-                  ${isAlreadyAssigned ? '<div style="margin-top:3px; font-size:0.68rem; background:rgba(234,179,8,0.25); color:#fde047; padding:1px 5px; border-radius:3px; display:inline-block;">⚠ Already Assigned</div>' : ''}
+                  ${isAlreadyAssigned ? '<div style="margin-top:3px; font-size:0.68rem; background:rgba(99,102,241,0.2); color:#a5b4fc; padding:1px 5px; border-radius:3px; display:inline-block;">Already Assigned</div>' : ''}
                 </div>
               </label>
             `;
@@ -467,15 +579,61 @@ function handleTeacherSelectChange(teacherId) {
   const privLabels = teacherPrivileges.map(p => `${p.privilege_type || p.role_title || 'Role'} (${p.target_name || 'Global'})`).join(', ');
 
   const teacherDept = getTeacherDepartment(teacherId);
-  const deptLabel = teacherDept ? `<span style="margin-left:6px; background:rgba(14,165,233,0.18); color:#38bdf8; padding:2px 8px; border-radius:4px; font-weight:600;">🔬 ${teacherDept.name}</span>` : '';
+  const deptChip = teacherDept
+    ? `<span class="workload-stat-chip dept">
+         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+         ${escapeHtml(teacherDept.name)}
+       </span>`
+    : '';
 
-  badgeContainer.innerHTML = `
-    📊 <strong>${teacherName} Current Workload:</strong> ${deptLabel}
-    <span style="margin-left:8px; background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:4px;">🏫 <strong>${uniqueClasses}</strong> Class Section(s)</span>
-    <span style="margin-left:6px; background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:4px;">📘 <strong>${uniqueSubjects}</strong> Subject(s)</span>
-    ${teacherPrivileges.length > 0 ? `<span style="margin-left:6px; background:rgba(234,179,8,0.2); color:#fde047; padding:2px 8px; border-radius:4px;">⭐ ${privLabels}</span>` : ''}
-  `;
-  badgeContainer.style.display = 'block';
+  const subjChip = teacher && teacher.primary_subject_name
+    ? `<span class="workload-stat-chip primary-subj">
+         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+         Specialization: ${escapeHtml(teacher.primary_subject_name)}
+       </span>`
+    : '';
+
+  const teacherRoles = teacher && teacher.roles ? teacher.roles.map(r => (typeof r === 'string' ? r : r.name || '').toLowerCase()) : [];
+  const isHead = teacherRoles.some(r => ['headmaster', 'headmistress', 'principal'].includes(r)) || (teacher && teacher.responsibility_role === 'HEADMASTER');
+  const isSHSSchool = (window.currentSchoolMode === 'SHS_ONLY' || window.currentSchoolMode === 'SHS' || (allClasses.some(c => (c.stage_name || '').toUpperCase().includes('SHS') || (c.name || '').toUpperCase().includes('FORM'))));
+
+  if (isHead && isSHSSchool) {
+    badgeContainer.className = 'policy-notice-box';
+    badgeContainer.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      <div>
+        <strong style="color:#fbbf24; text-transform:uppercase; letter-spacing:0.04em; font-size:0.78rem; display:block; margin-bottom:2px;">GES Governance Notice: Teaching Exemption Policy</strong>
+        <span><strong>${escapeHtml(teacherName)}</strong> serves as the institutional Headmaster/Headmistress. In Ghana Education Service Senior High Schools, executive heads are <strong>100% duty-exempt from teaching</strong> and cannot be allocated classroom subjects. Only administrative privileges are permitted.</span>
+      </div>
+    `;
+    badgeContainer.style.display = 'flex';
+  } else {
+    badgeContainer.className = 'workload-profile-card';
+    badgeContainer.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span style="font-weight:700; color:var(--text-primary); font-size:0.92rem;">${escapeHtml(teacherName)}</span>
+        ${deptChip}
+        ${subjChip}
+      </div>
+      <div class="workload-stat-group">
+        <span class="workload-stat-chip metric">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <strong>${uniqueClasses}</strong> Class Section(s)
+        </span>
+        <span class="workload-stat-chip metric">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <strong>${uniqueSubjects}</strong> Active Subject(s)
+        </span>
+        ${teacherPrivileges.length > 0 ? `
+          <span class="workload-stat-chip leadership" style="font-size:0.76rem;">
+            ${escapeHtml(privLabels)}
+          </span>` : ''}
+      </div>
+    `;
+    badgeContainer.style.display = 'flex';
+  }
 
   // Reset department filter to active when switching teacher
   isSubjectDeptFilterActive = true;
@@ -483,6 +641,22 @@ function handleTeacherSelectChange(teacherId) {
   const checkedClassCbs = document.querySelectorAll('.assign-class-cb:checked');
   if (checkedClassCbs.length > 0) {
     handleClassCheckboxChange();
+  } else {
+    // Show designated subject prompt immediately before classes are checked
+    const cbListContainer = document.getElementById('subjectsCheckboxList');
+    if (cbListContainer && teacher && teacher.primary_subject_name) {
+      cbListContainer.innerHTML = `
+        <div style="background:rgba(16,185,129,0.08); border:1px dashed rgba(16,185,129,0.35); border-radius:8px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:rgba(16,185,129,0.2); color:#34d399;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            </span>
+            <span style="font-size:0.86rem; font-weight:600; color:var(--text-primary);">Designated Subject: <strong>${escapeHtml(teacher.primary_subject_name)}</strong></span>
+          </div>
+          <span style="font-size:0.75rem; color:#94a3b8;">Check target class section(s) above to allocate</span>
+        </div>
+      `;
+    }
   }
 }
 
@@ -576,22 +750,103 @@ async function loadAssignments() {
 function setWorkloadRoleFilter(roleKey) {
   currentRoleFilter = roleKey;
   
-  // Update button styles
-  const btnIds = ['filterRoleAll', 'filterRoleHod', 'filterRoleFormMaster', 'filterRoleHouseMaster', 'filterRoleUnassigned'];
-  btnIds.forEach(id => {
+  const btnMap = {
+    all: 'filterRoleAll',
+    faculty: 'filterRoleFaculty',
+    leadership: 'filterRoleLeadership',
+    executive: 'filterRoleExecutive',
+    unassigned: 'filterRoleUnassigned'
+  };
+
+  Object.values(btnMap).forEach(id => {
     const btn = document.getElementById(id);
-    if (btn) btn.className = 'btn sm';
+    if (btn) btn.classList.remove('active');
   });
 
-  const activeBtnId = roleKey === 'hod' ? 'filterRoleHod' :
-                      roleKey === 'form_master' ? 'filterRoleFormMaster' :
-                      roleKey === 'house_master' ? 'filterRoleHouseMaster' :
-                      roleKey === 'unassigned' ? 'filterRoleUnassigned' : 'filterRoleAll';
-
-  const activeBtn = document.getElementById(activeBtnId);
-  if (activeBtn) activeBtn.className = 'btn primary sm';
+  const activeBtn = document.getElementById(btnMap[roleKey] || 'filterRoleAll');
+  if (activeBtn) activeBtn.classList.add('active');
 
   filterTeachingAssignments();
+}
+
+function getStaffWorkloadTierInfo(t, tPrivs) {
+  const roles = (t.roles || []).map(r => (typeof r === 'string' ? r : r.name || '').toLowerCase());
+  const resp = (t.responsibility_role || '').toLowerCase();
+  const title = (t.staff_title || t.job_title || '').toLowerCase();
+
+  // Tier 1: Executive & Administrative Support (Teaching Exempt)
+  const isHead = roles.some(r => ['headmaster', 'headmistress', 'principal'].includes(r)) || 
+                 resp === 'headmaster' || 
+                 title.includes('headmaster') || title.includes('headmistress');
+                 
+  const isNonTeachingAdmin = roles.some(r => [
+    'super_admin', 'admin', 'administrator', 'bursar', 'accountant',
+    'secretary', 'matron', 'storekeeper', 'nurse', 'cook', 'driver', 'security'
+  ].includes(r)) || [
+    'bursar', 'matron', 'storekeeper', 'nurse', 'secretary', 'admin'
+  ].includes(resp) || [
+    'bursar', 'accountant', 'matron', 'nurse', 'storekeeper', 'secretary'
+  ].some(x => title.includes(x));
+
+  if (isHead || isNonTeachingAdmin) {
+    let label = 'Executive / Exempt';
+    if (isHead) label = 'Headmaster (Teaching Exempt)';
+    else if (roles.includes('bursar') || resp === 'bursar' || title.includes('bursar')) label = 'Bursar / Accounts';
+    else if (roles.includes('secretary') || title.includes('secretary')) label = 'Administration / Secretary';
+    else if (roles.includes('matron') || title.includes('matron')) label = 'Domestic / Matron';
+    else if (roles.includes('nurse') || title.includes('nurse')) label = 'Health / Nurse';
+    else if (roles.includes('storekeeper') || title.includes('storekeeper')) label = 'Inventory / Storekeeper';
+    else if (roles.some(r => r.includes('admin'))) label = 'System Administrator';
+
+    return {
+      tierKey: 'executive',
+      tierTitle: 'Executive & Administration',
+      badgeClass: 'exempt',
+      badgeText: label,
+      isExempt: true
+    };
+  }
+
+  // Tier 2: Academic Leadership (Dual: Admin + Regulated Teaching)
+  const isLeadership = roles.some(r => [
+    'assistant_headmaster_academic', 'assistant_headmaster_domestic', 'assistant_headmaster_admin',
+    'assistant_head_academic', 'assistant_head_domestic', 'assistant_head_admin',
+    'hod', 'senior_housemaster', 'senior_housemistress', 'senior_house_master',
+    'house_master', 'house_mistress', 'assistant_house_master', 'assistant_house_mistress',
+    'form_master', 'form_mistress', 'exam_officer', 'timetable_officer', 'guidance_counselor'
+  ].includes(r)) || (tPrivs && tPrivs.length > 0) || [
+    'assistant_head', 'hod', 'housemaster', 'form_master'
+  ].some(x => resp.includes(x));
+
+  if (isLeadership) {
+    let label = 'Academic Leadership';
+    if (roles.some(r => r.includes('assistant_head')) || (tPrivs && tPrivs.some(p => (p.privilege_type || '').toLowerCase().includes('assistant head')))) {
+      label = 'Assistant Head (Dual Role)';
+    } else if (roles.includes('hod') || (tPrivs && tPrivs.some(p => (p.privilege_type || '').toLowerCase().includes('hod')))) {
+      label = 'HOD (Dual Role)';
+    } else if (roles.some(r => r.includes('house')) || (tPrivs && tPrivs.some(p => (p.privilege_type || '').toLowerCase().includes('house')))) {
+      label = 'House Master / Mistress';
+    } else if (roles.some(r => r.includes('form')) || (tPrivs && tPrivs.some(p => (p.privilege_type || '').toLowerCase().includes('form')))) {
+      label = 'Form Master / Mistress';
+    }
+
+    return {
+      tierKey: 'leadership',
+      tierTitle: 'Academic Leadership (Dual Role)',
+      badgeClass: 'leadership',
+      badgeText: label,
+      isExempt: false
+    };
+  }
+
+  // Tier 3: Teaching Faculty
+  return {
+    tierKey: 'faculty',
+    tierTitle: 'Teaching Faculty',
+    badgeClass: 'faculty',
+    badgeText: 'Teaching Faculty',
+    isExempt: false
+  };
 }
 
 function filterTeachingAssignments() {
@@ -687,10 +942,20 @@ function filterTeachingAssignments() {
       }
     });
 
+    const tierInfo = getStaffWorkloadTierInfo(t, tPrivs);
+    const deptObj = allDepartments.find(d => d.id === t.department_id);
+
     teacherMap.set(teacherId, {
       id: teacherId,
       name: teacherName,
       email: t.email || 'Staff Member',
+      primarySubjectName: t.primary_subject_name || null,
+      departmentName: deptObj ? deptObj.name : null,
+      tierKey: tierInfo.tierKey,
+      tierTitle: tierInfo.tierTitle,
+      tierBadgeClass: tierInfo.badgeClass,
+      tierBadgeText: tierInfo.badgeText,
+      isExempt: tierInfo.isExempt,
       assignmentsCount: tAsgns.length,
       privilegesCount: tPrivs.length,
       privileges: tPrivs,
@@ -721,60 +986,45 @@ function filterTeachingAssignments() {
     });
   }
 
-  // Filter by Role Pill
-  if (currentRoleFilter === 'hod') {
-    teacherProfiles = teacherProfiles.filter(tp => {
-      const hasPriv = tp.privileges.some(p => {
-        const pType = (p.privilege_type || '').toLowerCase();
-        const pTarget = (p.target_name || '').toLowerCase();
-        return pType.includes('hod') || pType.includes('head of department') || pType.includes('department') || pTarget.includes('department');
-      });
-      const hasRole = tp.rawUser && tp.rawUser.roles && tp.rawUser.roles.some(r => {
-        const rName = (typeof r === 'string' ? r : r.name || '').toLowerCase();
-        return rName === 'hod' || rName.includes('department');
-      });
-      return hasPriv || hasRole;
-    });
-  } else if (currentRoleFilter === 'form_master') {
-    teacherProfiles = teacherProfiles.filter(tp => {
-      const hasPriv = tp.privileges.some(p => {
-        const pType = (p.privilege_type || '').toLowerCase();
-        return pType.includes('form master') || pType.includes('form mistress') || pType.includes('form_master') || pType.includes('tutor');
-      });
-      const hasRole = tp.rawUser && tp.rawUser.roles && tp.rawUser.roles.some(r => {
-        const rName = (typeof r === 'string' ? r : r.name || '').toLowerCase();
-        return rName.includes('form');
-      });
-      return hasPriv || hasRole;
-    });
-  } else if (currentRoleFilter === 'house_master') {
-    teacherProfiles = teacherProfiles.filter(tp => {
-      const hasPriv = tp.privileges.some(p => {
-        const pType = (p.privilege_type || '').toLowerCase();
-        return pType.includes('house');
-      });
-      const hasRole = tp.rawUser && tp.rawUser.roles && tp.rawUser.roles.some(r => {
-        const rName = (typeof r === 'string' ? r : r.name || '').toLowerCase();
-        return rName.includes('house');
-      });
-      return hasPriv || hasRole;
-    });
+  // Update Segmented Pill Counts
+  const countAll = teacherProfiles.length;
+  const countFaculty = teacherProfiles.filter(tp => tp.tierKey === 'faculty').length;
+  const countLeadership = teacherProfiles.filter(tp => tp.tierKey === 'leadership').length;
+  const countExecutive = teacherProfiles.filter(tp => tp.tierKey === 'executive').length;
+  const countUnassigned = teacherProfiles.filter(tp => tp.assignmentsCount === 0 && !tp.isExempt).length;
+
+  const elAll = document.getElementById('countAllStaff'); if (elAll) elAll.textContent = countAll;
+  const elFac = document.getElementById('countFaculty'); if (elFac) elFac.textContent = countFaculty;
+  const elLead = document.getElementById('countLeadership'); if (elLead) elLead.textContent = countLeadership;
+  const elExec = document.getElementById('countExecutive'); if (elExec) elExec.textContent = countExecutive;
+  const elUnas = document.getElementById('countUnassigned'); if (elUnas) elUnas.textContent = countUnassigned;
+
+  // Filter by Segmented Role Key
+  if (currentRoleFilter === 'faculty') {
+    teacherProfiles = teacherProfiles.filter(tp => tp.tierKey === 'faculty');
+  } else if (currentRoleFilter === 'leadership') {
+    teacherProfiles = teacherProfiles.filter(tp => tp.tierKey === 'leadership');
+  } else if (currentRoleFilter === 'executive') {
+    teacherProfiles = teacherProfiles.filter(tp => tp.tierKey === 'executive');
   } else if (currentRoleFilter === 'unassigned') {
-    teacherProfiles = teacherProfiles.filter(tp => tp.assignmentsCount === 0 && tp.privilegesCount === 0);
+    teacherProfiles = teacherProfiles.filter(tp => tp.assignmentsCount === 0 && !tp.isExempt);
   }
 
   // Filter by Search Query
   if (query) {
     teacherProfiles = teacherProfiles.filter(tp => {
       const matchName = tp.name.toLowerCase().includes(query);
+      const matchEmail = (tp.email || '').toLowerCase().includes(query);
+      const matchDept = (tp.departmentName || '').toLowerCase().includes(query);
+      const matchSpecialization = (tp.primarySubjectName || '').toLowerCase().includes(query);
       const matchPriv = tp.privileges.some(p => (p.privilege_type || '').toLowerCase().includes(query) || (p.target_name || '').toLowerCase().includes(query));
-      const matchSub = tp.subjectGroups.some(sg => sg.subject_name.toLowerCase().includes(query) || sg.classes.some(c => c.toLowerCase().includes(query)));
-      return matchName || matchPriv || matchSub;
+      const matchSub = tp.subjectGroups.some(sg => sg.subject_name.toLowerCase().includes(query) || sg.classes.some(c => c.name.toLowerCase().includes(query)));
+      return matchName || matchEmail || matchDept || matchSpecialization || matchPriv || matchSub;
     });
   }
 
   if (teacherProfiles.length === 0) {
-    container.innerHTML = '<p style="opacity:.6; font-style:italic; padding:16px; text-align:center;">No matching consolidated teacher workloads found.</p>';
+    container.innerHTML = '<p style="opacity:.6; font-style:italic; padding:24px; text-align:center; color:var(--text-secondary);">No matching staff or teacher workload profiles found.</p>';
     return;
   }
 
@@ -785,62 +1035,128 @@ function filterTeachingAssignments() {
         const uniqueSubjectsCount = tp.subjectGroups.length;
 
         return `
-          <div class="card" style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:10px; padding:16px; box-shadow:0 2px 10px rgba(0,0,0,0.15);">
+          <div class="card workload-profile-card" style="margin-bottom:0;">
             <!-- Header Row -->
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px;">
-              <div>
-                <h4 style="margin:0; font-size:1.05rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
-                  👤 <strong>${tp.name}</strong> 
-                  <small style="opacity:0.6; font-weight:normal; font-size:0.8rem;">(${tp.email})</small>
-                </h4>
-                <!-- Administrative Leadership Privileges -->
-                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
-                  ${tp.privileges.length > 0 ? tp.privileges.map(p => `
-                    <span style="background:rgba(234,179,8,0.18); color:#fde047; padding:2px 8px; border-radius:4px; font-size:0.8rem; border:1px solid rgba(234,179,8,0.3);">
-                      ⭐ ${p.privilege_type || p.role_title} — <strong>${p.target_name || 'Global'}</strong>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; width:100%; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:6px; background:rgba(255,255,255,0.06); color:var(--text-secondary);">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </span>
+                  <h4 style="margin:0; font-size:1.02rem; color:var(--text-primary); font-weight:700;">
+                    ${escapeHtml(tp.name)}
+                  </h4>
+                  <span class="badge ${tp.tierBadgeClass}">
+                    ${escapeHtml(tp.tierBadgeText)}
+                  </span>
+                  ${tp.departmentName ? `
+                    <span class="workload-stat-chip dept" style="font-size:0.75rem;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                      ${escapeHtml(tp.departmentName)}
                     </span>
-                  `).join('') : '<span style="opacity:0.6; font-size:0.78rem; font-style:italic;">No leadership privileges</span>'}
+                  ` : ''}
+                  ${tp.primarySubjectName ? `
+                    <span class="workload-stat-chip primary-subj" style="font-size:0.75rem;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                      Specialization: ${escapeHtml(tp.primarySubjectName)}
+                    </span>
+                  ` : ''}
                 </div>
+                <div style="font-size:0.8rem; color:var(--text-secondary); margin-left:36px;">
+                  ${escapeHtml(tp.email)}
+                </div>
+
+                <!-- Administrative Leadership Privileges -->
+                ${tp.privileges.length > 0 ? `
+                  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; margin-left:36px;">
+                    ${tp.privileges.map(p => `
+                      <span class="workload-stat-chip leadership" style="font-size:0.76rem;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        ${escapeHtml(p.privilege_type || p.role_title)} &mdash; <strong>${escapeHtml(p.target_name || 'Global')}</strong>
+                      </span>
+                    `).join('')}
+                  </div>
+                ` : ''}
               </div>
 
               <!-- Workload Summary Stats & Quick Actions -->
-              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <div style="font-size:0.82rem; background:rgba(255,255,255,0.04); padding:4px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
-                  🏫 <strong>${uniqueClassesCount}</strong> Class(es) | 📘 <strong>${uniqueSubjectsCount}</strong> Subject(s)
-                </div>
-                <button class="btn sm primary" onclick="openEditTeacherWorkloadModal(${tp.id})" style="padding:4px 10px; font-size:0.8rem;">✏️ Edit Workload</button>
-                <button class="btn sm danger" onclick="removeAllTeacherAssignments(${tp.id}, '${tp.name}')" style="padding:4px 10px; font-size:0.8rem;">🗑 Remove Workload</button>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                ${!tp.isExempt ? `
+                  <div class="workload-stat-chip metric">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    <strong>${uniqueClassesCount}</strong> Class(es) &bull; <strong>${uniqueSubjectsCount}</strong> Subject(s)
+                  </div>
+                  <button type="button" class="btn sm primary" onclick="openEditTeacherWorkloadModal(${tp.id})" style="padding:4px 10px; font-size:0.8rem; border-radius:6px;">
+                    Edit Workload
+                  </button>
+                  <button type="button" class="btn sm danger" onclick="removeAllTeacherAssignments(${tp.id}, '${escapeHtml(tp.name)}')" style="padding:4px 10px; font-size:0.8rem; border-radius:6px;">
+                    Clear
+                  </button>
+                ` : `
+                  <span class="badge exempt">Teaching Exempt</span>
+                `}
               </div>
             </div>
 
-            <!-- Subject & Class Allocations — grouped by subject, class chips per row -->
-            <div style="margin-top:12px;">
-              ${tp.subjectGroups.length > 0 ? `
+            <!-- Subject & Class Allocations or Policy Box -->
+            <div style="margin-top:12px; width:100%;">
+              ${tp.isExempt ? `
+                <div class="policy-notice-box">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <div>
+                    <strong style="color:#fbbf24; text-transform:uppercase; letter-spacing:0.03em; font-size:0.75rem; display:block; margin-bottom:2px;">GES Governance Exemption</strong>
+                    <span>Executive leadership and non-teaching administration are 100% duty-exempt from instructional classroom periods. Only institutional administrative privileges apply.</span>
+                  </div>
+                </div>
+              ` : (tp.subjectGroups.length > 0 ? `
                 <div style="display:flex; flex-direction:column; gap:7px;">
                   ${tp.subjectGroups.map(sg => `
-                    <div style="display:flex; align-items:center; background:rgba(255,255,255,0.02); padding:9px 13px; border-radius:7px; border:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; gap:8px;">
-                      <strong style="color:var(--text-primary); font-size:0.88rem; white-space:nowrap; margin-right:2px;">
-                        📘 ${sg.subject_name}
-                        ${sg.is_core !== undefined ? `<span style="font-size:0.68rem; margin-left:5px; padding:1px 6px; border-radius:9px; background:${sg.is_core ? 'rgba(99,102,241,0.18)' : 'rgba(234,179,8,0.15)'}; color:${sg.is_core ? '#818cf8' : '#facc15'}; font-weight:600; vertical-align:middle;">${sg.is_core ? 'CORE' : 'ELECTIVE'}</span>` : ''}
-                      </strong>
+                    <div style="display:flex; align-items:center; background:rgba(255,255,255,0.02); padding:8px 12px; border-radius:7px; border:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; gap:8px;">
+                      <div style="display:flex; align-items:center; gap:6px; min-width:160px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.7;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        <strong style="color:var(--text-primary); font-size:0.86rem; white-space:nowrap;">
+                          ${escapeHtml(sg.subject_name)}
+                        </strong>
+                        ${sg.is_core !== undefined ? `<span style="font-size:0.65rem; padding:1px 5px; border-radius:4px; background:${sg.is_core ? 'rgba(99,102,241,0.18)' : 'rgba(14,165,233,0.15)'}; color:${sg.is_core ? '#818cf8' : '#38bdf8'}; font-weight:700;">${sg.is_core ? 'CORE' : 'ELECTIVE'}</span>` : ''}
+                      </div>
                       <div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center; flex:1;">
                         ${sg.classes.map(cls => `
-                          <span style="display:inline-flex; align-items:center; gap:4px; background:rgba(59,130,246,0.15); color:#93c5fd; border:1px solid rgba(59,130,246,0.3); padding:3px 8px; border-radius:5px; font-size:0.78rem; font-weight:500; white-space:nowrap;">
-                            🏫 ${cls.name}
-                            <button onclick="deleteSingleAssignment(${cls.id}, '${sg.subject_name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${cls.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')"
+                          <span style="display:inline-flex; align-items:center; gap:5px; background:rgba(59,130,246,0.15); color:#93c5fd; border:1px solid rgba(59,130,246,0.3); padding:3px 8px; border-radius:5px; font-size:0.76rem; font-weight:500; white-space:nowrap;">
+                            ${escapeHtml(cls.name)}
+                            <button type="button" onclick="deleteSingleAssignment(${cls.id}, '${sg.subject_name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${cls.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')"
                               title="Remove ${sg.subject_name} from ${cls.name}"
-                              style="background:none; border:none; cursor:pointer; color:rgba(252,165,165,0.85); font-size:0.75rem; padding:0 0 0 3px; line-height:1; display:flex; align-items:center; transition:color 0.15s;"
-                              onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='rgba(252,165,165,0.85)'">✕</button>
+                              style="background:none; border:none; cursor:pointer; color:rgba(252,165,165,0.85); font-size:0.8rem; padding:0 0 0 3px; line-height:1; display:inline-flex; align-items:center; transition:color 0.15s;"
+                              onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='rgba(252,165,165,0.85)'">&times;</button>
                           </span>
                         `).join('')}
                       </div>
-                      <small style="opacity:0.55; font-size:0.75rem; white-space:nowrap;">(${sg.semester_name || 'General'})</small>
+                      <small style="opacity:0.55; font-size:0.75rem; white-space:nowrap;">(${escapeHtml(sg.semester_name || 'General')})</small>
                     </div>
                   `).join('')}
                 </div>
+              ` : (tp.primarySubjectName ? `
+                <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(99,102,241,0.04); padding:10px 14px; border-radius:8px; border:1px dashed rgba(99,102,241,0.25); flex-wrap:wrap; gap:10px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:rgba(16,185,129,0.15); color:#34d399;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                    </span>
+                    <div>
+                      <strong style="color:var(--text-primary); font-size:0.88rem;">${escapeHtml(tp.primarySubjectName)}</strong>
+                      <span style="font-size:0.75rem; color:var(--text-secondary); margin-left:8px;">(Designated Subject from Staff Onboarding)</span>
+                    </div>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="workload-stat-chip leadership" style="font-size:0.73rem; padding:2px 8px;">
+                      Unassigned Class Stream
+                    </span>
+                    <button type="button" class="btn sm primary" onclick="openEditTeacherWorkloadModal(${tp.id})" style="padding:4px 10px; font-size:0.78rem;">
+                      + Assign Classes
+                    </button>
+                  </div>
+                </div>
               ` : `
-                <p style="margin:4px 0 0 0; opacity:0.6; font-style:italic; font-size:0.85rem;">No subject teaching allocations assigned yet.</p>
-              `}
+                <p style="margin:4px 0 0 0; opacity:0.6; font-style:italic; font-size:0.82rem; color:var(--text-secondary);">No subject teaching allocations assigned yet.</p>
+              `))}
             </div>
           </div>
         `;
@@ -879,7 +1195,7 @@ async function loadPrivileges() {
             ${allPrivilegesData.map(p => `
               <tr style="border-bottom: 1px solid var(--border-color);">
                 <td style="padding: 10px 14px;"><strong>${p.teacher_name}</strong></td>
-                <td style="padding: 10px 14px;"><span style="background:rgba(234,179,8,0.18); color:#fde047; padding:2px 8px; border-radius:4px; font-size:0.85rem;">⭐ ${p.privilege_type || p.role_title || 'Administrative Role'}</span></td>
+                <td style="padding: 10px 14px;"><span class="workload-stat-chip leadership" style="font-size:0.82rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> ${escapeHtml(p.privilege_type || p.role_title || 'Administrative Role')}</span></td>
                 <td style="padding: 10px 14px;">${p.target_name}</td>
                 <td style="padding: 10px 14px; text-align: center;">
                   <button class="btn danger" onclick="deletePrivilege('${p.privilege_type}', ${p.target_id}, ${p.teacher_id})" style="padding: 4px 8px; font-size: 0.85rem;">Remove</button>
@@ -925,6 +1241,17 @@ if (form) {
       }
       if (!semesterId) {
         alert('Please select a Term / Semester.');
+        return;
+      }
+
+      // GES Secondary Education Policy Guard
+      const selectedTeacher = allTeachers.find(t => t.id == teacherId);
+      const teacherRoles = selectedTeacher && selectedTeacher.roles ? selectedTeacher.roles.map(r => (typeof r === 'string' ? r : r.name || '').toLowerCase()) : [];
+      const isHead = teacherRoles.some(r => ['headmaster', 'headmistress', 'principal'].includes(r)) || (selectedTeacher && selectedTeacher.responsibility_role === 'HEADMASTER');
+      const isSHSSchool = (window.currentSchoolMode === 'SHS_ONLY' || window.currentSchoolMode === 'SHS' || (allClasses.some(c => (c.stage_name || '').toUpperCase().includes('SHS') || (c.name || '').toUpperCase().includes('FORM'))));
+
+      if (isHead && isSHSSchool) {
+        alert('GES Secondary Education Policy Guard:\n\nIn Senior High Schools (SHS), Headmasters and Headmistresses are 100% duty-exempt from teaching and cannot be assigned class subjects.\n\nPlease select an accredited subject teacher or switch Assignment Category to "Administrative Privilege".');
         return;
       }
     }
@@ -1081,11 +1408,11 @@ function switchAssignmentTab(tabName) {
   if (tabName === 'teaching') {
     teachingPane.style.display = 'block';
     privilegesPane.style.display = 'none';
-    if (privilegesBtn) privilegesBtn.textContent = '🎗️ View Raw Privileges Table';
+    if (privilegesBtn) privilegesBtn.textContent = 'View Raw Privileges Table';
   } else {
     teachingPane.style.display = 'none';
     privilegesPane.style.display = 'block';
-    if (privilegesBtn) privilegesBtn.textContent = '📘 View Consolidated Workload';
+    if (privilegesBtn) privilegesBtn.textContent = 'View Consolidated Workload';
     loadPrivileges();
   }
 }
@@ -1102,7 +1429,7 @@ function toggleAssignmentTab() {
 
 async function removeAllTeacherAssignments(teacherId, teacherName) {
   const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
-    '🗑️ Remove All Teaching Assignments',
+    'Remove All Teaching Assignments',
     `Are you sure you want to remove all teaching assignments for ${teacherName}?`,
     'Remove All Assignments',
     'Cancel',
@@ -1126,7 +1453,7 @@ async function removeAllTeacherAssignments(teacherId, teacherName) {
 
 async function deletePrivilege(privType, targetId, teacherId) {
   const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
-    '🗑️ Revoke Administrative Privilege',
+    'Revoke Administrative Privilege',
     'Are you sure you want to remove this administrative privilege assignment?',
     'Revoke Privilege',
     'Cancel',
@@ -1590,7 +1917,7 @@ function closeEditAssignmentModal() {
 
 async function deleteSingleAssignment(assignmentId, subjectName, className) {
   const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
-    '🗑️ Delete Assignment',
+    'Delete Assignment',
     `Are you sure you want to remove the assignment for ${subjectName} in ${className}?`,
     'Delete Assignment',
     'Cancel',
@@ -1686,7 +2013,7 @@ async function openPrimaryFastAssignModal() {
       });
 
       classSel.innerHTML = '<option value="">Select Primary / Early Childhood Class...</option>' +
-        basicClasses.map(c => `<option value="${c.id}">🏫 ${c.name} (${c.stage_name || 'Basic'})</option>`).join('');
+        basicClasses.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${c.stage_name || 'Basic'})</option>`).join('');
     } catch (e) {
       classSel.innerHTML = '<option value="">Error loading classes</option>';
     }
@@ -1701,7 +2028,7 @@ async function submitPrimaryFastAssign(event) {
   event.preventDefault();
   const btn = document.getElementById('btnRunFastAssign');
   const msg = document.getElementById('fastAssignMsg');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Allocating Class Subjects...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Allocating Class Subjects...'; }
   if (msg) msg.innerHTML = '';
 
   const teacherId = parseInt(document.getElementById('fastTeacherSelect')?.value);
@@ -1710,7 +2037,7 @@ async function submitPrimaryFastAssign(event) {
 
   if (!teacherId || !classId || !semId) {
     if (msg) msg.innerHTML = '<div style="color:#f87171;">Please select a teacher, class, and semester.</div>';
-    if (btn) { btn.disabled = false; btn.textContent = '⚡ Assign to All Subjects'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Assign to All Subjects'; }
     return;
   }
 
@@ -1731,7 +2058,7 @@ async function submitPrimaryFastAssign(event) {
     if (msg) {
       msg.innerHTML = `
         <div style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:10px 14px; border-radius:8px;">
-          ✓ <strong>Success:</strong> ${data.message}
+          <strong>Success:</strong> ${data.message}
         </div>
       `;
     }
@@ -1747,12 +2074,12 @@ async function submitPrimaryFastAssign(event) {
     if (msg) {
       msg.innerHTML = `
         <div style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:10px 14px; border-radius:8px;">
-          ❌ <strong>Error:</strong> ${err.message}
+          <strong>Error:</strong> ${err.message}
         </div>
       `;
     }
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '⚡ Assign to All Subjects'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Assign to All Subjects'; }
   }
 }
 
@@ -1784,6 +2111,13 @@ async function initAssignmentsPage() {
       });
       catSelect.value = catSelect.querySelector('option[value="subject"], option[value="SUBJECT_TEACHING"]')?.value || catSelect.value;
     }
+  }
+
+  // Audit and update staffing conflict badge
+  if (typeof fetchAndRenderStaffingConflicts === 'function') {
+    try {
+      await fetchAndRenderStaffingConflicts();
+    } catch (_) {}
   }
 }
 

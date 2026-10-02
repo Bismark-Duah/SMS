@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from ..services.excel_template_service import generate_staff_onboarding_excel, parse_uploaded_staff_file
 from ..middleware.device_session_guard import register_device_session
 from ..database import get_db
-from ..models import User, Role, School, ClassSection, House, Department, Student, UserDeviceSession, RevokedResetToken, Subject, Semester, TeacherAssignment
+from ..models import User, Role, School, ClassSection, House, Department, Student, UserDeviceSession, RevokedResetToken, Subject, Semester, TeacherAssignment, class_section_subjects
 from ..services.auth import create_jwt, decode_jwt, hash_password, verify_password
 from ..services.audit_service import record_audit_event
 from ..services.gender_detector import detect_gender_from_name
@@ -714,6 +714,12 @@ def create_user(
     if db.query(User).filter(User.username == username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
 
+    department_id = payload.get("department_id")
+    primary_subject_id = payload.get("primary_subject_id")
+    responsibility_role = payload.get("responsibility_role", "REGULAR_TEACHER")
+    max_weekly_periods = payload.get("max_weekly_periods", 28)
+    is_teaching_exempt = bool(payload.get("is_teaching_exempt", False))
+
     new_user = User(
         username=username,
         email=email,
@@ -724,7 +730,12 @@ def create_user(
         is_active=True,
         is_first_login=True,
         contact_verified=bool(phone_number or email),
-        school_id=target_sch_id
+        school_id=target_sch_id,
+        department_id=department_id,
+        primary_subject_id=primary_subject_id,
+        responsibility_role=responsibility_role,
+        max_weekly_periods=max_weekly_periods,
+        is_teaching_exempt=is_teaching_exempt,
     )
     if is_generated:
         setattr(new_user, "temporary_password", raw_password)
@@ -737,6 +748,15 @@ def create_user(
             role_obj = _resolve_or_create_role(db, normalized_name)
             if role_obj and role_obj not in new_user.roles:
                 new_user.roles.append(role_obj)
+
+    qualified_subject_ids = payload.get("qualified_subject_ids") or []
+    if qualified_subject_ids:
+        q_subjects = db.query(Subject).filter(Subject.id.in_(qualified_subject_ids)).all()
+        new_user.qualified_subjects = q_subjects
+    elif primary_subject_id:
+        p_subj = db.query(Subject).filter(Subject.id == primary_subject_id).first()
+        if p_subj:
+            new_user.qualified_subjects = [p_subj]
             
     db.add(new_user)
     db.flush()
@@ -827,6 +847,66 @@ def update_user_roles(
     db.commit()
     db.refresh(target)
     return {"status": "success", "message": f"Roles updated for {target.username}"}
+
+@router.put("/users/{user_id}/competencies")
+def update_user_competencies(
+    user_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update HR teaching capabilities, permanent primary & secondary subject specializations, and GES governance caps."""
+    target = db.query(User).filter(User.id == user_id).first()
+    _verify_managed_user_access(current_user, target, "update competencies")
+
+    if "primary_subject_id" in payload:
+        target.primary_subject_id = payload.get("primary_subject_id")
+    if "department_id" in payload:
+        target.department_id = payload.get("department_id")
+    if "staff_id" in payload:
+        target.staff_id = (payload.get("staff_id") or "").strip() or None
+    target_roles = [r.name.lower() for r in target.roles] if target.roles else []
+    is_executive = any(r in target_roles for r in [
+        "headmaster", "headmistress", "bursar", "school_administrator", "admin", "super_admin",
+        "assistant_headmaster_admin", "assistant_headmaster_academic", "assistant_headmaster_domestic",
+        "assistant_head_admin", "assistant_head_academic", "assistant_head_domestic"
+    ])
+
+    if is_executive:
+        # Enforce GES executive protection: Executive leaders are strictly protected from teaching duties
+        target.is_teaching_exempt = True
+        target.max_weekly_periods = 0
+        if "responsibility_role" in payload and payload.get("responsibility_role") not in ["HEADMASTER", "HEADMISTRESS", "BURSAR", "SCHOOL_ADMINISTRATOR", "ADMIN"]:
+            pass
+        elif "responsibility_role" in payload:
+            target.responsibility_role = payload.get("responsibility_role")
+    else:
+        if "responsibility_role" in payload:
+            target.responsibility_role = payload.get("responsibility_role")
+        if "max_weekly_periods" in payload:
+            target.max_weekly_periods = payload.get("max_weekly_periods")
+        if "is_teaching_exempt" in payload:
+            target.is_teaching_exempt = bool(payload.get("is_teaching_exempt"))
+
+    if "qualified_subject_ids" in payload:
+        q_ids = payload.get("qualified_subject_ids") or []
+        subjects = db.query(Subject).filter(Subject.id.in_(q_ids)).all()
+        target.qualified_subjects = subjects
+    elif "primary_subject_id" in payload and payload.get("primary_subject_id"):
+        p_subj = db.query(Subject).filter(Subject.id == payload.get("primary_subject_id")).first()
+        if p_subj and p_subj not in target.qualified_subjects:
+            target.qualified_subjects.append(p_subj)
+
+    db.commit()
+    db.refresh(target)
+    return {
+        "status": "success",
+        "message": f"Updated teaching competencies for {target.username}",
+        "primary_subject_id": target.primary_subject_id,
+        "primary_subject_name": target.primary_subject_name,
+        "qualified_subject_ids": target.qualified_subject_ids,
+        "qualified_subject_names": target.qualified_subject_names,
+    }
 
 @router.delete("/users/{user_id}")
 def delete_user(
@@ -1402,30 +1482,63 @@ async def import_users_csv(
                         if hm_r and hm_r not in new_user.roles:
                             new_user.roles.append(hm_r)
 
-                # ── 4. Subject & Teacher Assignment (Optional) ──
+                # ── 4. Subject & Teacher Competency / Assignment ──
                 subj_str = clean_row.get("subject") or clean_row.get("primary_subject") or clean_row.get("subject_specification")
-                if subj_str and matched_class:
+                if subj_str:
                     matched_subj = db.query(Subject).filter(
                         (func.lower(Subject.name) == subj_str.lower()) |
                         (func.lower(Subject.code) == subj_str.lower())
                     ).first()
                     if matched_subj:
-                        cur_sem = db.query(Semester).filter(Semester.is_current == True).first()
-                        if cur_sem:
-                            existing_ta = db.query(TeacherAssignment).filter(
-                                TeacherAssignment.teacher_id == new_user.id,
-                                TeacherAssignment.subject_id == matched_subj.id,
-                                TeacherAssignment.class_section_id == matched_class.id,
-                                TeacherAssignment.semester_id == cur_sem.id
+                        new_user.primary_subject_id = matched_subj.id
+                        if matched_subj not in new_user.qualified_subjects:
+                            new_user.qualified_subjects.append(matched_subj)
+
+                        is_head = any(r.name.lower() in ("headmaster", "headmistress", "principal") for r in new_user.roles) or getattr(new_user, "responsibility_role", None) == "HEADMASTER"
+                        if not is_head:
+                            cur_sem = db.query(Semester).filter(
+                                (Semester.school_id == target_sch_id) if target_sch_id else True,
+                                Semester.is_current == True
                             ).first()
-                            if not existing_ta:
-                                new_ta = TeacherAssignment(
-                                    teacher_id=new_user.id,
-                                    subject_id=matched_subj.id,
-                                    class_section_id=matched_class.id,
-                                    semester_id=cur_sem.id
-                                )
-                                db.add(new_ta)
+                            if cur_sem:
+                                if matched_class:
+                                    # ── Explicit class from template: assign to that class only ──
+                                    target_sections = [matched_class]
+                                else:
+                                    # ── Auto-Allocation Engine ──
+                                    # No form_class supplied → allocate to every ClassSection
+                                    # already linked to this subject in the academic hierarchy.
+                                    # This ensures the teacher's subject is visible in
+                                    # assignments immediately after upload, even when
+                                    # the form_class column was left blank.
+                                    target_sections = (
+                                        db.query(ClassSection)
+                                        .join(
+                                            class_section_subjects,
+                                            ClassSection.id == class_section_subjects.c.class_section_id
+                                        )
+                                        .filter(
+                                            class_section_subjects.c.subject_id == matched_subj.id,
+                                            ClassSection.school_id == target_sch_id
+                                        )
+                                        .all()
+                                    )
+
+                                for section in target_sections:
+                                    existing_ta = db.query(TeacherAssignment).filter(
+                                        TeacherAssignment.teacher_id == new_user.id,
+                                        TeacherAssignment.subject_id == matched_subj.id,
+                                        TeacherAssignment.class_section_id == section.id,
+                                        TeacherAssignment.semester_id == cur_sem.id
+                                    ).first()
+                                    if not existing_ta:
+                                        new_ta = TeacherAssignment(
+                                            teacher_id=new_user.id,
+                                            subject_id=matched_subj.id,
+                                            class_section_id=section.id,
+                                            semester_id=cur_sem.id
+                                        )
+                                        db.add(new_ta)
 
                 link_students_for_parent_user(db, new_user)
                 imported_count += 1
@@ -1441,11 +1554,34 @@ async def import_users_csv(
             
     db.commit()
     batch_status = "success" if not errors else ("partial_success" if imported_count > 0 else "error")
+    
+    # ── Check for Staffing Conflicts / Overloads post-import ──
+    staffing_conflicts = []
+    active_sem = db.query(Semester).filter(
+        (Semester.school_id == target_sch_id) if target_sch_id else True,
+        Semester.is_current == True
+    ).first()
+
+    if active_sem:
+        try:
+            from .assignments import audit_staffing_conflicts
+            audit_res = audit_staffing_conflicts(
+                semester_id=active_sem.id,
+                db=db,
+                current_user=current_user,
+                school_id=target_sch_id
+            )
+            staffing_conflicts = audit_res.get("conflicts", [])
+        except Exception:
+            staffing_conflicts = []
+
     return {
         "status": batch_status,
         "imported": imported_count,
         "errors": errors,
-        "temporary_credentials": generated_credentials
+        "temporary_credentials": generated_credentials,
+        "semester_id": active_sem.id if active_sem else None,
+        "staffing_conflicts": staffing_conflicts
     }
 
 

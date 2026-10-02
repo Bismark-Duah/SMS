@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple, Any
 
 from ..database import get_db
 from ..models import TeacherAssignment, User, Subject, Semester, ClassSection, House, Role, Setting, SchoolStage, Department
@@ -123,11 +123,21 @@ def create_assignment(
         if payload.subject_id not in allowed_sub_ids:
             raise HTTPException(status_code=403, detail="HODs can only assign subjects belonging to their department")
 
-    if not db.query(ClassSection).filter(ClassSection.id == payload.class_section_id).first():
+    class_sec = db.query(ClassSection).filter(ClassSection.id == payload.class_section_id).first()
+    if not class_sec:
         raise HTTPException(status_code=404, detail="Class section not found")
-    if not db.query(Semester).filter(Semester.id == payload.semester_id).first():
-        raise HTTPException(status_code=404, detail="Semester not found")
-        
+
+    # GES Secondary Education Policy Guard: In SHS, Headmasters/Headmistresses do NOT teach
+    mode = _get_school_mode(db, school_id)
+    teacher_roles = [r.name.lower() for r in teacher.roles] if teacher.roles else []
+    is_head = any(r in ["headmaster", "headmistress", "principal"] for r in teacher_roles) or getattr(teacher, "responsibility_role", None) == "HEADMASTER"
+    is_shs = (class_sec.stage and getattr(class_sec.stage, "school_type", "").upper() == "SHS") or mode in ["SHS_ONLY", "SHS"]
+    if is_head and is_shs:
+        raise HTTPException(
+            status_code=400,
+            detail="In Senior High Schools (SHS), Headmasters and Headmistresses are 100% duty-exempt from teaching and cannot be assigned class subjects."
+        )
+
     duplicate = db.query(TeacherAssignment).filter(
         TeacherAssignment.teacher_id == payload.teacher_id,
         TeacherAssignment.subject_id == payload.subject_id,
@@ -188,6 +198,21 @@ def update_assignment(
     teacher = db.query(User).filter(User.id == payload.teacher_id).first()
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
+
+    class_sec = db.query(ClassSection).filter(ClassSection.id == payload.class_section_id).first()
+    if not class_sec:
+        raise HTTPException(status_code=404, detail="Class section not found")
+
+    # GES Secondary Education Policy Guard: In SHS, Headmasters/Headmistresses do NOT teach
+    mode = _get_school_mode(db, current_user.school_id if hasattr(current_user, "school_id") else None)
+    teacher_roles = [r.name.lower() for r in teacher.roles] if teacher.roles else []
+    is_head = any(r in ["headmaster", "headmistress", "principal"] for r in teacher_roles) or getattr(teacher, "responsibility_role", None) == "HEADMASTER"
+    is_shs = (class_sec.stage and getattr(class_sec.stage, "school_type", "").upper() == "SHS") or mode in ["SHS_ONLY", "SHS"]
+    if is_head and is_shs:
+        raise HTTPException(
+            status_code=400,
+            detail="In Senior High Schools (SHS), Headmasters and Headmistresses are 100% duty-exempt from teaching and cannot be assigned class subjects."
+        )
 
     dup = db.query(TeacherAssignment).filter(
         TeacherAssignment.teacher_id == payload.teacher_id,
@@ -819,5 +844,341 @@ def batch_jhs_matrix_assignment(
         "assigned_count": assigned_count,
         "teacher_name": t_name,
         "message": f"Successfully allocated {assigned_count} teaching assignment(s) for {t_name}."
+    }
+
+
+# ── Staffing Conflicts & Smart Distribution Engine ───────────────────────────
+from ..services.curriculum_presets import get_subject_config, ROLE_WORKLOAD_LIMITS
+from ..models import class_section_subjects
+
+class BatchConfirmAssignmentItem(BaseModel):
+    teacher_id: int
+    subject_id: int
+    class_section_id: int
+
+class BatchConfirmAssignmentsRequest(BaseModel):
+    semester_id: int
+    assignments: List[BatchConfirmAssignmentItem]
+    replace_subject_ids: Optional[List[int]] = None
+
+
+@router.get("/audit-staffing-conflicts")
+def audit_staffing_conflicts(
+    semester_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    """
+    Audits active teaching allocations against curriculum weekly periods and teacher capacity caps.
+    Detects overloaded teachers and overloaded subjects with available qualified candidate teachers.
+    """
+    _check_admin(current_user, allow_view=True)
+
+    target_sch_id = school_id or getattr(current_user, "school_id", None)
+    if not semester_id:
+        cur_sem = db.query(Semester).filter(
+            (Semester.school_id == target_sch_id) if target_sch_id else True,
+            Semester.is_current == True
+        ).first()
+        semester_id = cur_sem.id if cur_sem else None
+
+    if not semester_id:
+        return {"conflicts": [], "total_conflicts": 0, "semester_id": None}
+
+    # Fetch active teaching assignments
+    asgns = db.query(TeacherAssignment).filter(
+        TeacherAssignment.semester_id == semester_id
+    ).join(TeacherAssignment.teacher).filter(
+        (User.school_id == target_sch_id) if target_sch_id else True
+    ).all()
+
+    # Preload all active teachers for qualified lookup
+    teachers_q = db.query(User).filter(
+        (User.school_id == target_sch_id) if target_sch_id else True
+    ).all()
+
+    teacher_map = {t.id: t for t in teachers_q}
+    
+    # Calculate period loads per teacher
+    teacher_period_loads: Dict[int, int] = {}
+    teacher_classes_by_subj: Dict[Tuple[int, int], List[Dict[str, Any]]] = {}
+
+    for a in asgns:
+        s_cfg = get_subject_config(a.subject.name if a.subject else "")
+        weekly_p = s_cfg.get("weekly_periods", 4)
+
+        teacher_period_loads[a.teacher_id] = teacher_period_loads.get(a.teacher_id, 0) + weekly_p
+
+        key = (a.teacher_id, a.subject_id)
+        if key not in teacher_classes_by_subj:
+            teacher_classes_by_subj[key] = []
+        teacher_classes_by_subj[key].append({
+            "assignment_id": a.id,
+            "class_section_id": a.class_section_id,
+            "class_section_name": a.class_section.name if a.class_section else f"Class {a.class_section_id}",
+            "weekly_periods": weekly_p
+        })
+
+    conflicts = []
+    # Identify overloaded teacher-subject assignments
+    for (t_id, s_id), class_items in teacher_classes_by_subj.items():
+        t = teacher_map.get(t_id)
+        if not t:
+            continue
+        
+        t_roles = [r.name.lower() for r in t.roles] if t.roles else []
+        is_exempt = getattr(t, "is_teaching_exempt", False) or any(r in t_roles for r in ["headmaster", "principal", "admin", "bursar"])
+        role_key = getattr(t, "responsibility_role", "REGULAR_TEACHER") or "REGULAR_TEACHER"
+        role_limit = ROLE_WORKLOAD_LIMITS.get(role_key, ROLE_WORKLOAD_LIMITS["REGULAR_TEACHER"])
+        max_cap = getattr(t, "max_weekly_periods", 0) if is_exempt else (getattr(t, "max_weekly_periods", role_limit["default_cap"]) or role_limit["default_cap"])
+
+        total_load = teacher_period_loads.get(t_id, 0)
+        subj_obj = db.query(Subject).filter(Subject.id == s_id).first()
+        subj_name = subj_obj.name if subj_obj else "Subject"
+
+        # Conflict trigger: total load exceeds max_cap or single subject load exceeds 24 periods
+        subject_load = sum(c["weekly_periods"] for c in class_items)
+        if (total_load > max_cap and not is_exempt) or (subject_load > 26 and len(class_items) > 4):
+            # Find candidate teachers who are qualified in this subject
+            qualified_candidates = []
+            for other_t in teachers_q:
+                # check if qualified or primary subject matches
+                is_qual = (other_t.primary_subject_id == s_id) or (s_id in [qs.id for qs in getattr(other_t, "qualified_subjects", [])])
+                # Also include same department teachers if available
+                if not is_qual and other_t.department_id and subj_obj:
+                    t_dept = db.query(Department).filter(Department.id == other_t.department_id).first()
+                    if t_dept and any(s.id == s_id for s in t_dept.subjects):
+                        is_qual = True
+                
+                other_t_roles = [r.name.lower() for r in other_t.roles] if other_t.roles else []
+                is_other_head = any(r in ["headmaster", "principal"] for r in other_t_roles) or getattr(other_t, "responsibility_role", None) == "HEADMASTER"
+                if is_qual and not is_other_head:
+                    other_load = teacher_period_loads.get(other_t.id, 0)
+                    other_cap = getattr(other_t, "max_weekly_periods", 26) or 26
+                    qualified_candidates.append({
+                        "teacher_id": other_t.id,
+                        "teacher_name": getattr(other_t, "full_name", None) or other_t.username,
+                        "current_periods": other_load,
+                        "max_cap": other_cap,
+                        "available_capacity": max(0, other_cap - other_load)
+                    })
+
+            conflicts.append({
+                "subject_id": s_id,
+                "subject_name": subj_name,
+                "overloaded_teacher_id": t_id,
+                "overloaded_teacher_name": getattr(t, "full_name", None) or t.username,
+                "current_teacher_load": total_load,
+                "subject_periods": subject_load,
+                "max_cap": max_cap,
+                "overload_periods": max(0, total_load - max_cap) if not is_exempt else 0,
+                "assigned_classes": class_items,
+                "qualified_teachers": qualified_candidates,
+                "recommendation": f"Redistribute {len(class_items)} classes of {subj_name} across {len(qualified_candidates)} available qualified teacher(s)."
+            })
+
+    return {
+        "status": "success",
+        "semester_id": semester_id,
+        "total_conflicts": len(conflicts),
+        "conflicts": conflicts
+    }
+
+
+@router.get("/smart-distribute-subject")
+def smart_distribute_subject(
+    subject_id: int,
+    semester_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    """
+    Calculates a balanced class distribution proposal for an overloaded subject.
+    Splits classes among qualified teachers respecting weekly workload limits.
+    """
+    _check_admin(current_user, allow_view=True)
+    target_sch_id = school_id or getattr(current_user, "school_id", None)
+
+    subj = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subj:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+    s_cfg = get_subject_config(subj.name)
+    weekly_p = s_cfg.get("weekly_periods", 4)
+
+    # All classes currently needing this subject in this school
+    # (either currently assigned in this semester, or bound via class_section_subjects)
+    assigned_sections = db.query(ClassSection).join(
+        TeacherAssignment,
+        ClassSection.id == TeacherAssignment.class_section_id
+    ).filter(
+        TeacherAssignment.subject_id == subject_id,
+        TeacherAssignment.semester_id == semester_id,
+        (ClassSection.school_id == target_sch_id) if target_sch_id else True
+    ).distinct().all()
+
+    if not assigned_sections:
+        # Fallback to academic structure links
+        assigned_sections = db.query(ClassSection).join(
+            class_section_subjects,
+            ClassSection.id == class_section_subjects.c.class_section_id
+        ).filter(
+            class_section_subjects.c.subject_id == subject_id,
+            (ClassSection.school_id == target_sch_id) if target_sch_id else True
+        ).all()
+
+    all_teachers = db.query(User).filter(
+        (User.school_id == target_sch_id) if target_sch_id else True
+    ).all()
+
+    # Find qualified teachers
+    qualified = []
+    for t in all_teachers:
+        t_roles = [r.name.lower() for r in t.roles] if t.roles else []
+        is_head = any(r in ["headmaster", "principal"] for r in t_roles) or getattr(t, "responsibility_role", None) == "HEADMASTER"
+        if is_head:
+            continue
+        
+        is_qual = (t.primary_subject_id == subject_id) or (subject_id in [qs.id for qs in getattr(t, "qualified_subjects", [])])
+        if not is_qual and t.department_id:
+            t_dept = db.query(Department).filter(Department.id == t.department_id).first()
+            if t_dept and any(s.id == subject_id for s in t_dept.subjects):
+                is_qual = True
+        
+        if is_qual:
+            cap = getattr(t, "max_weekly_periods", 26) or 26
+            # Current load excluding this subject
+            other_load = 0
+            other_asgns = db.query(TeacherAssignment).filter(
+                TeacherAssignment.teacher_id == t.id,
+                TeacherAssignment.semester_id == semester_id,
+                TeacherAssignment.subject_id != subject_id
+            ).all()
+            for oa in other_asgns:
+                other_load += get_subject_config(oa.subject.name if oa.subject else "").get("weekly_periods", 4)
+
+            qualified.append({
+                "teacher_id": t.id,
+                "teacher_name": getattr(t, "full_name", None) or t.username,
+                "max_cap": cap,
+                "base_load": other_load,
+                "classes": []
+            })
+
+    if not qualified:
+        # If no specific qualified teachers, pick any teacher currently assigned to this subject
+        asgn_teacher_ids = {a.teacher_id for a in db.query(TeacherAssignment).filter(
+            TeacherAssignment.subject_id == subject_id,
+            TeacherAssignment.semester_id == semester_id
+        ).all()}
+        for t in all_teachers:
+            if t.id in asgn_teacher_ids:
+                qualified.append({
+                    "teacher_id": t.id,
+                    "teacher_name": getattr(t, "full_name", None) or t.username,
+                    "max_cap": getattr(t, "max_weekly_periods", 26) or 26,
+                    "base_load": 0,
+                    "classes": []
+                })
+
+    if not qualified:
+        raise HTTPException(status_code=400, detail=f"No qualified teachers available to distribute '{subj.name}'. Please create or qualify additional teachers first.")
+
+    # Sort classes by name/level to group logically (e.g., 1S1, 1S2 together)
+    sections_sorted = sorted(assigned_sections, key=lambda c: c.name)
+
+    # Distribute classes round-robin or by available capacity
+    for idx, sec in enumerate(sections_sorted):
+        # Pick teacher with minimum projected load
+        target_teacher = min(qualified, key=lambda t: t["base_load"] + (len(t["classes"]) * weekly_p))
+        target_teacher["classes"].append({
+            "class_section_id": sec.id,
+            "class_section_name": sec.name,
+            "weekly_periods": weekly_p
+        })
+
+    # Prepare response proposal
+    proposal = []
+    for q in qualified:
+        projected_p = q["base_load"] + (len(q["classes"]) * weekly_p)
+        proposal.append({
+            "teacher_id": q["teacher_id"],
+            "teacher_name": q["teacher_name"],
+            "assigned_classes": q["classes"],
+            "classes_count": len(q["classes"]),
+            "subject_periods": len(q["classes"]) * weekly_p,
+            "projected_total_periods": projected_p,
+            "max_cap": q["max_cap"],
+            "status": "OVERLOADED" if projected_p > q["max_cap"] else "OPTIMAL"
+        })
+
+    return {
+        "status": "success",
+        "subject_id": subject_id,
+        "subject_name": subj.name,
+        "weekly_periods_per_class": weekly_p,
+        "total_classes": len(sections_sorted),
+        "teachers_count": len(qualified),
+        "proposal": proposal
+    }
+
+
+@router.post("/batch-confirm-assignments")
+def batch_confirm_assignments(
+    payload: BatchConfirmAssignmentsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    """
+    Commits approved teacher-class distributions after Admin inspection & confirmation.
+    Safely replaces previous allocations for the specified subjects.
+    """
+    _check_admin(current_user)
+    target_sch_id = school_id or getattr(current_user, "school_id", None)
+
+    sem = db.query(Semester).filter(Semester.id == payload.semester_id).first()
+    if not sem:
+        raise HTTPException(status_code=404, detail="Semester not found")
+
+    # If replace_subject_ids provided, remove existing assignments for these subjects first
+    if payload.replace_subject_ids:
+        del_q = db.query(TeacherAssignment).filter(
+            TeacherAssignment.semester_id == payload.semester_id,
+            TeacherAssignment.subject_id.in_(payload.replace_subject_ids)
+        )
+        if target_sch_id:
+            del_q = del_q.join(TeacherAssignment.class_section).filter(ClassSection.school_id == target_sch_id)
+        del_q.delete(synchronize_session=False)
+
+    saved_count = 0
+    for item in payload.assignments:
+        existing = db.query(TeacherAssignment).filter(
+            TeacherAssignment.teacher_id == item.teacher_id,
+            TeacherAssignment.subject_id == item.subject_id,
+            TeacherAssignment.class_section_id == item.class_section_id,
+            TeacherAssignment.semester_id == payload.semester_id
+        ).first()
+
+        if existing:
+            existing.teacher_id = item.teacher_id
+            saved_count += 1
+        else:
+            new_ta = TeacherAssignment(
+                teacher_id=item.teacher_id,
+                subject_id=item.subject_id,
+                class_section_id=item.class_section_id,
+                semester_id=payload.semester_id
+            )
+            db.add(new_ta)
+            saved_count += 1
+
+    db.commit()
+    return {
+        "status": "success",
+        "saved_count": saved_count,
+        "message": f"Successfully confirmed and committed {saved_count} teaching allocation(s)."
     }
 

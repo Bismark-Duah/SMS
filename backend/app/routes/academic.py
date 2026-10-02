@@ -12,14 +12,23 @@ router = APIRouter()
 # ── Academic Years ─────────────────────────────────────────────────────────────
 
 @router.get("/years")
-def list_years(db: Session = Depends(get_db)):
-    years = db.query(AcademicYear).order_by(AcademicYear.id.desc()).all()
+def list_years(
+    db: Session = Depends(get_db),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    q = db.query(AcademicYear)
+    if school_id is not None:
+        q = q.filter(AcademicYear.school_id == school_id)
+    years = q.order_by(AcademicYear.id.desc()).all()
     result = []
     for y in years:
+        # Only include semesters for this school
+        sems = [s for s in y.semesters if s.school_id == school_id] if school_id else y.semesters
         result.append({
             "id": y.id,
             "label": y.label,
             "is_current": y.is_current,
+            "school_id": y.school_id,
             "semesters": [
                 {
                     "id": s.id,
@@ -29,18 +38,30 @@ def list_years(db: Session = Depends(get_db)):
                     "start_date": str(s.start_date)[:10] if s.start_date else None,
                     "end_date": str(s.end_date)[:10] if s.end_date else None,
                 }
-                for s in y.semesters
+                for s in sems
             ],
         })
     return result
 
 
 @router.post("/years")
-def create_year(payload: AcademicYearCreate, db: Session = Depends(get_db)):
-    existing = db.query(AcademicYear).filter(AcademicYear.label == payload.label).first()
+def create_year(
+    payload: AcademicYearCreate,
+    db: Session = Depends(get_db),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    eff_school_id = payload.school_id or school_id
+    existing = db.query(AcademicYear).filter(
+        AcademicYear.label == payload.label,
+        AcademicYear.school_id == eff_school_id,
+    ).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Academic year '{payload.label}' already exists.")
-    db_year = AcademicYear(**payload.dict())
+    db_year = AcademicYear(
+        label=payload.label,
+        is_current=payload.is_current,
+        school_id=eff_school_id,
+    )
     db.add(db_year)
     db.commit()
     db.refresh(db_year)
@@ -48,48 +69,80 @@ def create_year(payload: AcademicYearCreate, db: Session = Depends(get_db)):
 
 
 @router.patch("/years/{year_id}/set-current")
-def set_current_year(year_id: int, db: Session = Depends(get_db)):
-    """Mark a year as current, clearing the flag from all others."""
-    db.query(AcademicYear).update({"is_current": False})
+def set_current_year(
+    year_id: int,
+    db: Session = Depends(get_db),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    """Mark a year as current within this school, clearing the flag from all others in same school."""
     year = db.query(AcademicYear).filter(AcademicYear.id == year_id).first()
     if not year:
         raise HTTPException(status_code=404, detail="Academic year not found.")
+    # Only clear flag within the same school
+    q = db.query(AcademicYear)
+    if school_id is not None:
+        q = q.filter(AcademicYear.school_id == school_id)
+    q.update({"is_current": False})
     year.is_current = True
     db.commit()
     return {"message": f"'{year.label}' is now the current academic year."}
 
 
 @router.delete("/years/{year_id}")
-def delete_year(year_id: int, db: Session = Depends(get_db)):
-    year = db.query(AcademicYear).filter(AcademicYear.id == year_id).first()
+def delete_year(
+    year_id: int,
+    db: Session = Depends(get_db),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    q = db.query(AcademicYear).filter(AcademicYear.id == year_id)
+    if school_id is not None:
+        q = q.filter(AcademicYear.school_id == school_id)
+    year = q.first()
     if not year:
         raise HTTPException(status_code=404, detail="Academic year not found.")
-    # Delete child semesters first
-    db.query(Semester).filter(Semester.academic_year_id == year_id).delete()
+    # Delete child semesters for this school first
+    sem_q = db.query(Semester).filter(Semester.academic_year_id == year_id)
+    if school_id is not None:
+        sem_q = sem_q.filter(Semester.school_id == school_id)
+    sem_q.delete()
     db.delete(year)
     db.commit()
     return {"message": f"Academic year '{year.label}' deleted."}
 
 
 @router.put("/years/{year_id}")
-def update_year(year_id: int, payload: AcademicYearUpdate, db: Session = Depends(get_db)):
-    year = db.query(AcademicYear).filter(AcademicYear.id == year_id).first()
+def update_year(
+    year_id: int,
+    payload: AcademicYearUpdate,
+    db: Session = Depends(get_db),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    q = db.query(AcademicYear).filter(AcademicYear.id == year_id)
+    if school_id is not None:
+        q = q.filter(AcademicYear.school_id == school_id)
+    year = q.first()
     if not year:
         raise HTTPException(status_code=404, detail="Academic year not found.")
-    
+
     if year.label != payload.label:
-        existing = db.query(AcademicYear).filter(AcademicYear.label == payload.label).first()
+        existing = db.query(AcademicYear).filter(
+            AcademicYear.label == payload.label,
+            AcademicYear.school_id == year.school_id,
+        ).first()
         if existing:
             raise HTTPException(status_code=400, detail=f"Academic year '{payload.label}' already exists.")
-            
+
     year.label = payload.label
-    
+
     if payload.is_current:
-        db.query(AcademicYear).update({"is_current": False})
+        scoped_q = db.query(AcademicYear)
+        if school_id is not None:
+            scoped_q = scoped_q.filter(AcademicYear.school_id == school_id)
+        scoped_q.update({"is_current": False})
         year.is_current = True
     else:
         year.is_current = False
-        
+
     db.commit()
     db.refresh(year)
     return year
@@ -98,8 +151,14 @@ def update_year(year_id: int, payload: AcademicYearUpdate, db: Session = Depends
 # ── Semesters ──────────────────────────────────────────────────────────────────
 
 @router.get("/semesters")
-def list_semesters(db: Session = Depends(get_db)):
-    semesters = db.query(Semester).all()
+def list_semesters(
+    db: Session = Depends(get_db),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    q = db.query(Semester)
+    if school_id is not None:
+        q = q.filter(Semester.school_id == school_id)
+    semesters = q.all()
     return [
         {
             "id": s.id,
@@ -111,14 +170,27 @@ def list_semesters(db: Session = Depends(get_db)):
             "locked_at": str(s.locked_at)[:19] if s.locked_at else None,
             "start_date": str(s.start_date)[:10] if s.start_date else None,
             "end_date": str(s.end_date)[:10] if s.end_date else None,
+            "school_id": s.school_id,
         }
         for s in semesters
     ]
 
 
 @router.post("/semesters")
-def create_semester(payload: SemesterCreate, db: Session = Depends(get_db)):
-    db_semester = Semester(**payload.dict())
+def create_semester(
+    payload: SemesterCreate,
+    db: Session = Depends(get_db),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    eff_school_id = payload.school_id or school_id
+    db_semester = Semester(
+        name=payload.name,
+        academic_year_id=payload.academic_year_id,
+        is_current=payload.is_current,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        school_id=eff_school_id,
+    )
     db.add(db_semester)
     db.commit()
     db.refresh(db_semester)
@@ -131,16 +203,25 @@ def create_semester(payload: SemesterCreate, db: Session = Depends(get_db)):
         "locked_at": str(db_semester.locked_at)[:19] if db_semester.locked_at else None,
         "start_date": str(db_semester.start_date)[:10] if db_semester.start_date else None,
         "end_date": str(db_semester.end_date)[:10] if db_semester.end_date else None,
+        "school_id": db_semester.school_id,
     }
 
 
 @router.patch("/semesters/{semester_id}/set-current")
-def set_current_semester(semester_id: int, db: Session = Depends(get_db)):
-    """Mark a semester as current, clearing the flag from all others."""
-    db.query(Semester).update({"is_current": False})
+def set_current_semester(
+    semester_id: int,
+    db: Session = Depends(get_db),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    """Mark a semester as current within this school, clearing the flag from all others in same school."""
     semester = db.query(Semester).filter(Semester.id == semester_id).first()
     if not semester:
         raise HTTPException(status_code=404, detail="Semester not found.")
+    # Only clear flag within this school
+    scoped_q = db.query(Semester)
+    if school_id is not None:
+        scoped_q = scoped_q.filter(Semester.school_id == school_id)
+    scoped_q.update({"is_current": False})
     semester.is_current = True
     db.commit()
     return {"message": f"'{semester.name}' is now the current semester."}
@@ -180,8 +261,15 @@ def toggle_semester_lock(
 
 
 @router.delete("/semesters/{semester_id}")
-def delete_semester(semester_id: int, db: Session = Depends(get_db)):
-    semester = db.query(Semester).filter(Semester.id == semester_id).first()
+def delete_semester(
+    semester_id: int,
+    db: Session = Depends(get_db),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    q = db.query(Semester).filter(Semester.id == semester_id)
+    if school_id is not None:
+        q = q.filter(Semester.school_id == school_id)
+    semester = q.first()
     if not semester:
         raise HTTPException(status_code=404, detail="Semester not found.")
     db.delete(semester)
@@ -190,21 +278,32 @@ def delete_semester(semester_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/semesters/{semester_id}")
-def update_semester(semester_id: int, payload: SemesterUpdate, db: Session = Depends(get_db)):
-    semester = db.query(Semester).filter(Semester.id == semester_id).first()
+def update_semester(
+    semester_id: int,
+    payload: SemesterUpdate,
+    db: Session = Depends(get_db),
+    school_id: Optional[int] = Depends(get_school_id),
+):
+    q = db.query(Semester).filter(Semester.id == semester_id)
+    if school_id is not None:
+        q = q.filter(Semester.school_id == school_id)
+    semester = q.first()
     if not semester:
         raise HTTPException(status_code=404, detail="Semester not found.")
-        
+
     semester.name = payload.name
     semester.start_date = payload.start_date
     semester.end_date = payload.end_date
-    
+
     if payload.is_current:
-        db.query(Semester).update({"is_current": False})
+        scoped_q = db.query(Semester)
+        if school_id is not None:
+            scoped_q = scoped_q.filter(Semester.school_id == school_id)
+        scoped_q.update({"is_current": False})
         semester.is_current = True
     else:
         semester.is_current = False
-        
+
     db.commit()
     db.refresh(semester)
     return {
@@ -212,6 +311,7 @@ def update_semester(semester_id: int, payload: SemesterUpdate, db: Session = Dep
         "name": semester.name,
         "academic_year_id": semester.academic_year_id,
         "is_current": semester.is_current,
+        "school_id": semester.school_id,
         "start_date": str(semester.start_date)[:10] if semester.start_date else None,
         "end_date": str(semester.end_date)[:10] if semester.end_date else None,
     }

@@ -228,11 +228,11 @@ async function initSuperAdminTenantFilter() {
     if (res.ok) {
       const schools = await res.json();
       let optionsHtml = `
-        <option value="system_only" ${selectedSchoolScope === 'system_only' ? 'selected' : ''}>👑 System & Super-Admins Only</option>
-        <option value="all" ${selectedSchoolScope === 'all' ? 'selected' : ''}>🌐 All Accounts (Global System View)</option>
+        <option value="system_only" ${selectedSchoolScope === 'system_only' ? 'selected' : ''}>System & Super-Admins Only</option>
+        <option value="all" ${selectedSchoolScope === 'all' ? 'selected' : ''}>All Accounts (Global System View)</option>
       `;
       (schools || []).forEach(s => {
-        optionsHtml += `<option value="${s.id}" ${String(selectedSchoolScope) === String(s.id) ? 'selected' : ''}>🏫 ${s.name} (${s.code})</option>`;
+        optionsHtml += `<option value="${s.id}" ${String(selectedSchoolScope) === String(s.id) ? 'selected' : ''}>${escapeHtml(s.name)} (${escapeHtml(s.code)})</option>`;
       });
       tenantSelect.innerHTML = optionsHtml;
     }
@@ -439,7 +439,10 @@ function renderUserTable(users) {
           <div style="display:flex; align-items:center; gap:10px;">
             <div class="user-avatar-badge">${initial}</div>
             <div>
-              <div style="font-weight:700; color:#f8fafc; font-size:0.9rem;">${escapeHtml(u.username)} ${genderBadge}</div>
+              <div style="font-weight:700; color:#f8fafc; font-size:0.9rem; display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                ${escapeHtml(u.username)} ${genderBadge}
+                ${u.primary_subject_name ? `<span style="font-size:0.72rem; color:#38bdf8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:1px 6px; border-radius:10px;">Specialization: ${escapeHtml(u.primary_subject_name)}</span>` : ''}
+              </div>
               ${childrenInfo}
             </div>
           </div>
@@ -550,7 +553,7 @@ if (userForm) {
       if (res.ok) {
         const data = await res.json();
         if (data && data.temporary_password) {
-          alert(`User account created successfully!\n\n🔑 Temporary Password: ${data.temporary_password}\n(The user will be required to change this password upon first login).`);
+          alert(`User account created successfully!\n\nTemporary Password: ${data.temporary_password}\n(The user will be required to change this password upon first login).`);
         } else {
           alert('User account created successfully!');
         }
@@ -567,7 +570,40 @@ if (userForm) {
   });
 }
 
-// ── Edit Roles Modal Handlers ──────────────────────────────────────────────────
+// ── Edit Roles & Competencies Modal Handlers ─────────────────────────────────────
+
+async function loadCompetencyDropdowns(targetUser) {
+  const deptSelect = document.getElementById('editDepartmentSelect');
+  const subjSelect = document.getElementById('editPrimarySubjectSelect');
+
+  // Load Departments
+  try {
+    const res = await fetch(`${API_BASE}/departments`, { headers: getHeaders() });
+    if (res.ok) {
+      const depts = await res.json();
+      let dHtml = '<option value="">(No Department)</option>';
+      (depts || []).forEach(d => {
+        const isSel = (targetUser.department_id === d.id) ? 'selected' : '';
+        dHtml += `<option value="${d.id}" ${isSel}>${escapeHtml(d.name)}</option>`;
+      });
+      if (deptSelect) deptSelect.innerHTML = dHtml;
+    }
+  } catch (_) {}
+
+  // Load Accredited Subjects
+  try {
+    const res = await fetch(`${API_BASE}/subjects`, { headers: getHeaders() });
+    if (res.ok) {
+      const subjs = await res.json();
+      let sHtml = '<option value="">(Select Subject Specialization)</option>';
+      (subjs || []).forEach(s => {
+        const isSel = (targetUser.primary_subject_id === s.id) ? 'selected' : '';
+        sHtml += `<option value="${s.id}" ${isSel}>${escapeHtml(s.name)} [${escapeHtml(s.code || '')}]</option>`;
+      });
+      if (subjSelect) subjSelect.innerHTML = sHtml;
+    }
+  } catch (_) {}
+}
 
 window.openEditRolesModal = function(userId) {
   const user = allUsersData.find(u => u.id === userId);
@@ -582,8 +618,17 @@ window.openEditRolesModal = function(userId) {
   if (!modal || !container) return;
 
   idInput.value = user.id;
-  if (title) title.textContent = `Edit Roles: ${user.username}`;
-  if (subtitle) subtitle.textContent = `Configure assigned permissions for ${user.username} (${user.email || 'No email'}) • ${user.gender || 'Male'}`;
+  if (title) title.textContent = `Edit Profile & Roles: ${user.username}`;
+  if (subtitle) subtitle.textContent = `Configure HR competency and assigned permissions for ${user.username} (${user.email || 'No email'}) • ${user.gender || 'Male'}`;
+
+  // Populate HR Competencies
+  const staffInput = document.getElementById('editStaffId');
+  const maxPeriodsInput = document.getElementById('editMaxPeriods');
+  const exemptInput = document.getElementById('editTeachingExempt');
+  if (staffInput) staffInput.value = user.staff_id || '';
+  if (maxPeriodsInput) maxPeriodsInput.value = user.max_weekly_periods || 24;
+  if (exemptInput) exemptInput.checked = Boolean(user.is_teaching_exempt);
+  loadCompetencyDropdowns(user);
 
   const isFemale = String(user.gender).toLowerCase().startsWith('f');
   
@@ -678,20 +723,41 @@ window.saveUserRoles = async function() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/auth/users/${userId}/roles`, {
+    // 1. Save Roles
+    const resRoles = await fetch(`${API_BASE}/auth/users/${userId}/roles`, {
       method: 'PUT',
       headers: getHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ roles: checkedRoles })
     });
 
-    if (res.ok) {
-      alert('User roles updated successfully!');
-      closeEditRolesModal();
-      await loadData();
-    } else {
-      const err = await res.json();
-      alert(`Error: ${err.detail || 'Failed to update roles'}`);
+    if (!resRoles.ok) {
+      const err = await resRoles.json();
+      alert(`Error updating roles: ${err.detail || 'Failed'}`);
+      return;
     }
+
+    // 2. Save Permanent Competencies & Governance (HR Domain)
+    const staffId = document.getElementById('editStaffId')?.value.trim() || null;
+    const deptId = parseInt(document.getElementById('editDepartmentSelect')?.value) || null;
+    const subjId = parseInt(document.getElementById('editPrimarySubjectSelect')?.value) || null;
+    const maxPeriods = parseInt(document.getElementById('editMaxPeriods')?.value) || 24;
+    const isExempt = document.getElementById('editTeachingExempt')?.checked || false;
+
+    await fetch(`${API_BASE}/auth/users/${userId}/competencies`, {
+      method: 'PUT',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        staff_id: staffId,
+        department_id: deptId,
+        primary_subject_id: subjId,
+        max_weekly_periods: maxPeriods,
+        is_teaching_exempt: isExempt
+      })
+    });
+
+    alert('User roles and permanent teaching competencies saved successfully!');
+    closeEditRolesModal();
+    await loadData();
   } catch (e) {
     alert(`Error: ${e.message}`);
   }
@@ -738,7 +804,7 @@ window.saveNewPassword = async function() {
     if (res.ok) {
       const data = await res.json();
       if (data && data.temporary_password) {
-        alert(`Password reset successfully!\n\n🔑 Temporary Password: ${data.temporary_password}\n(The user will be required to change this password upon first login).`);
+        alert(`Password reset successfully!\n\nTemporary Password: ${data.temporary_password}\n(The user will be required to change this password upon first login).`);
       } else {
         alert('Password reset successfully!');
       }
@@ -861,7 +927,7 @@ window.handleCreateRole = async function(event) {
 
 async function impersonateUser(userId, username) {
   const ok = await (window.showConfirmDialog ? window.showConfirmDialog(
-    '👤 Switch Session / View As',
+    'Switch Session / View As',
     `Are you sure you want to view the portal as "${username}" without entering their password?`,
     'Switch User Portal',
     'Cancel',

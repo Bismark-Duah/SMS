@@ -3,6 +3,44 @@ var API_BASE = window.API_BASE || (window.location.origin.includes('http') ? (wi
 var token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') || localStorage.getItem('token');
 if (!token && !window.location.pathname.includes('auth.html')) window.location.href = 'auth.html';
 
+// ── Toast Notification System (UX-1 FIX: replaces all alert() calls) ─────────
+if (!document.getElementById('_ttToastStyle')) {
+  const _s = document.createElement('style');
+  _s.id = '_ttToastStyle';
+  _s.textContent = `
+    #_ttToastContainer { position:fixed; bottom:24px; right:24px; z-index:99999; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
+    ._ttToast { pointer-events:all; min-width:280px; max-width:400px; padding:12px 18px; border-radius:10px; font-size:0.86rem; font-weight:600;
+      display:flex; align-items:center; gap:10px; box-shadow:0 8px 32px rgba(0,0,0,0.35); animation:_ttSlideIn 0.3s ease;
+      border-left:4px solid transparent; backdrop-filter:blur(12px); }
+    ._ttToast.success { background:rgba(16,185,129,0.15); border-color:#10b981; color:#34d399; }
+    ._ttToast.error   { background:rgba(239,68,68,0.15);  border-color:#ef4444; color:#f87171; }
+    ._ttToast.warning { background:rgba(245,158,11,0.15); border-color:#f59e0b; color:#fbbf24; }
+    ._ttToast.info    { background:rgba(99,102,241,0.15); border-color:#6366f1; color:#a5b4fc; }
+    @keyframes _ttSlideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes _ttSlideOut { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(40px); } }
+  `;
+  document.head.appendChild(_s);
+}
+if (!document.getElementById('_ttToastContainer')) {
+  const _c = document.createElement('div');
+  _c.id = '_ttToastContainer';
+  document.body.appendChild(_c);
+}
+window.showToast = function(message, type = 'info', duration = 4000) {
+  const c = document.getElementById('_ttToastContainer');
+  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  const t = document.createElement('div');
+  t.className = `_ttToast ${type}`;
+  t.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span style="flex:1;">${message}</span>`;
+  c.appendChild(t);
+  setTimeout(() => {
+    t.style.animation = '_ttSlideOut 0.3s ease forwards';
+    setTimeout(() => t.remove(), 310);
+  }, duration);
+};
+// Keep window.showToast available to staff-conflicts.js and other modules
+if (!window.showToast) window.showToast = showToast;
+
 function H(extra = {}) {
   const currentToken = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') || localStorage.getItem('token');
   const h = { 'Authorization': `Bearer ${currentToken}`, ...extra };
@@ -45,6 +83,7 @@ async function init() {
     await loadClassView();
   }
   await checkConflicts();
+  await checkSnapshotStatus();
 }
 
 // ── Profile Config Loader ───────────────────────────────────────────────────
@@ -146,9 +185,21 @@ function populateFormDropdowns() {
     document.getElementById('hoOutgoingTeacher').innerHTML = viewTeacherOpts;
     document.getElementById('hoIncomingTeacher').innerHTML = viewTeacherOpts;
   }
+  // UX-3 FIX: Auto-select current active semester so conflicts and views are
+  // immediately scoped to the right semester (not "All Semesters" which mixes data).
+  const _currentSem = allSemesters.find(s => s.is_current);
+  if (_currentSem) {
+    const _semSel = document.getElementById('viewSemesterSelect');
+    if (_semSel) _semSel.value = String(_currentSem.id);
+    const _agSemSel = document.getElementById('agSemesterSelect');
+    if (_agSemSel) _agSemSel.value = String(_currentSem.id);
+  }
 }
 
 // ── View Toggle ───────────────────────────────────────────────────────────────
+// ── Radar auto-refresh timer (UX-5 FIX) ─────────────────────────────────────
+let _radarRefreshTimer = null;
+
 window.switchView = function(mode) {
   currentView = mode;
   document.getElementById('vBtnClass').classList.toggle('active', mode === 'class');
@@ -162,6 +213,12 @@ window.switchView = function(mode) {
   document.getElementById('radarSection').style.display      = mode === 'radar' ? 'block' : 'none';
   document.getElementById('workloadsSection').style.display  = mode === 'workloads' ? 'block' : 'none';
 
+  // UX-5 FIX: Clear radar auto-refresh when leaving radar tab
+  if (mode !== 'radar' && _radarRefreshTimer) {
+    clearInterval(_radarRefreshTimer);
+    _radarRefreshTimer = null;
+  }
+
   if (isSchedule) {
     document.getElementById('classControls').style.display   = mode === 'class'   ? 'flex' : 'none';
     document.getElementById('teacherControls').style.display = mode === 'teacher' ? 'flex' : 'none';
@@ -169,6 +226,8 @@ window.switchView = function(mode) {
     else loadTeacherView();
   } else if (mode === 'radar') {
     loadCampusRadar();
+    // UX-5 FIX: Auto-refresh Campus Radar every 60 seconds
+    _radarRefreshTimer = setInterval(loadCampusRadar, 60000);
   } else if (mode === 'workloads') {
     loadTeacherWorkloads();
   }
@@ -182,6 +241,12 @@ window.loadClassView = async function() {
     document.getElementById('gridContainer').innerHTML = '<div class="empty-state" style="text-align:center; padding:40px; color:var(--text-secondary);">Select a class to view its timetable.</div>';
     return;
   }
+
+  // UX-2 FIX: Show skeleton loader immediately while fetching
+  document.getElementById('gridContainer').innerHTML = `
+    <div style="display:grid; grid-template-columns:80px repeat(5,1fr); gap:6px; padding:10px; opacity:0.5; pointer-events:none;">
+      ${Array(48).fill('<div style="height:52px; border-radius:8px; background:var(--glass-bg,rgba(255,255,255,0.05)); animation:pulse 1.5s ease infinite;"></div>').join('')}
+    </div>`;
 
   let url = `${API_BASE}/timetable/class/${classId}`;
   if (semesterId) url += `?semester_id=${semesterId}`;
@@ -222,6 +287,14 @@ function renderGrid(slots, viewMode) {
     map[s.day_of_week][s.period_number] = s;
   });
 
+  // Build period time label map from actual slot data
+  const periodTimeMap = {};
+  slots.forEach(s => {
+    if (s.start_time && s.end_time) {
+      periodTimeMap[s.period_number] = `${s.start_time}–${s.end_time}`;
+    }
+  });
+
   const usedPeriods = new Set(slots.map(s => s.period_number));
   const maxPeriod = usedPeriods.size ? Math.max(...usedPeriods, 6) : 8;
   const visiblePeriods = Array.from({length: maxPeriod}, (_, i) => i + 1);
@@ -232,7 +305,8 @@ function renderGrid(slots, viewMode) {
   </tr></thead><tbody>`;
 
   visiblePeriods.forEach(p => {
-    html += `<tr><td>Period ${p}</td>`;
+    const timeLabel = periodTimeMap[p] ? `<div style="font-size:0.68rem; color:var(--text-secondary); font-weight:400; margin-top:2px;">${periodTimeMap[p]}</div>` : '';
+    html += `<tr><td>Period ${p}${timeLabel}</td>`;
     DAYS.forEach((_, dayIdx) => {
       const slot = map[dayIdx]?.[p];
       if (slot) {
@@ -295,6 +369,8 @@ window.prefill = function(day, period) {
   document.getElementById('mSlotTeacher').value = '';
   document.getElementById('mSlotRoom').value = '';
   document.getElementById('mSlotStatus').textContent = '';
+  // Filter subjects to those assigned to this class
+  _populateClassSubjects(parseInt(classId));
   document.getElementById('slotEditModal').classList.add('open');
 };
 
@@ -303,12 +379,40 @@ window.openEditSlot = function(slot) {
   document.getElementById('slotModalTitle').textContent = `✏️ Edit Slot – ${DAYS[slot.day_of_week]} Period ${slot.period_number}`;
   document.getElementById('mSlotDay').value = slot.day_of_week;
   document.getElementById('mSlotPeriod').value = slot.period_number;
-  document.getElementById('mSlotSubject').value = slot.subject_id || '';
   document.getElementById('mSlotTeacher').value = slot.teacher_id || '';
   document.getElementById('mSlotRoom').value = slot.room || '';
   document.getElementById('mSlotStatus').textContent = '';
+  // Filter subjects to class, then pre-select the current subject
+  const classId = document.getElementById('viewClassSelect').value;
+  _populateClassSubjects(parseInt(classId), slot.subject_id);
   document.getElementById('slotEditModal').classList.add('open');
 };
+
+// Populate subject dropdown filtered to a specific class
+function _populateClassSubjects(classId, selectedSubjectId = null) {
+  // Find subjects that appear in the current class timetable or are assigned to it
+  const cls = allClasses.find(c => c.id === classId);
+  const classSubjectIds = new Set();
+
+  // Try to derive from current rendered slots in the grid
+  document.querySelectorAll('.slot-subject').forEach(el => {
+    // We don't have subject IDs from DOM easily, so fall back to allSubjects
+  });
+
+  // If class has a subjects array (from /my-classes), filter by that
+  let subjectsToShow = allSubjects;
+  if (cls && Array.isArray(cls.subjects) && cls.subjects.length > 0) {
+    const csids = new Set(cls.subjects.map(s => s.id));
+    subjectsToShow = allSubjects.filter(s => csids.has(s.id));
+    if (!subjectsToShow.length) subjectsToShow = allSubjects; // fallback
+  }
+
+  const opts = '<option value="">Select subject...</option>' +
+    subjectsToShow.map(s =>
+      `<option value="${s.id}"${selectedSubjectId === s.id ? ' selected' : ''}>${esc(s.name)}</option>`
+    ).join('');
+  document.getElementById('mSlotSubject').innerHTML = opts;
+}
 
 window.closeSlotModal = function() {
   document.getElementById('slotEditModal').classList.remove('open');
@@ -418,14 +522,335 @@ window.clearClassTimetable = async function() {
   }
 };
 
-// ── Auto-Generate Modal & Solver Execution ────────────────────────────────────
-window.openAutoGenerateModal = function() {
-  const modal = document.getElementById('autoGenModal');
-  const summary = document.getElementById('wizardProfileSummary');
-  if (summary && profileConfig) {
-    summary.innerHTML = `<strong>${profileConfig.school_name}</strong> &bull; Profile: <em>${profileConfig.derived_profile}</em> (${profileConfig.ownership_type})`;
+// ── Campus Working Hours & Live Dismissal Utilities ───────────────────────────
+let workingHoursTarget = 8.0;
+
+function formatClockTime(h, m) {
+  const period = h >= 12 ? 'PM' : 'AM';
+  const displayH = h % 12 === 0 ? 12 : h % 12;
+  return `${String(displayH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+function calculateDismissalTime(startTimeStr, periods, durationMins, snackMins = 20, lunchMins = 40) {
+  if (!startTimeStr || !startTimeStr.includes(':')) return '15:00';
+  const [startH, startM] = startTimeStr.split(':').map(Number);
+  const totalMins = (startH * 60 + startM) + (periods * durationMins) + snackMins + lunchMins;
+  const endH = Math.floor(totalMins / 60) % 24;
+  const endM = totalMins % 60;
+  return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+}
+
+window.calcPreFlightTimes = function() {
+  const startEl = document.getElementById('agStartTime');
+  const durEl = document.getElementById('agDuration');
+  const pMonThuEl = document.getElementById('agPeriodsPerDay');
+  const pFriEl = document.getElementById('agFridayPeriods');
+  const snackEl = document.getElementById('agSnackMins');
+  const lunchEl = document.getElementById('agLunchMins');
+  const worshipEl = document.getElementById('agWorshipDay');
+
+  if (!startEl) return;
+
+  const startTime = startEl.value || '08:00';
+  const dur = parseInt(durEl.value) || 45;
+  const pMonThu = parseInt(pMonThuEl.value) || 8;
+  const pFri = parseInt(pFriEl.value) || 6;
+  const snack = parseInt(snackEl ? snackEl.value : 20) || 20;
+  const lunch = parseInt(lunchEl ? lunchEl.value : 40) || 40;
+  const worship = worshipEl ? worshipEl.value : 'wed_p1';
+
+  // Format Start Time
+  const [sh, sm] = startTime.split(':').map(Number);
+  const startClock = formatClockTime(sh, sm);
+  document.getElementById('agSumStart').textContent = startClock;
+  document.getElementById('agSumDuration').textContent = `${dur} mins`;
+
+  // Calculated Dismissal Times
+  const closeMonThu = calculateDismissalTime(startTime, pMonThu, dur, snack, lunch);
+  const closeFri = calculateDismissalTime(startTime, pFri, dur, snack, lunch);
+  document.getElementById('agSumCloseMonThu').textContent = closeMonThu;
+  document.getElementById('agSumCloseFri').textContent = closeFri;
+
+  // Pills
+  document.getElementById('agSumPeriodsPill').textContent = `🔔 ${pMonThu} Mon-Thu | ${pFri} Fri`;
+  document.getElementById('agSumBreaksPill').textContent = `🥪 Snack (${snack}m) • 🍽️ Lunch (${lunch}m)`;
+
+  let worshipLabel = '⛪ Wed Chapel (P1)';
+  if (worship === 'fri_pm') worshipLabel = '🕌 Fri Jummah (PM)';
+  else if (worship === 'none') worshipLabel = 'No Mid-Week Block';
+  document.getElementById('agSumWorshipPill').textContent = worshipLabel;
+
+  document.getElementById('agSumTeacherDayPill').textContent = `⏱️ Campus Day: ${workingHoursTarget.toFixed(1)} hrs`;
+  const hoursValEl = document.getElementById('agWorkingHoursVal');
+  if (hoursValEl) hoursValEl.textContent = `${workingHoursTarget.toFixed(1)} hrs`;
+};
+
+window.toggleBellsDrawer = function() {
+  const drawer = document.getElementById('agBellsDrawer');
+  const icon = document.getElementById('agBellsToggleIcon');
+  const text = document.getElementById('agBellsToggleText');
+  const isOpen = drawer.style.display !== 'none';
+
+  drawer.style.display = isOpen ? 'none' : 'block';
+  icon.textContent = isOpen ? '⚙️' : '▲';
+  text.textContent = isOpen ? 'Edit Bells & Hours' : 'Close Bells Drawer';
+};
+
+window.stepWorkingHours = function(delta) {
+  workingHoursTarget = Math.max(6.0, Math.min(10.0, workingHoursTarget + delta));
+  calcPreFlightTimes();
+};
+
+window.calcPrefClosingTime = function() {
+  const startEl = document.getElementById('prefStartTime');
+  const durEl = document.getElementById('prefDuration');
+  const pMonThuEl = document.getElementById('prefMonThu');
+  const pFriEl = document.getElementById('prefFri');
+
+  if (!startEl) return;
+
+  const startTime = startEl.value || '08:00';
+  const dur = parseInt(durEl.value) || 45;
+  const pMonThu = parseInt(pMonThuEl.value) || 8;
+  const pFri = parseInt(pFriEl.value) || 6;
+
+  const closeMonThu = calculateDismissalTime(startTime, pMonThu, dur, 20, 40);
+  const closeFri = calculateDismissalTime(startTime, pFri, dur, 20, 40);
+
+  const monThuEl = document.getElementById('prefMonThuDismissal');
+  const friEl = document.getElementById('prefFriDismissal');
+  if (monThuEl) monThuEl.textContent = closeMonThu;
+  if (friEl) friEl.textContent = closeFri;
+};
+
+let currentFacilities = [];
+
+async function loadActiveFacilities() {
+  const container = document.getElementById('agFacilitiesContainer');
+  const section = document.getElementById('agFacilitiesSection');
+  if (!container) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/timetable/active-facilities`, { headers: H() });
+    if (!res.ok) throw new Error('Failed to load facilities');
+    const data = await res.json();
+    currentFacilities = data.facilities || [];
+
+    if (!data.has_specialized_facilities || !currentFacilities.length) {
+      if (section) section.style.display = 'none';
+      return;
+    }
+    if (section) section.style.display = 'block';
+
+    let html = '';
+    (data.categories || []).forEach(cat => {
+      html += `
+        <div style="margin-bottom:8px;">
+          <div style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">
+            ${esc(cat.title)}
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+      `;
+      cat.items.forEach(item => {
+        const isMulti = item.id === 'multipurpose_science_lab';
+        const bg = isMulti ? 'background:rgba(99,102,241,0.06); border:1px dashed rgba(99,102,241,0.3);' : 'background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);';
+        const statusText = item.count === 0 ? '(Homeroom)' : (item.count === 1 ? '(1 Room)' : `(${item.count} Rooms)`);
+        const statusColor = item.count === 0 ? 'var(--text-secondary)' : '#10b981';
+
+        html += `
+          <div style="${bg} border-radius:6px; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.1rem;">${item.icon || '🏫'}</span>
+              <div>
+                <div style="font-weight:600; font-size:0.82rem; color:var(--text);">${esc(item.title)}</div>
+                ${item.subtitle ? `<div style="font-size:0.7rem; color:var(--text-secondary);">${esc(item.subtitle)}</div>` : ''}
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button type="button" class="btn" onclick="stepFacilityCount('${item.id}', -1)" style="padding:2px 8px; font-weight:700; font-size:0.8rem; min-width:28px;">-</button>
+              <span id="fac_val_${item.id}" style="font-weight:700; font-size:0.85rem; min-width:24px; text-align:center;">${item.count}</span>
+              <button type="button" class="btn" onclick="stepFacilityCount('${item.id}', 1)" style="padding:2px 8px; font-weight:700; font-size:0.8rem; min-width:28px;">+</button>
+              <span id="fac_status_${item.id}" style="font-size:0.7rem; margin-left:4px; min-width:85px; color:${statusColor}; font-weight:600;">
+                ${statusText}
+              </span>
+            </div>
+          </div>
+        `;
+      });
+      html += `</div></div>`;
+    });
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<div style="color:var(--text-secondary); font-size:0.75rem;">Homeroom-based scheduling (Standard)</div>';
   }
+}
+
+window.stepFacilityCount = function(facId, delta) {
+  const fac = currentFacilities.find(f => f.id === facId);
+  if (!fac) return;
+  fac.count = Math.max(0, Math.min(10, (fac.count || 0) + delta));
+  const valEl = document.getElementById(`fac_val_${facId}`);
+  const statEl = document.getElementById(`fac_status_${facId}`);
+  if (valEl) valEl.textContent = fac.count;
+  if (statEl) {
+    statEl.textContent = fac.count === 0 ? '(Homeroom)' : (fac.count === 1 ? '(1 Room)' : `(${fac.count} Rooms)`);
+    statEl.style.color = fac.count === 0 ? 'var(--text-secondary)' : '#10b981';
+  }
+};
+
+async function checkSnapshotStatus() {
+  const banner = document.getElementById('timetableUndoBanner');
+  if (!banner) return;
+  try {
+    const res = await fetch(`${API_BASE}/timetable/snapshot-status`, { headers: H() });
+    if (!res.ok) {
+      banner.style.display = 'none';
+      return;
+    }
+    const data = await res.json();
+    if (data.has_snapshot) {
+      banner.style.display = 'flex';
+      const badge = document.getElementById('undoSlotCountBadge');
+      if (badge) badge.textContent = `${data.slot_count} slots`;
+      const subtitle = document.getElementById('undoBannerSubtitle');
+      if (subtitle) {
+        subtitle.textContent = `A backup snapshot exists from ${data.created_at || 'last generation'}. Undo will restore those exact slots.`;
+      }
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch (err) {
+    banner.style.display = 'none';
+  }
+}
+
+window.dismissUndoBanner = function() {
+  const banner = document.getElementById('timetableUndoBanner');
+  if (banner) banner.style.display = 'none';
+};
+
+window.executeUndoTimetable = async function() {
+  if (!confirm('↩️ Revert Timetable:\n\nAre you sure you want to discard the current draft and restore your previous master timetable?')) {
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/timetable/revert`, {
+      method: 'POST',
+      headers: J()
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'SUCCESS') {
+      alert(`✅ ${data.message}`);
+      dismissUndoBanner();
+      if (currentView === 'class') await loadClassView();
+      else if (currentView === 'workloads') await loadTeacherWorkloads();
+      else await loadTeacherView();
+      await checkConflicts();
+    } else {
+      alert(`⚠️ ${data.detail || data.message || 'Failed to revert timetable.'}`);
+    }
+  } catch (err) {
+    alert('Network error while reverting timetable.');
+  }
+};
+
+window.executeDiscardDraft = async function() {
+  if (!confirm('🗑️ Discard Draft:\n\nAre you sure you want to discard this generated timetable and clear all slots back to blank (0 slots)?')) {
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/timetable/discard`, {
+      method: 'POST',
+      headers: J()
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'SUCCESS') {
+      alert(`✅ ${data.message}`);
+      dismissUndoBanner();
+      if (currentView === 'class') await loadClassView();
+      else if (currentView === 'workloads') await loadTeacherWorkloads();
+      else await loadTeacherView();
+      await checkConflicts();
+    } else {
+      alert(`⚠️ ${data.detail || data.message || 'Failed to discard draft.'}`);
+    }
+  } catch (err) {
+    alert('Network error while discarding draft.');
+  }
+};
+
+window.executeClearTimetable = async function() {
+  const semSelect = document.getElementById('semSelect');
+  const semId = semSelect ? semSelect.value : null;
+
+  if (!confirm('⚠️ Master Clear Timetable:\n\nAre you sure you want to completely clear the entire timetable back to blank (0 slots)?\n\nThis will remove all scheduled periods for this school.')) {
+    return;
+  }
+  try {
+    const url = semId ? `${API_BASE}/timetable/clear?semester_id=${semId}` : `${API_BASE}/timetable/clear`;
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: J()
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'SUCCESS') {
+      alert(`✅ ${data.message}`);
+      dismissUndoBanner();
+      if (currentView === 'class') await loadClassView();
+      else if (currentView === 'workloads') await loadTeacherWorkloads();
+      else await loadTeacherView();
+      await checkConflicts();
+    } else {
+      alert(`⚠️ ${data.detail || data.message || 'Failed to clear timetable.'}`);
+    }
+  } catch (err) {
+    alert('Network error while clearing timetable.');
+  }
+};
+
+// ── Auto-Generate Modal & Pre-Flight Execution ───────────────────────────────
+window.openAutoGenerateModal = async function() {
+  const modal = document.getElementById('autoGenModal');
+
+  // Populate semester selector
+  const semSelect = document.getElementById('agSemesterSelect');
+  if (semSelect) {
+    let opts = '<option value="">Current Active Semester</option>';
+    allSemesters.forEach(s => {
+      opts += `<option value="${s.id}">${esc(s.name)}</option>`;
+    });
+    semSelect.innerHTML = opts;
+  }
+
+  // Pre-fill fields from profileConfig
+  if (profileConfig) {
+    if (document.getElementById('agStartTime')) {
+      document.getElementById('agStartTime').value = profileConfig.start_time || '08:00';
+    }
+    if (document.getElementById('agDuration')) {
+      document.getElementById('agDuration').value = profileConfig.period_duration_minutes || 45;
+    }
+    if (document.getElementById('agPeriodsPerDay')) {
+      document.getElementById('agPeriodsPerDay').value = profileConfig.periods_per_day || 8;
+    }
+    if (document.getElementById('agFridayPeriods')) {
+      document.getElementById('agFridayPeriods').value = profileConfig.friday_periods || 6;
+    }
+    const badge = document.getElementById('agProfileBadge');
+    if (badge) {
+      badge.textContent = profileConfig.derived_profile || 'SHS';
+    }
+  }
+
+  // Hide progress and drawer
   document.getElementById('agProgressCard').style.display = 'none';
+  document.getElementById('agBellsDrawer').style.display = 'none';
+  document.getElementById('agBellsToggleIcon').textContent = '⚙️';
+  document.getElementById('agBellsToggleText').textContent = 'Edit Bells & Hours';
+  document.getElementById('agSubmitBtn').disabled = false;
+
+  calcPreFlightTimes();
+  await loadActiveFacilities();
   modal.classList.add('open');
 };
 
@@ -435,6 +860,8 @@ window.closeAutoGenerateModal = function() {
 
 window.runAutoGenerator = async function() {
   const semesterId = document.getElementById('agSemesterSelect').value;
+  const startTime = document.getElementById('agStartTime').value || '08:00';
+  const duration = parseInt(document.getElementById('agDuration').value) || 45;
   const periodsPerDay = parseInt(document.getElementById('agPeriodsPerDay').value) || 8;
   const fridayPeriods = parseInt(document.getElementById('agFridayPeriods').value) || 6;
 
@@ -443,32 +870,103 @@ window.runAutoGenerator = async function() {
   const submitBtn = document.getElementById('agSubmitBtn');
 
   progressCard.style.display = 'block';
-  progressText.textContent = '⚡ Running Pure-Python CSP Solver...';
+  progressText.textContent = '🔍 Step 1 of 2: Running Pre-Flight Staff Workload & Capacity Audit...';
   submitBtn.disabled = true;
 
   try {
+    // ── Pre-Flight Step: Scan for Staffing Overloads / Capacity Conflicts ──
+    const auditUrl = `${API_BASE}/assignments/audit-staffing-conflicts${semesterId ? `?semester_id=${semesterId}` : ''}`;
+    const auditRes = await fetch(auditUrl, { headers: H() }).catch(() => null);
+    if (auditRes && auditRes.ok) {
+      const auditData = await auditRes.json();
+      if (auditData.conflicts && auditData.conflicts.length > 0) {
+        progressText.innerHTML = `⚠️ <strong>Staffing Conflicts Detected:</strong> ${auditData.conflicts.length} subject(s) have teachers exceeding GES period limits. Opening Smart Distribute review...`;
+        // UX-7 FIX: Keep submitBtn DISABLED while conflicts modal is open.
+        // User must resolve conflicts first; the Smart Distribute flow re-enables when done.
+        submitBtn.disabled = true;
+        submitBtn.title = 'Resolve staffing conflicts first before generating';
+
+        if (typeof openStaffingConflictsModal === 'function') {
+          setTimeout(() => {
+            openStaffingConflictsModal(auditData.conflicts, auditData.semester_id || (semesterId ? parseInt(semesterId) : null));
+          }, 400);
+        }
+        return;
+      }
+    }
+
+    progressText.textContent = '⚡ Step 2 of 2: Running Conflict-Free CSP Solver with facility allocation...';
+
+    // 1. Collect facility counts
+    const facilityCounts = {};
+    currentFacilities.forEach(f => {
+      facilityCounts[f.id] = f.count;
+    });
+
+    // 2. Sync updated bell preferences first so backend and generator are 100% aligned
+    await fetch(`${API_BASE}/timetable/preferences`, {
+      method: 'PUT',
+      headers: J(),
+      body: JSON.stringify({
+        start_time: startTime,
+        period_duration_minutes: duration,
+        periods_per_day: periodsPerDay,
+        friday_periods: fridayPeriods,
+        facility_counts: facilityCounts
+      })
+    }).catch(() => {});
+
+    // 3. Run the solver
     const res = await fetch(`${API_BASE}/timetable/auto-generate`, {
       method: 'POST',
       headers: J(),
       body: JSON.stringify({
         semester_id: semesterId ? parseInt(semesterId) : null,
         periods_per_day: periodsPerDay,
-        friday_periods: fridayPeriods
+        friday_periods: fridayPeriods,
+        facility_counts: facilityCounts
       })
     });
 
     const data = await res.json();
     if (res.ok && data.status === 'SUCCESS') {
-      progressText.innerHTML = `🎉 Timetable Generated Successfully!<br/><span style="font-size:0.85rem; font-weight:normal;">Created <strong>${data.total_slots} periods</strong> across all classes with 0 collisions.</span>`;
+      const qr = data.quality_report || {};
+      const scoreBadge = qr.score ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; padding:3px 10px; border-radius:12px; font-weight:700; font-size:0.8rem; margin-left:6px; border:1px solid #10b981;">Quality Score: ${qr.score}/100 (${qr.rating || 'Optimal'})</span>` : '';
+      progressText.innerHTML = `🎉 Timetable Generated Successfully! ${scoreBadge}<br/><span style="font-size:0.85rem; font-weight:normal; margin-top:4px; display:inline-block;">Scheduled <strong>${data.total_slots} periods</strong> across all classes with 0 collisions.</span>`;
+
+      await checkSnapshotStatus();
+
       setTimeout(async () => {
         closeAutoGenerateModal();
+        await loadProfileConfig();
         if (currentView === 'class') await loadClassView();
         else if (currentView === 'workloads') await loadTeacherWorkloads();
         else await loadTeacherView();
         await checkConflicts();
-      }, 1500);
+      }, 1600);
+    } else if (res.ok && data.status === 'PARTIAL') {
+      const qr = data.quality_report || {};
+      const scoreBadge = qr.score !== undefined ? `<span style="background:rgba(245,158,11,0.2); color:#f59e0b; padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.8rem;">${qr.score}/100</span>` : '';
+      const conflictLines = (data.conflicts || []).map(c => `<li style="margin:4px 0;">${esc(c)}</li>`).join('');
+      const skippedLines = (data.skipped_classes || []).map(c => `<li style="margin:4px 0; color:#f59e0b;">${esc(c)}</li>`).join('');
+      progressText.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="color:#f59e0b; font-weight:700;">⚠️ Generated with ${data.unassigned_count} unplaced period(s)</div>
+          ${scoreBadge}
+        </div>
+        <div style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:10px;">${data.total_slots} periods placed. Items that could not be scheduled:</div>
+        ${conflictLines ? `<ul style="font-size:0.78rem; color:#ef4444; text-align:left; margin:0; padding-left:16px; max-height:120px; overflow-y:auto;">${conflictLines}</ul>` : ''}
+        ${skippedLines ? `<div style="font-size:0.78rem; color:#f59e0b; margin-top:6px; font-weight:600;">⚠️ Classes skipped (no subjects assigned):</div><ul style="font-size:0.76rem; color:#f59e0b; text-align:left; margin:0; padding-left:16px; max-height:80px; overflow-y:auto;">${skippedLines}</ul>` : ''}
+        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+          <button type="button" class="btn primary" onclick="openStaffingConflictsModal(null, ${semesterId ? `'${semesterId}'` : 'null'})" style="flex:1; background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border:none; font-weight:700; font-size:0.85rem; padding:8px 14px;">
+            ⚡ Resolve with Smart Distribute
+          </button>
+          <button type="button" class="btn" onclick="closeAutoGenerateModal(); loadClassView(); checkConflicts();" style="flex:1;">View Current Placements</button>
+        </div>
+      `;
+      await checkSnapshotStatus();
     } else {
-      progressText.innerHTML = `⚠️ Generation Finished with Warnings:<br/><span style="font-size:0.8rem; color:#ef4444;">${(data.conflicts || []).join('<br/>') || data.message || 'Partial generation'}</span>`;
+      progressText.innerHTML = `⚠️ ${data.message || 'Generation failed. Check server logs.'}`;
     }
   } catch (err) {
     progressText.innerHTML = '❌ Network error while executing generator.';
@@ -479,6 +977,7 @@ window.runAutoGenerator = async function() {
 
 // ── Preferences Modal ────────────────────────────────────────────────────────
 window.openPreferencesModal = function() {
+  calcPrefClosingTime();
   document.getElementById('prefModal').classList.add('open');
 };
 
@@ -505,14 +1004,15 @@ window.savePreferences = async function() {
     });
 
     if (res.ok) {
-      alert('✅ Timetable preferences saved successfully!');
+      // UX-1 FIX: Replace alert() with toast
+      showToast('Timetable preferences saved successfully!', 'success');
       closePreferencesModal();
       await loadProfileConfig();
     } else {
-      alert('⚠️ Failed to save preferences.');
+      showToast('Failed to save preferences.', 'error');
     }
   } catch (e) {
-    alert('❌ Network error.');
+    showToast('Network error.', 'error');
   }
 };
 
@@ -648,34 +1148,90 @@ window.loadTeacherWorkloads = async function() {
     if (!res.ok) return;
     const workloads = await res.json();
 
+    // 1. Update Quick Summary Metrics Cards
+    const totalStaff = workloads.length;
+    const optimalStaff = workloads.filter(w => !w.is_exempt && w.compliance_status === 'OPTIMAL').length;
+    const underStaff = workloads.filter(w => !w.is_exempt && w.compliance_status === 'UNDERLOADED').length;
+    const overStaff = workloads.filter(w => !w.is_exempt && w.compliance_status === 'OVERLOADED').length;
+    const exemptStaff = workloads.filter(w => w.is_exempt).length;
+
+    const elTotal = document.getElementById('statTotalStaff');
+    const elOptimal = document.getElementById('statOptimalStaff');
+    const elUnder = document.getElementById('statUnderStaff');
+    const elOver = document.getElementById('statOverStaff');
+    const elExempt = document.getElementById('statExemptStaff');
+
+    if (elTotal) elTotal.textContent = totalStaff;
+    if (elOptimal) elOptimal.textContent = optimalStaff;
+    if (elUnder) elUnder.textContent = underStaff;
+    if (elOver) elOver.textContent = overStaff;
+    if (elExempt) elExempt.textContent = exemptStaff;
+
     if (!workloads.length) {
       container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-secondary);">No teachers registered yet.</div>';
       return;
     }
 
     let html = `<table class="tt-table" style="width:100%;"><thead><tr>
-      <th style="width:25%;">Teacher Name</th>
-      <th style="width:25%;">Responsibility Post</th>
-      <th style="width:20%; text-align:center;">Weekly Load</th>
-      <th style="width:30%;">Workload Utilization</th>
+      <th style="width:22%;">Staff Member &amp; ID</th>
+      <th style="width:18%;">Permanent Subject Competency</th>
+      <th style="width:18%;">GES Post &amp; Department</th>
+      <th style="width:14%; text-align:center;">Weekly Load</th>
+      <th style="width:13%; text-align:center;">Compliance</th>
+      <th style="width:15%;">Utilization</th>
     </tr></thead><tbody>`;
 
     workloads.forEach(w => {
       const isExempt = w.is_exempt;
       const pct = Math.min(100, w.utilization_percent || 0);
       const barColor = isExempt ? '#64748b' : (pct > 90 ? '#ef4444' : (pct > 70 ? '#f59e0b' : '#10b981'));
-      const badgeText = isExempt ? 'EXEMPT (0 Periods)' : `${w.assigned_periods} / ${w.max_cap} Periods`;
+      const badgeText = isExempt ? 'EXEMPT' : `${w.assigned_periods} / ${w.max_cap} P`;
+
+      // Status pill badge
+      let statusPill = '';
+      if (isExempt) {
+        statusPill = `<span style="background:rgba(100,116,139,0.15); color:#94a3b8; border:1px solid rgba(100,116,139,0.3); font-size:0.72rem; padding:2px 8px; border-radius:12px; font-weight:700;">🛡️ Exempt</span>`;
+      } else if (w.compliance_status === 'OVERLOADED') {
+        statusPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size:0.72rem; padding:2px 8px; border-radius:12px; font-weight:700;">⚠️ Overload</span>`;
+      } else if (w.compliance_status === 'OPTIMAL') {
+        statusPill = `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:0.72rem; padding:2px 8px; border-radius:12px; font-weight:700;">✓ Optimal</span>`;
+      } else {
+        statusPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); font-size:0.72rem; padding:2px 8px; border-radius:12px; font-weight:700;">Underloaded</span>`;
+      }
+
+      // Subject tags
+      let subjTags = '';
+      if (w.primary_subject_name) {
+        subjTags += `<div style="font-weight:700; color:var(--text); font-size:0.8rem;">🎓 ${esc(w.primary_subject_name)}</div>`;
+      }
+      if (w.qualified_subject_names && w.qualified_subject_names.length) {
+        const others = w.qualified_subject_names.filter(s => s !== w.primary_subject_name);
+        if (others.length) {
+          subjTags += `<div style="font-size:0.7rem; color:var(--text-secondary); margin-top:2px;">+ ${others.map(s => esc(s)).join(', ')}</div>`;
+        }
+      }
+      if (!subjTags) {
+        subjTags = `<span style="color:var(--text-secondary); font-size:0.75rem;">(Unassigned Subject)</span>`;
+      }
 
       html += `<tr>
-        <td style="font-weight:700; font-size:0.85rem;">👤 ${esc(w.teacher_name)}</td>
-        <td style="font-size:0.8rem;"><span style="background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:4px;">${esc(w.role_title)}</span></td>
-        <td style="text-align:center; font-weight:700; font-size:0.85rem;">${badgeText}</td>
         <td>
-          <div style="font-size:0.75rem; color:var(--text-secondary); display:flex; justify-content:space-between;">
-            <span>${isExempt ? 'Administrative Duty' : `${pct}% of max capacity`}</span>
+          <div style="font-weight:700; font-size:0.85rem; color:var(--text);">👤 ${esc(w.teacher_name)}</div>
+          ${w.staff_id ? `<div style="font-size:0.7rem; color:var(--text-secondary); font-family:monospace;">ID: ${esc(w.staff_id)}</div>` : ''}
+        </td>
+        <td>${subjTags}</td>
+        <td>
+          <div style="font-size:0.8rem; font-weight:600;">${esc(w.role_title)}</div>
+          <div style="font-size:0.7rem; color:var(--text-secondary);">${esc(w.department_name || 'General')}</div>
+        </td>
+        <td style="text-align:center; font-weight:700; font-size:0.85rem;">${badgeText}</td>
+        <td style="text-align:center;">${statusPill}</td>
+        <td>
+          <div style="font-size:0.72rem; color:var(--text-secondary); display:flex; justify-content:space-between; margin-bottom:2px;">
+            <span>${isExempt ? 'Admin' : `${pct}%`}</span>
           </div>
-          <div class="workload-bar-container">
-            <div class="workload-bar-fill" style="width:${isExempt ? 0 : pct}%; background:${barColor};"></div>
+          <div class="workload-bar-container" style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+            <div class="workload-bar-fill" style="width:${isExempt ? 0 : pct}%; background:${barColor}; height:100%;"></div>
           </div>
         </td>
       </tr>`;
@@ -685,6 +1241,33 @@ window.loadTeacherWorkloads = async function() {
     container.innerHTML = html;
   } catch (err) {
     container.innerHTML = '<div style="color:var(--danger); text-align:center; padding:20px;">Failed to load workload audit.</div>';
+  }
+};
+
+window.promptRolloverAssignments = async function() {
+  const confirmed = confirm(
+    "📋 1-Click Term Rollover:\n\n" +
+    "Are you sure you want to copy all teacher-class subject allocations into the current semester?\n\n" +
+    "This preserves staff specializations, avoids duplicate entries, and carries over teaching duties with 0 keystrokes."
+  );
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/timetable/rollover-assignments`, {
+      method: 'POST',
+      headers: J(),
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'SUCCESS') {
+      // UX-1 FIX: Replace alert() with toast
+      showToast(`🎉 Rollover: ${data.message}`, 'success', 5000);
+      await loadTeacherWorkloads();
+    } else {
+      showToast(data.detail || data.message || 'No changes made.', 'warning', 5000);
+    }
+  } catch (e) {
+    showToast(`Network error: ${e.message}`, 'error');
   }
 };
 
@@ -701,16 +1284,22 @@ window.syncTeacherCalendar = async function() {
 // ── Official GES PDF Exports ─────────────────────────────────────────────────
 window.downloadClassTimetablePDF = async function() {
   const classId = document.getElementById('viewClassSelect')?.value;
+  const semesterId = document.getElementById('viewSemesterSelect')?.value;
   if (!classId) {
-    alert('Please select a Class Section first.');
+    // UX-4 FIX: Highlight the selector instead of blocking alert
+    const sel = document.getElementById('viewClassSelect');
+    if (sel) { sel.style.outline = '2px solid #ef4444'; setTimeout(() => sel.style.outline = '', 2000); sel.focus(); }
+    showToast('Please select a Class Section first.', 'warning');
     return;
   }
 
   try {
-    const res = await fetch(`${API_BASE}/timetable/class/${classId}/pdf`, { headers: H() });
+    let pdfUrl = `${API_BASE}/timetable/class/${classId}/pdf`;
+    if (semesterId) pdfUrl += `?semester_id=${semesterId}`;
+    const res = await fetch(pdfUrl, { headers: H() });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Failed to generate class timetable PDF' }));
-      alert(`⚠️ Error: ${err.detail || 'Failed to download PDF'}`);
+      showToast(err.detail || 'Failed to download PDF', 'error');
       return;
     }
 
@@ -723,23 +1312,30 @@ window.downloadClassTimetablePDF = async function() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    showToast('Class timetable PDF downloaded!', 'success');
   } catch (err) {
-    alert('Network error while downloading class timetable PDF.');
+    showToast('Network error while downloading class timetable PDF.', 'error');
   }
 };
 
 window.downloadTeacherTimetablePDF = async function() {
   const teacherId = document.getElementById('viewTeacherSelect')?.value;
+  const semesterId = document.getElementById('viewSemesterSelect')?.value;
   if (!teacherId) {
-    alert('Please select a Teacher first.');
+    // UX-4 FIX: Highlight selector instead of alert
+    const sel = document.getElementById('viewTeacherSelect');
+    if (sel) { sel.style.outline = '2px solid #ef4444'; setTimeout(() => sel.style.outline = '', 2000); sel.focus(); }
+    showToast('Please select a Teacher first.', 'warning');
     return;
   }
 
   try {
-    const res = await fetch(`${API_BASE}/timetable/teacher/${teacherId}/pdf`, { headers: H() });
+    let pdfUrl = `${API_BASE}/timetable/teacher/${teacherId}/pdf`;
+    if (semesterId) pdfUrl += `?semester_id=${semesterId}`;
+    const res = await fetch(pdfUrl, { headers: H() });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Failed to generate teacher schedule PDF' }));
-      alert(`⚠️ Error: ${err.detail || 'Failed to download PDF'}`);
+      showToast(err.detail || 'Failed to download PDF', 'error');
       return;
     }
 
@@ -752,8 +1348,9 @@ window.downloadTeacherTimetablePDF = async function() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    showToast('Teacher schedule PDF downloaded!', 'success');
   } catch (err) {
-    alert('Network error while downloading teacher schedule PDF.');
+    showToast('Network error while downloading teacher schedule PDF.', 'error');
   }
 };
 

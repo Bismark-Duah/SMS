@@ -1,5 +1,6 @@
 import io
 import json
+import threading
 from datetime import datetime, time
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
@@ -11,26 +12,41 @@ from xhtml2pdf import pisa
 from ..database import get_db
 from ..models import (
     Timetable, ClassSection, Subject, User, Semester, Program, School, Setting,
-    TimetableConfig, TimetableReliefLog, TimetableSyllabusLog
+    TimetableConfig, TimetableReliefLog, TimetableSyllabusLog, TimetableSnapshot,
+    TeacherAssignment, Department
 )
 from ..dependencies import get_current_user, get_school_id
 from ..services.timetable_generator import TimetableSolver, smart_surgical_swap
 from ..services.curriculum_presets import (
-    DEFAULT_BREAK_SCHEDULES, DEFAULT_SUBJECT_CONFIGS, ROLE_WORKLOAD_LIMITS
+    DEFAULT_BREAK_SCHEDULES, DEFAULT_SUBJECT_CONFIGS, ROLE_WORKLOAD_LIMITS,
+    get_active_facilities_for_subjects, FACILITY_REGISTRY
 )
 
 router = APIRouter()
+
+# ARCH-6 FIX: Single in-process lock prevents concurrent timetable generation from
+# causing a race condition (two admins generating at the same time corrupt each other's data).
+_GENERATE_LOCK = threading.Lock()
 
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+# BUG 13 FIX: Headmasters, school administrators, and assistant heads should all be
+# able to manage their school timetable — not just users with role="admin".
+_TIMETABLE_ADMIN_ROLES = {
+    "admin", "super_admin", "headmaster", "headmistress", "principal",
+    "school_administrator", "schooladmin",
+    "assistant_head_academic", "assistant_head_admin",
+    "assistant_head_domestic", "assistant_head"
+}
+
 def require_admin(current_user: User):
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    roles = [r.name for r in current_user.roles] if current_user.roles else []
-    if "admin" not in roles and "super_admin" not in roles:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    roles = {r.name.lower() for r in current_user.roles} if current_user.roles else set()
+    if not roles.intersection(_TIMETABLE_ADMIN_ROLES):
+        raise HTTPException(status_code=403, detail="Admin or Headmaster access required")
 
 
 def _check_class_school(cs: ClassSection, school_id: Optional[int]) -> bool:
@@ -92,6 +108,7 @@ class AutoGenerateSchema(BaseModel):
     periods_per_day: Optional[int] = 8
     friday_periods: Optional[int] = 6
     custom_quotas: Optional[Dict[int, int]] = None  # subject_id -> weekly_periods
+    facility_counts: Optional[Dict[str, int]] = None  # fac_id -> quantity e.g. {"physics_lab": 1, ...}
 
 
 class PreferencesUpdateSchema(BaseModel):
@@ -100,6 +117,7 @@ class PreferencesUpdateSchema(BaseModel):
     periods_per_day: Optional[int] = 8
     friday_periods: Optional[int] = 6
     break_schedule: Optional[List[Dict[str, Any]]] = None
+    facility_counts: Optional[Dict[str, int]] = None
 
 
 class HandoverSchema(BaseModel):
@@ -160,6 +178,13 @@ def get_timetable_profile_config(
     else:
         break_sched = DEFAULT_BREAK_SCHEDULES.get(profile, DEFAULT_BREAK_SCHEDULES["SHS"])
 
+    fac_counts = {}
+    if config and config.facility_counts:
+        try:
+            fac_counts = json.loads(config.facility_counts)
+        except Exception:
+            fac_counts = {}
+
     return {
         "school_id": school_id,
         "school_name": school.name if school else "Ghana Senior High School",
@@ -171,6 +196,7 @@ def get_timetable_profile_config(
         "periods_per_day": config.periods_per_day if config else 8,
         "friday_periods": config.friday_periods if config else 6,
         "break_schedule": break_sched,
+        "facility_counts": fac_counts,
         "role_workload_limits": ROLE_WORKLOAD_LIMITS
     }
 
@@ -181,7 +207,7 @@ def update_timetable_preferences(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Admin: update school-specific daily hours, period counts, and break/chapel intervals."""
+    """Admin: update school-specific daily hours, period counts, break/chapel intervals, and facility counts."""
     require_admin(current_user)
     school_id = get_school_id(current_user)
     if not school_id:
@@ -200,9 +226,252 @@ def update_timetable_preferences(
     if payload.break_schedule is not None:
         config.break_schedule = json.dumps(payload.break_schedule)
 
+    if payload.facility_counts is not None:
+        config.facility_counts = json.dumps(payload.facility_counts)
+
     db.commit()
     db.refresh(config)
     return {"status": "SUCCESS", "message": "Timetable preferences saved successfully."}
+
+
+@router.get("/active-facilities")
+def get_active_school_facilities(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
+):
+    """
+    Returns only the specialized facilities (science labs, technical workshops,
+    home econs units, etc.) relevant to the programs and subjects actively offered
+    by this school, pre-populated with any saved room counts.
+    """
+    school_id = get_school_id(current_user, x_school_id)
+    if not school_id:
+        raise HTTPException(status_code=400, detail="Active school context required")
+
+    # Find active subject names for this school
+    classes = db.query(ClassSection).filter(ClassSection.school_id == school_id).all()
+    active_subject_names = set()
+    for c in classes:
+        for s in (c.subjects or []):
+            if s.name:
+                active_subject_names.add(s.name.strip())
+        if c.program and c.program.subjects:
+            for s in c.program.subjects:
+                if s.name:
+                    active_subject_names.add(s.name.strip())
+
+    if not active_subject_names:
+        subjs = db.query(Subject).filter((Subject.school_id == school_id) | (Subject.school_id.is_(None))).all()
+        for s in subjs:
+            if s.name:
+                active_subject_names.add(s.name.strip())
+
+    config = db.query(TimetableConfig).filter(TimetableConfig.school_id == school_id).first()
+    saved_counts = {}
+    if config and config.facility_counts:
+        try:
+            saved_counts = json.loads(config.facility_counts)
+        except Exception:
+            saved_counts = {}
+
+    facilities = get_active_facilities_for_subjects(list(active_subject_names), saved_counts)
+
+    categories = {}
+    for f in facilities:
+        cat = f["category"]
+        if cat not in categories:
+            categories[cat] = {
+                "category": cat,
+                "title": f["category_title"],
+                "items": []
+            }
+        categories[cat]["items"].append(f)
+
+    return {
+        "school_id": school_id,
+        "has_specialized_facilities": len(facilities) > 0,
+        "facilities": facilities,
+        "categories": list(categories.values())
+    }
+
+
+@router.get("/snapshot-status")
+def get_snapshot_status(
+    semester_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
+):
+    """Checks whether an undo snapshot is available for the current school and semester."""
+    school_id = get_school_id(current_user, x_school_id)
+    if not school_id:
+        return {"has_snapshot": False}
+
+    q = db.query(TimetableSnapshot).filter(TimetableSnapshot.school_id == school_id)
+    if semester_id and isinstance(semester_id, int):
+        q = q.filter((TimetableSnapshot.semester_id == semester_id) | (TimetableSnapshot.semester_id.is_(None)))
+    latest = q.order_by(TimetableSnapshot.id.desc()).first()
+
+    if not latest:
+        return {"has_snapshot": False}
+
+    return {
+        "has_snapshot": True,
+        "snapshot_id": latest.id,
+        "slot_count": latest.slot_count,
+        "created_at": latest.created_at.strftime("%Y-%m-%d %H:%M:%S") if latest.created_at else None
+    }
+
+
+@router.post("/revert")
+def revert_timetable(
+    semester_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
+):
+    """
+    1-Click Rollback / Undo:
+    Reverts the timetable to the snapshot taken immediately before the last auto-generation.
+    """
+    require_admin(current_user)
+    school_id = get_school_id(current_user, x_school_id)
+    if not school_id:
+        raise HTTPException(status_code=400, detail="Active school context required")
+
+    q = db.query(TimetableSnapshot).filter(TimetableSnapshot.school_id == school_id)
+    if semester_id and isinstance(semester_id, int):
+        q = q.filter((TimetableSnapshot.semester_id == semester_id) | (TimetableSnapshot.semester_id.is_(None)))
+    latest = q.order_by(TimetableSnapshot.id.desc()).first()
+
+    if not latest:
+        raise HTTPException(status_code=404, detail="No previous timetable snapshot found to revert to.")
+
+    # 1. Delete current timetable slots for this school
+    class_ids = [c[0] for c in db.query(ClassSection.id).filter(
+        (ClassSection.school_id == school_id) | (ClassSection.school_id.is_(None))
+    ).all()]
+
+    if class_ids:
+        del_q = db.query(Timetable).filter(Timetable.class_section_id.in_(class_ids))
+        if semester_id:
+            del_q = del_q.filter(Timetable.semester_id == semester_id)
+        del_q.delete(synchronize_session=False)
+
+    # 2. Restore slots from snapshot
+    restored_items = json.loads(latest.snapshot_data)
+    new_slots = [
+        Timetable(
+            class_section_id=item["class_section_id"],
+            subject_id=item["subject_id"],
+            teacher_id=item.get("teacher_id"),
+            semester_id=item.get("semester_id"),
+            day_of_week=item["day_of_week"],
+            period_number=item["period_number"],
+            start_time=item.get("start_time"),
+            end_time=item.get("end_time"),
+            room=item.get("room"),
+        )
+        for item in restored_items
+    ]
+    if new_slots:
+        db.add_all(new_slots)
+
+    db.delete(latest)
+    db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Successfully reverted to previous timetable ({len(new_slots)} slots restored).",
+        "restored_slots": len(new_slots)
+    }
+
+
+@router.post("/discard")
+def discard_draft_timetable(
+    semester_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
+):
+    """
+    1-Click Discard Draft:
+    Deletes the drafted timetable slots and clears the snapshot, resetting to a clean slate.
+    """
+    require_admin(current_user)
+    school_id = get_school_id(current_user, x_school_id)
+    if not school_id:
+        raise HTTPException(status_code=400, detail="Active school context required")
+
+    class_ids = [c[0] for c in db.query(ClassSection.id).filter(
+        (ClassSection.school_id == school_id) | (ClassSection.school_id.is_(None))
+    ).all()]
+
+    deleted_count = 0
+    if class_ids:
+        del_q = db.query(Timetable).filter(Timetable.class_section_id.in_(class_ids))
+        if semester_id:
+            del_q = del_q.filter(Timetable.semester_id == semester_id)
+        deleted_count = del_q.delete(synchronize_session=False)
+
+    # Delete the snapshot as well
+    q = db.query(TimetableSnapshot).filter(TimetableSnapshot.school_id == school_id)
+    if semester_id and isinstance(semester_id, int):
+        q = q.filter((TimetableSnapshot.semester_id == semester_id) | (TimetableSnapshot.semester_id.is_(None)))
+    latest = q.order_by(TimetableSnapshot.id.desc()).first()
+    if latest:
+        db.delete(latest)
+
+    db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Successfully discarded draft ({deleted_count} slots cleared back to blank).",
+        "cleared_slots": deleted_count
+    }
+
+
+@router.delete("/clear")
+def clear_timetable(
+    semester_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
+):
+    """
+    Master Clear Timetable:
+    Wipes all timetable slots for the school/semester back to 0.
+    """
+    require_admin(current_user)
+    school_id = get_school_id(current_user, x_school_id)
+    if not school_id:
+        raise HTTPException(status_code=400, detail="Active school context required")
+
+    class_ids = [c[0] for c in db.query(ClassSection.id).filter(
+        (ClassSection.school_id == school_id) | (ClassSection.school_id.is_(None))
+    ).all()]
+
+    deleted_count = 0
+    if class_ids:
+        del_q = db.query(Timetable).filter(Timetable.class_section_id.in_(class_ids))
+        if semester_id:
+            del_q = del_q.filter(Timetable.semester_id == semester_id)
+        deleted_count = del_q.delete(synchronize_session=False)
+
+    # Also clean up snapshots for this school/semester
+    q = db.query(TimetableSnapshot).filter(TimetableSnapshot.school_id == school_id)
+    if semester_id and isinstance(semester_id, int):
+        q = q.filter((TimetableSnapshot.semester_id == semester_id) | (TimetableSnapshot.semester_id.is_(None)))
+    q.delete(synchronize_session=False)
+
+    db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Successfully cleared all {deleted_count} timetable slots.",
+        "deleted_count": deleted_count
+    }
 
 
 @router.post("/auto-generate", status_code=200)
@@ -239,6 +508,23 @@ def auto_generate_timetable(
 
     periods_per_day = payload.periods_per_day or (config.periods_per_day if config else 8)
     friday_periods = payload.friday_periods or (config.friday_periods if config else 6)
+    start_time = config.start_time if config and config.start_time else "08:00"
+    period_duration = config.period_duration_minutes if config and config.period_duration_minutes else 45
+
+    saved_fac = {}
+    if config and config.facility_counts:
+        try:
+            saved_fac = json.loads(config.facility_counts)
+        except Exception:
+            saved_fac = {}
+
+    effective_facility_counts = payload.facility_counts if payload.facility_counts is not None else saved_fac
+    if payload.facility_counts is not None:
+        if not config:
+            config = TimetableConfig(school_id=school_id)
+            db.add(config)
+        config.facility_counts = json.dumps(payload.facility_counts)
+        db.commit()
 
     solver = TimetableSolver(
         db=db,
@@ -247,11 +533,24 @@ def auto_generate_timetable(
         school_profile=profile,
         periods_per_day=periods_per_day,
         friday_periods=friday_periods,
+        start_time=start_time,
+        period_duration=period_duration,
         break_schedule=break_sched,
-        custom_quotas=payload.custom_quotas or {}
+        custom_quotas=payload.custom_quotas or {},
+        facility_counts=effective_facility_counts
     )
 
-    result = solver.solve()
+    # ARCH-6 FIX: Acquire generation lock — only one school generates at a time.
+    # Non-blocking acquire with 0 timeout returns False if lock is already held.
+    if not _GENERATE_LOCK.acquire(blocking=False):
+        raise HTTPException(
+            status_code=409,
+            detail="Timetable generation is already running. Please wait and try again."
+        )
+    try:
+        result = solver.solve()
+    finally:
+        _GENERATE_LOCK.release()
     return result
 
 
@@ -316,18 +615,123 @@ def get_teacher_workloads(
 
             assigned_count = db.query(Timetable).filter(Timetable.teacher_id == t.id).count()
 
+            if is_exempt:
+                compliance_status = "EXEMPT"
+            elif assigned_count > max_cap:
+                compliance_status = "OVERLOADED"
+            elif assigned_count >= 18:
+                compliance_status = "OPTIMAL"
+            else:
+                compliance_status = "UNDERLOADED"
+
             workloads.append({
                 "teacher_id": t.id,
                 "teacher_name": t.username,
+                "staff_id": getattr(t, "staff_id", None),
                 "responsibility_role": role,
                 "role_title": role_limit["title"],
+                "department_id": t.department_id,
+                "department_name": t.department.name if t.department else "General",
+                "primary_subject_id": getattr(t, "primary_subject_id", None),
+                "primary_subject_name": getattr(t, "primary_subject_name", None),
+                "qualified_subject_names": getattr(t, "qualified_subject_names", []),
                 "assigned_periods": assigned_count,
                 "max_cap": max_cap,
                 "is_exempt": is_exempt,
+                "compliance_status": compliance_status,
                 "utilization_percent": round((assigned_count / max(1, max_cap)) * 100, 1) if not is_exempt else 0
             })
 
     return workloads
+
+
+class RolloverAssignmentsSchema(BaseModel):
+    source_semester_id: Optional[int] = None
+    target_semester_id: Optional[int] = None
+
+
+@router.post("/rollover-assignments")
+def rollover_teacher_assignments(
+    payload: RolloverAssignmentsSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    x_school_id: Optional[str] = Header(None, alias="X-School-Id"),
+):
+    """
+    1-Click Academic Delivery Rollover:
+    Copies all teacher-to-class subject assignments from a source semester to a target semester.
+    Guarantees staff specializations and class allocations carry over seamlessly with 0 keystrokes.
+    """
+    require_admin(current_user)
+    school_id = get_school_id(current_user, x_school_id)
+
+    target_sem_id = payload.target_semester_id
+    if not target_sem_id:
+        cur_sem = db.query(Semester).filter(Semester.is_current == True).first()
+        if not cur_sem:
+            raise HTTPException(status_code=400, detail="No active semester found to rollover assignments into.")
+        target_sem_id = cur_sem.id
+
+    source_sem_id = payload.source_semester_id
+    if not source_sem_id:
+        prev_sem = db.query(Semester).filter(Semester.id != target_sem_id).order_by(Semester.id.desc()).first()
+        if not prev_sem:
+            raise HTTPException(status_code=400, detail="No previous semester found to rollover assignments from.")
+        source_sem_id = prev_sem.id
+
+    if source_sem_id == target_sem_id:
+        raise HTTPException(status_code=400, detail="Source and target semesters must be different.")
+
+    source_assignments = db.query(TeacherAssignment).options(
+        joinedload(TeacherAssignment.class_section)  # BUG 12 FIX: eager-load to avoid N+1
+    ).filter(
+        TeacherAssignment.semester_id == source_sem_id
+    ).all()
+
+    if not source_assignments:
+        return {
+            "status": "SUCCESS",
+            "copied_count": 0,
+            "message": f"No assignments found in source semester (ID: {source_sem_id}) to rollover."
+        }
+
+    existing_target = set(
+        db.query(
+            TeacherAssignment.class_section_id,
+            TeacherAssignment.subject_id,
+            TeacherAssignment.teacher_id
+        ).filter(
+            TeacherAssignment.semester_id == target_sem_id
+        ).all()
+    )
+
+    copied = 0
+    for sa in source_assignments:
+        if school_id and sa.class_section and sa.class_section.school_id != school_id:
+            continue
+        key = (sa.class_section_id, sa.subject_id, sa.teacher_id)
+        if key not in existing_target:
+            new_ta = TeacherAssignment(
+                class_section_id=sa.class_section_id,
+                subject_id=sa.subject_id,
+                teacher_id=sa.teacher_id,
+                semester_id=target_sem_id
+            )
+            db.add(new_ta)
+            existing_target.add(key)
+            copied += 1
+
+    db.commit()
+    target_sem_obj = db.query(Semester).filter(Semester.id == target_sem_id).first()
+    target_name = target_sem_obj.name if target_sem_obj else f"Semester {target_sem_id}"
+
+    return {
+        "status": "SUCCESS",
+        "copied_count": copied,
+        "source_semester_id": source_sem_id,
+        "target_semester_id": target_sem_id,
+        "message": f"Successfully rolled over {copied} teacher assignments into {target_name}."
+    }
 
 
 @router.post("/handover")
@@ -369,30 +773,41 @@ def get_campus_radar(
     now = datetime.now()
     now_day = now.weekday()  # 0=Mon ... 6=Sun
 
-    # Determine current period from time
-    current_hour = now.hour
-    current_min = now.minute
+    # BUG 2 FIX: Determine current period from TimetableConfig (not hardcoded 08:00 times).
+    # Falls back to standard GES SHS period map if config is not set.
+    _tt_cfg = db.query(TimetableConfig).filter(TimetableConfig.school_id == school_id).first()
+    _start_h, _start_m = 8, 0
+    _dur = 45
+    if _tt_cfg:
+        if _tt_cfg.start_time:
+            try:
+                _parts = str(_tt_cfg.start_time).split(":")
+                _start_h, _start_m = int(_parts[0]), int(_parts[1])
+            except Exception:
+                pass
+        if _tt_cfg.period_duration_minutes:
+            _dur = _tt_cfg.period_duration_minutes
 
-    # Simple standard period mapping:
-    # 08:00 - 08:45 -> P1, 08:45 - 09:30 -> P2, 09:50 - 10:35 -> P3, 10:35 - 11:20 -> P4,
-    # 12:00 - 12:45 -> P5, 12:45 - 01:30 -> P6, 01:30 - 02:15 -> P7, 02:15 - 03:00 -> P8
-    current_period = 1
-    if current_hour == 8 and current_min < 45:
-        current_period = 1
-    elif (current_hour == 8 and current_min >= 45) or (current_hour == 9 and current_min < 30):
-        current_period = 2
-    elif current_hour == 9 and current_min >= 50 or (current_hour == 10 and current_min < 35):
-        current_period = 3
-    elif (current_hour == 10 and current_min >= 35) or (current_hour == 11 and current_min < 20):
-        current_period = 4
-    elif current_hour == 12 and current_min < 45:
-        current_period = 5
-    elif (current_hour == 12 and current_min >= 45) or (current_hour == 13 and current_min < 30):
-        current_period = 6
-    elif (current_hour == 13 and current_min >= 30) or (current_hour == 14 and current_min < 15):
-        current_period = 7
-    elif (current_hour == 14 and current_min >= 15) or current_hour >= 15:
-        current_period = 8
+    # Standard GES SHS break structure (minutes from school start):
+    # P1, P2, [break 20min], P3, P4, [break 40min], P5, P6, P7, P8
+    _BREAK_AFTER = {2: 20, 4: 40}  # after period N, break of X minutes
+    _now_minutes = (now.hour * 60 + now.minute)
+    _cursor = _start_h * 60 + _start_m
+    current_period = None
+    for _pnum in range(1, 10):
+        _pend = _cursor + _dur
+        if _cursor <= _now_minutes < _pend:
+            current_period = _pnum
+            break
+        _cursor = _pend
+        _brk = _BREAK_AFTER.get(_pnum, 0)
+        _cursor += _brk
+        if _cursor > _now_minutes and current_period is None:
+            # We are in a break between periods
+            current_period = _pnum  # Show last active period during break
+            break
+    if current_period is None:
+        current_period = 1  # Before school starts or after it ends
 
     # Query all slots for today & current period
     slot_filter = [
@@ -531,10 +946,35 @@ def export_calendar_ics(
         room = s.room or "Classroom"
         day_abbr = days_abbr[s.day_of_week] if 0 <= s.day_of_week <= 4 else "MO"
 
-        start_h = 8 + (s.period_number - 1)
-        end_h = 8 + s.period_number
+        # BUG 8 FIX: Use actual slot start_time/end_time from DB instead of
+        # hardcoded "8 + period_number" arithmetic that assumed 1-hr periods.
+        if s.start_time and s.end_time:
+            try:
+                _st = str(s.start_time).split(":")
+                _et = str(s.end_time).split(":")
+                start_h, start_m = int(_st[0]), int(_st[1])
+                end_h, end_m = int(_et[0]), int(_et[1])
+            except Exception:
+                start_h, start_m = 8 + (s.period_number - 1), 0
+                end_h, end_m = 8 + s.period_number, 0
+        else:
+            # Fallback: approximate using period number with 45-min slots
+            _base = 8 * 60 + (s.period_number - 1) * 45
+            start_h, start_m = _base // 60, _base % 60
+            end_h, end_m = (_base + 45) // 60, (_base + 45) % 60
 
-        ics_content += f"BEGIN:VEVENT\r\nSUMMARY:{sub_name} - {cls_name}\r\nDESCRIPTION:Teaching period {s.period_number} for {cls_name} in {room}\r\nLOCATION:{room}\r\nRRULE:FREQ=WEEKLY;BYDAY={day_abbr}\r\nDTSTART:20260901T{start_h:02d}0000\r\nDTEND:20260901T{end_h:02d}0000\r\nBEGIN:VALARM\r\nTRIGGER:-PT10M\r\nACTION:DISPLAY\r\nDESCRIPTION:Reminder: {sub_name} in 10 minutes\r\nEND:VALARM\r\nEND:VEVENT\r\n"
+        ics_content += (
+            f"BEGIN:VEVENT\r\n"
+            f"SUMMARY:{sub_name} - {cls_name}\r\n"
+            f"DESCRIPTION:Period {s.period_number} — {cls_name} in {room}\r\n"
+            f"LOCATION:{room}\r\n"
+            f"RRULE:FREQ=WEEKLY;BYDAY={day_abbr}\r\n"
+            f"DTSTART:20260901T{start_h:02d}{start_m:02d}00\r\n"
+            f"DTEND:20260901T{end_h:02d}{end_m:02d}00\r\n"
+            f"BEGIN:VALARM\r\nTRIGGER:-PT10M\r\nACTION:DISPLAY\r\n"
+            f"DESCRIPTION:Reminder: {sub_name} in 10 minutes\r\n"
+            f"END:VALARM\r\nEND:VEVENT\r\n"
+        )
 
     ics_content += "END:VCALENDAR\r\n"
 
@@ -592,6 +1032,7 @@ def get_teacher_timetable(
 
 @router.get("/conflicts")
 def check_conflicts(
+    semester_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -609,6 +1050,15 @@ def check_conflicts(
             query = query.filter((ClassSection.school_id == school_id) | (Program.school_id == school_id))
         else:
             query = query.filter(Program.school_id == school_id)
+
+    # BUG 11 FIX: Filter by semester to prevent phantom cross-semester conflicts.
+    # Auto-detect current active semester when not explicitly provided.
+    if not semester_id:
+        _active = db.query(Semester).filter(Semester.is_current == True).first()
+        if _active:
+            semester_id = _active.id
+    if semester_id:
+        query = query.filter(Timetable.semester_id == semester_id)
 
     all_slots = query.all()
 
@@ -825,6 +1275,7 @@ def clear_class_timetable(
 @router.get("/class/{class_section_id}/pdf")
 def get_class_timetable_pdf(
     class_section_id: int,
+    semester_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -834,23 +1285,42 @@ def get_class_timetable_pdf(
     if not cs or not _check_class_school(cs, school_id):
         raise HTTPException(status_code=404, detail="Class section not found")
 
-    slots = db.query(Timetable).filter(Timetable.class_section_id == class_section_id).all()
+    # BUG 10 FIX: Scope PDF to one semester. Auto-detect current if none provided.
+    if not semester_id:
+        _active_sem = db.query(Semester).filter(Semester.is_current == True).first()
+        semester_id = _active_sem.id if _active_sem else None
+    _pdf_q = [Timetable.class_section_id == class_section_id]
+    if semester_id:
+        _pdf_q.append(Timetable.semester_id == semester_id)
+    slots = db.query(Timetable).filter(*_pdf_q).all()
     slot_map = {(s.day_of_week, s.period_number): s for s in slots}
 
     school_name_s = db.query(Setting).filter(Setting.key == "school_name").first()
     school_name = school_name_s.value if school_name_s and school_name_s.value else "SENIOR HIGH SCHOOL"
     now_str = datetime.now().strftime("%d %B %Y")
 
+    # Build period rows dynamically from actual slot start/end times stored in DB.
+    # Falls back to GES SHS standard times. UX-6 FIX: Period 8 now included.
+    _slot_times: Dict[int, str] = {}
+    for _s in slots:
+        if _s.start_time and _s.end_time and _s.period_number not in _slot_times:
+            _slot_times[_s.period_number] = f"{_s.start_time} - {_s.end_time}"
+    _std_times = {
+        1: "08:00 - 08:45", 2: "08:45 - 09:30", 3: "09:50 - 10:35",
+        4: "10:35 - 11:20", 5: "12:00 - 12:45", 6: "12:45 - 13:30",
+        7: "13:30 - 14:15", 8: "14:15 - 15:00",
+    }
     periods_config = [
-        {"period": 1, "time": "08:00 - 08:45"},
-        {"period": 2, "time": "08:45 - 09:30"},
-        {"is_break": True, "title": "SNACK &amp; BREAKFAST BREAK (09:30 - 09:50)"},
-        {"period": 3, "time": "09:50 - 10:35"},
-        {"period": 4, "time": "10:35 - 11:20"},
-        {"is_break": True, "title": "MID-DAY LUNCH BREAK (11:20 - 12:00)"},
-        {"period": 5, "time": "12:00 - 12:45"},
-        {"period": 6, "time": "12:45 - 01:30"},
-        {"period": 7, "time": "01:30 - 02:15"},
+        {"period": 1, "time": _slot_times.get(1, _std_times[1])},
+        {"period": 2, "time": _slot_times.get(2, _std_times[2])},
+        {"is_break": True, "title": "SNACK &amp; BREAKFAST BREAK"},
+        {"period": 3, "time": _slot_times.get(3, _std_times[3])},
+        {"period": 4, "time": _slot_times.get(4, _std_times[4])},
+        {"is_break": True, "title": "MID-DAY LUNCH BREAK"},
+        {"period": 5, "time": _slot_times.get(5, _std_times[5])},
+        {"period": 6, "time": _slot_times.get(6, _std_times[6])},
+        {"period": 7, "time": _slot_times.get(7, _std_times[7])},
+        {"period": 8, "time": _slot_times.get(8, _std_times[8])},  # UX-6 FIX: was missing
     ]
 
     rows_html = ""
@@ -970,6 +1440,7 @@ def get_class_timetable_pdf(
 @router.get("/teacher/{teacher_id}/pdf")
 def get_teacher_timetable_pdf(
     teacher_id: int,
+    semester_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -978,23 +1449,41 @@ def get_teacher_timetable_pdf(
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
 
-    slots = db.query(Timetable).filter(Timetable.teacher_id == teacher_id).all()
+    # BUG 10 FIX: Scope teacher PDF to one semester — auto-detect current if none provided.
+    if not semester_id:
+        _active_sem = db.query(Semester).filter(Semester.is_current == True).first()
+        semester_id = _active_sem.id if _active_sem else None
+    _t_pdf_q = [Timetable.teacher_id == teacher_id]
+    if semester_id:
+        _t_pdf_q.append(Timetable.semester_id == semester_id)
+    slots = db.query(Timetable).filter(*_t_pdf_q).all()
     slot_map = {(s.day_of_week, s.period_number): s for s in slots}
 
     school_name_s = db.query(Setting).filter(Setting.key == "school_name").first()
     school_name = school_name_s.value if school_name_s and school_name_s.value else "SENIOR HIGH SCHOOL"
     now_str = datetime.now().strftime("%d %B %Y")
 
+    # BUG 3 + UX-6 FIX: Dynamic period times from actual DB slot data; Period 8 included.
+    _t_slot_times: Dict[int, str] = {}
+    for _s in slots:
+        if _s.start_time and _s.end_time and _s.period_number not in _t_slot_times:
+            _t_slot_times[_s.period_number] = f"{_s.start_time} - {_s.end_time}"
+    _t_std_times = {
+        1: "08:00 - 08:45", 2: "08:45 - 09:30", 3: "09:50 - 10:35",
+        4: "10:35 - 11:20", 5: "12:00 - 12:45", 6: "12:45 - 13:30",
+        7: "13:30 - 14:15", 8: "14:15 - 15:00",
+    }
     periods_config = [
-        {"period": 1, "time": "08:00 - 08:45"},
-        {"period": 2, "time": "08:45 - 09:30"},
-        {"is_break": True, "title": "SNACK &amp; BREAKFAST BREAK (09:30 - 09:50)"},
-        {"period": 3, "time": "09:50 - 10:35"},
-        {"period": 4, "time": "10:35 - 11:20"},
-        {"is_break": True, "title": "MID-DAY LUNCH BREAK (11:20 - 12:00)"},
-        {"period": 5, "time": "12:00 - 12:45"},
-        {"period": 6, "time": "12:45 - 01:30"},
-        {"period": 7, "time": "01:30 - 02:15"},
+        {"period": 1, "time": _t_slot_times.get(1, _t_std_times[1])},
+        {"period": 2, "time": _t_slot_times.get(2, _t_std_times[2])},
+        {"is_break": True, "title": "SNACK &amp; BREAKFAST BREAK"},
+        {"period": 3, "time": _t_slot_times.get(3, _t_std_times[3])},
+        {"period": 4, "time": _t_slot_times.get(4, _t_std_times[4])},
+        {"is_break": True, "title": "MID-DAY LUNCH BREAK"},
+        {"period": 5, "time": _t_slot_times.get(5, _t_std_times[5])},
+        {"period": 6, "time": _t_slot_times.get(6, _t_std_times[6])},
+        {"period": 7, "time": _t_slot_times.get(7, _t_std_times[7])},
+        {"period": 8, "time": _t_slot_times.get(8, _t_std_times[8])},  # UX-6 FIX: was missing
     ]
 
     rows_html = ""
